@@ -114,7 +114,7 @@ export function ChatWidget() {
     <>
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-20 sm:bottom-24 right-4 sm:right-8 w-[calc(100vw-2rem)] sm:w-[400px] max-w-[400px] z-50 animate-in slide-in-from-bottom-5 duration-300">
+        <div className="fixed bottom-20 sm:bottom-24 right-2 left-2 sm:right-8 sm:left-auto sm:w-[400px] max-w-[400px] z-50 animate-in slide-in-from-bottom-5 duration-300">
           <div className="relative group">
             {/* Glow effect */}
             <div className="absolute -inset-1 sm:-inset-2 bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20 sm:from-primary/30 sm:via-secondary/30 sm:to-accent/30 rounded-2xl sm:rounded-3xl blur-lg sm:blur-xl opacity-40 sm:opacity-50" />
@@ -150,7 +150,7 @@ export function ChatWidget() {
 
               {/* Chat Messages */}
               <div 
-                className="p-3 sm:p-4 space-y-3 sm:space-y-4 max-h-[350px] sm:max-h-[400px] overflow-y-auto overscroll-contain"
+                className="p-2 sm:p-4 space-y-2 sm:space-y-4 max-h-[300px] sm:max-h-[400px] overflow-y-auto overscroll-contain"
                 style={{ 
                   WebkitOverflowScrolling: 'touch',
                   touchAction: 'pan-y'
@@ -168,13 +168,13 @@ export function ChatWidget() {
                         <User className="w-4 h-4 text-black" />
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 max-w-[85%]">
                       <div className={`rounded-xl sm:rounded-2xl p-2.5 sm:p-3 ${
                         msg.role === 'assistant' 
                           ? 'bg-primary/10 border border-primary/20 rounded-tl-sm' 
                           : 'bg-accent/10 border border-accent/20 rounded-tr-sm'
                       }`}>
-                        <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-line">{msg.content}</p>
+                        <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-line break-words">{msg.content}</p>
                       </div>
                     </div>
                   </div>
@@ -202,10 +202,10 @@ export function ChatWidget() {
               </div>
 
               {/* Message Input */}
-              <form onSubmit={sendMessage} className="border-t border-white/10 p-3 sm:p-4 bg-background/50">
-                <div className="flex gap-2">
+              <form onSubmit={sendMessage} className="border-t border-white/10 p-2 sm:p-4 bg-background/50">
+                <div className="flex gap-1.5 sm:gap-2 items-end">
                   <Textarea
-                    placeholder="Ask me anything about Cem..."
+                    placeholder="Ask me about Cem..."
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     onKeyDown={(e) => {
@@ -216,16 +216,16 @@ export function ChatWidget() {
                     }}
                     disabled={isLoading}
                     rows={2}
-                    className="bg-input-background border-primary/20 focus:border-primary/40 rounded-xl resize-none text-sm leading-relaxed"
+                    className="flex-1 bg-input-background border-primary/20 focus:border-primary/40 rounded-xl resize-none text-xs sm:text-sm leading-relaxed py-2 px-3"
                   />
                   <Button
                     type="submit"
                     size="icon"
                     disabled={isLoading || !inputMessage.trim()}
-                    className="bg-primary hover:bg-primary/90 text-black rounded-xl h-auto w-10 sm:w-11 self-end flex-shrink-0"
+                    className="bg-primary hover:bg-primary/90 text-black rounded-xl h-[42px] w-[42px] sm:h-11 sm:w-11 flex-shrink-0"
                     aria-label="Send message"
                   >
-                    <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground text-center mt-2 leading-relaxed">
