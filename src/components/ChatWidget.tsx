@@ -216,7 +216,8 @@ export function ChatWidget() {
                     }}
                     disabled={isLoading}
                     rows={2}
-                    className="flex-1 bg-input-background border-primary/20 focus:border-primary/40 rounded-xl resize-none text-xs sm:text-sm leading-relaxed py-2 px-3"
+                    className="flex-1 bg-input-background border-primary/20 focus:border-primary/40 rounded-xl resize-none text-base leading-relaxed py-2 px-3"
+                    style={{ fontSize: '16px' }}
                   />
                   <Button
                     type="submit"

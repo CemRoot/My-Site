@@ -27,7 +27,7 @@ export default function App() {
   useSmoothScroll();
 
   return (
-    <div className="min-h-screen bg-background text-foreground antialiased">
+    <div className="min-h-screen bg-background text-foreground antialiased overflow-x-hidden">
       {/* SEO Meta Tags */}
       <SEO />
 
