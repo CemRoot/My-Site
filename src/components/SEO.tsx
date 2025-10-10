@@ -7,7 +7,7 @@ import type { SEOMetadata } from '../lib/types';
  * Manages meta tags, Open Graph, Twitter Card, and structured data
  */
 export function SEO({
-  title = `${PERSONAL_INFO.name} - ${PERSONAL_INFO.title} | ${PERSONAL_INFO.location}`,
+  title = 'Welcome',
   description = `${PERSONAL_INFO.bio.short} Based in ${PERSONAL_INFO.location}. Available for freelance projects and full-time opportunities.`,
   keywords = 'AI Engineer, Machine Learning, NLP, Computer Vision, LLMs, Python Developer, Azure Specialist, Microsoft 365, System Operations, Dublin Ireland, Freelance AI Developer, RAG, LangChain, Deep Learning, TensorFlow, PyTorch, Cloud Solutions, Data Engineering',
   author = PERSONAL_INFO.name,
