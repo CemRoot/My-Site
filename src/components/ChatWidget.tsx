@@ -149,7 +149,13 @@ export function ChatWidget() {
               </div>
 
               {/* Chat Messages */}
-              <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 max-h-[350px] sm:max-h-[400px] overflow-y-auto">
+              <div 
+                className="p-3 sm:p-4 space-y-3 sm:space-y-4 max-h-[350px] sm:max-h-[400px] overflow-y-auto overscroll-contain"
+                style={{ 
+                  WebkitOverflowScrolling: 'touch',
+                  touchAction: 'pan-y'
+                }}
+              >
                 {messages.map((msg) => (
                   <div 
                     key={msg.id} 
