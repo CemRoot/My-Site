@@ -61,7 +61,7 @@ export function SEO({
     // Additional SEO tags
     setMetaTag('theme-color', '#5BE7FF');
     setMetaTag('msapplication-TileColor', '#5BE7FF');
-    setMetaTag('apple-mobile-web-app-capable', 'yes');
+    setMetaTag('mobile-web-app-capable', 'yes');
     setMetaTag('apple-mobile-web-app-status-bar-style', 'black-translucent');
     setMetaTag('format-detection', 'telephone=no');
 
