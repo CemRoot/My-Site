@@ -41,7 +41,7 @@ About Cem Koyluoglu:
 - Title: AI Engineer & System Operations Specialist
 - Location: Dublin, Ireland
 - Education: MSc in Artificial Intelligence (First Class Honours, 71.4%) from National College of Ireland (2022-2023)
-- Email: emincem@live.com
+- Email: cemkoyluoglu@icloud.com
 - Phone: +353 87 344 5918
 - WhatsApp: +353 87 344 5918
 

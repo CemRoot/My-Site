@@ -16,7 +16,7 @@ export function Footer() {
     },
     {
       icon: Mail,
-      href: 'mailto:emincem@live.com',
+      href: 'mailto:cemkoyluoglu@icloud.com',
       label: 'Email',
     },
   ];

@@ -124,7 +124,7 @@ vercel --prod
 
 ### Contact Form:
 1. Fill out the form on https://cemkoyluoglu.codes/#contact
-2. Check your email (emincem@live.com)
+2. Check your email (cemkoyluoglu@icloud.com)
 3. Should receive notification within seconds
 
 ### AI Chat:

@@ -8,7 +8,7 @@ export const PERSONAL_INFO = {
   initials: 'CK',
   title: 'AI Engineer & System Operations Specialist',
   location: 'Dublin, Ireland',
-  email: 'emincem@live.com',
+  email: 'cemkoyluoglu@icloud.com',
   phone: '+353 87 344 5918',
   whatsapp: '+353873445918',
   
