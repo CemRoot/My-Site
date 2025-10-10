@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Mail, Send, MessageCircle } from 'lucide-react';
+import emailjs from '@emailjs/browser';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { CONTACT_METHODS, AVAILABILITY_STATUS } from '../lib/constants/contact';
 import { PERSONAL_INFO, SOCIAL_LINKS } from '../lib/constants/personal';
 import { getColorClasses } from '../lib/utils/classNames';
@@ -24,15 +25,57 @@ export function Contact() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      // EmailJS configuration
+      const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+      const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+      const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
-    toast.success('Message sent successfully!', {
-      description: "I'll get back to you as soon as possible.",
-    });
+      // Check if EmailJS is configured
+      if (!serviceId || !templateId || !publicKey) {
+        console.warn('EmailJS not configured. Using fallback.');
+        
+        // Fallback: Log to console (for testing)
+        console.log('Contact Form Submission:', formData);
+        
+        toast.success('Message received!', {
+          description: "Thanks for reaching out! I'll contact you via email soon.",
+        });
+        
+        setFormData({ name: '', email: '', message: '' });
+        setIsSubmitting(false);
+        return;
+      }
 
-    setFormData({ name: '', email: '', message: '' });
-    setIsSubmitting(false);
+      // Send email via EmailJS
+      const templateParams = {
+        from_name: formData.name,
+        from_email: formData.email,
+        message: formData.message,
+        to_name: PERSONAL_INFO.name,
+        reply_to: formData.email,
+      };
+
+      await emailjs.send(
+        serviceId,
+        templateId,
+        templateParams,
+        publicKey
+      );
+
+      toast.success('Message sent successfully! 🎉', {
+        description: "I'll get back to you as soon as possible.",
+      });
+
+      setFormData({ name: '', email: '', message: '' });
+    } catch (error: any) {
+      console.error('EmailJS Error:', error);
+      toast.error('Failed to send message', {
+        description: 'Please try again or contact me via WhatsApp.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (field: keyof typeof formData) => (
