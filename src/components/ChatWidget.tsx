@@ -133,7 +133,7 @@ export function ChatWidget() {
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-medium text-sm sm:text-base truncate">AI Assistant</h3>
-                      <p className="text-xs text-green-500">● Powered by Groq AI</p>
+                      <p className="text-xs text-green-500">● Powered by Cem Koyluoglu</p>
                     </div>
                   </div>
                   <Button
@@ -229,7 +229,7 @@ export function ChatWidget() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground text-center mt-2 leading-relaxed">
-                  Powered by <span className="text-primary">Groq AI</span> • Free & Fast
+                  <span className="text-primary">🛠️ Hand made</span> by Cem Koyluoglu
                 </p>
               </form>
             </div>
