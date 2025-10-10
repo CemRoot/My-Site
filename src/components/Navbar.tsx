@@ -123,22 +123,13 @@ export function Navbar() {
                   `}</style>
                 </div>
                 <span 
-                  className="hidden sm:block font-[Space_Grotesk] text-[16px] tracking-wider"
+                  className="hidden sm:block font-[Space_Grotesk] text-[16px] tracking-wider font-bold"
                   style={{
-                    background: 'linear-gradient(180deg, #FFD700 0%, #FFA500 50%, #B8860B 100%)',
+                    background: 'linear-gradient(135deg, #5BE7FF 0%, #A78BFA 50%, #FFB86C 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
-                    textShadow: `
-                      0 1px 0 rgba(255, 215, 0, 0.8),
-                      0 2px 0 rgba(255, 165, 0, 0.6),
-                      0 3px 0 rgba(184, 134, 11, 0.4),
-                      0 4px 6px rgba(0, 0, 0, 0.5),
-                      0 0 10px rgba(255, 215, 0, 0.3)
-                    `,
-                    filter: 'drop-shadow(0 0 2px rgba(255, 215, 0, 0.4))',
-                    fontWeight: '700',
-                    letterSpacing: '0.12em',
+                    filter: 'drop-shadow(0 0 8px rgba(91, 231, 255, 0.3))',
                   }}
                 >
                   CEM KOYLUOGLU
