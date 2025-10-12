@@ -66,6 +66,7 @@ export function ChatWidget() {
   const [awaitingRelevantQuestion, setAwaitingRelevantQuestion] = useState(false);
   const [blockedUntil, setBlockedUntil] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const now = Date.now();
   const isChatBlocked = blockedUntil !== null && blockedUntil > now;
   const remainingBlockMinutes = isChatBlocked
@@ -216,6 +217,10 @@ export function ChatWidget() {
       setMessages((prev) => [...prev, fallbackMessage]);
     } finally {
       setIsLoading(false);
+      // Focus textarea after message is sent
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
     }
   };
 
@@ -285,7 +290,9 @@ export function ChatWidget() {
                 className="p-2 sm:p-4 space-y-2 sm:space-y-4 max-h-[300px] sm:max-h-[400px] overflow-y-auto overscroll-contain"
                 style={{ 
                   WebkitOverflowScrolling: 'touch',
-                  touchAction: 'pan-y'
+                  touchAction: 'pan-y',
+                  overflowX: 'hidden',
+                  maxWidth: '100%'
                 }}
               >
                 {messages.map((msg) => (
@@ -307,8 +314,14 @@ export function ChatWidget() {
                           : 'bg-accent/10 border border-accent/20 rounded-tr-sm'
                       }`}>
                         <p
-                          className="text-xs sm:text-sm leading-relaxed whitespace-pre-line break-words"
-                          style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                          className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words"
+                          style={{ 
+                            wordBreak: 'break-word', 
+                            overflowWrap: 'anywhere',
+                            hyphens: 'auto',
+                            maxWidth: '100%',
+                            minWidth: 0
+                          }}
                         >
                           {msg.content}
                         </p>
@@ -342,6 +355,7 @@ export function ChatWidget() {
               <form onSubmit={sendMessage} className="border-t border-white/10 p-2 sm:p-4 bg-background/50">
                 <div className="flex gap-1.5 sm:gap-2 items-end">
                   <Textarea
+                    ref={textareaRef}
                     placeholder={isChatBlocked ? 'Sohbet geçici olarak kapalı' : 'Ask me about Cem...'}
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
@@ -354,7 +368,12 @@ export function ChatWidget() {
                     disabled={isLoading || isChatBlocked}
                     rows={2}
                     className="flex-1 bg-input-background border-primary/20 focus:border-primary/40 rounded-xl resize-none text-base leading-relaxed py-2 px-3"
-                    style={{ fontSize: '16px' }}
+                    style={{ 
+                      fontSize: '16px',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'anywhere',
+                      maxWidth: '100%'
+                    }}
                   />
                   <Button
                     type="submit"
