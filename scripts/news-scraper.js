@@ -238,9 +238,10 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
     const markdown = scrapeResult.data.markdown;
     const articles = [];
     
-    // Extract category lines with date and URL
-    // Format: "Category Name10/10/2025**Article Title**](url)"
-    const lineRegex = new RegExp(`${categoryTag}[\\s\\S]*?(\\d{1,2}\\/\\d{1,2}\\/\\d{4})[\\s\\S]*?\\]\\((https:\\/\\/www\\.nuvemmag\\.com\\/post\\/[^)]+)\\)`, 'g');
+    // Extract article lines with date and URL
+    // Format: "Any Text10/10/2025**Article Title**](url)"
+    // Don't depend on category name as it's in Turkish on website
+    const lineRegex = /(\d{1,2}\/\d{1,2}\/\d{4})[^\]]*\]\((https:\/\/www\.nuvemmag\.com\/post\/[^)]+)\)/g;
     let match;
     
     while ((match = lineRegex.exec(markdown)) !== null) {
