@@ -12,6 +12,7 @@
 
 import 'dotenv/config';
 import crypto from 'crypto';
+import path from 'path';
 import { fileURLToPath } from 'url';
 import Groq from 'groq-sdk';
 import { createClient } from '@supabase/supabase-js';
