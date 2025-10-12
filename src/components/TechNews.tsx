@@ -120,25 +120,19 @@ export function TechNews() {
             Stay updated with the latest technology news, trends, and innovations from around the world
           </p>
           
-          {newsData && newsData.totalArticles > 0 && (
+          {newsData && newsData.lastUpdated && (
             <div className="mt-6 flex items-center justify-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
-                <Newspaper className="w-4 h-4" />
-                <span>{newsData.totalArticles} articles</span>
+                <Calendar className="w-4 h-4" />
+                <span>
+                  Updated{' '}
+                  {new Date(newsData.lastUpdated).toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </span>
               </div>
-              {newsData.lastUpdated && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>
-                    Updated{' '}
-                    {new Date(newsData.lastUpdated).toLocaleDateString('en-GB', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric'
-                    })}
-                  </span>
-                </div>
-              )}
             </div>
           )}
         </div>
