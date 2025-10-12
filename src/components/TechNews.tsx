@@ -38,17 +38,21 @@ export function TechNews() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   
   const ARTICLES_PER_PAGE = 20;
 
   useEffect(() => {
     fetchNews(currentPage);
-  }, [currentPage]);
+  }, [currentPage, selectedCategory]);
 
   const fetchNews = async (page: number = 1) => {
     try {
       setLoading(true);
-      const apiUrl = `/api/tech-news?page=${page}&limit=${ARTICLES_PER_PAGE}`;
+      const categoryQuery = selectedCategory && selectedCategory !== 'all' 
+        ? `&category=${encodeURIComponent(selectedCategory)}` 
+        : '';
+      const apiUrl = `/api/tech-news?page=${page}&limit=${ARTICLES_PER_PAGE}${categoryQuery}`;
       const response = await fetch(apiUrl);
       
       if (!response.ok) {
@@ -114,6 +118,17 @@ export function TechNews() {
     };
     return colors[category || ''] || '#A8DADC';
   };
+
+  const AVAILABLE_CATEGORIES: { label: string; value: string }[] = [
+    { label: 'All', value: 'all' },
+    { label: 'AI Applications', value: 'AI Applications' },
+    { label: 'AI', value: 'AI' },
+    { label: 'Tech', value: 'Tech' },
+    { label: 'Science', value: 'Science' },
+    { label: 'Sustainability', value: 'Sustainability' },
+    { label: 'News', value: 'News' },
+    { label: 'Latest News', value: 'Latest News' },
+  ];
 
   // Pagination logic (server-side pagination)
   const totalArticles = newsData?.totalArticles || 0;
@@ -268,11 +283,32 @@ export function TechNews() {
         {/* Articles Grid */}
         {!loading && !error && newsData && newsData.articles.length > 0 && (
           <>
+            {/* Category Filter */}
+            <div className="mb-6 flex flex-wrap gap-2 justify-center">
+              {AVAILABLE_CATEGORIES.map((c) => (
+                <Button
+                  key={c.value}
+                  variant={selectedCategory === c.value ? 'default' : 'outline'}
+                  onClick={() => {
+                    if (selectedCategory !== c.value) {
+                      setSelectedCategory(c.value);
+                      setCurrentPage(1);
+                    }
+                  }}
+                  className={`h-9 px-4 ${selectedCategory === c.value ? '' : 'bg-background'}`}
+                  style={selectedCategory === c.value && c.value !== 'all' ? { backgroundColor: getCategoryColor(c.value), color: '#000' } : {}}
+                >
+                  {c.label}
+                </Button>
+              ))}
+            </div>
+
             {/* Articles Count & Page Info */}
             <div className="mb-6 text-center">
               <p className="text-sm text-muted-foreground">
                 Showing {startIndex + 1}-{Math.min(endIndex, totalArticles)} of {totalArticles} articles
                 {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
+                {selectedCategory !== 'all' && ` • Category: ${selectedCategory}`}
               </p>
             </div>
 
