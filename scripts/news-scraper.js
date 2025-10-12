@@ -1,20 +1,20 @@
 /**
  * Tech News Scraper
  * 
- * Scrapes tech news from Nuvemmag, translates to English, and stores in JSON
+ * Scrapes tech news from Nuvemmag, translates to English, and stores in Supabase
  * Features:
  * - Firecrawl integration for web scraping
  * - Groq AI for unlimited, high-quality Turkish to English translation
- * - Duplicate detection using URL hashing
+ * - Supabase PostgreSQL for reliable storage
+ * - Duplicate detection using source URL
  * - Smart rate limiting
  */
 
 import 'dotenv/config';
 import crypto from 'crypto';
-import fs from 'fs/promises';
-import path from 'path';
 import { fileURLToPath } from 'url';
 import Groq from 'groq-sdk';
+import { createClient } from '@supabase/supabase-js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,8 +34,9 @@ const CONFIG = {
   ],
   FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY || '',
   GROQ_API_KEY: process.env.GROQ_API_KEY || '',
-  DATA_PATH: path.join(__dirname, '../public/data/tech-news.json'),
-  MAX_ARTICLES_PER_CATEGORY: 15, // Increased to get all daily news (was 2)
+  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  MAX_ARTICLES_PER_CATEGORY: 15,
   TRANSLATION_DELAY: 300, // ms between translation requests
   RATE_LIMIT_DELAY: 7000, // 7 seconds between requests (Firecrawl free: 10 req/min)
   MAX_ARTICLES_PER_RUN: 50, // Safety limit per scraping run
@@ -45,6 +46,9 @@ const CONFIG = {
 const groq = new Groq({
   apiKey: CONFIG.GROQ_API_KEY,
 });
+
+// Initialize Supabase client (using service role for admin access)
+const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
 
 /**
  * Generate unique ID from URL
@@ -109,41 +113,93 @@ function isRecent(dateString) {
 }
 
 /**
- * Load existing articles from JSON database
+ * Check if article already exists in Supabase by source URL
  */
-async function loadDatabase() {
+async function articleExists(sourceUrl) {
   try {
-    const data = await fs.readFile(CONFIG.DATA_PATH, 'utf-8');
-    return JSON.parse(data);
+    const { data, error } = await supabase
+      .from('tech_news_articles')
+      .select('id')
+      .eq('source_url', sourceUrl)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 = no rows returned (expected for new articles)
+      console.error('Error checking article existence:', error);
+      return false;
+    }
+    
+    return !!data;
   } catch (error) {
-    console.log('📝 Creating new database...');
-    return {
-      version: '1.0.0',
-      lastUpdated: null,
-      totalArticles: 0,
-      articles: []
-    };
+    console.error('Error checking article:', error);
+    return false;
   }
 }
 
 /**
- * Save articles to JSON database
+ * Save article to Supabase
  */
-async function saveDatabase(database) {
-  const dir = path.dirname(CONFIG.DATA_PATH);
-  await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(
-    CONFIG.DATA_PATH,
-    JSON.stringify(database, null, 2),
-    'utf-8'
-  );
+async function saveArticle(article) {
+  try {
+    // Parse date from Turkish format (DD/MM/YYYY) to ISO
+    let isoDate;
+    try {
+      const [day, month, year] = article.date.split('/');
+      isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    } catch (e) {
+      isoDate = new Date().toISOString().split('T')[0];
+    }
+
+    const { data, error } = await supabase
+      .from('tech_news_articles')
+      .insert([
+        {
+          title: article.title,
+          description: article.description,
+          content: article.content,
+          original_title: article.originalTitle,
+          image_url: article.image,
+          date: isoDate,
+          category: article.category,
+          source_url: article.sourceUrl,
+          original_source: article.originalSource,
+          slug: article.slug,
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error saving article to Supabase:', error);
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error saving article:', error);
+    return { success: false, error };
+  }
 }
 
 /**
- * Check if article already exists in database
+ * Get article count from Supabase
  */
-function articleExists(database, articleId) {
-  return database.articles.some(article => article.id === articleId);
+async function getArticleCount() {
+  try {
+    const { count, error } = await supabase
+      .from('tech_news_articles')
+      .select('*', { count: 'exact', head: true });
+    
+    if (error) {
+      console.error('Error getting article count:', error);
+      return 0;
+    }
+    
+    return count || 0;
+  } catch (error) {
+    console.error('Error getting count:', error);
+    return 0;
+  }
 }
 
 /**
@@ -438,9 +494,9 @@ async function scrapeNews() {
   CONFIG.CATEGORIES.forEach(cat => console.log(`   • ${cat.tag}: ${cat.name}`));
   console.log('='.repeat(60));
   
-  // Load existing database
-  const database = await loadDatabase();
-  console.log(`\n📊 Current database: ${database.totalArticles} articles\n`);
+  // Get current article count from Supabase
+  const currentCount = await getArticleCount();
+  console.log(`\n📊 Current database: ${currentCount} articles\n`);
   
   // Scrape all categories
   const articlesWithCategories = await scrapeAllCategories();
@@ -456,10 +512,10 @@ async function scrapeNews() {
   let skippedCount = 0;
   
   for (const { url, category } of articlesWithCategories) {
-    const articleId = generateArticleId(url);
+    // Check if article already exists by source URL
+    const exists = await articleExists(url);
     
-    // Check if article already exists
-    if (articleExists(database, articleId)) {
+    if (exists) {
       console.log(`⏭️  [${category}] Article already exists, skipping\n`);
       skippedCount++;
       continue;
@@ -477,35 +533,37 @@ async function scrapeNews() {
     // Translate article
     const translatedArticle = await translateArticle(article);
     
-    // Add to database with category
-    database.articles.unshift({
-      id: articleId,
+    // Prepare article data
+    const articleData = {
       ...translatedArticle,
       category, // Add category tag
-      createdAt: new Date().toISOString(),
-      slug: generateSlug(translatedArticle.title) // Generate English slug from translated title
-    });
+      slug: generateSlug(translatedArticle.title), // Generate English slug from translated title
+    };
     
-    newArticlesCount++;
-    console.log(`✅ [${category}] Article added successfully!\n`);
+    // Save to Supabase
+    const result = await saveArticle(articleData);
+    
+    if (result.success) {
+      newArticlesCount++;
+      console.log(`✅ [${category}] Article added successfully to Supabase!\n`);
+    } else {
+      console.log(`❌ [${category}] Failed to save article\n`);
+    }
     
     // Rate limiting between articles (Firecrawl free: 10 req/min)
     await new Promise(resolve => setTimeout(resolve, 7000)); // 7 seconds = ~8 req/min
   }
   
-  // Update metadata
-  database.totalArticles = database.articles.length;
-  database.lastUpdated = new Date().toISOString();
-  
-  // Save database
-  await saveDatabase(database);
+  // Get final count
+  const finalCount = await getArticleCount();
   
   console.log('='.repeat(60));
   console.log(`🎉 Multi-Category Scraping Completed!`);
   console.log(`📊 New articles added: ${newArticlesCount}`);
   console.log(`⏭️  Skipped (duplicates): ${skippedCount}`);
-  console.log(`📊 Total articles in database: ${database.totalArticles}`);
-  console.log(`⏰ Last updated: ${database.lastUpdated}`);
+  console.log(`📊 Total articles in database: ${finalCount}`);
+  console.log(`⏰ Last updated: ${new Date().toISOString()}`);
+  console.log(`💾 Storage: Supabase PostgreSQL`);
   console.log('='.repeat(60));
 }
 

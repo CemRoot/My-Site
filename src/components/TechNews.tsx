@@ -53,15 +53,27 @@ export function TechNews() {
   const fetchNews = async () => {
     try {
       setLoading(true);
-      const dataUrl = '/data/tech-news.json';
-      const response = await fetch(dataUrl);
+      const apiUrl = '/api/tech-news';
+      const response = await fetch(apiUrl);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch news (status ${response.status})`);
       }
       
-      const data: NewsDatabase = await response.json();
-      setNewsData(data);
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        // Transform API response to match NewsDatabase interface
+        const newsData: NewsDatabase = {
+          version: '2.0.0',
+          lastUpdated: new Date().toISOString(),
+          totalArticles: result.data.pagination.totalArticles,
+          articles: result.data.articles
+        };
+        setNewsData(newsData);
+      } else {
+        throw new Error('Invalid response format');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {

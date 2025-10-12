@@ -77,25 +77,36 @@ export function TechNewsDetail() {
   const fetchArticle = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/data/tech-news.json');
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch article');
-      }
+      // Fetch specific article by slug
+      const articleResponse = await fetch(`/api/tech-news?slug=${slug}`);
       
-      const data: NewsDatabase = await response.json();
-      const foundArticle = data.articles.find(a => a.slug === slug);
-      
-      if (!foundArticle) {
+      if (!articleResponse.ok) {
         throw new Error('Article not found');
       }
       
-      setArticle(foundArticle);
+      const articleResult = await articleResponse.json();
       
-      // Get related articles (3 random articles excluding current)
-      const otherArticles = data.articles.filter(a => a.id !== foundArticle.id);
-      const shuffled = otherArticles.sort(() => 0.5 - Math.random());
-      setRelatedArticles(shuffled.slice(0, 3));
+      if (!articleResult.success || !articleResult.article) {
+        throw new Error('Article not found');
+      }
+      
+      setArticle(articleResult.article);
+      
+      // Fetch related articles (3 recent articles from same category if available)
+      const category = articleResult.article.category;
+      const relatedResponse = await fetch(`/api/tech-news?limit=4&category=${category || 'all'}`);
+      
+      if (relatedResponse.ok) {
+        const relatedResult = await relatedResponse.json();
+        if (relatedResult.success && relatedResult.data.articles) {
+          // Filter out current article and take 3
+          const otherArticles = relatedResult.data.articles.filter(
+            (a: Article) => a.id !== articleResult.article.id
+          );
+          setRelatedArticles(otherArticles.slice(0, 3));
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {

@@ -65,7 +65,8 @@
             "dev": "vite",
             "build": "vite build",
             "scrape:news": "node scripts/news-scraper.js",
-            "test:translation": "node scripts/test-groq-translation.js"
+            "test:translation": "node scripts/test-groq-translation.js",
+            "migrate:supabase": "node scripts/migrate-to-supabase.js"
       },
       "type": "module"
 }
