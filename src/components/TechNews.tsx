@@ -42,18 +42,13 @@ export function TechNews() {
   const ARTICLES_PER_PAGE = 20;
 
   useEffect(() => {
-    fetchNews();
-  }, []);
+    fetchNews(currentPage);
+  }, [currentPage]);
 
-  // Reset to page 1 when data changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [newsData]);
-
-  const fetchNews = async () => {
+  const fetchNews = async (page: number = 1) => {
     try {
       setLoading(true);
-      const apiUrl = '/api/tech-news';
+      const apiUrl = `/api/tech-news?page=${page}&limit=${ARTICLES_PER_PAGE}`;
       const response = await fetch(apiUrl);
       
       if (!response.ok) {
@@ -120,14 +115,15 @@ export function TechNews() {
     return colors[category || ''] || '#A8DADC';
   };
 
-  // Pagination logic
-  const totalArticles = newsData?.articles.length || 0;
+  // Pagination logic (server-side pagination)
+  const totalArticles = newsData?.totalArticles || 0;
   const totalPages = Math.ceil(totalArticles / ARTICLES_PER_PAGE);
   const startIndex = (currentPage - 1) * ARTICLES_PER_PAGE;
-  const endIndex = startIndex + ARTICLES_PER_PAGE;
-  const currentArticles = newsData?.articles.slice(startIndex, endIndex) || [];
+  const currentArticles = newsData?.articles || [];
+  const endIndex = startIndex + currentArticles.length;
 
   const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
     // Scroll to top of articles section
     window.scrollTo({ top: 200, behavior: 'smooth' });
@@ -241,7 +237,7 @@ export function TechNews() {
               {error}
             </p>
             <button
-              onClick={fetchNews}
+              onClick={() => fetchNews(currentPage)}
               className="px-6 py-3 bg-primary hover:bg-primary/90 text-black rounded-lg font-medium transition-colors"
             >
               Try Again
