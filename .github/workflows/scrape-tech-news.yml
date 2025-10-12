@@ -43,6 +43,9 @@ jobs:
           # IDE warnings are normal - secrets are not accessible locally
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           echo "🚀 Starting multi-category tech news scraper..."
           echo "📂 Categories: 7 (AI, Tech, Science, etc.)"
@@ -50,56 +53,21 @@ jobs:
           echo "📅 Run time: $(date)"
           echo "🌍 Timezone: UTC"
           echo "📰 Filtering: Recent articles (last 7 days)"
+          echo "💾 Storage: Supabase PostgreSQL"
           npm run scrape:news
       
-      - name: 📊 Check if changes exist
-        id: check_changes
+      - name: ✅ Success summary
+        if: success()
         run: |
-          if git diff --quiet public/data/tech-news.json; then
-            echo "changes=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ No new articles found"
-          else
-            echo "changes=true" >> $GITHUB_OUTPUT
-            echo "✅ New articles detected"
-          fi
-      
-      - name: 💾 Commit and push changes
-        if: steps.check_changes.outputs.changes == 'true'
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add public/data/tech-news.json
-          
-          # Get article count
-          ARTICLE_COUNT=$(node -p "JSON.parse(require('fs').readFileSync('public/data/tech-news.json', 'utf8')).totalArticles")
-          
-          git commit -m "🤖 Auto-update: Tech news scraped and translated
-
-          - Total articles: $ARTICLE_COUNT
-          - Updated: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
-          - Workflow: ${{ github.workflow }}
-          - Run: ${{ github.run_number }}"
-          
-          git push
+          echo "🎉 Tech news successfully scraped and saved to Supabase!"
+          echo "📊 Articles saved directly to PostgreSQL database"
+          echo "⏰ Completed at: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          echo "💾 Storage: Supabase (no git commit needed)"
+          echo "🔄 Website will fetch latest data from database automatically"
       
       - name: 📧 Send notification on failure
         if: failure()
         run: |
           echo "❌ Scraping failed!"
           echo "Check the logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-      
-      - name: ✅ Success summary
-        if: success() && steps.check_changes.outputs.changes == 'true'
-        run: |
-          echo "🎉 Tech news successfully scraped and translated!"
-          ARTICLE_COUNT=$(node -p "JSON.parse(require('fs').readFileSync('public/data/tech-news.json', 'utf8')).totalArticles")
-          LAST_UPDATED=$(node -p "JSON.parse(require('fs').readFileSync('public/data/tech-news.json', 'utf8')).lastUpdated")
-          echo "📊 Total articles: $ARTICLE_COUNT"
-          echo "⏰ Last updated: $LAST_UPDATED"
-      
-      - name: ℹ️ No changes summary
-        if: success() && steps.check_changes.outputs.changes == 'false'
-        run: |
-          echo "ℹ️ No new articles to add"
-          echo "All articles are up to date!"
 
