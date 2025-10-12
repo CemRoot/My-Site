@@ -411,7 +411,7 @@ async function translateText(text) {
 
   try {
     const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile', // Updated from deprecated 3.1 // High quality model for translation
+      model: 'groq/compound', // Unlimited tokens per day!
       messages: [
         {
           role: 'system',
