@@ -238,30 +238,17 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
     const markdown = scrapeResult.data.markdown;
     const articles = [];
     
-    // Debug: Find where article content starts and show relevant section
-    const articleSectionStart = markdown.indexOf('10/10/2025') || markdown.indexOf('9/10/2025') || markdown.indexOf('8/10/2025');
-    if (articleSectionStart > 0) {
-      const relevantSection = markdown.substring(Math.max(0, articleSectionStart - 200), articleSectionStart + 800);
-      console.log(`  🔍 Markdown section around articles:\n${relevantSection}\n`);
-    } else {
-      console.log(`  🔍 Markdown sample (first 1000 chars):\n${markdown.substring(0, 1000)}\n`);
-    }
-    
     // Extract article lines with date and URL
-    // Try multiple patterns to match different markdown formats
+    // Format from Firecrawl: [Category\\\n\\\nDate\\\n\\\n**Title**](URL)
+    // Example: [Yapay Zeka Uygulamaları\\\n\\\n10/10/2025\\\n\\\n**Title**](https://...)
     
-    // Pattern 1: Date followed by link [text](url)
-    const pattern1 = /(\d{1,2}\/\d{1,2}\/\d{4})[^\[]*\[([^\]]+)\]\((https:\/\/www\.nuvemmag\.com\/post\/[^)]+)\)/g;
-    
-    // Pattern 2: More flexible - any date and nuvemmag link
-    const pattern2 = /(\d{1,2}\/\d{1,2}\/\d{4})[^h]*?(https:\/\/www\.nuvemmag\.com\/post\/[^\s)\]]+)/g;
+    const pattern = /(\d{1,2}\/\d{1,2}\/\d{4})[^\(]*\((https:\/\/www\.nuvemmag\.com\/post\/[^)]+)\)/g;
     
     let match;
     
-    // Try pattern 1
-    while ((match = pattern1.exec(markdown)) !== null) {
+    while ((match = pattern.exec(markdown)) !== null) {
       const date = match[1];
-      const url = match[3];
+      const url = match[2];
       
       if (!articles.some(a => a.url === url)) {
         if (isRecent(date)) {
@@ -270,36 +257,8 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
         }
       }
     }
-    
-    // If pattern 1 found nothing, try pattern 2
-    if (articles.length === 0) {
-      console.log(`  🔄 Pattern 1 found nothing, trying pattern 2...`);
-      while ((match = pattern2.exec(markdown)) !== null) {
-        const date = match[1];
-        const url = match[2];
-        
-        if (!articles.some(a => a.url === url)) {
-          if (isRecent(date)) {
-            articles.push({ url, category: categoryTag, scrapedDate: date });
-            console.log(`  📅 ${date}: ${url.split('/').pop()}`);
-          }
-        }
-      }
-    }
 
     console.log(`✅ Found ${articles.length} recent articles in ${categoryTag}`);
-    
-    // Debug: If we found 0 articles, save markdown to file for inspection
-    if (articles.length === 0 && categoryTag === 'Latest News') {
-      console.log(`  ⚠️  No articles found! This might be a pattern issue.`);
-      console.log(`  📝 Markdown length: ${markdown.length} characters`);
-      console.log(`  🔍 Searching for date patterns in markdown...`);
-      const dateMatches = markdown.match(/(\d{1,2}\/\d{1,2}\/\d{4})/g);
-      if (dateMatches) {
-        console.log(`  📅 Found ${dateMatches.length} dates: ${dateMatches.slice(0, 10).join(', ')}`);
-      }
-    }
-    
     return articles;
   } catch (error) {
     console.error(`❌ Failed to scrape ${categoryTag}: ${error.message}`);
