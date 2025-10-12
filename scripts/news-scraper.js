@@ -238,21 +238,45 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
     const markdown = scrapeResult.data.markdown;
     const articles = [];
     
+    // Debug: Print first 500 chars of markdown to see format
+    console.log(`  🔍 Markdown sample (first 500 chars):\n${markdown.substring(0, 500)}\n`);
+    
     // Extract article lines with date and URL
-    // Format: "Any Text10/10/2025**Article Title**](url)"
-    // Don't depend on category name as it's in Turkish on website
-    const lineRegex = /(\d{1,2}\/\d{1,2}\/\d{4})[^\]]*\]\((https:\/\/www\.nuvemmag\.com\/post\/[^)]+)\)/g;
+    // Try multiple patterns to match different markdown formats
+    
+    // Pattern 1: Date followed by link [text](url)
+    const pattern1 = /(\d{1,2}\/\d{1,2}\/\d{4})[^\[]*\[([^\]]+)\]\((https:\/\/www\.nuvemmag\.com\/post\/[^)]+)\)/g;
+    
+    // Pattern 2: More flexible - any date and nuvemmag link
+    const pattern2 = /(\d{1,2}\/\d{1,2}\/\d{4})[^h]*?(https:\/\/www\.nuvemmag\.com\/post\/[^\s)\]]+)/g;
+    
     let match;
     
-    while ((match = lineRegex.exec(markdown)) !== null) {
+    // Try pattern 1
+    while ((match = pattern1.exec(markdown)) !== null) {
       const date = match[1];
-      const url = match[2];
+      const url = match[3];
       
       if (!articles.some(a => a.url === url)) {
-        // Filter by date (last 7 days for initial scraping)
         if (isRecent(date)) {
           articles.push({ url, category: categoryTag, scrapedDate: date });
           console.log(`  📅 ${date}: ${url.split('/').pop()}`);
+        }
+      }
+    }
+    
+    // If pattern 1 found nothing, try pattern 2
+    if (articles.length === 0) {
+      console.log(`  🔄 Pattern 1 found nothing, trying pattern 2...`);
+      while ((match = pattern2.exec(markdown)) !== null) {
+        const date = match[1];
+        const url = match[2];
+        
+        if (!articles.some(a => a.url === url)) {
+          if (isRecent(date)) {
+            articles.push({ url, category: categoryTag, scrapedDate: date });
+            console.log(`  📅 ${date}: ${url.split('/').pop()}`);
+          }
         }
       }
     }
