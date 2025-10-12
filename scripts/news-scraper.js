@@ -238,8 +238,14 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
     const markdown = scrapeResult.data.markdown;
     const articles = [];
     
-    // Debug: Print first 500 chars of markdown to see format
-    console.log(`  🔍 Markdown sample (first 500 chars):\n${markdown.substring(0, 500)}\n`);
+    // Debug: Find where article content starts and show relevant section
+    const articleSectionStart = markdown.indexOf('10/10/2025') || markdown.indexOf('9/10/2025') || markdown.indexOf('8/10/2025');
+    if (articleSectionStart > 0) {
+      const relevantSection = markdown.substring(Math.max(0, articleSectionStart - 200), articleSectionStart + 800);
+      console.log(`  🔍 Markdown section around articles:\n${relevantSection}\n`);
+    } else {
+      console.log(`  🔍 Markdown sample (first 1000 chars):\n${markdown.substring(0, 1000)}\n`);
+    }
     
     // Extract article lines with date and URL
     // Try multiple patterns to match different markdown formats
@@ -282,6 +288,18 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
     }
 
     console.log(`✅ Found ${articles.length} recent articles in ${categoryTag}`);
+    
+    // Debug: If we found 0 articles, save markdown to file for inspection
+    if (articles.length === 0 && categoryTag === 'Latest News') {
+      console.log(`  ⚠️  No articles found! This might be a pattern issue.`);
+      console.log(`  📝 Markdown length: ${markdown.length} characters`);
+      console.log(`  🔍 Searching for date patterns in markdown...`);
+      const dateMatches = markdown.match(/(\d{1,2}\/\d{1,2}\/\d{4})/g);
+      if (dateMatches) {
+        console.log(`  📅 Found ${dateMatches.length} dates: ${dateMatches.slice(0, 10).join(', ')}`);
+      }
+    }
+    
     return articles;
   } catch (error) {
     console.error(`❌ Failed to scrape ${categoryTag}: ${error.message}`);
