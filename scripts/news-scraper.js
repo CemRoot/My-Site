@@ -48,6 +48,10 @@ const groq = new Groq({
   apiKey: CONFIG.GROQ_API_KEY,
 });
 
+// Groq translation models
+const GROQ_PRIMARY_MODEL = 'groq/compound'; // Higher throughput, unlimited tokens/day
+const GROQ_FALLBACK_MODEL = 'llama-3.3-70b-versatile'; // High quality fallback
+
 // Initialize Supabase client (using service role for admin access)
 const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
 
@@ -404,18 +408,13 @@ async function scrapeArticleDetails(url) {
  * Translate text using Groq AI (Unlimited, High Quality)
  * Handles texts of any length - no chunking needed!
  */
-async function translateText(text) {
-  if (!text || text.trim().length === 0) {
-    return text;
-  }
-
-  try {
-    const completion = await groq.chat.completions.create({
-      model: 'groq/compound', // Unlimited tokens per day!
-      messages: [
-        {
-          role: 'system',
-          content: `You are a professional translator specializing in Turkish to English translation for technology news.
+async function translateWithModel(model, text) {
+  const completion = await groq.chat.completions.create({
+    model,
+    messages: [
+      {
+        role: 'system',
+        content: `You are a professional translator specializing in Turkish to English translation for technology news.
 
 TRANSLATION RULES:
 - Translate from Turkish to English with high accuracy
@@ -428,18 +427,32 @@ TRANSLATION RULES:
 - ONLY return the translated text, nothing else
 
 Translate the following Turkish text to English:`
-        },
-        {
-          role: 'user',
-          content: text
-        }
-      ],
-      temperature: 0.3, // Lower temperature for more accurate translation
-      max_tokens: 4000, // Support long articles
-    });
+      },
+      { role: 'user', content: text }
+    ],
+    temperature: 0.3,
+    max_tokens: 4000,
+  });
 
-    const translatedText = completion.choices[0]?.message?.content || text;
-    return translatedText.trim();
+  const translatedText = completion.choices[0]?.message?.content || text;
+  return translatedText.trim();
+}
+
+async function translateText(text) {
+  if (!text || text.trim().length === 0) {
+    return text;
+  }
+
+  try {
+    // Try primary model first
+    try {
+      return await translateWithModel(GROQ_PRIMARY_MODEL, text);
+    } catch (primaryError) {
+      const msg = String(primaryError?.message || primaryError);
+      console.warn(`⚠️ Primary model failed (${GROQ_PRIMARY_MODEL}): ${msg}`);
+      // Fallback to 70B model on any error or rate limit
+      return await translateWithModel(GROQ_FALLBACK_MODEL, text);
+    }
   } catch (error) {
     console.error(`❌ Groq translation error: ${error.message}`);
     return text; // Fallback to original
