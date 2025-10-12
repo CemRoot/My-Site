@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, ArrowRight, Newspaper, TrendingUp } from 'lucide-react';
+import { Calendar, ArrowRight, Newspaper, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Skeleton } from './ui/skeleton';
+import { Button } from './ui/button';
 import { NewsletterSignup } from './NewsletterSignup';
 
 interface Article {
@@ -36,15 +37,23 @@ export function TechNews() {
   const [newsData, setNewsData] = useState<NewsDatabase | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  const ARTICLES_PER_PAGE = 20;
 
   useEffect(() => {
     fetchNews();
   }, []);
 
+  // Reset to page 1 when data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [newsData]);
+
   const fetchNews = async () => {
     try {
       setLoading(true);
-      const dataUrl = `${import.meta.env.BASE_URL}data/tech-news.json`;
+      const dataUrl = '/data/tech-news.json';
       const response = await fetch(dataUrl);
       
       if (!response.ok) {
@@ -97,6 +106,58 @@ export function TechNews() {
       'Latest News': '#DDA15E'
     };
     return colors[category || ''] || '#A8DADC';
+  };
+
+  // Pagination logic
+  const totalArticles = newsData?.articles.length || 0;
+  const totalPages = Math.ceil(totalArticles / ARTICLES_PER_PAGE);
+  const startIndex = (currentPage - 1) * ARTICLES_PER_PAGE;
+  const endIndex = startIndex + ARTICLES_PER_PAGE;
+  const currentArticles = newsData?.articles.slice(startIndex, endIndex) || [];
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Scroll to top of articles section
+    window.scrollTo({ top: 200, behavior: 'smooth' });
+  };
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisible = 5; // Maximum visible page numbers
+    
+    if (totalPages <= maxVisible) {
+      // Show all pages if total is small
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Show first page
+      pages.push(1);
+      
+      // Calculate range around current page
+      let start = Math.max(2, currentPage - 1);
+      let end = Math.min(totalPages - 1, currentPage + 1);
+      
+      // Add ellipsis if needed
+      if (start > 2) {
+        pages.push('...');
+      }
+      
+      // Add middle pages
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      
+      // Add ellipsis if needed
+      if (end < totalPages - 1) {
+        pages.push('...');
+      }
+      
+      // Show last page
+      pages.push(totalPages);
+    }
+    
+    return pages;
   };
 
   return (
@@ -198,8 +259,17 @@ export function TechNews() {
 
         {/* Articles Grid */}
         {!loading && !error && newsData && newsData.articles.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {newsData.articles.map((article) => (
+          <>
+            {/* Articles Count & Page Info */}
+            <div className="mb-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Showing {startIndex + 1}-{Math.min(endIndex, totalArticles)} of {totalArticles} articles
+                {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {currentArticles.map((article) => (
               <Link
                 key={article.id}
                 to={`/tech-news/${article.slug}`}
@@ -261,6 +331,58 @@ export function TechNews() {
               </Link>
             ))}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="mt-12 flex justify-center items-center gap-2">
+              {/* Previous Button */}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="h-10 w-10"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              {/* Page Numbers */}
+              <div className="flex gap-2">
+                {getPageNumbers().map((page, index) => (
+                  <React.Fragment key={index}>
+                    {page === '...' ? (
+                      <span className="px-4 py-2 text-muted-foreground">...</span>
+                    ) : (
+                      <Button
+                        variant={currentPage === page ? 'default' : 'outline'}
+                        size="icon"
+                        onClick={() => handlePageChange(page as number)}
+                        className={`h-10 w-10 ${
+                          currentPage === page 
+                            ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                            : ''
+                        }`}
+                      >
+                        {page}
+                      </Button>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+
+              {/* Next Button */}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="h-10 w-10"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </>
         )}
       </div>
     </main>
