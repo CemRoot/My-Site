@@ -1,0 +1,105 @@
+name: Scrape Tech News
+
+# Smart scheduling algorithm
+# WEEKDAYS ONLY: Nuvemmag doesn't publish on weekends
+# Runs 3 times per day: Morning, Afternoon, Evening (UTC)
+on:
+  schedule:
+    # Monday-Friday only
+    - cron: '0 8 * * 1-5'   # 08:00 UTC (Morning check)
+    - cron: '0 14 * * 1-5'  # 14:00 UTC (Afternoon check)
+    - cron: '0 20 * * 1-5'  # 20:00 UTC (Evening check)
+  
+  # Manual trigger
+  workflow_dispatch:
+
+# Prevent multiple runs
+concurrency:
+  group: tech-news-scraper
+  cancel-in-progress: true
+
+jobs:
+  scrape-and-translate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: 📦 Install dependencies
+        run: npm ci
+      
+      - name: 🔍 Scrape and translate tech news
+        env:
+          # GitHub Secrets - These will be available at runtime
+          # IDE warnings are normal - secrets are not accessible locally
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+        run: |
+          echo "🚀 Starting multi-category tech news scraper..."
+          echo "📂 Categories: 7 (AI, Tech, Science, etc.)"
+          echo "📊 Articles per category: 15 (Get all daily news)"
+          echo "📅 Run time: $(date)"
+          echo "🌍 Timezone: UTC"
+          echo "📰 Filtering: Recent articles (last 7 days)"
+          npm run scrape:news
+      
+      - name: 📊 Check if changes exist
+        id: check_changes
+        run: |
+          if git diff --quiet public/data/tech-news.json; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No new articles found"
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "✅ New articles detected"
+          fi
+      
+      - name: 💾 Commit and push changes
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add public/data/tech-news.json
+          
+          # Get article count
+          ARTICLE_COUNT=$(node -p "JSON.parse(require('fs').readFileSync('public/data/tech-news.json', 'utf8')).totalArticles")
+          
+          git commit -m "🤖 Auto-update: Tech news scraped and translated
+
+          - Total articles: $ARTICLE_COUNT
+          - Updated: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          - Workflow: ${{ github.workflow }}
+          - Run: ${{ github.run_number }}"
+          
+          git push
+      
+      - name: 📧 Send notification on failure
+        if: failure()
+        run: |
+          echo "❌ Scraping failed!"
+          echo "Check the logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      
+      - name: ✅ Success summary
+        if: success() && steps.check_changes.outputs.changes == 'true'
+        run: |
+          echo "🎉 Tech news successfully scraped and translated!"
+          ARTICLE_COUNT=$(node -p "JSON.parse(require('fs').readFileSync('public/data/tech-news.json', 'utf8')).totalArticles")
+          LAST_UPDATED=$(node -p "JSON.parse(require('fs').readFileSync('public/data/tech-news.json', 'utf8')).lastUpdated")
+          echo "📊 Total articles: $ARTICLE_COUNT"
+          echo "⏰ Last updated: $LAST_UPDATED"
+      
+      - name: ℹ️ No changes summary
+        if: success() && steps.check_changes.outputs.changes == 'false'
+        run: |
+          echo "ℹ️ No new articles to add"
+          echo "All articles are up to date!"
+

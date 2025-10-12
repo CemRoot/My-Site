@@ -1,4 +1,5 @@
 import { Heart, Github, Linkedin, Mail } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -52,13 +53,30 @@ export function Footer() {
             })}
           </div>
 
+          {/* Legal Links */}
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <Link 
+              to="/terms" 
+              className="hover:text-primary transition-colors underline-offset-4 hover:underline"
+            >
+              Terms & Conditions
+            </Link>
+            <span className="text-white/10">•</span>
+            <Link 
+              to="/privacy-policy" 
+              className="hover:text-primary transition-colors underline-offset-4 hover:underline"
+            >
+              Privacy Policy
+            </Link>
+          </div>
+
           {/* Copyright */}
           <div className="text-center space-y-2">
             <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
               Made with <Heart className="w-4 h-4 text-primary fill-primary" /> by Cem Koyluoglu
             </p>
             <p className="text-xs text-muted-foreground">
-              © {currentYear} All rights reserved.
+              © {currentYear} All rights reserved. Dublin, Ireland 🇮🇪
             </p>
           </div>
         </div>

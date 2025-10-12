@@ -83,6 +83,7 @@
     --color-green-500: oklch(.723 .219 149.579);
     --color-black: #000;
     --color-white: #fff;
+    --nav-height: 120px;
     --spacing: .25rem;
     --container-md: 28rem;
     --container-lg: 32rem;

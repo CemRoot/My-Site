@@ -1,11 +1,21 @@
-import { useState, useEffect } from 'react';
-import { Menu, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Menu, X, Newspaper } from 'lucide-react';
 import { Button } from './ui/button';
 import coinLogo from 'figma:asset/5a044018a2d01618456d3b6a76d961bdd5099599.png';
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const isHomePage = location.pathname === '/';
+  const navRef = useRef<HTMLElement | null>(null);
+
+  const updateNavHeight = () => {
+    if (navRef.current) {
+      document.documentElement.style.setProperty('--nav-height', `${navRef.current.offsetHeight}px`);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -13,19 +23,31 @@ export function Navbar() {
     };
 
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('resize', updateNavHeight);
+
+    updateNavHeight();
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', updateNavHeight);
+    };
   }, []);
 
+  useEffect(() => {
+    updateNavHeight();
+  }, [isScrolled, isMobileMenuOpen, location.pathname]);
+
   const navItems = [
-    { label: 'About', href: '#about' },
-    { label: 'Projects', href: '#projects' },
-    { label: 'Experience', href: '#experience' },
-    { label: 'Skills', href: '#skills' },
-    { label: 'Contact', href: '#contact' },
+    { label: 'About', href: '#about', isHash: true },
+    { label: 'Projects', href: '#projects', isHash: true },
+    { label: 'Experience', href: '#experience', isHash: true },
+    { label: 'Skills', href: '#skills', isHash: true },
+    { label: 'Contact', href: '#contact', isHash: true },
   ];
 
   return (
     <nav
+      ref={navRef}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
           ? 'py-3'
@@ -48,7 +70,7 @@ export function Navbar() {
           }`}>
             <div className="flex items-center justify-between px-6 py-4">
               {/* Logo - CK Coin */}
-              <a href="#" className="group flex items-center space-x-3">
+              <Link to="/" className="group flex items-center space-x-3">
                 <div className="w-12 h-12 relative" style={{ perspective: '2000px' }}>
                   <div 
                     className="w-full h-full relative transition-all duration-700 ease-out group-hover:scale-110"
@@ -134,11 +156,12 @@ export function Navbar() {
                 >
                   CEM KOYLUOGLU
                 </span>
-              </a>
+              </Link>
 
               {/* Desktop Navigation */}
               <div className="hidden md:flex items-center space-x-1">
-                {navItems.map((item) => (
+                {/* Home Page Links */}
+                {isHomePage && navItems.map((item) => (
                   <a
                     key={item.href}
                     href={item.href}
@@ -147,6 +170,29 @@ export function Navbar() {
                     {item.label}
                   </a>
                 ))}
+                
+                {/* Tech News Link (Always visible) */}
+                <Link
+                  to="/tech-news"
+                  className={`px-4 py-2 rounded-xl text-sm flex items-center gap-2 transition-all duration-200 ${
+                    location.pathname.startsWith('/tech-news')
+                      ? 'text-primary bg-primary/10 font-medium'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
+                  }`}
+                >
+                  <Newspaper className="w-4 h-4" />
+                  Tech News
+                </Link>
+
+                {/* Back Home Link (when not on home page) */}
+                {!isHomePage && (
+                  <Link
+                    to="/"
+                    className="px-4 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all duration-200"
+                  >
+                    Home
+                  </Link>
+                )}
               </div>
 
               {/* Mobile Menu Button */}
@@ -167,7 +213,8 @@ export function Navbar() {
             {/* Mobile Navigation */}
             {isMobileMenuOpen && (
               <div className="md:hidden border-t border-primary/20 px-6 py-4 space-y-2 bg-background/95">
-                {navItems.map((item) => (
+                {/* Home Page Links */}
+                {isHomePage && navItems.map((item) => (
                   <a
                     key={item.href}
                     href={item.href}
@@ -177,6 +224,31 @@ export function Navbar() {
                     {item.label}
                   </a>
                 ))}
+                
+                {/* Tech News Link */}
+                <Link
+                  to="/tech-news"
+                  className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm transition-all duration-200 liquid-shimmer ${
+                    location.pathname.startsWith('/tech-news')
+                      ? 'text-primary bg-primary/10 font-medium border border-primary/30'
+                      : 'text-foreground hover:text-primary hover:bg-primary/10 border border-transparent hover:border-primary/30'
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Newspaper className="w-4 h-4" />
+                  Tech News
+                </Link>
+
+                {/* Back Home Link */}
+                {!isHomePage && (
+                  <Link
+                    to="/"
+                    className="block px-4 py-3 rounded-xl text-sm text-foreground hover:text-primary hover:bg-primary/10 transition-all duration-200 liquid-shimmer border border-transparent hover:border-primary/30"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Home
+                  </Link>
+                )}
               </div>
             )}
           </div>
