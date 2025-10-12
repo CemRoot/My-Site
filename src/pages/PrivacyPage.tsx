@@ -1,12 +1,33 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Shield } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { usePageContext } from '../lib/context/PageContext';
 
 /**
  * Privacy Policy Page
  * GDPR-compliant privacy policy for Ireland-based business
  */
 export function PrivacyPage() {
+  const { setPageInfo } = usePageContext();
+
+  useEffect(() => {
+    setPageInfo({
+      path: '/privacy-policy',
+      title: 'Privacy Policy',
+      summary:
+        'GDPR-compliant privacy policy detailing data collection, usage, retention, third-party services, cookies, and user rights for Cem Koyluoglu’s site.',
+      highlights: [
+        'Explains contact form, newsletter, and chat data handling',
+        'Details legal bases, retention periods, and GDPR rights',
+        'Lists third-party processors, security measures, and contact information',
+      ],
+      lastUpdated: 'October 12, 2025',
+    });
+
+    return () => setPageInfo(null);
+  }, [setPageInfo]);
+
   return (
     <main
       className="min-h-screen bg-gradient-to-b from-background to-muted/20 px-4 pb-24"

@@ -1,5 +1,38 @@
 import Groq from 'groq-sdk';
 
+function formatPageContext(context) {
+  if (!context || typeof context !== 'object') {
+    return 'No page context provided.';
+  }
+
+  const parts = [];
+
+  if (context.title) {
+    parts.push(`Title: ${context.title}`);
+  }
+
+  if (context.path) {
+    parts.push(`Path: ${context.path}`);
+  }
+
+  if (context.summary) {
+    parts.push(`Summary: ${context.summary}`);
+  }
+
+  if (Array.isArray(context.highlights) && context.highlights.length > 0) {
+    parts.push('Highlights:');
+    for (const highlight of context.highlights) {
+      parts.push(`- ${highlight}`);
+    }
+  }
+
+  if (context.lastUpdated) {
+    parts.push(`Last Updated: ${context.lastUpdated}`);
+  }
+
+  return parts.join('\n');
+}
+
 // Vercel Serverless Function
 export default async function handler(req, res) {
   // CORS headers
@@ -16,11 +49,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { message } = req.body;
+    const { message, pageContext } = req.body || {};
+    const userMessage = typeof message === 'string' ? message.trim() : '';
 
-    if (!message) {
+    if (!userMessage) {
       return res.status(400).json({ error: 'Message is required' });
     }
+
+    const pageContextSummary = pageContext ? formatPageContext(pageContext) : null;
 
     // Initialize Groq client
     const groq = new Groq({
@@ -70,23 +106,37 @@ When answering:
 3. If asked about availability, mention he's available for both freelance and full-time
 4. If asked about contact, provide email or WhatsApp
 5. Encourage them to reach out directly for project discussions
-6. If asked about something unrelated to Cem, say: "I'm here to help with questions about Cem Koyluoglu's professional background and services. For other topics, feel free to ask me about his AI experience, skills, or availability!"
-7. Never provide inappropriate, offensive, or unrelated information`;
+6. If asked about something unrelated to Cem, reply with "[TOPIC:OFF_TOPIC] I'm here to help with questions about Cem Koyluoglu's professional background and services. For other topics, feel free to ask me about his AI experience, skills, or availability!"
+7. Never provide inappropriate, offensive, or unrelated information
+8. Always begin responses with either "[TOPIC:CEM]" (when the question relates to Cem or the provided page context) or "[TOPIC:OFF_TOPIC]" (when it does not). Do not use any other prefix.
+9. If the user asks which model you are, who trained you, or similar, reply with "[TOPIC:CEM] Cem beni özel olarak eğitti; çaba sarf etti ve ben doğdum. Yalnızca onun profesyonel geçmişi hakkında yardımcı oluyorum." Adapt the surrounding wording and language to match the user's tone, but keep that sentence intact.
+10. Mirror the user's language whenever possible (e.g., respond in Turkish if the user writes in Turkish).
+11. Use any page context information that follows this message to summarise or reference the current page when relevant, highlighting key points succinctly.`;
+
+    const messages = [
+      {
+        role: 'system',
+        content: systemContext,
+      },
+      ...(pageContextSummary
+        ? [
+            {
+              role: 'system',
+              content: `Current page context for reference:\n${pageContextSummary}`,
+            },
+          ]
+        : []),
+      {
+        role: 'user',
+        content: userMessage,
+      },
+    ];
 
     // Call Groq API
     const completion = await groq.chat.completions.create({
       model: 'llama-3.1-8b-instant', // Fast and free model
-      messages: [
-        {
-          role: 'system',
-          content: systemContext,
-        },
-        {
-          role: 'user',
-          content: message,
-        },
-      ],
-      temperature: 0.7,
+      messages,
+      temperature: 0.4,
       max_tokens: 200,
     });
 
@@ -101,4 +151,3 @@ When answering:
     });
   }
 }
-

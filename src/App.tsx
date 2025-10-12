@@ -10,6 +10,7 @@ import { Button } from './components/ui/button';
 import { Toaster } from './components/ui/sonner';
 import { useScrollTop } from './lib/hooks/useScrollTop';
 import { useSmoothScroll } from './lib/hooks/useSmoothScroll';
+import { PageContextProvider } from './lib/context/PageContext';
 import { HomePage } from './pages/HomePage';
 import { TechNews } from './components/TechNews';
 import { TechNewsDetail } from './components/TechNewsDetail';
@@ -36,49 +37,51 @@ export default function App() {
 
   return (
     <Router>
-      <ScrollToTopOnRouteChange />
-      <div className="min-h-screen bg-background text-foreground antialiased overflow-x-hidden">
-        {/* SEO Meta Tags */}
-        <SEO />
+      <PageContextProvider>
+        <ScrollToTopOnRouteChange />
+        <div className="min-h-screen bg-background text-foreground antialiased overflow-x-hidden">
+          {/* SEO Meta Tags */}
+          <SEO />
 
-        {/* Navigation */}
-        <Navbar />
+          {/* Navigation */}
+          <Navbar />
 
-        {/* Main Content with Routes */}
-        <main>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/tech-news" element={<TechNews />} />
-            <Route path="/tech-news/:slug" element={<TechNewsDetail />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/privacy-policy" element={<PrivacyPage />} />
-          </Routes>
-        </main>
+          {/* Main Content with Routes */}
+          <main>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/tech-news" element={<TechNews />} />
+              <Route path="/tech-news/:slug" element={<TechNewsDetail />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy-policy" element={<PrivacyPage />} />
+            </Routes>
+          </main>
 
-        {/* Footer */}
-        <Footer />
+          {/* Footer */}
+          <Footer />
 
-        {/* Scroll to Top Button */}
-        {showScrollTop && (
-          <Button
-            onClick={scrollToTop}
-            size="icon"
-            className="fixed bottom-4 right-20 sm:bottom-8 sm:right-8 z-50 w-12 h-12 rounded-full bg-primary hover:bg-primary/90 text-black shadow-lg shadow-primary/20 transition-all duration-300 hover:scale-110"
-            aria-label="Scroll to top"
-          >
-            <ArrowUp className="w-5 h-5" />
-          </Button>
-        )}
+          {/* Scroll to Top Button */}
+          {showScrollTop && (
+            <Button
+              onClick={scrollToTop}
+              size="icon"
+              className="fixed bottom-4 right-20 sm:bottom-8 sm:right-8 z-50 w-12 h-12 rounded-full bg-primary hover:bg-primary/90 text-black shadow-lg shadow-primary/20 transition-all duration-300 hover:scale-110"
+              aria-label="Scroll to top"
+            >
+              <ArrowUp className="w-5 h-5" />
+            </Button>
+          )}
 
-        {/* Chat Widget */}
-        <ChatWidget />
+          {/* Chat Widget */}
+          <ChatWidget />
 
-        {/* Toast Notifications */}
-        <Toaster />
+          {/* Toast Notifications */}
+          <Toaster />
 
-        {/* Vercel Analytics */}
-        <Analytics />
-      </div>
+          {/* Vercel Analytics */}
+          <Analytics />
+        </div>
+      </PageContextProvider>
     </Router>
   );
 }

@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { toast } from 'sonner';
 import { PERSONAL_INFO } from '../lib/constants/personal';
+import { usePageContext } from '../lib/context/PageContext';
 
 /**
  * Configuration
@@ -13,12 +14,35 @@ const WIDGET_CONFIG = {
   initialMessage: `👋 Hey! I'm Cem's AI assistant. Ask me anything about Cem's experience, skills, availability, or projects!`,
 } as const;
 
+const BLOCK_DURATION_MS = 5 * 60 * 1000;
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
 }
+
+type TopicTag = 'cem' | 'off_topic';
+
+const createMessageId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+const parseAssistantReply = (reply: string): { topic: TopicTag; content: string } => {
+  const topicPattern = /^\s*\[TOPIC:(CEM|OFF_TOPIC)\]\s*/i;
+  const match = reply.match(topicPattern);
+
+  if (!match) {
+    return {
+      topic: 'cem',
+      content: reply.trim(),
+    };
+  }
+
+  const topic = match[1].toUpperCase() === 'OFF_TOPIC' ? 'off_topic' : 'cem';
+  const content = reply.replace(topicPattern, '').trimStart();
+
+  return { topic, content };
+};
 
 /**
  * AI-Powered Chat Widget Component
@@ -37,7 +61,16 @@ export function ChatWidget() {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { pageInfo } = usePageContext();
+  const [offTopicCount, setOffTopicCount] = useState(0);
+  const [awaitingRelevantQuestion, setAwaitingRelevantQuestion] = useState(false);
+  const [blockedUntil, setBlockedUntil] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const now = Date.now();
+  const isChatBlocked = blockedUntil !== null && blockedUntil > now;
+  const remainingBlockMinutes = isChatBlocked
+    ? Math.max(1, Math.ceil((blockedUntil - now) / 60000))
+    : 0;
 
   // Show widget after delay
   useEffect(() => {
@@ -52,17 +85,30 @@ export function ChatWidget() {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!inputMessage.trim() || isLoading) return;
+
+    const trimmedMessage = inputMessage.trim();
+    if (!trimmedMessage || isLoading) return;
+
+    const attemptTimestamp = Date.now();
+    if (blockedUntil && attemptTimestamp >= blockedUntil) {
+      setBlockedUntil(null);
+      setOffTopicCount(0);
+      setAwaitingRelevantQuestion(false);
+    } else if (blockedUntil && attemptTimestamp < blockedUntil) {
+      toast.warning('Sohbet geçici olarak kapalı', {
+        description: '5 dakika sonra tekrar dene veya Cem hakkında soru sor.',
+      });
+      return;
+    }
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: createMessageId(),
       role: 'user',
-      content: inputMessage,
+      content: trimmedMessage,
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInputMessage('');
     setIsLoading(true);
 
@@ -72,7 +118,10 @@ export function ChatWidget() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: inputMessage }),
+        body: JSON.stringify({
+          message: trimmedMessage,
+          pageContext: pageInfo,
+        }),
       });
 
       const data = await response.json();
@@ -81,31 +130,114 @@ export function ChatWidget() {
         throw new Error(data.error || 'Failed to get response');
       }
 
+      const rawReply = typeof data.reply === 'string' ? data.reply : '';
+      const { topic, content } = parseAssistantReply(rawReply);
+
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: createMessageId(),
         role: 'assistant',
-        content: data.reply,
+        content,
         timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      let nextOffTopicCount = offTopicCount;
+      let issueWarning = false;
+      let enforceBlock = false;
+
+      if (topic === 'off_topic') {
+        const potentialCount = offTopicCount + 1;
+        if (awaitingRelevantQuestion) {
+          enforceBlock = true;
+          nextOffTopicCount = 0;
+        } else {
+          nextOffTopicCount = potentialCount;
+          if (potentialCount >= 3) {
+            issueWarning = true;
+          }
+        }
+      } else {
+        nextOffTopicCount = 0;
+      }
+
+      const outgoingMessages: Message[] = [assistantMessage];
+
+      if (issueWarning) {
+        outgoingMessages.push({
+          id: createMessageId(),
+          role: 'assistant',
+          content:
+            "Hey! Ben ChatGPT değilim; Cem Koyluoğlu hakkında soru sor ya da sohbeti kapatmak zorunda kalacağım.",
+          timestamp: new Date(),
+        });
+      }
+
+      if (enforceBlock) {
+        const blockTimestamp = Date.now() + BLOCK_DURATION_MS;
+        setBlockedUntil(blockTimestamp);
+        outgoingMessages.push({
+          id: createMessageId(),
+          role: 'assistant',
+          content:
+            'Sohbet Cem Koyluoğlu dışındaki konular sorulduğu için 5 dakika boyunca kapalı. Lütfen daha sonra tekrar dene.',
+          timestamp: new Date(),
+        });
+        toast.warning('Sohbet geçici olarak kapatıldı', {
+          description: '5 dakika sonra tekrar deneyebilir veya Cem hakkında soru sorabilirsin.',
+        });
+      }
+
+      setMessages((prev) => [...prev, ...outgoingMessages]);
+      setOffTopicCount(nextOffTopicCount);
+
+      if (topic === 'off_topic') {
+        if (issueWarning) {
+          setAwaitingRelevantQuestion(true);
+        } else if (enforceBlock) {
+          setAwaitingRelevantQuestion(false);
+        }
+      } else {
+        if (blockedUntil && Date.now() >= blockedUntil) {
+          setBlockedUntil(null);
+        }
+        setAwaitingRelevantQuestion(false);
+      }
     } catch (error: any) {
       console.error('Chat error:', error);
       toast.error('Failed to send message', {
         description: 'Please try again or contact directly via WhatsApp',
       });
       
-      // Add fallback message
       const fallbackMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: createMessageId(),
         role: 'assistant',
         content: `Sorry, I'm having trouble connecting right now. Please reach out directly:\n📧 ${PERSONAL_INFO.email}\n📱 WhatsApp: +353 87 344 5918`,
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, fallbackMessage]);
+      setMessages((prev) => [...prev, fallbackMessage]);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleToggleChat = () => {
+    const toggleTimestamp = Date.now();
+
+    if (!isOpen) {
+      if (blockedUntil && toggleTimestamp >= blockedUntil) {
+        setBlockedUntil(null);
+        setOffTopicCount(0);
+        setAwaitingRelevantQuestion(false);
+      }
+
+      if (blockedUntil && toggleTimestamp < blockedUntil) {
+        toast.warning('Sohbet geçici olarak kapalı', {
+          description: '5 dakika sonra tekrar deneyebilir veya Cem hakkında soru sorabilirsin.',
+        });
+        return;
+      }
+    }
+
+    setIsOpen((prev) => !prev);
   };
 
   if (!showWidget) return null;
@@ -168,13 +300,18 @@ export function ChatWidget() {
                         <User className="w-4 h-4 text-black" />
                       )}
                     </div>
-                    <div className="flex-1 min-w-0 max-w-[85%]">
+                    <div className="flex-1 min-w-0 max-w-full sm:max-w-[85%]">
                       <div className={`rounded-xl sm:rounded-2xl p-2.5 sm:p-3 ${
                         msg.role === 'assistant' 
                           ? 'bg-primary/10 border border-primary/20 rounded-tl-sm' 
                           : 'bg-accent/10 border border-accent/20 rounded-tr-sm'
                       }`}>
-                        <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-line break-words">{msg.content}</p>
+                        <p
+                          className="text-xs sm:text-sm leading-relaxed whitespace-pre-line break-words"
+                          style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                        >
+                          {msg.content}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -205,7 +342,7 @@ export function ChatWidget() {
               <form onSubmit={sendMessage} className="border-t border-white/10 p-2 sm:p-4 bg-background/50">
                 <div className="flex gap-1.5 sm:gap-2 items-end">
                   <Textarea
-                    placeholder="Ask me about Cem..."
+                    placeholder={isChatBlocked ? 'Sohbet geçici olarak kapalı' : 'Ask me about Cem...'}
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     onKeyDown={(e) => {
@@ -214,7 +351,7 @@ export function ChatWidget() {
                         sendMessage(e);
                       }
                     }}
-                    disabled={isLoading}
+                    disabled={isLoading || isChatBlocked}
                     rows={2}
                     className="flex-1 bg-input-background border-primary/20 focus:border-primary/40 rounded-xl resize-none text-base leading-relaxed py-2 px-3"
                     style={{ fontSize: '16px' }}
@@ -222,13 +359,18 @@ export function ChatWidget() {
                   <Button
                     type="submit"
                     size="icon"
-                    disabled={isLoading || !inputMessage.trim()}
+                    disabled={isLoading || isChatBlocked || !inputMessage.trim()}
                     className="bg-primary hover:bg-primary/90 text-black rounded-xl h-[42px] w-[42px] sm:h-11 sm:w-11 flex-shrink-0"
                     aria-label="Send message"
                   >
                     <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                   </Button>
                 </div>
+                {isChatBlocked && (
+                  <p className="text-xs text-destructive text-center mt-2 leading-relaxed">
+                    Sohbet {remainingBlockMinutes} dakika sonra yeniden açılacak. Cem hakkında sorularını bekliyorum.
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground text-center mt-2 leading-relaxed">
                   <span className="text-primary">🛠️ Hand made</span> by Cem Koyluoglu
                 </p>
@@ -241,10 +383,16 @@ export function ChatWidget() {
       {/* Floating Button */}
       <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-24 z-50">
         <Button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={handleToggleChat}
           size="icon"
           className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-primary via-secondary to-accent hover:scale-110 transition-all duration-300 shadow-lg shadow-primary/20 group"
-          aria-label={isOpen ? 'Close chat' : 'Open chat'}
+          aria-label={
+            isChatBlocked
+              ? 'Assistant temporarily disabled'
+              : isOpen
+                ? 'Close chat'
+                : 'Open chat'
+          }
         >
           {/* Pulse ring */}
           <div className="absolute inset-0 rounded-full bg-primary/20 sm:bg-primary/30 animate-ping" />

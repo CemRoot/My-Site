@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Skeleton } from './ui/skeleton';
 import { Button } from './ui/button';
 import { NewsletterSignup } from './NewsletterSignup';
+import { usePageContext } from '../lib/context/PageContext';
 
 interface Article {
   id: string;
@@ -39,6 +40,7 @@ export function TechNews() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const { setPageInfo } = usePageContext();
   
   const ARTICLES_PER_PAGE = 20;
 
@@ -182,6 +184,30 @@ export function TechNews() {
     
     return pages;
   };
+
+  useEffect(() => {
+    const total = Math.max(1, totalPages || 1);
+    const articles = newsData?.articles ?? [];
+    const highlights = articles.slice(0, 3).map((article) => {
+      const formattedDate = formatDate(article.date);
+      return `${article.title} — ${formattedDate}`;
+    });
+
+    const categoryLabel =
+      selectedCategory !== 'all'
+        ? `Currently filtered by ${selectedCategory}.`
+        : 'Showing all categories.';
+
+    setPageInfo({
+      path: '/tech-news',
+      title: 'Tech Insights - Latest News',
+      summary: `Translated Turkish technology news curated by Cem Koyluoglu. Displaying page ${currentPage} of ${total}. ${categoryLabel}`,
+      highlights,
+      lastUpdated: newsData?.lastUpdated || undefined,
+    });
+  }, [setPageInfo, newsData, selectedCategory, currentPage, totalPages]);
+
+  useEffect(() => () => setPageInfo(null), [setPageInfo]);
 
   return (
     <main

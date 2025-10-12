@@ -7,6 +7,7 @@ import { Skeleton } from './ui/skeleton';
 import { Separator } from './ui/separator';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
+import { usePageContext } from '../lib/context/PageContext';
 
 interface Article {
   id: string;
@@ -69,6 +70,7 @@ export function TechNewsDetail() {
   const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { setPageInfo } = usePageContext();
 
   useEffect(() => {
     fetchArticle();
@@ -184,6 +186,43 @@ export function TechNewsDetail() {
       return 'Original Source';
     }
   };
+
+  useEffect(() => {
+    setPageInfo({
+      path: `/tech-news/${slug ?? ''}`,
+      title: 'Tech News Article',
+      summary:
+        'Detailed view of a translated technology article with publish date, original source, and related reading suggestions.',
+    });
+  }, [setPageInfo, slug]);
+
+  useEffect(() => {
+    if (!article) {
+      return;
+    }
+
+    const preview =
+      article.description ||
+      sanitizeArticleContent(article.content || '')
+        .split('\n')
+        .filter(Boolean)
+        .slice(0, 2)
+        .join(' ');
+
+    setPageInfo({
+      path: `/tech-news/${article.slug}`,
+      title: article.title,
+      summary: preview || 'Full article content from the selected tech news story.',
+      highlights: [
+        `Category: ${article.category || 'General'}`,
+        `Published: ${formatDate(article.date)}`,
+        `Source: ${getSourceDomain(article.sourceUrl)}`,
+      ],
+      lastUpdated: article.createdAt,
+    });
+  }, [article, setPageInfo]);
+
+  useEffect(() => () => setPageInfo(null), [setPageInfo]);
 
   if (loading) {
     return (

@@ -1,12 +1,33 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Scale } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { usePageContext } from '../lib/context/PageContext';
 
 /**
  * Terms & Conditions Page
  * GDPR-compliant terms for Ireland-based business
  */
 export function TermsPage() {
+  const { setPageInfo } = usePageContext();
+
+  useEffect(() => {
+    setPageInfo({
+      path: '/terms',
+      title: 'Terms & Conditions',
+      summary:
+        'Detailed terms and conditions for Cem Koyluoglu’s portfolio site, covering services, newsletter, communications, IP, and legal compliance.',
+      highlights: [
+        'Overview of professional services and newsletter expectations',
+        'Guidelines for contact forms and communication response times',
+        'Intellectual property, liability limitations, external links, and Irish jurisdiction',
+      ],
+      lastUpdated: 'October 12, 2025',
+    });
+
+    return () => setPageInfo(null);
+  }, [setPageInfo]);
+
   return (
     <main
       className="min-h-screen bg-gradient-to-b from-background to-muted/20 px-4 pb-24"
