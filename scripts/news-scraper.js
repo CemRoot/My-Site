@@ -114,26 +114,24 @@ function isRecent(dateString) {
 }
 
 /**
- * Check if article already exists in Supabase by source URL
+ * Check which articles already exist in Supabase (bulk check)
  */
-async function articleExists(sourceUrl) {
+async function getExistingArticles(urls) {
   try {
     const { data, error } = await supabase
       .from('tech_news_articles')
-      .select('id')
-      .eq('source_url', sourceUrl)
-      .single();
+      .select('source_url')
+      .in('source_url', urls);
     
-    if (error && error.code !== 'PGRST116') {
-      // PGRST116 = no rows returned (expected for new articles)
-      console.error('Error checking article existence:', error);
-      return false;
+    if (error) {
+      console.error('Error checking existing articles:', error);
+      return new Set();
     }
     
-    return !!data;
+    return new Set(data.map(article => article.source_url));
   } catch (error) {
-    console.error('Error checking article:', error);
-    return false;
+    console.error('Error in bulk check:', error);
+    return new Set();
   }
 }
 
@@ -509,27 +507,36 @@ async function scrapeNews() {
     return;
   }
   
-  console.log(`📝 Processing ${articlesWithCategories.length} articles...\n`);
+  console.log(`📝 Found ${articlesWithCategories.length} articles total...\n`);
+  
+  // Bulk check: Get all existing articles from Supabase
+  const allUrls = articlesWithCategories.map(article => article.url);
+  console.log(`🔍 Checking which articles already exist in database...`);
+  const existingUrls = await getExistingArticles(allUrls);
+  
+  // Filter to only new articles
+  const newArticles = articlesWithCategories.filter(article => !existingUrls.has(article.url));
+  const duplicateCount = articlesWithCategories.length - newArticles.length;
+  
+  console.log(`✅ Found ${newArticles.length} new articles to process`);
+  console.log(`⏭️  Skipping ${duplicateCount} existing articles\n`);
+  
+  if (newArticles.length === 0) {
+    console.log('ℹ️  All articles already exist in database. Nothing to process.');
+    return;
+  }
   
   let newArticlesCount = 0;
-  let skippedCount = 0;
+  let failedCount = 0;
   
-  for (const { url, category } of articlesWithCategories) {
-    // Check if article already exists by source URL
-    const exists = await articleExists(url);
-    
-    if (exists) {
-      console.log(`⏭️  [${category}] Article already exists, skipping\n`);
-      skippedCount++;
-      continue;
-    }
-    
+  for (const { url, category } of newArticles) {
     console.log(`📰 [${category}] Processing: ${url}`);
     
     // Scrape article details
     const article = await scrapeArticleDetails(url);
     
     if (!article) {
+      failedCount++;
       continue;
     }
     
@@ -550,6 +557,7 @@ async function scrapeNews() {
       newArticlesCount++;
       console.log(`✅ [${category}] Article added successfully to Supabase!\n`);
     } else {
+      failedCount++;
       console.log(`❌ [${category}] Failed to save article\n`);
     }
     
@@ -563,7 +571,8 @@ async function scrapeNews() {
   console.log('='.repeat(60));
   console.log(`🎉 Multi-Category Scraping Completed!`);
   console.log(`📊 New articles added: ${newArticlesCount}`);
-  console.log(`⏭️  Skipped (duplicates): ${skippedCount}`);
+  console.log(`⏭️  Skipped (duplicates): ${duplicateCount}`);
+  console.log(`❌ Failed to process: ${failedCount}`);
   console.log(`📊 Total articles in database: ${finalCount}`);
   console.log(`⏰ Last updated: ${new Date().toISOString()}`);
   console.log(`💾 Storage: Supabase PostgreSQL`);
