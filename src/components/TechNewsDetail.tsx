@@ -47,9 +47,9 @@ function sanitizeArticleContent(content: string) {
   // 1. Remove ANY remaining markdown images (backend should already clean these)
   sanitized = sanitized.replace(/!\[[^\]]*\]\([^)]+\)/g, '');
 
-  // 2. Remove Twitter/Social media widget text remnants
-  sanitized = sanitized.replace(/Twitter Widget Iframe/gi, '');
-  sanitized = sanitized.replace(/YouTube Widget/gi, '');
+  // 2. PRESERVE Social Media Widgets (don't remove them, they should display)
+  // Backend already handles widget preservation during translation
+  // We only remove widget text remnants if they appear without proper HTML
 
   // 3. Remove Nuvemmag logo and branding
   sanitized = sanitized.replace(
@@ -364,30 +364,32 @@ export function TechNewsDetail() {
 
           {/* Article Content */}
           <div className="prose prose-lg dark:prose-invert max-w-none">
-            <ReactMarkdown
-              components={{
-                // Custom styling for markdown elements
-                h1: ({ children }) => <h2 className="text-3xl font-bold mt-8 mb-4">{children}</h2>,
-                h2: ({ children }) => <h3 className="text-2xl font-bold mt-6 mb-3">{children}</h3>,
-                h3: ({ children }) => <h4 className="text-xl font-bold mt-4 mb-2">{children}</h4>,
-                p: ({ children }) => <p className="text-lg leading-relaxed mb-4">{children}</p>,
-                a: ({ href, children }) => (
-                  <a href={href} className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
-                    {children}
-                  </a>
-                ),
-                ul: ({ children }) => <ul className="list-disc list-inside space-y-2 mb-4">{children}</ul>,
-                ol: ({ children }) => <ol className="list-decimal list-inside space-y-2 mb-4">{children}</ol>,
-                blockquote: ({ children }) => (
-                  <blockquote className="border-l-4 border-primary pl-4 italic my-4">{children}</blockquote>
-                ),
-                code: ({ children }) => (
-                  <code className="bg-muted px-2 py-1 rounded text-sm">{children}</code>
-                ),
+            <div 
+              className="article-content"
+              dangerouslySetInnerHTML={{
+                __html: sanitizedContent
+                  // Convert markdown headers to HTML
+                  .replace(/^### (.*$)/gim, '<h4 class="text-xl font-bold mt-4 mb-2">$1</h4>')
+                  .replace(/^## (.*$)/gim, '<h3 class="text-2xl font-bold mt-6 mb-3">$1</h3>')
+                  .replace(/^# (.*$)/gim, '<h2 class="text-3xl font-bold mt-8 mb-4">$1</h2>')
+                  // Convert markdown links
+                  .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary hover:underline" target="_blank" rel="noopener noreferrer">$1</a>')
+                  // Convert markdown bold
+                  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                  .replace(/__(.*?)__/g, '<strong>$1</strong>')
+                  // Convert markdown italic
+                  .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                  .replace(/_(.*?)_/g, '<em>$1</em>')
+                  // Convert line breaks
+                  .replace(/\n\n/g, '</p><p class="text-lg leading-relaxed mb-4">')
+                  .replace(/^(.+)$/gm, '<p class="text-lg leading-relaxed mb-4">$1</p>')
+                  // Handle Twitter Widget placeholders
+                  .replace(/Twitter Widget Iframe/gi, '<div class="my-6 p-4 border border-gray-200 rounded-lg bg-gray-50 text-center text-gray-600"><p>🐦 Twitter Widget</p><p class="text-sm">Social media content will be displayed here</p></div>')
+                  // Clean up extra p tags
+                  .replace(/<p[^>]*><\/p>/g, '')
+                  .replace(/(<\/p>)(\s*)(<p[^>]*>)/g, '$1$2$3')
               }}
-            >
-              {sanitizedContent}
-            </ReactMarkdown>
+            />
           </div>
 
           {/* Original Article Source (if available) */}

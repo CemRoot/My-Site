@@ -62,7 +62,7 @@ const CONFIG = {
   SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
   SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   MAX_ARTICLES_PER_CATEGORY: 20,
-  TRANSLATION_DELAY: 300, // ms between translation requests
+  TRANSLATION_DELAY: 1000, // ms between translation requests (increased to avoid rate limits)
   RATE_LIMIT_DELAY: 7000, // 7 seconds between requests (Firecrawl free: 10 req/min)
   MAX_ARTICLES_PER_RUN: 50, // Safety limit per scraping run
 };
@@ -73,8 +73,9 @@ const groq = new Groq({
 });
 
 // Groq translation models
-const GROQ_PRIMARY_MODEL = 'groq/compound'; // Higher throughput, unlimited tokens/day
-const GROQ_FALLBACK_MODEL = 'llama-3.3-70b-versatile'; // High quality fallback
+const GROQ_PRIMARY_MODEL = 'llama-3.1-70b-versatile'; // More reliable than compound
+const GROQ_FALLBACK_MODEL = 'llama-3.1-8b-instant'; // Fast and reliable fallback
+const GROQ_LAST_RESORT_MODEL = 'gemma2-9b-it'; // Last resort if others fail
 
 // Initialize Supabase client (using service role for admin access)
 const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
@@ -139,9 +140,6 @@ function isRecent(dateString) {
     today.setHours(0, 0, 0, 0);
     
     const isRecent = articleDate >= threeDaysAgo;
-    
-    // DEBUG: Log date comparison
-    console.log(`    📅 Date check: ${dateString} -> ${articleDate.toISOString().split('T')[0]} (today: ${today.toISOString().split('T')[0]}, cutoff: ${threeDaysAgo.toISOString().split('T')[0]}) = ${isRecent ? '✓ RECENT' : '✗ TOO OLD'}`);
     
     return isRecent;
   } catch (error) {
@@ -297,8 +295,8 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
     const markdown = scrapeResult.data.markdown;
     const articles = [];
     
-    // DEBUG: Log markdown sample for troubleshooting
-    console.log(`  📝 Markdown sample (first 500 chars):\n${markdown.substring(0, 500)}\n`);
+    // DEBUG: Log markdown sample for troubleshooting (commented out to reduce log noise)
+    // console.log(`  📝 Markdown sample (first 500 chars):\n${markdown.substring(0, 500)}\n`);
     
     // Extract article lines with date and URL
     // Format from Firecrawl: [Category\\\n\\\nDate\\\n\\\n**Title**](URL)
@@ -329,8 +327,6 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
         
         if (!tempArticles.some(a => a.url === url)) {
           const isDateRecent = isRecent(date);
-          console.log(`  🔎 Pattern ${i + 1} found: ${date} (recent: ${isDateRecent}) - ${url.split('/').pop()}`);
-          
           if (isDateRecent) {
             const priority = getDatePriority(date);
             tempArticles.push({ 
@@ -339,9 +335,6 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
               scrapedDate: date,
               datePriority: priority
             });
-            console.log(`    🎯 Priority: ${priority} (${priority >= 100 ? 'TODAY' : priority >= 90 ? 'YESTERDAY' : 'OLDER'})`);
-          } else {
-            console.log(`  ⏭️  Skipping (too old): ${date}`);
           }
         }
       }
@@ -350,13 +343,7 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
         // Sort by date priority (newest first: Today=100, Yesterday=90, etc.)
         tempArticles.sort((a, b) => b.datePriority - a.datePriority);
         
-        console.log(`  🔄 Sorted ${tempArticles.length} articles by priority:`);
-        tempArticles.forEach((article, idx) => {
-          const priorityLabel = article.datePriority >= 100 ? '🔥 TODAY' : 
-                               article.datePriority >= 90 ? '🌟 YESTERDAY' : 
-                               '📰 OLDER';
-          console.log(`    ${idx + 1}. ${priorityLabel} ${article.scrapedDate} - ${article.url.split('/').pop()?.substring(0, 50)}...`);
-        });
+        console.log(`  📊 Found ${tempArticles.length} articles, sorted by date priority`);
         
         articles.push(...tempArticles);
         patternUsed = i;
@@ -387,13 +374,10 @@ async function scrapeAllCategories() {
     const limitedArticles = articles.slice(0, CONFIG.MAX_ARTICLES_PER_CATEGORY);
     
     if (limitedArticles.length > 0) {
-      console.log(`  📊 Taking top ${limitedArticles.length} articles from ${category.tag} (priority order):`);
-      limitedArticles.forEach((article, idx) => {
-        const priorityLabel = article.datePriority >= 100 ? '🔥 TODAY' : 
-                             article.datePriority >= 90 ? '🌟 YESTERDAY' : 
-                             '📰 OLDER';
-        console.log(`    ${idx + 1}. ${priorityLabel} ${article.scrapedDate}`);
-      });
+      const todayCount = limitedArticles.filter(a => a.datePriority >= 100).length;
+      const yesterdayCount = limitedArticles.filter(a => a.datePriority >= 90 && a.datePriority < 100).length;
+      const olderCount = limitedArticles.filter(a => a.datePriority < 90).length;
+      console.log(`  📊 Selected ${limitedArticles.length} articles: ${todayCount} today, ${yesterdayCount} yesterday, ${olderCount} older`);
     }
     
     allArticles.push(...limitedArticles);
@@ -414,26 +398,9 @@ async function scrapeAllCategories() {
   const yesterdayArticles = allArticles.filter(a => a.datePriority >= 90 && a.datePriority < 100);
   const olderArticles = allArticles.filter(a => a.datePriority < 90);
   
-  if (todayArticles.length > 0) {
-    console.log(`  🔥 TODAY (${todayArticles.length} articles):`);
-    todayArticles.forEach((article, idx) => {
-      console.log(`    ${idx + 1}. [${article.category}] ${article.scrapedDate} - ${article.url.split('/').pop()?.substring(0, 60)}...`);
-    });
-  }
-  
-  if (yesterdayArticles.length > 0) {
-    console.log(`  🌟 YESTERDAY (${yesterdayArticles.length} articles):`);
-    yesterdayArticles.forEach((article, idx) => {
-      console.log(`    ${idx + 1}. [${article.category}] ${article.scrapedDate} - ${article.url.split('/').pop()?.substring(0, 60)}...`);
-    });
-  }
-  
-  if (olderArticles.length > 0) {
-    console.log(`  📰 OLDER (${olderArticles.length} articles):`);
-    olderArticles.forEach((article, idx) => {
-      console.log(`    ${idx + 1}. [${article.category}] ${article.scrapedDate} - ${article.url.split('/').pop()?.substring(0, 60)}...`);
-    });
-  }
+  console.log(`  🔥 TODAY: ${todayArticles.length} articles`);
+  console.log(`  🌟 YESTERDAY: ${yesterdayArticles.length} articles`);
+  console.log(`  📰 OLDER: ${olderArticles.length} articles`);
   
   console.log(`\n`);
   return allArticles;
@@ -515,15 +482,8 @@ async function scrapeArticleDetails(url) {
     content = content
       .replace(/!\[[^\]]*\]\([^)]+\)/g, ''); // Markdown format: ![alt](url)
     
-    // 2. Remove Twitter/Social Media Widgets and Embeds
-    // These don't translate well and shouldn't be sent to AI
-    content = content
-      .replace(/Twitter Widget Iframe/gi, '') // Twitter widget placeholder text
-      .replace(/YouTube Widget/gi, '') // YouTube widget placeholder
-      .replace(/<iframe[^>]*>.*?<\/iframe>/gis, '') // Any iframe embeds
-      .replace(/<blockquote[^>]*class="twitter-tweet"[^>]*>.*?<\/blockquote>/gis, '') // Twitter embeds
-      .replace(/https?:\/\/(?:www\.)?twitter\.com\/[^\s\)]+/gi, '') // Twitter URLs
-      .replace(/https?:\/\/(?:www\.)?x\.com\/[^\s\)]+/gi, ''); // X.com URLs
+    // 2. PRESERVE Social Media Widgets (don't remove, they'll be handled during translation)
+    // We'll temporarily replace them with placeholders during translation only
     
     // 3. Remove Nuvemmag logo and branding anchors
     content = content
@@ -585,6 +545,87 @@ async function scrapeArticleDetails(url) {
 }
 
 /**
+ * Widget Preservation System
+ * Temporarily replaces widgets with placeholders during translation
+ */
+function preserveWidgets(content) {
+  const widgets = [];
+  let processedContent = content;
+  
+  // 1. Preserve Twitter Widget Iframes
+  processedContent = processedContent.replace(/Twitter Widget Iframe/gi, (match) => {
+    const placeholder = `__WIDGET_${widgets.length}__`;
+    widgets.push({
+      type: 'twitter_iframe',
+      content: match,
+      placeholder
+    });
+    return placeholder;
+  });
+  
+  // 2. Preserve HTML iframe embeds (Twitter, YouTube, etc.)
+  processedContent = processedContent.replace(/<iframe[^>]*>.*?<\/iframe>/gis, (match) => {
+    const placeholder = `__WIDGET_${widgets.length}__`;
+    widgets.push({
+      type: 'iframe_embed',
+      content: match,
+      placeholder
+    });
+    return placeholder;
+  });
+  
+  // 3. Preserve Twitter blockquote embeds
+  processedContent = processedContent.replace(/<blockquote[^>]*class="twitter-tweet"[^>]*>.*?<\/blockquote>/gis, (match) => {
+    const placeholder = `__WIDGET_${widgets.length}__`;
+    widgets.push({
+      type: 'twitter_blockquote',
+      content: match,
+      placeholder
+    });
+    return placeholder;
+  });
+  
+  // 4. Preserve other widget types
+  const widgetPatterns = [
+    /YouTube Widget/gi,
+    /Instagram Widget/gi,
+    /Social Media Widget/gi,
+    /Widget Iframe/gi
+  ];
+  
+  widgetPatterns.forEach(pattern => {
+    processedContent = processedContent.replace(pattern, (match) => {
+      const placeholder = `__WIDGET_${widgets.length}__`;
+      widgets.push({
+        type: 'generic_widget',
+        content: match,
+        placeholder
+      });
+      return placeholder;
+    });
+  });
+  
+  return { content: processedContent, widgets };
+}
+
+/**
+ * Restore preserved widgets back to content
+ */
+function restoreWidgets(translatedContent, widgets) {
+  let restoredContent = translatedContent;
+  
+  // Restore each widget from its placeholder
+  widgets.forEach(widget => {
+    restoredContent = restoredContent.replace(
+      new RegExp(widget.placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+      widget.content
+    );
+  });
+  
+  return restoredContent;
+}
+
+/**
  * Translate text using Groq AI (Unlimited, High Quality)
  * Handles texts of any length - no chunking needed!
  */
@@ -623,20 +664,57 @@ async function translateText(text) {
     return text;
   }
 
-  try {
-    // Try primary model first
+  // Step 1: Preserve widgets by replacing them with placeholders
+  const { content: cleanContent, widgets } = preserveWidgets(text);
+  
+  // Step 2: Translate the clean content (without widgets)
+  const models = [GROQ_PRIMARY_MODEL, GROQ_FALLBACK_MODEL, GROQ_LAST_RESORT_MODEL];
+  let translatedContent = null;
+  
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i];
     try {
-      return await translateWithModel(GROQ_PRIMARY_MODEL, text);
-    } catch (primaryError) {
-      const msg = String(primaryError?.message || primaryError);
-      console.warn(`⚠️ Primary model failed (${GROQ_PRIMARY_MODEL}): ${msg}`);
-      // Fallback to 70B model on any error or rate limit
-      return await translateWithModel(GROQ_FALLBACK_MODEL, text);
+      const result = await translateWithModel(model, cleanContent);
+      
+      // Quality check: Make sure translation is not garbage
+      if (result && result.trim().length > 0 && !result.includes('**Translation**') && !result.includes('**Reasoning')) {
+        translatedContent = result;
+        break; // Success, exit loop
+      } else {
+        throw new Error(`Translation quality check failed - got garbage output`);
+      }
+    } catch (error) {
+      const msg = String(error?.message || error);
+      const isRateLimit = msg.includes('429') || msg.includes('rate_limit') || msg.includes('Rate limit');
+      
+      console.warn(`⚠️ Model ${model} failed: ${msg}`);
+      
+      // If it's a rate limit error, wait longer
+      if (isRateLimit && i < models.length - 1) {
+        console.log(`⏳ Rate limit detected, waiting 3 seconds before trying next model...`);
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+      
+      // If this is the last model, throw error
+      if (i === models.length - 1) {
+        throw new Error(`All translation models failed. Last error: ${msg}`);
+      }
     }
-  } catch (error) {
-    console.error(`❌ Groq translation error: ${error.message}`);
-    return text; // Fallback to original
   }
+  
+  if (!translatedContent) {
+    throw new Error('All translation models failed');
+  }
+  
+  // Step 3: Restore widgets back to the translated content
+  const finalContent = restoreWidgets(translatedContent, widgets);
+  
+  // Log widget preservation stats
+  if (widgets.length > 0) {
+    console.log(`    🔧 Preserved ${widgets.length} widgets during translation`);
+  }
+  
+  return finalContent;
 }
 
 /**
@@ -733,25 +811,39 @@ async function scrapeNews() {
       continue;
     }
     
-    // Translate article
-    const translatedArticle = await translateArticle(article);
-    
-    // Prepare article data
-    const articleData = {
-      ...translatedArticle,
-      category, // Add category tag
-      slug: generateSlug(translatedArticle.title), // Generate English slug from translated title
-    };
-    
-    // Save to Supabase
-    const result = await saveArticle(articleData);
-    
-    if (result.success) {
-      newArticlesCount++;
-      console.log(`✅ [${category}] Article added successfully to Supabase!\n`);
-    } else {
+    try {
+      // Translate article
+      const translatedArticle = await translateArticle(article);
+      
+      // Quality check: Make sure translation actually happened
+      if (!translatedArticle || translatedArticle.title === article.title || 
+          translatedArticle.title.includes('**Translation**') ||
+          translatedArticle.content.includes('**Translation**')) {
+        throw new Error('Translation failed or returned original/garbage text');
+      }
+      
+      // Prepare article data
+      const articleData = {
+        ...translatedArticle,
+        category, // Add category tag
+        slug: generateSlug(translatedArticle.title), // Generate English slug from translated title
+      };
+      
+      // Save to Supabase
+      const result = await saveArticle(articleData);
+      
+      if (result.success) {
+        newArticlesCount++;
+        console.log(`✅ [${category}] Article added successfully to Supabase!\n`);
+      } else {
+        failedCount++;
+        console.log(`❌ [${category}] Failed to save article to database\n`);
+      }
+    } catch (translationError) {
       failedCount++;
-      console.log(`❌ [${category}] Failed to save article\n`);
+      console.log(`❌ [${category}] Translation failed: ${translationError.message}`);
+      console.log(`❌ [${category}] Skipping article to avoid saving bad translation\n`);
+      continue; // Skip this article, don't save to DB
     }
     
     // Rate limiting between articles (Firecrawl free: 10 req/min)
