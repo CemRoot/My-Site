@@ -20,6 +20,30 @@ import { createClient } from '@supabase/supabase-js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+
+// Returns true if the line contains a URL whose hostname is nuvemmag.com (or a subdomain)
+function hasNuvemmagDomain(line) {
+  const urlRegex = /(https?:\/\/[^\s)>]+)/ig;
+  let match;
+  while ((match = urlRegex.exec(line)) !== null) {
+    try {
+      const urlObj = new URL(match[1]);
+      // Accept nuvemmag.com and any subdomain, but not similar-looking domains
+      // e.g., nuvemmag.com, www.nuvemmag.com, blog.nuvemmag.com
+      const hostname = urlObj.hostname.toLowerCase();
+      if (
+        hostname === "nuvemmag.com" ||
+        hostname.endsWith(".nuvemmag.com")
+      ) {
+        return true;
+      }
+    } catch (e) {
+      // Ignore invalid URL
+    }
+  }
+  return false;
+}
+
 // Configuration
 const CONFIG = {
   // All categories to scrape (excluding "Çiçek ile Teknoloji")
@@ -349,7 +373,7 @@ async function scrapeArticleDetails(url) {
                !line.includes('Kategoriler') &&
                !line.includes('Kurumsal') &&
                !line.includes('İlginizi Çekebilir') &&
-               !line.includes('nuvemmag.com') &&
+               !hasNuvemmagDomain(line) &&
                !line.includes('NuvemMag-Logo') &&
                !line.includes('cdn.prod.website-files.com/664e54b1b2f127a2d94fd963');
       })
