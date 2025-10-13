@@ -39,26 +39,41 @@ function sanitizeArticleContent(content: string) {
 
   let sanitized = content;
 
-  // Remove markdown image links pointing to the root Nuvemmag domain
+  // ============================================
+  // FRONTEND CONTENT SANITIZATION
+  // Additional safety layer for content cleaning
+  // ============================================
+  
+  // 1. Remove ANY remaining markdown images (backend should already clean these)
+  sanitized = sanitized.replace(/!\[[^\]]*\]\([^)]+\)/g, '');
+
+  // 2. Remove Twitter/Social media widget text remnants
+  sanitized = sanitized.replace(/Twitter Widget Iframe/gi, '');
+  sanitized = sanitized.replace(/YouTube Widget/gi, '');
+
+  // 3. Remove Nuvemmag logo and branding
   sanitized = sanitized.replace(
     /\[!\[[^\]]*\]\([^)]+\)\]\(\s*https?:\/\/(?:www\.)?nuvemmag\.com\/?\s*\)/gi,
     '',
   );
-
-  // Remove any residual HTML anchors that wrap the logo image
   sanitized = sanitized.replace(
     /<a[^>]*href="https?:\/\/(?:www\.)?nuvemmag\.com\/?"[^>]*>\s*<img[\s\S]*?<\/a>/gi,
     '',
   );
-
-  // Remove standalone logo images that may not be wrapped in anchors
   sanitized = sanitized.replace(
     /!\[[^\]]*\]\([^)]*NuvemMag-Logo[^)]*\)/gi,
     '',
   );
 
-  // Collapse multiple blank lines left behind after removals
+  // 4. Remove social media URLs that might have escaped
+  sanitized = sanitized.replace(/https?:\/\/(?:www\.)?twitter\.com\/[^\s\)]+/gi, '');
+  sanitized = sanitized.replace(/https?:\/\/(?:www\.)?x\.com\/[^\s\)]+/gi, '');
+  sanitized = sanitized.replace(/https?:\/\/(?:www\.)?instagram\.com\/[^\s\)]+/gi, '');
+  sanitized = sanitized.replace(/https?:\/\/(?:www\.)?youtube\.com\/[^\s\)]+/gi, '');
+
+  // 5. Clean up excessive whitespace
   sanitized = sanitized.replace(/(\r?\n){3,}/g, '\n\n');
+  sanitized = sanitized.replace(/[ \t]+$/gm, '');
 
   return sanitized.trim();
 }

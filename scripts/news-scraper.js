@@ -61,7 +61,7 @@ const CONFIG = {
   GROQ_API_KEY: process.env.GROQ_API_KEY || '',
   SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
   SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-  MAX_ARTICLES_PER_CATEGORY: 15,
+  MAX_ARTICLES_PER_CATEGORY: 20,
   TRANSLATION_DELAY: 300, // ms between translation requests
   RATE_LIMIT_DELAY: 7000, // 7 seconds between requests (Firecrawl free: 10 req/min)
   MAX_ARTICLES_PER_RUN: 50, // Safety limit per scraping run
@@ -124,20 +124,53 @@ function isFromToday(dateString) {
 }
 
 /**
- * Check if article is from last 7 days (more lenient for initial scraping)
+ * Check if article is from last 3 days (focus on current news)
  */
 function isRecent(dateString) {
   try {
     const [day, month, year] = dateString.split('/').map(n => parseInt(n, 10));
     const articleDate = new Date(year, month - 1, day);
     
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    weekAgo.setHours(0, 0, 0, 0);
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    threeDaysAgo.setHours(0, 0, 0, 0);
     
-    return articleDate >= weekAgo;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const isRecent = articleDate >= threeDaysAgo;
+    
+    // DEBUG: Log date comparison
+    console.log(`    📅 Date check: ${dateString} -> ${articleDate.toISOString().split('T')[0]} (today: ${today.toISOString().split('T')[0]}, cutoff: ${threeDaysAgo.toISOString().split('T')[0]}) = ${isRecent ? '✓ RECENT' : '✗ TOO OLD'}`);
+    
+    return isRecent;
   } catch (error) {
-    return true;
+    console.log(`    ⚠️ Date parse error for "${dateString}": ${error.message}`);
+    return true; // If error, include the article
+  }
+}
+
+/**
+ * Calculate date priority for sorting (higher = more recent)
+ * Today = 100, Yesterday = 90, 2 days ago = 80, etc.
+ */
+function getDatePriority(dateString) {
+  try {
+    const [day, month, year] = dateString.split('/').map(n => parseInt(n, 10));
+    const articleDate = new Date(year, month - 1, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    articleDate.setHours(0, 0, 0, 0);
+    
+    const diffTime = today.getTime() - articleDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Priority scoring: Today=100, Yesterday=90, 2 days ago=80, etc.
+    const priority = Math.max(0, 100 - (diffDays * 10));
+    
+    return priority;
+  } catch (error) {
+    return 0; // Lowest priority for unparseable dates
   }
 }
 
@@ -264,27 +297,74 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
     const markdown = scrapeResult.data.markdown;
     const articles = [];
     
+    // DEBUG: Log markdown sample for troubleshooting
+    console.log(`  📝 Markdown sample (first 500 chars):\n${markdown.substring(0, 500)}\n`);
+    
     // Extract article lines with date and URL
     // Format from Firecrawl: [Category\\\n\\\nDate\\\n\\\n**Title**](URL)
     // Example: [Yapay Zeka Uygulamaları\\\n\\\n10/10/2025\\\n\\\n**Title**](https://...)
     
-    const pattern = /(\d{1,2}\/\d{1,2}\/\d{4})[^\(]*\((https:\/\/www\.nuvemmag\.com\/post\/[^)]+)\)/g;
+    // Try multiple regex patterns to capture different markdown formats
+    const patterns = [
+      // Original pattern
+      /(\d{1,2}\/\d{1,2}\/\d{4})[^\(]*\((https:\/\/www\.nuvemmag\.com\/post\/[^)]+)\)/g,
+      // Alternative: Date might be on same line without newlines
+      /\[.*?(\d{1,2}\/\d{1,2}\/\d{4}).*?\]\((https:\/\/www\.nuvemmag\.com\/post\/[^)]+)\)/g,
+      // Alternative: Just look for any nuvemmag post link with nearby date
+      /(\d{1,2}\/\d{1,2}\/\d{4})[\s\S]{0,200}?(https:\/\/www\.nuvemmag\.com\/post\/[^\s\)]+)/g,
+    ];
     
-    let match;
+    let totalMatches = 0;
+    let patternUsed = -1;
     
-    while ((match = pattern.exec(markdown)) !== null) {
-      const date = match[1];
-      const url = match[2];
+    for (let i = 0; i < patterns.length; i++) {
+      const pattern = patterns[i];
+      let match;
+      const tempArticles = [];
       
-      if (!articles.some(a => a.url === url)) {
-        if (isRecent(date)) {
-          articles.push({ url, category: categoryTag, scrapedDate: date });
-          console.log(`  📅 ${date}: ${url.split('/').pop()}`);
+      while ((match = pattern.exec(markdown)) !== null) {
+        totalMatches++;
+        const date = match[1];
+        const url = match[2].replace(/[,;.]$/, ''); // Remove trailing punctuation
+        
+        if (!tempArticles.some(a => a.url === url)) {
+          const isDateRecent = isRecent(date);
+          console.log(`  🔎 Pattern ${i + 1} found: ${date} (recent: ${isDateRecent}) - ${url.split('/').pop()}`);
+          
+          if (isDateRecent) {
+            const priority = getDatePriority(date);
+            tempArticles.push({ 
+              url, 
+              category: categoryTag, 
+              scrapedDate: date,
+              datePriority: priority
+            });
+            console.log(`    🎯 Priority: ${priority} (${priority >= 100 ? 'TODAY' : priority >= 90 ? 'YESTERDAY' : 'OLDER'})`);
+          } else {
+            console.log(`  ⏭️  Skipping (too old): ${date}`);
+          }
         }
+      }
+      
+      if (tempArticles.length > 0) {
+        // Sort by date priority (newest first: Today=100, Yesterday=90, etc.)
+        tempArticles.sort((a, b) => b.datePriority - a.datePriority);
+        
+        console.log(`  🔄 Sorted ${tempArticles.length} articles by priority:`);
+        tempArticles.forEach((article, idx) => {
+          const priorityLabel = article.datePriority >= 100 ? '🔥 TODAY' : 
+                               article.datePriority >= 90 ? '🌟 YESTERDAY' : 
+                               '📰 OLDER';
+          console.log(`    ${idx + 1}. ${priorityLabel} ${article.scrapedDate} - ${article.url.split('/').pop()?.substring(0, 50)}...`);
+        });
+        
+        articles.push(...tempArticles);
+        patternUsed = i;
+        break; // Use first pattern that works
       }
     }
 
-    console.log(`✅ Found ${articles.length} recent articles in ${categoryTag}`);
+    console.log(`✅ Found ${articles.length} recent articles in ${categoryTag} (total matches: ${totalMatches}, pattern: ${patternUsed + 1})`);
     return articles;
   } catch (error) {
     console.error(`❌ Failed to scrape ${categoryTag}: ${error.message}`);
@@ -302,15 +382,60 @@ async function scrapeAllCategories() {
   for (const category of CONFIG.CATEGORIES) {
     const articles = await scrapeArticleListFromCategory(category.url, category.tag);
     
-    // Limit articles per category
+    // Articles are already sorted by date priority (newest first)
+    // Now limit articles per category, preserving the priority order
     const limitedArticles = articles.slice(0, CONFIG.MAX_ARTICLES_PER_CATEGORY);
+    
+    if (limitedArticles.length > 0) {
+      console.log(`  📊 Taking top ${limitedArticles.length} articles from ${category.tag} (priority order):`);
+      limitedArticles.forEach((article, idx) => {
+        const priorityLabel = article.datePriority >= 100 ? '🔥 TODAY' : 
+                             article.datePriority >= 90 ? '🌟 YESTERDAY' : 
+                             '📰 OLDER';
+        console.log(`    ${idx + 1}. ${priorityLabel} ${article.scrapedDate}`);
+      });
+    }
+    
     allArticles.push(...limitedArticles);
     
     // Rate limiting between categories (Firecrawl free: 10 req/min)
     await new Promise(resolve => setTimeout(resolve, 10000)); // 10 seconds
   }
   
-  console.log(`\n✅ Total articles found across all categories: ${allArticles.length}\n`);
+  // Sort all articles by date priority across all categories
+  // This ensures we process today's articles first, regardless of category
+  allArticles.sort((a, b) => b.datePriority - a.datePriority);
+  
+  console.log(`\n✅ Total articles found across all categories: ${allArticles.length}`);
+  console.log(`\n🎯 Final Priority Order (Today → Yesterday → Older):`);
+  
+  // Group and display by priority
+  const todayArticles = allArticles.filter(a => a.datePriority >= 100);
+  const yesterdayArticles = allArticles.filter(a => a.datePriority >= 90 && a.datePriority < 100);
+  const olderArticles = allArticles.filter(a => a.datePriority < 90);
+  
+  if (todayArticles.length > 0) {
+    console.log(`  🔥 TODAY (${todayArticles.length} articles):`);
+    todayArticles.forEach((article, idx) => {
+      console.log(`    ${idx + 1}. [${article.category}] ${article.scrapedDate} - ${article.url.split('/').pop()?.substring(0, 60)}...`);
+    });
+  }
+  
+  if (yesterdayArticles.length > 0) {
+    console.log(`  🌟 YESTERDAY (${yesterdayArticles.length} articles):`);
+    yesterdayArticles.forEach((article, idx) => {
+      console.log(`    ${idx + 1}. [${article.category}] ${article.scrapedDate} - ${article.url.split('/').pop()?.substring(0, 60)}...`);
+    });
+  }
+  
+  if (olderArticles.length > 0) {
+    console.log(`  📰 OLDER (${olderArticles.length} articles):`);
+    olderArticles.forEach((article, idx) => {
+      console.log(`    ${idx + 1}. [${article.category}] ${article.scrapedDate} - ${article.url.split('/').pop()?.substring(0, 60)}...`);
+    });
+  }
+  
+  console.log(`\n`);
   return allArticles;
 }
 
@@ -380,12 +505,43 @@ async function scrapeArticleDetails(url) {
       .join('\n')
       .trim();
 
-    // Additional cleanup to remove Nuvemmag logo anchors that may slip through
+    // ============================================
+    // COMPREHENSIVE CONTENT CLEANING ALGORITHM
+    // Removes all images, embeds, and widgets to prevent duplicates
+    // ============================================
+    
+    // 1. Remove ALL markdown images (featured image already stored separately in metadata)
+    // This prevents duplicate images showing in frontend
+    content = content
+      .replace(/!\[[^\]]*\]\([^)]+\)/g, ''); // Markdown format: ![alt](url)
+    
+    // 2. Remove Twitter/Social Media Widgets and Embeds
+    // These don't translate well and shouldn't be sent to AI
+    content = content
+      .replace(/Twitter Widget Iframe/gi, '') // Twitter widget placeholder text
+      .replace(/YouTube Widget/gi, '') // YouTube widget placeholder
+      .replace(/<iframe[^>]*>.*?<\/iframe>/gis, '') // Any iframe embeds
+      .replace(/<blockquote[^>]*class="twitter-tweet"[^>]*>.*?<\/blockquote>/gis, '') // Twitter embeds
+      .replace(/https?:\/\/(?:www\.)?twitter\.com\/[^\s\)]+/gi, '') // Twitter URLs
+      .replace(/https?:\/\/(?:www\.)?x\.com\/[^\s\)]+/gi, ''); // X.com URLs
+    
+    // 3. Remove Nuvemmag logo and branding anchors
     content = content
       .replace(/\[!\[[^\]]*\]\([^)]+\)\]\(\s*https?:\/\/(?:www\.)?nuvemmag\.com\/?\s*\)/gi, '')
       .replace(/<a[^>]*href="https?:\/\/(?:www\.)?nuvemmag\.com\/?"[^>]*>\s*<img[\s\S]*?<\/a>/gi, '')
-      .replace(/!\[[^\]]*\]\([^)]*NuvemMag-Logo[^)]*\)/gi, '')
-      .replace(/(\r?\n){3,}/g, '\n\n')
+      .replace(/!\[[^\]]*\]\([^)]*NuvemMag-Logo[^)]*\)/gi, '');
+    
+    // 4. Remove other embedded content and social media links
+    content = content
+      .replace(/https?:\/\/(?:www\.)?youtube\.com\/[^\s\)]+/gi, '') // YouTube links
+      .replace(/https?:\/\/(?:www\.)?instagram\.com\/[^\s\)]+/gi, '') // Instagram links
+      .replace(/https?:\/\/(?:www\.)?linkedin\.com\/[^\s\)]+/gi, ''); // LinkedIn links
+    
+    // 5. Clean up excessive whitespace and blank lines
+    content = content
+      .replace(/(\r?\n){3,}/g, '\n\n') // Max 2 consecutive line breaks
+      .replace(/[ \t]+$/gm, '') // Remove trailing spaces from each line
+      .replace(/^\s*[\r\n]/gm, '\n') // Clean empty lines
       .trim();
     
     // Extract source URL from content (usually at the end)
