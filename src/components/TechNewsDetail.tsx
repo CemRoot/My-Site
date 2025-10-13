@@ -47,9 +47,27 @@ function sanitizeArticleContent(content: string) {
   // 1. Remove ANY remaining markdown images (backend should already clean these)
   sanitized = sanitized.replace(/!\[[^\]]*\]\([^)]+\)/g, '');
 
-  // 2. PRESERVE Social Media Widgets (don't remove them, they should display)
-  // Backend already handles widget preservation during translation
-  // We only remove widget text remnants if they appear without proper HTML
+  // 2. Clean up broken social media widget fragments (from poor translations)
+  // These appear as blockquote-style text that should be proper widgets
+  sanitized = sanitized
+    // Remove broken TikTok embed fragments
+    .replace(/>\s*TikTok Embed\s*/gi, '\n\n__TIKTOK_WIDGET__\n\n')
+    .replace(/>\s*Twitter Widget Iframe\s*/gi, '\n\n__TWITTER_WIDGET__\n\n')
+    .replace(/>\s*YouTube Widget\s*/gi, '\n\n__YOUTUBE_WIDGET__\n\n')
+    // Remove broken social media text fragments
+    .replace(/>\s*Watch more exciting videos on TikTok[\\]*\s*/gi, '')
+    .replace(/>\s*Watch more exciting videos on TikTokWatch more exciting videos on TikTok[\\]*\s*/gi, '')
+    .replace(/>\s*@\w+\s*/gi, '')
+    .replace(/>\s*\d+(\.\d+)?[MK]?\s+\d+(\.\d+)?[MK]?\s+\d+(\.\d+)?[MK]?\s*/gi, '') // View counts like "13.6M 130.4K 578.4K"
+    .replace(/>\s*Watch now\s*/gi, '')
+    .replace(/>\s*I never thought.*?See more\s*/gi, '')
+    .replace(/>\s*Sunset Lover.*?Petit Biscuit\s*/gi, '')
+    .replace(/>\s*Ineverthought.*?See more\s*/gi, '')
+    // Remove empty blockquote lines
+    .replace(/>\s*\\?\s*/gi, '')
+    .replace(/>\s*$/gm, '')
+    // Clean up excessive line breaks
+    .replace(/\n{3,}/g, '\n\n');
 
   // 3. Remove Nuvemmag logo and branding
   sanitized = sanitized.replace(
@@ -383,8 +401,14 @@ export function TechNewsDetail() {
                   // Convert line breaks
                   .replace(/\n\n/g, '</p><p class="text-lg leading-relaxed mb-4">')
                   .replace(/^(.+)$/gm, '<p class="text-lg leading-relaxed mb-4">$1</p>')
-                  // Handle Twitter Widget placeholders
-                  .replace(/Twitter Widget Iframe/gi, '<div class="my-6 p-4 border border-gray-200 rounded-lg bg-gray-50 text-center text-gray-600"><p>🐦 Twitter Widget</p><p class="text-sm">Social media content will be displayed here</p></div>')
+                  // Handle Social Media Widget placeholders
+                  .replace(/__TWITTER_WIDGET__/gi, '<div class="my-6 p-4 border border-blue-200 rounded-lg bg-blue-50 text-center text-blue-600"><div class="flex items-center justify-center mb-2"><svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg><span class="font-medium">Twitter Post</span></div><p class="text-sm">Original Twitter content from the source article</p></div>')
+                  .replace(/__TIKTOK_WIDGET__/gi, '<div class="my-6 p-4 border border-pink-200 rounded-lg bg-pink-50 text-center text-pink-600"><div class="flex items-center justify-center mb-2"><svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg><span class="font-medium">TikTok Video</span></div><p class="text-sm">Original TikTok content from the source article</p></div>')
+                  .replace(/__YOUTUBE_WIDGET__/gi, '<div class="my-6 p-4 border border-red-200 rounded-lg bg-red-50 text-center text-red-600"><div class="flex items-center justify-center mb-2"><svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg><span class="font-medium">YouTube Video</span></div><p class="text-sm">Original YouTube content from the source article</p></div>')
+                  // Clean up any remaining broken widget patterns
+                  .replace(/Twitter Widget Iframe/gi, '')
+                  .replace(/TikTok Embed/gi, '')
+                  .replace(/YouTube Widget/gi, '')
                   // Clean up extra p tags
                   .replace(/<p[^>]*><\/p>/g, '')
                   .replace(/(<\/p>)(\s*)(<p[^>]*>)/g, '$1$2$3')
