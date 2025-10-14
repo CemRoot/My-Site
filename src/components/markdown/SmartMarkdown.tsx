@@ -1,18 +1,44 @@
 /**
- * Smart Markdown Renderer with Automatic Embeds
- * Detects standalone URLs in paragraphs and converts them to embeds
+ * Smart Markdown Renderer with Token-Based Embeds
+ * Primary: Detects [[EMBED:...]] tokens and converts to React components
+ * Fallback: Detects standalone URLs in paragraphs and converts to embeds
  * Uses ReactMarkdown for safe rendering (no dangerouslySetInnerHTML)
  */
 
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import EmbedFromURL from '../embeds/EmbedFromURL';
+import EmbedFromURL, { EmbedFromToken } from '../embeds/EmbedFromURL';
 
 type AnyNode = any;
 
+// Regex to detect embed tokens: [[EMBED:TYPE:DATA]]
+const TOKEN_REGEX = /^\s*\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):.+\]\]\s*$/i;
+
 /**
- * Checks if a paragraph node contains only a single URL
+ * Checks if a paragraph contains an embed token
+ * Returns the token if found, null otherwise
+ */
+function maybeEmbedToken(node: AnyNode): string | null {
+  if (!node?.children || node.children.length !== 1) {
+    return null;
+  }
+
+  const onlyChild = node.children[0];
+
+  // Check if it's a text node containing a token
+  if (onlyChild?.type === 'text' && typeof onlyChild?.value === 'string') {
+    const text = onlyChild.value.trim();
+    if (TOKEN_REGEX.test(text)) {
+      return text;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Checks if a paragraph node contains only a single URL (fallback for legacy content)
  * Returns the URL if found, null otherwise
  */
 function maybeEmbedFromParagraph(node: AnyNode): string | null {
@@ -48,12 +74,20 @@ export default function SmartMarkdown({ content }: SmartMarkdownProps) {
       remarkPlugins={[remarkGfm]}
       skipHtml={true} // Skip HTML for security
       components={{
-        // Custom paragraph renderer - detect and embed URLs
+        // Custom paragraph renderer - detect tokens first, then URLs
         p({ node, children, ...props }) {
+          // Priority 1: Check for embed token
+          const token = maybeEmbedToken(node as any);
+          if (token) {
+            return <EmbedFromToken token={token} />;
+          }
+          
+          // Priority 2: Check for standalone URL (fallback for legacy content)
           const url = maybeEmbedFromParagraph(node as any);
           if (url) {
             return <EmbedFromURL url={url} />;
           }
+          
           return <p className="text-lg leading-relaxed mb-4" {...props}>{children}</p>;
         },
         // Open links in new tab

@@ -16,6 +16,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import Groq from 'groq-sdk';
 import { createClient } from '@supabase/supabase-js';
+import { htmlToTokens } from './embeds/extractEmbeds.js';
+import { TRANSLATION_SYSTEM_PROMPT, createTranslationPrompt } from './translate/prompt.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -422,7 +424,7 @@ async function scrapeArticleDetails(url) {
       },
       body: JSON.stringify({
         url: url,
-        formats: ['markdown'],
+        formats: ['markdown', 'html'], // Get both for embed extraction
         onlyMainContent: true
       })
     });
@@ -437,7 +439,7 @@ async function scrapeArticleDetails(url) {
       throw new Error('Failed to scrape article - no markdown returned');
     }
 
-    const { markdown, metadata } = scrapeResult.data;
+    const { markdown, html, metadata } = scrapeResult.data;
     
     // Extract title from metadata or markdown
     const title = metadata.title || metadata.ogTitle || '';
@@ -473,35 +475,50 @@ async function scrapeArticleDetails(url) {
       .trim();
 
     // ============================================
-    // COMPREHENSIVE CONTENT CLEANING ALGORITHM
-    // Removes all images, embeds, and widgets to prevent duplicates
+    // TOKEN-BASED EMBED PRESERVATION SYSTEM
+    // Extract social media embeds from HTML and convert to protected tokens
+    // These tokens will be preserved during translation and rendered as React components
     // ============================================
     
-    // 1. Remove ALL markdown images (featured image already stored separately in metadata)
-    // This prevents duplicate images showing in frontend
-    content = content
-      .replace(/!\[[^\]]*\]\([^)]+\)/g, ''); // Markdown format: ![alt](url)
+    // Step 1: Extract embeds from HTML and convert to tokens
+    let embedCount = { tiktok: 0, twitter: 0, youtube: 0 };
+    if (html) {
+      try {
+        const extracted = htmlToTokens(html);
+        // Inject tokens into markdown content at appropriate positions
+        // The tokens will survive translation because they're in [[EMBED:...]] format
+        const tokenLines = extracted.contentWithTokens.match(/\[\[EMBED:[^\]]+\]\]/g) || [];
+        if (tokenLines.length > 0) {
+          // Append tokens to content (they'll be distributed properly during rendering)
+          content = content + '\n\n' + tokenLines.join('\n\n');
+          embedCount = extracted.embedCount;
+          console.log(`    🎬 Extracted ${tokenLines.length} embeds: ${JSON.stringify(embedCount)}`);
+        }
+      } catch (error) {
+        console.warn(`    ⚠️ Failed to extract embeds from HTML: ${error.message}`);
+      }
+    }
     
-    // 2. PRESERVE Social Media Widgets (don't remove, they'll be handled during translation)
-    // We'll temporarily replace them with placeholders during translation only
+    // Step 2: Remove ALL markdown images (featured image already stored separately)
+    content = content.replace(/!\[[^\]]*\]\([^)]+\)/g, '');
     
-    // 3. Remove Nuvemmag logo and branding anchors
+    // Step 3: Remove Nuvemmag logo and branding anchors
     content = content
       .replace(/\[!\[[^\]]*\]\([^)]+\)\]\(\s*https?:\/\/(?:www\.)?nuvemmag\.com\/?\s*\)/gi, '')
       .replace(/<a[^>]*href="https?:\/\/(?:www\.)?nuvemmag\.com\/?"[^>]*>\s*<img[\s\S]*?<\/a>/gi, '')
       .replace(/!\[[^\]]*\]\([^)]*NuvemMag-Logo[^)]*\)/gi, '');
     
-    // 4. Remove other embedded content and social media links
+    // Step 4: Remove navigation/footer social links ONLY (not embeds - they're now tokens)
+    // Only remove Instagram/LinkedIn navigation links, NOT TikTok/Twitter/YouTube embeds
     content = content
-      .replace(/https?:\/\/(?:www\.)?youtube\.com\/[^\s\)]+/gi, '') // YouTube links
-      .replace(/https?:\/\/(?:www\.)?instagram\.com\/[^\s\)]+/gi, '') // Instagram links
-      .replace(/https?:\/\/(?:www\.)?linkedin\.com\/[^\s\)]+/gi, ''); // LinkedIn links
+      .replace(/https?:\/\/(?:www\.)?instagram\.com\/[^\s\)]+/gi, '') // Instagram navigation
+      .replace(/https?:\/\/(?:www\.)?linkedin\.com\/[^\s\)]+/gi, ''); // LinkedIn navigation
     
-    // 5. Clean up excessive whitespace and blank lines
+    // Step 5: Clean up excessive whitespace
     content = content
-      .replace(/(\r?\n){3,}/g, '\n\n') // Max 2 consecutive line breaks
-      .replace(/[ \t]+$/gm, '') // Remove trailing spaces from each line
-      .replace(/^\s*[\r\n]/gm, '\n') // Clean empty lines
+      .replace(/(\r?\n){3,}/g, '\n\n')
+      .replace(/[ \t]+$/gm, '')
+      .replace(/^\s*[\r\n]/gm, '\n')
       .trim();
     
     // Extract source URL from content (usually at the end)
@@ -635,21 +652,12 @@ async function translateWithModel(model, text) {
     messages: [
       {
         role: 'system',
-        content: `You are a professional translator specializing in Turkish to English translation for technology news.
-
-TRANSLATION RULES:
-- Translate from Turkish to English with high accuracy
-- Maintain the original meaning and tone
-- Use clear, professional English suitable for tech news
-- Keep technical terms and brand names intact (Netflix, AI, OpenAI, etc.)
-- Preserve formatting (line breaks, emphasis)
-- Use natural, readable English (B2-C1 level)
-- DO NOT add any commentary or explanations
-- ONLY return the translated text, nothing else
-
-Translate the following Turkish text to English:`
+        content: TRANSLATION_SYSTEM_PROMPT // Use the new prompt that preserves tokens
       },
-      { role: 'user', content: text }
+      {
+        role: 'user',
+        content: createTranslationPrompt(text) // Use template that reminds to preserve tokens
+      }
     ],
     temperature: 0.3,
     max_tokens: 4000,

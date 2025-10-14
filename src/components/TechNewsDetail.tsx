@@ -41,67 +41,13 @@ function sanitizeArticleContent(content: string) {
 
   // ============================================
   // FRONTEND CONTENT SANITIZATION
-  // Additional safety layer for content cleaning
+  // Minimal cleanup only - embeds are now handled via [[EMBED:...]] tokens
   // ============================================
   
-  // 1. Remove ANY remaining markdown images (backend should already clean these)
+  // 1. Remove ANY remaining markdown images (backend already handles this)
   sanitized = sanitized.replace(/!\[[^\]]*\]\([^)]+\)/g, '');
 
-  // 2. Extract and clean social media embeds from broken markdown fragments
-  
-  // Extract TikTok URLs from blockquotes with view count links
-  // Pattern: > TikTok Embed\n>\n> [13.7M](https://www.tiktok.com/...)
-  const tiktokBlockquotePattern = />\s*TikTok Embed\s*(?:\n\s*>)*\s*\n\s*>\s*\[[\d.MK]+\]\((https:\/\/(?:www\.)?tiktok\.com\/@[^/]+\/video\/\d+)[^)]*\)/gi;
-  sanitized = sanitized.replace(tiktokBlockquotePattern, (match, url) => {
-    // Extract clean TikTok URL and return it as standalone line
-    const cleanUrl = url.split('?')[0]; // Remove query parameters
-    return `\n\n${cleanUrl}\n\n`;
-  });
-
-  // Extract Twitter/X URLs from blockquotes
-  const twitterBlockquotePattern = />\s*Twitter Widget Iframe\s*(?:\n\s*>)*\s*\n\s*>\s*\[[\d.MK]+\]\((https:\/\/(?:twitter\.com|x\.com)\/[^/]+\/status\/\d+)[^)]*\)/gi;
-  sanitized = sanitized.replace(twitterBlockquotePattern, (match, url) => {
-    const cleanUrl = url.split('?')[0];
-    return `\n\n${cleanUrl}\n\n`;
-  });
-
-  // Extract YouTube URLs from blockquotes
-  const youtubeBlockquotePattern = />\s*YouTube Widget\s*(?:\n\s*>)*\s*\n\s*>\s*\[[\d.MK]+\]\((https:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)\/[^)]+)\)/gi;
-  sanitized = sanitized.replace(youtubeBlockquotePattern, (match, url) => {
-    const cleanUrl = url.split('?')[0];
-    return `\n\n${cleanUrl}\n\n`;
-  });
-
-  // Also extract URLs from standalone markdown links (fallback)
-  // [View Count](https://tiktok.com/...) -> https://tiktok.com/...
-  sanitized = sanitized.replace(/\[[\d.MK]+\]\((https:\/\/(?:www\.)?tiktok\.com\/@[^/]+\/video\/\d+)[^)]*\)/gi, (match, url) => {
-    return `\n\n${url.split('?')[0]}\n\n`;
-  });
-  
-  sanitized = sanitized.replace(/\[[\d.MK]+\]\((https:\/\/(?:twitter\.com|x\.com)\/[^/]+\/status\/\d+)[^)]*\)/gi, (match, url) => {
-    return `\n\n${url.split('?')[0]}\n\n`;
-  });
-
-  sanitized = sanitized.replace(/\[[\d.MK]+\]\((https:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)\/[^)]+)\)/gi, (match, url) => {
-    return `\n\n${url.split('?')[0]}\n\n`;
-  });
-
-  // Clean up any remaining broken widget text fragments
-  sanitized = sanitized
-    .replace(/>\s*TikTok Embed\s*/gi, '')
-    .replace(/>\s*Twitter Widget Iframe\s*/gi, '')
-    .replace(/>\s*YouTube Widget\s*/gi, '')
-    .replace(/>\s*Watch more exciting videos on TikTok[\\]*\s*/gi, '')
-    .replace(/>\s*@\w+\s*/gi, '')
-    .replace(/>\s*\d+(\.\d+)?[MK]?\s+\d+(\.\d+)?[MK]?\s+\d+(\.\d+)?[MK]?\s*/gi, '')
-    .replace(/>\s*Watch now\s*/gi, '')
-    .replace(/>\s*I never thought.*?See more\s*/gi, '')
-    .replace(/>\s*Sunset Lover.*?Petit Biscuit\s*/gi, '')
-    .replace(/>\s*\\?\s*/gi, '')
-    .replace(/>\s*$/gm, '')
-    .replace(/\n{3,}/g, '\n\n');
-
-  // 3. Remove Nuvemmag logo and branding
+  // 2. Remove Nuvemmag logo and branding
   sanitized = sanitized.replace(
     /\[!\[[^\]]*\]\([^)]+\)\]\(\s*https?:\/\/(?:www\.)?nuvemmag\.com\/?\s*\)/gi,
     '',
@@ -115,10 +61,18 @@ function sanitizeArticleContent(content: string) {
     '',
   );
 
-  // 4. Keep social media URLs for auto-embedding
-  // (Previously removed, now preserved for SmartMarkdown to detect and embed)
+  // 3. Clean up any remaining broken widget text (legacy content only)
+  sanitized = sanitized
+    .replace(/>\s*TikTok Embed\s*/gi, '')
+    .replace(/>\s*Twitter Widget Iframe\s*/gi, '')
+    .replace(/>\s*YouTube Widget\s*/gi, '')
+    .replace(/>\s*Watch more exciting videos on TikTok[\\]*\s*/gi, '')
+    .replace(/>\s*\[[\d.MK]+\]\([^)]+\)/gi, '') // Remove view count links
+    .replace(/>\s*Watch now\s*/gi, '')
+    .replace(/>\s*\\?\s*/gi, '')
+    .replace(/>\s*$/gm, '');
 
-  // 5. Clean up excessive whitespace
+  // 4. Clean up excessive whitespace
   sanitized = sanitized.replace(/(\r?\n){3,}/g, '\n\n');
   sanitized = sanitized.replace(/[ \t]+$/gm, '');
 
