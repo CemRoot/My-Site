@@ -74,8 +74,8 @@ const groq = new Groq({
   apiKey: CONFIG.GROQ_API_KEY,
 });
 
-// Groq translation models
-const GROQ_PRIMARY_MODEL = 'llama-3.1-70b-versatile'; // More reliable than compound
+// Groq translation models (updated to active models)
+const GROQ_PRIMARY_MODEL = 'llama-3.3-70b-versatile'; // Most capable, updated model
 const GROQ_FALLBACK_MODEL = 'llama-3.1-8b-instant'; // Fast and reliable fallback
 const GROQ_LAST_RESORT_MODEL = 'gemma2-9b-it'; // Last resort if others fail
 
@@ -685,11 +685,20 @@ async function translateText(text) {
       const result = await translateWithModel(model, cleanContent);
       
       // Quality check: Make sure translation is not garbage
-      if (result && result.trim().length > 0 && !result.includes('**Translation**') && !result.includes('**Reasoning')) {
+      const isValidTranslation = 
+        result && 
+        result.trim().length > 0 && 
+        !result.includes('**Translation**') && 
+        !result.includes('**Reasoning') &&
+        !result.includes('REMINDER:') &&
+        !result.includes('Translate the following') &&
+        !result.toLowerCase().includes('text to translate:');
+      
+      if (isValidTranslation) {
         translatedContent = result;
         break; // Success, exit loop
       } else {
-        throw new Error(`Translation quality check failed - got garbage output`);
+        throw new Error(`Translation quality check failed - got garbage output or instructions in result`);
       }
     } catch (error) {
       const msg = String(error?.message || error);

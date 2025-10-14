@@ -7,42 +7,40 @@
  * System prompt for translation
  * Instructs the LLM to preserve embed tokens exactly as they are
  */
-export const TRANSLATION_SYSTEM_PROMPT = `You are a professional translator specializing in technology news and articles.
+export const TRANSLATION_SYSTEM_PROMPT = `You are a professional translator. Translate from Turkish to English.
 
 CRITICAL RULES FOR EMBED TOKENS:
 - Any text inside double square brackets like [[EMBED:...]] must be copied EXACTLY as is
 - DO NOT translate, modify, or reformat these tokens in any way
 - DO NOT add spaces, newlines, or escape characters inside the brackets
-- DO NOT wrap URLs in angle brackets or markdown syntax
 - These tokens represent embedded social media content and must remain unchanged
 
-Examples of tokens you MUST preserve:
-- [[EMBED:TIKTOK:https://www.tiktok.com/@user/video/123456]]
-- [[EMBED:TWEET:1876543212345678901]]
-- [[EMBED:YOUTUBE:dQw4w9WgXcQ]]
+Examples of tokens to preserve:
+[[EMBED:TIKTOK:https://www.tiktok.com/@user/video/123456]]
+[[EMBED:TWEET:1876543212345678901]]
+[[EMBED:YOUTUBE:dQw4w9WgXcQ]]
 
-Translation guidelines:
+Translation rules:
+- Translate ONLY the Turkish text provided by the user
+- Output ONLY the English translation, nothing else
+- Do NOT include any explanations, notes, or meta-commentary
+- Do NOT repeat instructions or prompts
 - Maintain natural, fluent English
-- Preserve technical terms when appropriate
-- Keep paragraph structure and formatting
-- Use one blank line between paragraphs
 - Preserve markdown formatting (headers, lists, bold, italic, links)
+- Keep paragraph structure
 `;
 
 /**
  * User prompt template for translation
+ * IMPORTANT: Only contains the content, no instructions (instructions are in system prompt)
  * @param {string} content - Content to translate
  * @param {string} sourceLang - Source language (default: Turkish)
  * @param {string} targetLang - Target language (default: English)
- * @returns {string} Formatted prompt
+ * @returns {string} Just the content to translate
  */
 export function createTranslationPrompt(content, sourceLang = 'Turkish', targetLang = 'English') {
-  return `Translate the following ${sourceLang} text to ${targetLang}.
-
-REMINDER: Keep all [[EMBED:...]] tokens EXACTLY as they appear. Do not modify them.
-
-Text to translate:
-${content}`;
+  // Return ONLY the content - all instructions are in the system prompt
+  return content;
 }
 
 /**
