@@ -663,8 +663,18 @@ async function translateWithModel(model, text) {
     max_tokens: 4000,
   });
 
-  const translatedText = completion.choices[0]?.message?.content || text;
-  return translatedText.trim();
+  let translatedText = completion.choices[0]?.message?.content || text;
+  
+  // POST-PROCESSING: Remove any leaked instructions from output
+  translatedText = translatedText
+    .replace(/^REMINDER:.*$/gim, '')
+    .replace(/^Note: I have.*$/gim, '')
+    .replace(/^Translate the following.*$/gim, '')
+    .replace(/^Translation:.*$/gim, '')
+    .replace(/Text to translate:.*$/gim, '')
+    .trim();
+  
+  return translatedText;
 }
 
 async function translateText(text) {
@@ -738,6 +748,35 @@ async function translateText(text) {
  * Translate article to English using Groq AI
  * Can handle full articles without chunking!
  */
+/**
+ * Post-process translation to ensure quality
+ */
+function cleanTranslation(text) {
+  if (!text) return text;
+  
+  let cleaned = text;
+  
+  // Remove any instruction leakage patterns
+  const instructionPatterns = [
+    /^REMINDER:.*$/gim,
+    /^Note: I have.*$/gim,
+    /^I have preserved.*$/gim,
+    /^I have kept.*$/gim,
+    /^Translate the following.*$/gim,
+    /^Translation:.*$/gim,
+    /^Text to translate:.*$/gim,
+  ];
+  
+  instructionPatterns.forEach(pattern => {
+    cleaned = cleaned.replace(pattern, '');
+  });
+  
+  // Clean up excessive whitespace
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
+  
+  return cleaned;
+}
+
 async function translateArticle(article) {
   console.log(`🌐 Translating article with Groq AI...`);
   console.log(`   Title length: ${article.title.length} chars`);
@@ -746,19 +785,26 @@ async function translateArticle(article) {
   try {
     // Translate title
     console.log(`   🔤 Translating title...`);
-    const translatedTitle = await translateText(article.title);
+    const translatedTitle = cleanTranslation(await translateText(article.title));
     await new Promise(resolve => setTimeout(resolve, CONFIG.TRANSLATION_DELAY));
     
     // Translate description
     console.log(`   📝 Translating description...`);
-    const translatedDescription = await translateText(article.description);
+    const translatedDescription = cleanTranslation(await translateText(article.description));
     await new Promise(resolve => setTimeout(resolve, CONFIG.TRANSLATION_DELAY));
     
     // Translate full content (no chunking needed!)
     console.log(`   📄 Translating full content...`);
-    const translatedContent = await translateText(article.content);
+    const translatedContent = cleanTranslation(await translateText(article.content));
     
-    console.log(`   ✅ Translation complete!`);
+    // FINAL VALIDATION: Ensure no instruction leakage
+    if (translatedTitle.includes('REMINDER:') || 
+        translatedTitle.includes('Note: I have') ||
+        translatedContent.includes('Text to translate:')) {
+      throw new Error('Translation contains instruction leakage - rejecting');
+    }
+    
+    console.log(`   ✅ Translation complete and validated`);
     
     return {
       ...article,
