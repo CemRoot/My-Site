@@ -47,26 +47,58 @@ function sanitizeArticleContent(content: string) {
   // 1. Remove ANY remaining markdown images (backend should already clean these)
   sanitized = sanitized.replace(/!\[[^\]]*\]\([^)]+\)/g, '');
 
-  // 2. Clean up broken social media widget fragments (from poor translations)
-  // These appear as blockquote-style text that should be proper widgets
+  // 2. Extract and clean social media embeds from broken markdown fragments
+  
+  // Extract TikTok URLs from blockquotes with view count links
+  // Pattern: > TikTok Embed\n>\n> [13.7M](https://www.tiktok.com/...)
+  const tiktokBlockquotePattern = />\s*TikTok Embed\s*(?:\n\s*>)*\s*\n\s*>\s*\[[\d.MK]+\]\((https:\/\/(?:www\.)?tiktok\.com\/@[^/]+\/video\/\d+)[^)]*\)/gi;
+  sanitized = sanitized.replace(tiktokBlockquotePattern, (match, url) => {
+    // Extract clean TikTok URL and return it as standalone line
+    const cleanUrl = url.split('?')[0]; // Remove query parameters
+    return `\n\n${cleanUrl}\n\n`;
+  });
+
+  // Extract Twitter/X URLs from blockquotes
+  const twitterBlockquotePattern = />\s*Twitter Widget Iframe\s*(?:\n\s*>)*\s*\n\s*>\s*\[[\d.MK]+\]\((https:\/\/(?:twitter\.com|x\.com)\/[^/]+\/status\/\d+)[^)]*\)/gi;
+  sanitized = sanitized.replace(twitterBlockquotePattern, (match, url) => {
+    const cleanUrl = url.split('?')[0];
+    return `\n\n${cleanUrl}\n\n`;
+  });
+
+  // Extract YouTube URLs from blockquotes
+  const youtubeBlockquotePattern = />\s*YouTube Widget\s*(?:\n\s*>)*\s*\n\s*>\s*\[[\d.MK]+\]\((https:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)\/[^)]+)\)/gi;
+  sanitized = sanitized.replace(youtubeBlockquotePattern, (match, url) => {
+    const cleanUrl = url.split('?')[0];
+    return `\n\n${cleanUrl}\n\n`;
+  });
+
+  // Also extract URLs from standalone markdown links (fallback)
+  // [View Count](https://tiktok.com/...) -> https://tiktok.com/...
+  sanitized = sanitized.replace(/\[[\d.MK]+\]\((https:\/\/(?:www\.)?tiktok\.com\/@[^/]+\/video\/\d+)[^)]*\)/gi, (match, url) => {
+    return `\n\n${url.split('?')[0]}\n\n`;
+  });
+  
+  sanitized = sanitized.replace(/\[[\d.MK]+\]\((https:\/\/(?:twitter\.com|x\.com)\/[^/]+\/status\/\d+)[^)]*\)/gi, (match, url) => {
+    return `\n\n${url.split('?')[0]}\n\n`;
+  });
+
+  sanitized = sanitized.replace(/\[[\d.MK]+\]\((https:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)\/[^)]+)\)/gi, (match, url) => {
+    return `\n\n${url.split('?')[0]}\n\n`;
+  });
+
+  // Clean up any remaining broken widget text fragments
   sanitized = sanitized
-    // Remove broken TikTok embed fragments
-    .replace(/>\s*TikTok Embed\s*/gi, '\n\n__TIKTOK_WIDGET__\n\n')
-    .replace(/>\s*Twitter Widget Iframe\s*/gi, '\n\n__TWITTER_WIDGET__\n\n')
-    .replace(/>\s*YouTube Widget\s*/gi, '\n\n__YOUTUBE_WIDGET__\n\n')
-    // Remove broken social media text fragments
+    .replace(/>\s*TikTok Embed\s*/gi, '')
+    .replace(/>\s*Twitter Widget Iframe\s*/gi, '')
+    .replace(/>\s*YouTube Widget\s*/gi, '')
     .replace(/>\s*Watch more exciting videos on TikTok[\\]*\s*/gi, '')
-    .replace(/>\s*Watch more exciting videos on TikTokWatch more exciting videos on TikTok[\\]*\s*/gi, '')
     .replace(/>\s*@\w+\s*/gi, '')
-    .replace(/>\s*\d+(\.\d+)?[MK]?\s+\d+(\.\d+)?[MK]?\s+\d+(\.\d+)?[MK]?\s*/gi, '') // View counts like "13.6M 130.4K 578.4K"
+    .replace(/>\s*\d+(\.\d+)?[MK]?\s+\d+(\.\d+)?[MK]?\s+\d+(\.\d+)?[MK]?\s*/gi, '')
     .replace(/>\s*Watch now\s*/gi, '')
     .replace(/>\s*I never thought.*?See more\s*/gi, '')
     .replace(/>\s*Sunset Lover.*?Petit Biscuit\s*/gi, '')
-    .replace(/>\s*Ineverthought.*?See more\s*/gi, '')
-    // Remove empty blockquote lines
     .replace(/>\s*\\?\s*/gi, '')
     .replace(/>\s*$/gm, '')
-    // Clean up excessive line breaks
     .replace(/\n{3,}/g, '\n\n');
 
   // 3. Remove Nuvemmag logo and branding
