@@ -3,8 +3,8 @@
  * Handles Telegram bot callbacks for LinkedIn automation approval workflow
  */
 
-import { createClient } from '@supabase/supabase-js';
-import { sendTelegramMessage, sendTelegramError } from '../scripts/telegram-bot.js';
+// Import statements for Vercel serverless function
+const { createClient } = require('@supabase/supabase-js');
 
 const CONFIG = {
   SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -15,7 +15,32 @@ const CONFIG = {
 
 const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
 
-export default async function handler(req, res) {
+// Helper function to send Telegram messages
+async function sendTelegramMessage(text, options = {}) {
+  const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`;
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: CONFIG.TELEGRAM_CHAT_ID,
+        text: text,
+        parse_mode: 'HTML',
+        ...options,
+      }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Telegram API error: ${response.status} - ${JSON.stringify(errorData)}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Failed to send Telegram message:', error.message);
+    throw error;
+  }
+}
+
+module.exports = async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -75,7 +100,11 @@ export default async function handler(req, res) {
 
         if (fetchError || !postEntries || postEntries.length === 0) {
           console.error('Error fetching post entries or posts not found:', fetchError?.message || 'Not found');
-          await sendTelegramMessage('❌ Bu gönderiler bulunamadı veya bir hata oluştu.');
+          try {
+            await sendTelegramMessage('❌ Bu gönderiler bulunamadı veya bir hata oluştu.');
+          } catch (telegramError) {
+            console.error('Failed to send Telegram error message:', telegramError.message);
+          }
           return res.status(200).json({ success: false, message: 'Posts not found' });
         }
 
@@ -135,7 +164,11 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, message: responseText });
       } catch (error) {
         console.error('❌ Telegram webhook handler error:', error.message);
-        await sendTelegramError(`Webhook hatası: ${error.message}`);
+        try {
+          await sendTelegramMessage(`🚨 Webhook hatası: ${error.message}`);
+        } catch (telegramError) {
+          console.error('Failed to send Telegram error message:', telegramError.message);
+        }
         return res.status(500).json({ success: false, message: 'Internal server error' });
       }
     }
