@@ -78,6 +78,5 @@
     "telegram:webhook-remove": "node scripts/setup-telegram-webhook.js remove",
     "test:webhook": "node scripts/test-webhook.js webhook",
     "test:webhook-ping": "node scripts/test-webhook.js connectivity"
-      },
-      "type": "module"
+      }
 }
