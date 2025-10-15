@@ -8,6 +8,13 @@ import { Separator } from './ui/separator';
 import { toast } from 'sonner';
 import { usePageContext } from '../lib/context/PageContext';
 import SmartMarkdown from './markdown/SmartMarkdown';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client for direct queries in development
+const supabase = createClient(
+  (import.meta as any).env?.VITE_SUPABASE_URL || (import.meta as any).env?.VITE_PUBLIC_SUPABASE_URL || 'https://egehpwmjvvabyvfilehd.supabase.co',
+  (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || (import.meta as any).env?.VITE_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnZWhwd21qdnZhYnl2ZmlsZWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMDcwODgsImV4cCI6MjA3NTc4MzA4OH0.fxwjdP9JtlIUVXVz6UwGej6O2H9C-Kz0YhjApcZeRjo'
+);
 
 interface Article {
   id: string;
@@ -96,34 +103,64 @@ export function TechNewsDetail() {
     try {
       setLoading(true);
       
-      // Fetch specific article by slug
-      const articleResponse = await fetch(`/api/tech-news?slug=${slug}`);
-      
-      if (!articleResponse.ok) {
+      // Use direct Supabase query (works in both dev and production)
+      const { data: articleData, error: articleError } = await supabase
+        .from('tech_news_articles')
+        .select('*')
+        .eq('slug', slug)
+        .single();
+
+      if (articleError || !articleData) {
         throw new Error('Article not found');
       }
-      
-      const articleResult = await articleResponse.json();
-      
-      if (!articleResult.success || !articleResult.article) {
-        throw new Error('Article not found');
-      }
-      
-      setArticle(articleResult.article);
+
+      // Format article to match interface
+      const formattedArticle: Article = {
+        id: articleData.id,
+        title: articleData.title,
+        description: articleData.description,
+        content: articleData.content,
+        originalTitle: articleData.original_title,
+        image: articleData.image_url,
+        date: articleData.date,
+        category: articleData.category,
+        sourceUrl: articleData.source_url,
+        originalSource: articleData.original_source,
+        slug: articleData.slug,
+        createdAt: articleData.created_at,
+      };
+
+      setArticle(formattedArticle);
+
+      // Increment view count
+      await supabase.rpc('increment_article_views', { article_id: articleData.id });
       
       // Fetch related articles (3 recent articles from same category if available)
-      const category = articleResult.article.category;
-      const relatedResponse = await fetch(`/api/tech-news?limit=4&category=${category || 'all'}`);
-      
-      if (relatedResponse.ok) {
-        const relatedResult = await relatedResponse.json();
-        if (relatedResult.success && relatedResult.data.articles) {
-          // Filter out current article and take 3
-          const otherArticles = relatedResult.data.articles.filter(
-            (a: Article) => a.id !== articleResult.article.id
-          );
-          setRelatedArticles(otherArticles.slice(0, 3));
-        }
+      const category = formattedArticle.category;
+      const { data: relatedData } = await supabase
+        .from('tech_news_articles')
+        .select('*')
+        .eq('category', category || 'AI')
+        .neq('id', articleData.id)
+        .order('date', { ascending: false })
+        .limit(3);
+
+      if (relatedData) {
+        const formattedRelated = relatedData.map((a: any) => ({
+          id: a.id,
+          title: a.title,
+          description: a.description,
+          content: a.content,
+          originalTitle: a.original_title,
+          image: a.image_url,
+          date: a.date,
+          category: a.category,
+          sourceUrl: a.source_url,
+          originalSource: a.original_source,
+          slug: a.slug,
+          createdAt: a.created_at,
+        }));
+        setRelatedArticles(formattedRelated);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');

@@ -5,9 +5,9 @@
  */
 
 import React from 'react';
-import TweetEmbed from './TweetEmbed';
-import TikTokEmbed from './TikTokEmbed';
-import YouTubeEmbed from './YouTubeEmbed';
+import TweetEmbedHTML from './TweetEmbedHTML';
+import TikTokEmbedHTML from './TikTokEmbedHTML';
+import YouTubeEmbedHTML from './YouTubeEmbedHTML';
 import { matchTweetId, matchTikTok, matchYouTubeId } from '../../lib/embed/extractors';
 
 interface EmbedFromTokenProps {
@@ -27,24 +27,24 @@ export function EmbedFromToken({ token }: EmbedFromTokenProps) {
   const match = /^\[\[EMBED:(TIKTOK|TWEET|YOUTUBE):(.+)\]\]$/i.exec(token.trim());
   
   if (!match) {
-    // Not a valid token, return null
     return null;
   }
   
   const type = match[1].toUpperCase();
   const payload = match[2];
   
-  // Route to appropriate embed component
+  // Route to appropriate HTML embed component
   if (type === 'TWEET') {
-    return <TweetEmbed id={payload} />;
+    const tweetUrl = `https://twitter.com/i/status/${payload}`;
+    return <TweetEmbedHTML url={tweetUrl} id={payload} />;
   }
   
   if (type === 'TIKTOK') {
-    return <TikTokEmbed url={payload} />;
+    return <TikTokEmbedHTML url={payload} />;
   }
   
   if (type === 'YOUTUBE') {
-    return <YouTubeEmbed id={payload} />;
+    return <YouTubeEmbedHTML videoId={payload} />;
   }
   
   return null;
@@ -58,19 +58,19 @@ export default function EmbedFromURL({ url }: EmbedFromURLProps) {
   // Try to match Twitter/X URL
   const tweetId = matchTweetId(url);
   if (tweetId) {
-    return <TweetEmbed id={tweetId} />;
+    return <TweetEmbedHTML url={url} id={tweetId} />;
   }
 
   // Try to match TikTok URL
   const tiktok = matchTikTok(url);
   if (tiktok) {
-    return <TikTokEmbed url={tiktok.url} />;
+    return <TikTokEmbedHTML url={tiktok.url} />;
   }
 
   // Try to match YouTube URL
   const youtubeId = matchYouTubeId(url);
   if (youtubeId) {
-    return <YouTubeEmbed id={youtubeId} />;
+    return <YouTubeEmbedHTML videoId={youtubeId} />;
   }
 
   // Fallback: render as normal link

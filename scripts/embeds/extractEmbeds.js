@@ -58,6 +58,8 @@ export function htmlToTokens(html) {
   // ==========================================
   // Twitter (X) Embed Detection
   // ==========================================
+  
+  // Method 1: Standard blockquote embeds
   $('blockquote.twitter-tweet, blockquote.x-tweet, [class*="twitter"], [class*="x-tweet"]').each((_, el) => {
     const $el = $(el);
     
@@ -72,7 +74,37 @@ export function htmlToTokens(html) {
     }
   });
 
-  // Also catch standalone Twitter links
+  // Method 2: Embedly CDN iframes (used by Nuvemmag)
+  $('iframe[src*="embedly.com"]').each((_, el) => {
+    const $el = $(el);
+    const src = $el.attr('src') || '';
+    
+    // Check if schema=twitter in URL
+    if (src.includes('schema=twitter') || src.includes('schema%3Dtwitter')) {
+      // Extract the embedded URL parameter
+      const urlMatch = /url=([^&]+)/.exec(src);
+      if (urlMatch) {
+        const encodedUrl = urlMatch[1];
+        const decodedUrl = decodeURIComponent(encodedUrl);
+        
+        // Extract tweet ID from URL
+        const tweetMatch = /\/status\/(\d+)/.exec(decodedUrl);
+        if (tweetMatch) {
+          const tweetId = tweetMatch[1];
+          // Replace the entire figure/div wrapper if exists
+          const $parent = $el.closest('figure, div');
+          if ($parent.length > 0) {
+            $parent.replaceWith(`\n\n[[EMBED:TWEET:${tweetId}]]\n\n`);
+          } else {
+            $el.replaceWith(`\n\n[[EMBED:TWEET:${tweetId}]]\n\n`);
+          }
+          counts.twitter++;
+        }
+      }
+    }
+  });
+
+  // Method 3: Standalone Twitter links
   $('a[href*="twitter.com"][href*="/status/"], a[href*="x.com"][href*="/status/"]').each((_, el) => {
     const $el = $(el);
     const href = $el.attr('href') || '';

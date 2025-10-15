@@ -5,7 +5,7 @@
  * Uses ReactMarkdown for safe rendering (no dangerouslySetInnerHTML)
  */
 
-import React from 'react';
+import React, { Fragment } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import EmbedFromURL, { EmbedFromToken } from '../embeds/EmbedFromURL';
@@ -14,6 +14,7 @@ type AnyNode = any;
 
 // Regex to detect embed tokens: [[EMBED:TYPE:DATA]]
 const TOKEN_REGEX = /^\s*\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):.+\]\]\s*$/i;
+const GLOBAL_TOKEN_REGEX = /\[\[EMBED:(TIKTOK|TWEET|YOUTUBE):([^\]]+)\]\]/g;
 
 /**
  * Checks if a paragraph contains an embed token
@@ -69,20 +70,78 @@ interface SmartMarkdownProps {
 }
 
 export default function SmartMarkdown({ content }: SmartMarkdownProps) {
+  // PRE-PROCESS: Extract tokens and split content
+  const tokens: Array<{ type: string; payload: string; fullToken: string }> = [];
+  const tokenMatches = content.matchAll(GLOBAL_TOKEN_REGEX);
+  
+  for (const match of tokenMatches) {
+    tokens.push({
+      type: match[1],
+      payload: match[2],
+      fullToken: match[0]
+    });
+  }
+  
+  // If no tokens, render normally
+  if (tokens.length === 0) {
+    return renderMarkdown(content);
+  }
+  
+  // Split content by tokens
+  const parts: Array<{ type: 'markdown' | 'embed'; content: string; embedData?: any }> = [];
+  let lastIndex = 0;
+  
+  for (const token of tokens) {
+    const tokenIndex = content.indexOf(token.fullToken, lastIndex);
+    
+    if (tokenIndex > lastIndex) {
+      // Add markdown before token
+      parts.push({
+        type: 'markdown',
+        content: content.substring(lastIndex, tokenIndex)
+      });
+    }
+    
+    // Add embed
+    parts.push({
+      type: 'embed',
+      content: token.fullToken,
+      embedData: { type: token.type, payload: token.payload }
+    });
+    
+    lastIndex = tokenIndex + token.fullToken.length;
+  }
+  
+  // Add remaining markdown
+  if (lastIndex < content.length) {
+    parts.push({
+      type: 'markdown',
+      content: content.substring(lastIndex)
+    });
+  }
+  
+  // Render parts
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part.type === 'embed' && part.embedData) {
+          return <EmbedFromToken key={index} token={part.content} />;
+        } else {
+          return <Fragment key={index}>{renderMarkdown(part.content)}</Fragment>;
+        }
+      })}
+    </>
+  );
+}
+
+function renderMarkdown(content: string) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
-      skipHtml={true} // Skip HTML for security
+      skipHtml={true}
       components={{
-        // Custom paragraph renderer - detect tokens first, then URLs
         p({ node, children, ...props }) {
-          // Priority 1: Check for embed token
-          const token = maybeEmbedToken(node as any);
-          if (token) {
-            return <EmbedFromToken token={token} />;
-          }
-          
-          // Priority 2: Check for standalone URL (fallback for legacy content)
+          // Check for standalone URL (fallback for legacy content)
           const url = maybeEmbedFromParagraph(node as any);
           if (url) {
             return <EmbedFromURL url={url} />;

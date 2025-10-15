@@ -17,6 +17,7 @@ import { fileURLToPath } from 'url';
 import Groq from 'groq-sdk';
 import { createClient } from '@supabase/supabase-js';
 import { htmlToTokens } from './embeds/extractEmbeds.js';
+import { replaceTikTokBlockquote, replaceTwitterBlockquote, cleanSocialEmbedRemnants } from './embeds/cleanMarkdownEmbeds.js';
 import { TRANSLATION_SYSTEM_PROMPT, createTranslationPrompt } from './translate/prompt.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -455,24 +456,8 @@ async function scrapeArticleDetails(url) {
     const originalCategory = categoryMatch ? categoryMatch[1].trim() : '';
     
     // Extract main content (remove header, footer, related articles, Nuvemmag logo)
-    let content = markdown
-      .split('\n')
-      .filter(line => {
-        // Remove navigation, social media, footer links, and Nuvemmag branding
-        return !line.includes('instagram') && 
-               !line.includes('twitter') && 
-               !line.includes('linkedin') &&
-               !line.includes('youtube') &&
-               !line.includes('Ana Sayfa') &&
-               !line.includes('Kategoriler') &&
-               !line.includes('Kurumsal') &&
-               !line.includes('İlginizi Çekebilir') &&
-               !hasNuvemmagDomain(line) &&
-               !line.includes('NuvemMag-Logo') &&
-               !line.includes('cdn.prod.website-files.com/664e54b1b2f127a2d94fd963');
-      })
-      .join('\n')
-      .trim();
+    // IMPORTANT: Do NOT filter out lines here - we'll add embed tokens first, then clean
+    let content = markdown;
 
     // ============================================
     // TOKEN-BASED EMBED PRESERVATION SYSTEM
@@ -480,19 +465,43 @@ async function scrapeArticleDetails(url) {
     // These tokens will be preserved during translation and rendered as React components
     // ============================================
     
-    // Step 1: Extract embeds from HTML and convert to tokens
+    // Step 1: Extract embeds from HTML and inject into markdown at correct positions
     let embedCount = { tiktok: 0, twitter: 0, youtube: 0 };
     if (html) {
       try {
         const extracted = htmlToTokens(html);
-        // Inject tokens into markdown content at appropriate positions
-        // The tokens will survive translation because they're in [[EMBED:...]] format
         const tokenLines = extracted.contentWithTokens.match(/\[\[EMBED:[^\]]+\]\]/g) || [];
+        
         if (tokenLines.length > 0) {
-          // Append tokens to content (they'll be distributed properly during rendering)
-          content = content + '\n\n' + tokenLines.join('\n\n');
           embedCount = extracted.embedCount;
           console.log(`    🎬 Extracted ${tokenLines.length} embeds: ${JSON.stringify(embedCount)}`);
+          
+          // Replace markdown blockquotes with tokens (not append!)
+          for (const token of tokenLines) {
+            const tiktokMatch = /\[\[EMBED:TIKTOK:([^\]]+)\]\]/.exec(token);
+            if (tiktokMatch) {
+              const url = tiktokMatch[1];
+              content = replaceTikTokBlockquote(content, url);
+              console.log(`    ✅ Replaced TikTok blockquote with token`);
+            }
+            
+            const tweetMatch = /\[\[EMBED:TWEET:(\d+)\]\]/.exec(token);
+            if (tweetMatch) {
+              const tweetId = tweetMatch[1];
+              content = replaceTwitterBlockquote(content, tweetId);
+              console.log(`    ✅ Replaced Twitter blockquote with token`);
+            }
+            
+            // YouTube embeds are usually not in blockquotes in markdown, so we append them
+            const youtubeMatch = /\[\[EMBED:YOUTUBE:([^\]]+)\]\]/.exec(token);
+            if (youtubeMatch) {
+              content = content + '\n\n' + token + '\n\n';
+              console.log(`    ✅ Appended YouTube token`);
+            }
+          }
+          
+          // Clean up any remaining social media embed text
+          content = cleanSocialEmbedRemnants(content);
         }
       } catch (error) {
         console.warn(`    ⚠️ Failed to extract embeds from HTML: ${error.message}`);
@@ -508,11 +517,64 @@ async function scrapeArticleDetails(url) {
       .replace(/<a[^>]*href="https?:\/\/(?:www\.)?nuvemmag\.com\/?"[^>]*>\s*<img[\s\S]*?<\/a>/gi, '')
       .replace(/!\[[^\]]*\]\([^)]*NuvemMag-Logo[^)]*\)/gi, '');
     
-    // Step 4: Remove navigation/footer social links ONLY (not embeds - they're now tokens)
-    // Only remove Instagram/LinkedIn navigation links, NOT TikTok/Twitter/YouTube embeds
-    content = content
-      .replace(/https?:\/\/(?:www\.)?instagram\.com\/[^\s\)]+/gi, '') // Instagram navigation
-      .replace(/https?:\/\/(?:www\.)?linkedin\.com\/[^\s\)]+/gi, ''); // LinkedIn navigation
+    // Step 3.5: Remove "Kaynak:" lines (duplicate of Original Article Source)
+    // Handles both plain URLs and markdown links
+    content = content.replace(/^Kaynak:\s*(?:https?:\/\/[^\n]+|\[[^\]]+\]\([^)]+\))$/gm, '');
+    
+    // Step 4: AGGRESSIVE CONTENT CLEANING (after tokens are safely added)
+    // Remove navigation, footer, social links, related articles section, etc.
+    
+    // Split into lines for better control
+    const lines = content.split('\n');
+    const cleanedLines = [];
+    let skipSection = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Skip "İlginizi Çekebilir" section and everything after it
+      if (line.includes('İlginizi Çekebilir') || line.includes('Kategoriler')) {
+        skipSection = true;
+        continue;
+      }
+      
+      // Skip if we're in a skip section
+      if (skipSection) {
+        // Check if we hit an embed token - if so, stop skipping
+        if (line.match(/\[\[EMBED:/)) {
+          skipSection = false;
+        } else {
+          continue;
+        }
+      }
+      
+      // Skip navigation/footer lines
+      if (
+        line.includes('Ana Sayfa') ||
+        line.includes('Kurumsal') ||
+        line.includes('Hakkımızda') ||
+        line.includes('Küny') ||
+        line.includes('İletişim') ||
+        line.includes('Aydınlatma') ||
+        line.includes('Çerez Politikası') ||
+        line.includes('Pinetent Digital') ||
+        line.includes('Tüm Hakları Saklıdır') ||
+        line.includes('instagram.com') && !line.includes('[[EMBED') ||
+        line.includes('twitter.com') && !line.includes('[[EMBED') ||
+        line.includes('linkedin.com') ||
+        line.includes('youtube.com') && !line.includes('[[EMBED') ||
+        line.includes('facebook.com') ||
+        hasNuvemmagDomain(line) && !line.includes('Kaynak:') ||
+        line.includes('NuvemMag-Logo') ||
+        line.includes('cdn.prod.website-files.com/664e54b1b2f127a2d94fd963')
+      ) {
+        continue;
+      }
+      
+      cleanedLines.push(line);
+    }
+    
+    content = cleanedLines.join('\n');
     
     // Step 5: Clean up excessive whitespace
     content = content
