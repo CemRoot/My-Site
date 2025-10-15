@@ -69,7 +69,11 @@
             "build": "vite build",
             "scrape:news": "node scripts/news-scraper.js",
             "test:translation": "node scripts/test-groq-translation.js",
-            "migrate:supabase": "node scripts/migrate-to-supabase.js"
+            "migrate:supabase": "node scripts/migrate-to-supabase.js",
+            "linkedin:analyze": "node scripts/daily-linkedin-automation.js analyze",
+            "linkedin:post": "node scripts/daily-linkedin-automation.js post",
+            "linkedin:test": "node scripts/daily-linkedin-automation.js test",
+            "linkedin:setup-test": "node scripts/test-linkedin-setup.js"
       },
       "type": "module"
 }
