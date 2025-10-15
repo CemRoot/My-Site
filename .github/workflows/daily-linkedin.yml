@@ -3,10 +3,9 @@ name: Daily LinkedIn Automation
 # Daily schedule for LinkedIn automation
 on:
   schedule:
-    # Analysis phase: 15:00 UTC (16:00 Ireland time)
+    # Analysis phase: 15:00 UTC (16:00 Ireland time) - sends manual sharing content to Telegram
     - cron: '0 15 * * *'
-    # Posting phase: 15:30 UTC (16:30 Ireland time) 
-    - cron: '30 15 * * *'
+    # Posting is now manual - users copy content from Telegram and paste to LinkedIn
   
   # Manual trigger for testing
   workflow_dispatch:

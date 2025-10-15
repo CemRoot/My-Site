@@ -109,17 +109,25 @@ module.exports = async function handler(req, res) {
         }
 
         switch (data) {
-          case 'approve_all':
-            updateData = { status: 'approved' };
-            responseText = `✅ ${postEntries.length} gönderi onaylandı ve LinkedIn için sıraya alındı!`;
+          case 'manual_shared':
+            updateData = { status: 'posted', posted_at: new Date().toISOString() };
+            responseText = `✅ ${postEntries.length} gönderi manuel olarak paylaşıldı olarak işaretlendi!`;
+            break;
+          case 'copy_content':
+            responseText = '📋 İçerikler yukarıda hazır. Kopyalayıp LinkedIn\'e yapıştırabilirsiniz.';
+            // No status change, just acknowledgment
             break;
           case 'reject_all':
             updateData = { status: 'rejected' };
             responseText = `❌ ${postEntries.length} gönderi reddedildi.`;
             break;
+          // Legacy support for old buttons
+          case 'approve_all':
+            updateData = { status: 'approved' };
+            responseText = `✅ ${postEntries.length} gönderi onaylandı (manuel paylaşım için hazır)!`;
+            break;
           case 'edit_posts':
-            responseText = '✏️ Lütfen düzenlemek istediğiniz gönderileri belirtin veya manuel olarak düzenleyin.';
-            // No status change, user will manually edit
+            responseText = '✏️ İçerikleri yukarıdan kopyalayıp düzenleyebilirsiniz.';
             break;
           default:
             responseText = 'Geçersiz işlem.';

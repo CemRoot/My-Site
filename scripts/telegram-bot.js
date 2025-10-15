@@ -47,13 +47,13 @@ async function sendTelegramMessage(text, options = {}) {
 }
 
 /**
- * Send articles for approval with inline buttons
+ * Send articles for manual sharing with ready-to-copy LinkedIn content
  */
 export async function sendApprovalRequest(articles) {
   try {
-    console.log('📤 Sending approval request to Telegram...');
+    console.log('📤 Sending manual sharing request to Telegram...');
     
-    // Create summary message
+    // Create detailed message for manual sharing
     const summary = `📊 <b>GÜNLÜK HABER ANALİZİ TAMAMLANDI</b>
 📅 ${new Date().toLocaleDateString('tr-TR')} - ${articles.length} haber hazır
 
@@ -62,42 +62,38 @@ ${articles.map((article, index) => {
   let cleanContent = article.suggested_content || '';
   cleanContent = cleanContent.replace(/POST_CONTENT\s*/g, '').trim();
   
-  // Get first meaningful sentence or first 120 chars
-  const preview = cleanContent.split('\n')[0] || cleanContent.substring(0, 120);
+  // Add hashtags to content
+  const hashtagsText = article.hashtags ? article.hashtags.join(' ') : '#TechNews #AI';
+  const fullContent = `${cleanContent}\n\n🔗 ${CONFIG.SITE_URL}/tech-news/${article.slug}\n\n${hashtagsText}`;
   
   return `${getScoreEmoji(article.ai_score)} <b>[${article.ai_score} puan]</b> ${article.title}
 
-📝 <i>${preview}${preview.length < cleanContent.length ? '...' : ''}</i>
-
-🔗 ${process.env.NEXT_PUBLIC_SITE_URL || 'https://yoursite.com'}/tech-news/${article.slug}
+📋 <b>LİNKEDİN İÇERİĞİ:</b>
+<code>${fullContent}</code>
 
 `;
 }).join('─────────────────────\n')}
 
-⏰ Onayınızı bekliyorum...`;
+📱 <b>MANUEL PAYLAŞIM TALİMATI:</b>
+1. Yukarıdaki içerikleri kopyalayın
+2. LinkedIn'e gidin ve "Gönderi Oluştur"a tıklayın  
+3. İçeriği yapıştırın ve paylaşın
+4. Aşağıdaki butonla tamamlandığını bildirin`;
 
-    // Create inline keyboard
+    // Create inline keyboard for manual sharing
     const keyboard = {
       inline_keyboard: [
         [
-          { text: '✅ TÜMÜNÜ ONAYLA', callback_data: 'approve_all' },
-          { text: '❌ TÜMÜNÜ RED ET', callback_data: 'reject_all' }
+          { text: '✅ MANUEL PAYLAŞTIM', callback_data: 'manual_shared' },
         ],
-        ...articles.map((article, index) => [
-          { text: `✅ ${index + 1}`, callback_data: `approve_${article.id}` },
-          { text: `❌ ${index + 1}`, callback_data: `reject_${article.id}` },
-          { text: `✏️ ${index + 1}`, callback_data: `edit_${article.id}` }
-        ]),
         [
-          { text: '📊 İstatistikler', callback_data: 'stats' },
-          { text: '⚙️ Ayarlar', callback_data: 'settings' }
-        ]
-      ]
+          { text: '📋 İÇERİKLERİ KOPYALA', callback_data: 'copy_content' },
+          { text: '❌ İPTAL ET', callback_data: 'reject_all' },
+        ],
+      ],
     };
 
-    const message = await sendTelegramMessage(summary, {
-      reply_markup: keyboard
-    });
+    const message = await sendTelegramMessage(summary, { reply_markup: keyboard });
 
     // Save message ID for later reference
     for (const article of articles) {
@@ -107,11 +103,11 @@ ${articles.map((article, index) => {
         .eq('article_id', article.id);
     }
 
-    console.log('✅ Approval request sent successfully');
+    console.log('✅ Manual sharing request sent successfully');
     return message;
     
   } catch (error) {
-    console.error('❌ Error sending approval request:', error);
+    console.error('❌ Error sending manual sharing request:', error);
     throw error;
   }
 }
