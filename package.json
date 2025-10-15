@@ -73,7 +73,9 @@
             "linkedin:analyze": "node scripts/daily-linkedin-automation.js analyze",
             "linkedin:post": "node scripts/daily-linkedin-automation.js post",
             "linkedin:test": "node scripts/daily-linkedin-automation.js test",
-            "linkedin:setup-test": "node scripts/test-linkedin-setup.js"
+            "linkedin:setup-test": "node scripts/test-linkedin-setup.js",
+    "telegram:webhook-setup": "node scripts/setup-telegram-webhook.js set",
+    "telegram:webhook-remove": "node scripts/setup-telegram-webhook.js remove"
       },
       "type": "module"
 }
