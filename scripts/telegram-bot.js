@@ -63,7 +63,9 @@ ${articles.map((article, index) => {
   cleanContent = cleanContent.replace(/POST_CONTENT\s*/g, '').trim();
   
   // Add hashtags to content
-  const hashtagsText = article.hashtags ? article.hashtags.join(' ') : '#TechNews #AI';
+  const hashtagsText = (Array.isArray(article.hashtags) && article.hashtags.length > 0) 
+    ? article.hashtags.join(' ') 
+    : '#TechNews #AI';
   const fullContent = `${cleanContent}\n\n🔗 ${CONFIG.SITE_URL}/tech-news/${article.slug}\n\n${hashtagsText}`;
   
   return `${getScoreEmoji(article.ai_score)} <b>[${article.ai_score} puan]</b> ${article.title}

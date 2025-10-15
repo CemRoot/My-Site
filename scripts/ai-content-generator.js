@@ -73,7 +73,24 @@ Respond with ONLY a number between 0-100 (no explanation):`;
     return Math.min(100, Math.max(0, score || 50)); // Ensure 0-100 range
   } catch (error) {
     console.error('Error scoring article:', error);
-    return 50; // Default neutral score
+    
+    // Fallback scoring based on keywords
+    const title = article.title.toLowerCase();
+    const description = article.description.toLowerCase();
+    const content = article.content.toLowerCase();
+    
+    let fallbackScore = 50;
+    
+    // High-value keywords
+    if (title.includes('ai') || title.includes('artificial intelligence') || 
+        title.includes('openai') || title.includes('chatgpt')) fallbackScore += 20;
+    if (title.includes('google') || title.includes('microsoft') || 
+        title.includes('apple') || title.includes('meta')) fallbackScore += 15;
+    if (title.includes('breakthrough') || title.includes('revolutionary') || 
+        title.includes('first') || title.includes('new')) fallbackScore += 10;
+    if (content.includes('billion') || content.includes('million')) fallbackScore += 10;
+    
+    return Math.min(100, Math.max(30, fallbackScore));
   }
 }
 
