@@ -77,6 +77,7 @@
     "telegram:webhook-setup": "node scripts/setup-telegram-webhook.js set",
     "telegram:webhook-remove": "node scripts/setup-telegram-webhook.js remove",
     "test:webhook": "node scripts/test-webhook.js webhook",
-    "test:webhook-ping": "node scripts/test-webhook.js connectivity"
+    "test:webhook-ping": "node scripts/test-webhook.js connectivity",
+    "linkedin:analyze-force": "MIN_AI_SCORE=50 node scripts/daily-linkedin-automation.js analyze"
       }
 }

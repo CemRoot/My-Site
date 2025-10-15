@@ -100,8 +100,22 @@ module.exports = async function handler(req, res) {
 
         if (fetchError || !postEntries || postEntries.length === 0) {
           console.error('Error fetching post entries or posts not found:', fetchError?.message || 'Not found');
+          
+          // Check if this is an old message (more than 24 hours old)
+          const messageDate = new Date(callback_query.message.date * 1000);
+          const hoursOld = (Date.now() - messageDate.getTime()) / (1000 * 60 * 60);
+          
+          let errorMessage;
+          if (hoursOld > 24) {
+            errorMessage = '⏰ Bu mesaj çok eski. Yeni analizler için bekleyin veya manuel test çalıştırın.';
+          } else if (fetchError) {
+            errorMessage = `❌ Veritabanı hatası: ${fetchError.message}`;
+          } else {
+            errorMessage = '❌ Bu mesajla ilişkili gönderi bulunamadı. Muhtemelen zaten işlenmiş.';
+          }
+          
           try {
-            await sendTelegramMessage('❌ Bu gönderiler bulunamadı veya bir hata oluştu.');
+            await sendTelegramMessage(errorMessage);
           } catch (telegramError) {
             console.error('Failed to send Telegram error message:', telegramError.message);
           }

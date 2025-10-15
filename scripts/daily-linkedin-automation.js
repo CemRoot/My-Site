@@ -21,7 +21,7 @@ const CONFIG = {
   LINKEDIN_ACCESS_TOKEN: process.env.LINKEDIN_ACCESS_TOKEN,
   LINKEDIN_PERSON_ID: process.env.LINKEDIN_PERSON_ID,
   MAX_ARTICLES_PER_DAY: 5,
-  MIN_AI_SCORE: parseInt(process.env.MIN_AI_SCORE) || 70,
+  MIN_AI_SCORE: parseInt(process.env.MIN_AI_SCORE) || 60, // Lowered from 70 to 60 for better content selection
   SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || 'https://yoursite.com'
 };
 
@@ -240,7 +240,16 @@ export async function runDailyAnalysis() {
     
     if (qualifiedArticles.length === 0) {
       console.log(`⚠️ No articles meet minimum score threshold (${CONFIG.MIN_AI_SCORE})`);
-      await sendSuccessNotification(`⚠️ Hiçbir haber minimum skoru (${CONFIG.MIN_AI_SCORE}) geçemedi`);
+      
+      // Show top scores for debugging
+      const topScores = topArticles.slice(0, 3).map(a => `${a.title.substring(0, 40)}... (${a.ai_score})`).join('\n');
+      
+      await sendSuccessNotification(`⚠️ Bugün hiçbir haber minimum skoru (${CONFIG.MIN_AI_SCORE}) geçemedi
+
+📊 En yüksek skorlar:
+${topScores}
+
+💡 Yarın daha ilginç haberler olabilir!`);
       return;
     }
     
@@ -301,7 +310,15 @@ export async function runDailyPosting() {
     
     if (approvedPosts.length === 0) {
       console.log('ℹ️ No approved posts found for today');
-      await sendSuccessNotification('ℹ️ Bugün onaylanmış haber bulunamadı');
+      await sendSuccessNotification(`ℹ️ Bugün onaylanmış haber bulunamadı
+
+📱 Manuel paylaşım sistemi aktif:
+1. Günlük analiz sonuçlarını Telegram'dan alın
+2. Hazır içerikleri kopyalayın  
+3. LinkedIn'e manuel olarak yapıştırın
+4. "MANUEL PAYLAŞTIM" butonuna basın
+
+⏰ Bir sonraki analiz: Yarın 16:00`);
       return;
     }
     
