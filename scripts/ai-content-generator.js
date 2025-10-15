@@ -100,9 +100,11 @@ Category: ${article.category}
 Content: ${article.content.substring(0, 800)}...
 
 Format the response as:
-POST_CONTENT
+[Your LinkedIn post content here]
 ---
-HASHTAGS: #hashtag1 #hashtag2 #hashtag3`;
+HASHTAGS: #hashtag1 #hashtag2 #hashtag3
+
+Do NOT include "POST_CONTENT" text in your response. Start directly with the actual post content.`;
 
   try {
     const content = await generateWithGemini(prompt);

@@ -59,6 +59,7 @@ jobs:
           
           # Site Configuration
           NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          SITE_URL: ${{ secrets.SITE_URL }}
           
           # GitHub Context for error reporting
           GITHUB_SERVER_URL: ${{ github.server_url }}
@@ -132,6 +133,7 @@ jobs:
           
           # Site Configuration
           NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          SITE_URL: ${{ secrets.SITE_URL }}
           
           # GitHub Context for error reporting
           GITHUB_SERVER_URL: ${{ github.server_url }}

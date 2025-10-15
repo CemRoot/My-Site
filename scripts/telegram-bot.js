@@ -57,11 +57,22 @@ export async function sendApprovalRequest(articles) {
     const summary = `📊 <b>GÜNLÜK HABER ANALİZİ TAMAMLANDI</b>
 📅 ${new Date().toLocaleDateString('tr-TR')} - ${articles.length} haber hazır
 
-${articles.map((article, index) => 
-  `${getScoreEmoji(article.ai_score)} <b>[${article.ai_score} puan]</b> ${article.title}
-📝 <i>${article.suggested_content.substring(0, 100)}...</i>
-🔗 ${process.env.NEXT_PUBLIC_SITE_URL}/tech-news/${article.slug}
-`).join('\n')}
+${articles.map((article, index) => {
+  // Clean the content from "POST_CONTENT" and format properly
+  let cleanContent = article.suggested_content || '';
+  cleanContent = cleanContent.replace(/POST_CONTENT\s*/g, '').trim();
+  
+  // Get first meaningful sentence or first 120 chars
+  const preview = cleanContent.split('\n')[0] || cleanContent.substring(0, 120);
+  
+  return `${getScoreEmoji(article.ai_score)} <b>[${article.ai_score} puan]</b> ${article.title}
+
+📝 <i>${preview}${preview.length < cleanContent.length ? '...' : ''}</i>
+
+🔗 ${process.env.NEXT_PUBLIC_SITE_URL || 'https://yoursite.com'}/tech-news/${article.slug}
+
+`;
+}).join('─────────────────────\n')}
 
 ⏰ Onayınızı bekliyorum...`;
 

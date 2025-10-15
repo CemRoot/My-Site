@@ -22,7 +22,7 @@ const CONFIG = {
   LINKEDIN_PERSON_ID: process.env.LINKEDIN_PERSON_ID,
   MAX_ARTICLES_PER_DAY: 5,
   MIN_AI_SCORE: 70,
-  SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || 'https://yoursite.com'
+  SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || 'https://yoursite.com'
 };
 
 // Initialize Supabase
