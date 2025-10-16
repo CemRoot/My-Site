@@ -126,6 +126,14 @@ export function TechNewsDetail() {
 
       setArticle(formattedArticle);
 
+      // Debug: Log original source info
+      console.log('🔍 DEBUG - Original Source Info:', {
+        originalSource: formattedArticle.originalSource,
+        sourceUrl: formattedArticle.sourceUrl,
+        originalSourceFromDB: articleData.original_source,
+        sourceUrlFromDB: articleData.source_url
+      });
+
       // Increment view count
       await supabase.rpc('increment_article_views', { article_id: articleData.id });
       
@@ -400,7 +408,8 @@ export function TechNewsDetail() {
           </div>
 
           {/* Original Article Source (if available) */}
-          {article.originalSource && (
+          {/* Debug: Always show this section for testing */}
+          {(article.originalSource || article.sourceUrl) && (
             <>
               <Separator />
               <div className="bg-primary/5 p-6 rounded-lg border border-primary/10">
@@ -413,12 +422,12 @@ export function TechNewsDetail() {
                   className="w-full sm:w-auto"
                 >
                   <a
-                    href={article.originalSource}
+                    href={article.originalSource || article.sourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2"
                   >
-                    Read on {getSourceDomain(article.originalSource)}
+                    Read on {getSourceDomain(article.originalSource || article.sourceUrl)}
                     <ExternalLink className="w-4 h-4" />
                   </a>
                 </Button>
