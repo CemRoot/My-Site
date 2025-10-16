@@ -182,14 +182,14 @@ My-Site/
 ## 🚀 Deployment Checklist
 
 ### Required API Keys
-- [x] **Firecrawl**: `fc-91af995e81b647b4adf3d76455ad99d9` (Already configured)
+- [x] **Firecrawl**: Get from https://www.firecrawl.dev/app/api-keys
 - [ ] **Groq**: Add to `.env` (Get from https://console.groq.com/)
 
 ### GitHub Setup
 - [ ] Push code to GitHub
 - [ ] Add secrets:
-  - `FIRECRAWL_API_KEY`: fc-91af995e81b647b4adf3d76455ad99d9
-  - `GROQ_API_KEY`: Your key
+  - `FIRECRAWL_API_KEY`: Your Firecrawl API key
+  - `GROQ_API_KEY`: Your Groq API key
 - [ ] Enable GitHub Actions
 - [ ] Test manual workflow run
 

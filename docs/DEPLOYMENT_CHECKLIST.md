@@ -8,7 +8,7 @@
   - Format: `GROQ_API_KEY=gsk-...`
   
 - [x] **Firecrawl API Key** added to `.env`
-  - Already configured: `fc-91af995e81b647b4adf3d76455ad99d9`
+  - Get from: https://www.firecrawl.dev/app/api-keys
   - ⚠️ DO NOT share this key publicly!
 
 ### 2. Local Testing
@@ -47,7 +47,7 @@ Go to: **Settings → Secrets and variables → Actions**
 
 Add these secrets:
 - `GROQ_API_KEY`: Your Groq API key
-- `FIRECRAWL_API_KEY`: `fc-91af995e81b647b4adf3d76455ad99d9`
+- `FIRECRAWL_API_KEY`: Your Firecrawl API key
 
 ### 2. Enable GitHub Actions
 - [ ] Go to **Actions** tab
@@ -76,7 +76,7 @@ Add these secrets:
 Add in Vercel project settings:
 ```
 GROQ_API_KEY=your_groq_key_here
-FIRECRAWL_API_KEY=fc-91af995e81b647b4adf3d76455ad99d9
+FIRECRAWL_API_KEY=your_firecrawl_key_here
 ```
 
 ### 3. Deploy

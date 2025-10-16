@@ -11,10 +11,15 @@ import SmartMarkdown from './markdown/SmartMarkdown';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client for direct queries in development
-const supabase = createClient(
-  (import.meta as any).env?.VITE_SUPABASE_URL || (import.meta as any).env?.VITE_PUBLIC_SUPABASE_URL || 'https://egehpwmjvvabyvfilehd.supabase.co',
-  (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || (import.meta as any).env?.VITE_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnZWhwd21qdnZhYnl2ZmlsZWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMDcwODgsImV4cCI6MjA3NTc4MzA4OH0.fxwjdP9JtlIUVXVz6UwGej6O2H9C-Kz0YhjApcZeRjo'
-);
+// Keys should be set in .env file with VITE_ prefix
+const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || (import.meta as any).env?.VITE_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || (import.meta as any).env?.VITE_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env file.');
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface Article {
   id: string;

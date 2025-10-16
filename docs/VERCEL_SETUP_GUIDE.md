@@ -7,7 +7,7 @@ Go to: https://vercel.com/cemroots-projects/my-portfolio/settings/environment-va
 Add these variables:
 
 1. **NEXT_PUBLIC_SUPABASE_URL**
-   - Value: `https://egehpwmjvvabyvfilehd.supabase.co`
+   - Value: Your Supabase project URL (from Supabase dashboard)
    - Environment: Production, Preview, Development
 
 2. **NEXT_PUBLIC_SUPABASE_ANON_KEY**
@@ -28,7 +28,7 @@ Add these variables:
 
 ## Step 2: Verify Supabase Table
 
-Go to: https://supabase.com/dashboard/project/egehpwmjvvabyvfilehd/editor
+Go to: Supabase Dashboard → Your Project → Table Editor
 
 Run the SQL from: `docs/supabase-schema.sql`
 

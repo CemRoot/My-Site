@@ -2,13 +2,13 @@ name: Scrape Tech News
 
 # Smart scheduling algorithm
 # WEEKDAYS ONLY: Nuvemmag doesn't publish on weekends
-# Runs 3 times per day: Morning, Afternoon, Evening (UTC)
+# Runs 3 times per day: 09:30, 13:00, 16:00 Ireland time (UTC)
 on:
   schedule:
-    # Monday-Friday only
-    - cron: '0 8 * * 1-5'   # 08:00 UTC (Morning check)
-    - cron: '0 14 * * 1-5'  # 14:00 UTC (Afternoon check)
-    - cron: '0 20 * * 1-5'  # 20:00 UTC (Evening check)
+    # Monday-Friday only - Updated timing per user request
+    - cron: '30 9 * * 1-5'   # 09:30 UTC (Morning check - İrlanda 09:30)
+    - cron: '0 13 * * 1-5'   # 13:00 UTC (Afternoon check - İrlanda 13:00)
+    - cron: '0 16 * * 1-5'   # 16:00 UTC (Final check - İrlanda 16:00)
   
   # Manual trigger
   workflow_dispatch:

@@ -3,8 +3,8 @@ name: Daily LinkedIn Automation
 # Daily schedule for LinkedIn automation
 on:
   schedule:
-    # Analysis phase: 15:00 UTC (16:00 Ireland time) - sends manual sharing content to Telegram
-    - cron: '0 15 * * *'
+    # Analysis phase: 16:30 UTC (16:30 Ireland time) - waits for final news scraping then sends to Telegram
+    - cron: '30 16 * * *'
     # Posting is now manual - users copy content from Telegram and paste to LinkedIn
   
   # Manual trigger for testing
@@ -27,7 +27,7 @@ concurrency:
 
 jobs:
   analyze-news:
-    if: github.event.schedule == '0 15 * * *' || github.event.inputs.mode == 'analyze' || github.event.inputs.mode == 'test'
+    if: github.event.schedule == '30 16 * * *' || github.event.inputs.mode == 'analyze' || github.event.inputs.mode == 'test'
     runs-on: ubuntu-latest
     
     steps:
@@ -70,8 +70,9 @@ jobs:
           echo "🌍 Timezone: UTC"
           echo "🧠 AI Engine: Google Gemini 2.0 Flash"
           echo "📊 Max articles per day: 5"
-          echo "🎯 Minimum AI score: 70"
+          echo "🎯 Minimum AI score: 60"
           echo "📤 Telegram notifications: Enabled"
+          echo "⏰ Analysis timing: After final news scraping (16:00 UTC)"
           
           if [ "${{ github.event.inputs.mode }}" = "test" ]; then
             echo "🧪 Running in TEST mode"
@@ -88,7 +89,7 @@ jobs:
           echo "📊 Articles analyzed and scored with Google Gemini AI"
           echo "📤 Approval request sent to Telegram"
           echo "⏰ Completed at: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
-          echo "⏳ Next phase: Posting at 15:30 UTC (if approved)"
+          echo "⏳ Next phase: Manual posting via Telegram (if approved)"
           echo "📱 Check Telegram for approval buttons"
       
       - name: 📧 Analysis failure notification
@@ -169,7 +170,7 @@ jobs:
 
   # Health check job (runs once per day)
   system-health-check:
-    if: github.event.schedule == '0 15 * * *'
+    if: github.event.schedule == '30 16 * * *'
     runs-on: ubuntu-latest
     needs: analyze-news
     

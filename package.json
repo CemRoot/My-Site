@@ -62,7 +62,7 @@
       "devDependencies": {
             "@types/node": "^20.10.0",
             "@vitejs/plugin-react-swc": "^3.10.2",
-            "vite": "6.3.6"
+            "vite": "^6.3.6"
       },
       "scripts": {
             "dev": "vite",
@@ -74,10 +74,10 @@
             "linkedin:post": "node scripts/daily-linkedin-automation.js post",
             "linkedin:test": "node scripts/daily-linkedin-automation.js test",
             "linkedin:setup-test": "node scripts/test-linkedin-setup.js",
-    "telegram:webhook-setup": "node scripts/setup-telegram-webhook.js set",
-    "telegram:webhook-remove": "node scripts/setup-telegram-webhook.js remove",
-    "test:webhook": "node scripts/test-webhook.js webhook",
-    "test:webhook-ping": "node scripts/test-webhook.js connectivity",
-    "linkedin:analyze-force": "MIN_AI_SCORE=50 node scripts/daily-linkedin-automation.js analyze"
+            "telegram:webhook-setup": "node scripts/setup-telegram-webhook.js set",
+            "telegram:webhook-remove": "node scripts/setup-telegram-webhook.js remove",
+            "test:webhook": "node scripts/test-webhook.js webhook",
+            "test:webhook-ping": "node scripts/test-webhook.js connectivity",
+            "linkedin:analyze-force": "MIN_AI_SCORE=50 node scripts/daily-linkedin-automation.js analyze"
       }
 }

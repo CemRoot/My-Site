@@ -79,14 +79,16 @@ Example: https://abc123xyz.supabase.co
 #### B) Anon Public Key
 ```
 Location: "Project API keys" section → "anon public"
-Example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Format: JWT token starting with "eyJ..."
+Note: This is a public key, safe to use in frontend
 ```
 
 #### C) Service Role Key (Secret!)
 ```
 Location: "Project API keys" section → "service_role"
 ⚠️ IMPORTANT: This is a SECRET key - never commit to git!
-Example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Format: JWT token starting with "eyJ..."
+Note: Only use in backend/serverless functions
 ```
 
 ---

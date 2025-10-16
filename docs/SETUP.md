@@ -78,7 +78,7 @@ Or via Vercel Dashboard:
 **For Local Development:**
 Update `.env`:
 ```env
-GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+GROQ_API_KEY=your_groq_api_key_here
 ```
 
 **For Vercel Production:**

@@ -18,7 +18,9 @@ import Groq from 'groq-sdk';
 import { createClient } from '@supabase/supabase-js';
 import { htmlToTokens } from './embeds/extractEmbeds.js';
 import { replaceTikTokBlockquote, replaceTwitterBlockquote, cleanSocialEmbedRemnants } from './embeds/cleanMarkdownEmbeds.js';
+import { extractAllEmbedsFromMarkdown } from './embeds/extractMarkdownEmbeds.js';
 import { TRANSLATION_SYSTEM_PROMPT, createTranslationPrompt } from './translate/prompt.js';
+import { assertContentQuality, validateArticleContent } from './validation/contentQualityCheck.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -460,12 +462,55 @@ async function scrapeArticleDetails(url) {
     let content = markdown;
 
     // ============================================
+    // STEP 0: REMOVE HEADER/NAVIGATION BEFORE CONTENT
+    // Remove everything up to and including the date (dd/mm/yyyy)
+    // This removes: logo, navigation, category links, date
+    // ============================================
+    
+    const datePattern = /\d{1,2}\/\d{1,2}\/\d{4}/;
+    const initialLines = content.split('\n');
+    let contentStartIndex = 0;
+    
+    // Find where actual content starts (after date line)
+    for (let i = 0; i < initialLines.length; i++) {
+      if (datePattern.test(initialLines[i])) {
+        contentStartIndex = i + 1; // Start AFTER the date line
+        if (contentStartIndex > 0) {
+          console.log(`    ✂️  Removed first ${contentStartIndex} lines (header/navigation/date)`);
+        }
+        break;
+      }
+    }
+    
+    // Keep only content from contentStartIndex onwards
+    if (contentStartIndex > 0) {
+      content = initialLines.slice(contentStartIndex).join('\n');
+    }
+
+    // ============================================
     // TOKEN-BASED EMBED PRESERVATION SYSTEM
     // Extract social media embeds from HTML and convert to protected tokens
     // These tokens will be preserved during translation and rendered as React components
     // ============================================
     
-    // Step 1: Extract embeds from HTML and inject into markdown at correct positions
+    // Step 1: Extract Tweet IDs from HTML (for dynamic Twitter embeds that Firecrawl can't scrape)
+    let tweetIdsFromHtml = [];
+    if (html) {
+      const tweetMatches = html.matchAll(/(?:twitter|x)\.com\/[^\/]+\/status\/(\d+)/gi);
+      for (const match of tweetMatches) {
+        const tweetId = match[1];
+        if (!tweetIdsFromHtml.includes(tweetId)) {
+          tweetIdsFromHtml.push(tweetId);
+          console.log(`  🐦 Found tweet ID in HTML: ${tweetId}`);
+        }
+      }
+    }
+    
+    // Step 2: Extract embeds from MARKDOWN links (Firecrawl often converts iframes to markdown links)
+    console.log(`  🔍 Checking for social media links in markdown...`);
+    content = extractAllEmbedsFromMarkdown(content);
+    
+    // Step 3: Extract embeds from HTML iframes and inject into markdown at correct positions
     let embedCount = { tiktok: 0, twitter: 0, youtube: 0 };
     if (html) {
       try {
@@ -508,26 +553,31 @@ async function scrapeArticleDetails(url) {
       }
     }
     
-    // Step 2: Remove ALL markdown images (featured image already stored separately)
+    // Step 4: Remove ALL markdown images (featured image already stored separately)
     content = content.replace(/!\[[^\]]*\]\([^)]+\)/g, '');
     
-    // Step 3: Remove Nuvemmag logo and branding anchors
+    // Step 5: Remove Nuvemmag logo and branding anchors
     content = content
       .replace(/\[!\[[^\]]*\]\([^)]+\)\]\(\s*https?:\/\/(?:www\.)?nuvemmag\.com\/?\s*\)/gi, '')
       .replace(/<a[^>]*href="https?:\/\/(?:www\.)?nuvemmag\.com\/?"[^>]*>\s*<img[\s\S]*?<\/a>/gi, '')
       .replace(/!\[[^\]]*\]\([^)]*NuvemMag-Logo[^)]*\)/gi, '');
     
-    // Step 3.5: Remove "Kaynak:" lines (duplicate of Original Article Source)
+    // Step 6: Remove "Kaynak:" lines (duplicate of Original Article Source)
     // Handles both plain URLs and markdown links
     content = content.replace(/^Kaynak:\s*(?:https?:\/\/[^\n]+|\[[^\]]+\]\([^)]+\))$/gm, '');
     
-    // Step 4: AGGRESSIVE CONTENT CLEANING (after tokens are safely added)
+    // Remove any remaining Nuvemmag URLs (that weren't caught in Step 0)
+    content = content.replace(/\[([^\]]*)\]\(https?:\/\/(?:www\.)?nuvemmag\.com[^\)]*\)/gi, '');
+    content = content.replace(/https?:\/\/(?:www\.)?nuvemmag\.com[^\s\)>\]]+/gi, '');
+    
+    // Step 7: LINE-BY-LINE AGGRESSIVE CLEANING (after tokens are safely added)
     // Remove navigation, footer, social links, related articles section, etc.
     
     // Split into lines for better control
     const lines = content.split('\n');
     const cleanedLines = [];
     let skipSection = false;
+    let skipYouTubeUILines = 0; // Skip lines after YouTube embed (UI text)
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -548,27 +598,98 @@ async function scrapeArticleDetails(url) {
         }
       }
       
-      // Skip navigation/footer lines
+      // Skip lines after YouTube embed (contains UI text like "Info", "Share", subscribers, etc.)
+      if (skipYouTubeUILines > 0) {
+        skipYouTubeUILines--;
+        continue;
+      }
+      
+      // Detect YouTube embed token and skip next lines
+      if (line.includes('[[EMBED:YOUTUBE:')) {
+        cleanedLines.push(line);
+        skipYouTubeUILines = 15; // Skip next 15 lines after YouTube embed
+        continue;
+      }
+      
+      // SPECIAL: Replace "Twitter Widget Iframe" with actual tweet token
+      // This handles dynamic Twitter embeds that Firecrawl can't properly scrape
+      if (line.includes('Twitter Widget Iframe') || line.includes('Twitter Embed')) {
+        if (tweetIdsFromHtml.length > 0) {
+          // Use the first tweet ID found in HTML
+          const tweetId = tweetIdsFromHtml[0];
+          cleanedLines.push(`\n[[EMBED:TWEET:${tweetId}]]\n`);
+          console.log(`  ✅ Replaced Twitter Widget placeholder with tweet token: ${tweetId}`);
+          tweetIdsFromHtml.shift(); // Remove used tweet ID
+          continue;
+        }
+      }
+      
+      // Skip YouTube UI text that wasn't caught by skipYouTubeUILines
+      if (
+        line.includes('- YouTube') ||
+        line.includes('youtube.com/channel') ||
+        line.includes('embeds_referring_euri') ||
+        line.match(/^\s*(Info|Share|Subscribe|Watch later|Copy link|Report|Playlist)\s*$/i) ||
+        line.match(/^\s*\d+\.?\d*[KM]?\s+subscribers?\s*$/i) || // "19.4K subscribers", "1M subscribers"
+        line.match(/^\s*\d+\.?\d*[KM]?\s+views?\s*$/i) || // "1.2M views"
+        line.match(/^\s*(Photo image of|Video thumbnail|Uploaded by)\s/i) ||
+        line.match(/Introducing.*YouTube$/i) || // "Introducing X - YouTube"
+        line.includes('youtube.com/watch?v=') && !line.includes('[[EMBED') ||
+        line.includes('youtu.be/') && !line.includes('[[EMBED')
+      ) {
+        continue;
+      }
+      
+      // Skip navigation/footer/category lines (catch any that slipped through Step 0)
       if (
         line.includes('Ana Sayfa') ||
+        line.includes('Ana SayfaEn') ||
+        line.includes('En Son Haberler') ||
+        line.includes('Çiçek ile Teknoloji') ||
+        line.includes('Yapay Zeka Uygulamaları') ||
+        line.includes('Yapay Zeka') && line.length < 50 || // Short "Yapay Zeka" is category, not content
+        line.includes('Teknoloji') && line.length < 20 || // "Teknoloji" category vs content
+        line.includes('Sürdürülebilirlik') && line.length < 30 ||
+        line.includes('Bilim ve Dünya') ||
+        line.includes('Gündem') && line.length < 20 ||
         line.includes('Kurumsal') ||
         line.includes('Hakkımızda') ||
         line.includes('Küny') ||
         line.includes('İletişim') ||
         line.includes('Aydınlatma') ||
         line.includes('Çerez Politikası') ||
+        line.includes('Kişisel Verilerin Korunması') ||
         line.includes('Pinetent Digital') ||
         line.includes('Tüm Hakları Saklıdır') ||
+        line.includes('©202') || // Copyright notices
         line.includes('instagram.com') && !line.includes('[[EMBED') ||
         line.includes('twitter.com') && !line.includes('[[EMBED') ||
         line.includes('linkedin.com') ||
-        line.includes('youtube.com') && !line.includes('[[EMBED') ||
+        line.includes('youtube.com/@') || // YouTube CHANNEL links (not videos!)
+        line.includes('x.com/Nuvemmag') || // Nuvemmag's own Twitter
         line.includes('facebook.com') ||
+        line.includes('post-category') || // Category URLs
+        line.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/) || // Date lines
         hasNuvemmagDomain(line) && !line.includes('Kaynak:') ||
         line.includes('NuvemMag-Logo') ||
-        line.includes('cdn.prod.website-files.com/664e54b1b2f127a2d94fd963')
+        line.includes('cdn.prod.website-files.com') ||
+        line.trim() === '[]()' || line.match(/^\[\]\([^\)]*\)$/) // Empty markdown links
       ) {
         continue;
+      }
+      
+      // Skip lines that are ONLY short names (1-3 words, likely channel/company names)
+      const trimmed = line.trim();
+      if (trimmed && 
+          trimmed.split(/\s+/).length <= 3 && 
+          !trimmed.match(/[.,:;!?]/) && 
+          !trimmed.match(/\[\[EMBED:/) &&
+          !trimmed.startsWith('#') &&
+          !trimmed.includes('**')) {
+        const prevLine = cleanedLines[cleanedLines.length - 1] || '';
+        if (!prevLine.endsWith(',') && !prevLine.endsWith(':') && !prevLine.includes('**')) {
+          continue;
+        }
       }
       
       cleanedLines.push(line);
@@ -576,7 +697,7 @@ async function scrapeArticleDetails(url) {
     
     content = cleanedLines.join('\n');
     
-    // Step 5: Clean up excessive whitespace
+    // Step 8: Clean up excessive whitespace
     content = content
       .replace(/(\r?\n){3,}/g, '\n\n')
       .replace(/[ \t]+$/gm, '')
@@ -866,15 +987,28 @@ async function translateArticle(article) {
       throw new Error('Translation contains instruction leakage - rejecting');
     }
     
-    console.log(`   ✅ Translation complete and validated`);
-    
-    return {
+    // Create translated article object
+    const translatedArticle = {
       ...article,
       title: translatedTitle,
       description: translatedDescription,
       content: translatedContent,
       originalTitle: article.title,
     };
+    
+    // QUALITY CHECK: Validate content quality
+    console.log(`   🔍 Running content quality check...`);
+    try {
+      assertContentQuality(translatedArticle);
+      console.log(`   ✅ Content quality check PASSED`);
+    } catch (error) {
+      console.error(`   ❌ Content quality check FAILED: ${error.message}`);
+      throw new Error(`Content quality validation failed: ${error.message}`);
+    }
+    
+    console.log(`   ✅ Translation complete and validated`);
+    
+    return translatedArticle;
   } catch (error) {
     console.error(`❌ Translation failed: ${error.message}`);
     return article; // Return original if translation fails

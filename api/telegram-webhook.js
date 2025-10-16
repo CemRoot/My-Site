@@ -123,6 +123,29 @@ module.exports = async function handler(req, res) {
         }
 
         switch (data) {
+          case 'approve_auto_post':
+            // Approve and trigger N8N workflow for automatic posting
+            updateData = { status: 'approved' };
+            
+            // Trigger N8N workflow for each approved post
+            for (const post of postEntries) {
+              try {
+                const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL || 'https://your-n8n-instance.com/webhook/linkedin-post-webhook';
+                await fetch(n8nWebhookUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    post_id: post.id,
+                    action: 'approve'
+                  })
+                });
+              } catch (n8nError) {
+                console.error('N8N webhook error:', n8nError.message);
+              }
+            }
+            
+            responseText = `🚀 ${postEntries.length} gönderi onaylandı ve otomatik paylaşım başlatıldı!`;
+            break;
           case 'manual_shared':
             updateData = { status: 'posted', posted_at: new Date().toISOString() };
             responseText = `✅ ${postEntries.length} gönderi manuel olarak paylaşıldı olarak işaretlendi!`;

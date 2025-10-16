@@ -10,7 +10,7 @@
 
 2. **Navigate to SQL Editor:**
    - Left sidebar → Click "SQL Editor"
-   - Or direct link: https://supabase.com/dashboard/project/egehpwmjvvabyvfilehd/sql
+   - Or: Dashboard → Your Project → SQL Editor
 
 3. **Create Newsletter Table:**
    - Click "New Query"
@@ -88,7 +88,7 @@ Expected: Empty table (0 rows) - This is correct! ✅
 
 ### Option 1: Supabase Dashboard
 
-1. Go to: https://supabase.com/dashboard/project/egehpwmjvvabyvfilehd/editor
+1. Go to: Supabase Dashboard → Your Project → Table Editor
 2. Click "newsletter_subscribers" table
 3. View all subscribers
 
@@ -170,9 +170,9 @@ WHERE email = 'user@example.com';
 Already configured! ✅
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://egehpwmjvvabyvfilehd.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJI...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJI...
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_public_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
 ### Vercel (Production)
@@ -291,7 +291,7 @@ Already covered in Privacy Policy! ✅
 
 - **Supabase Docs:** https://supabase.com/docs
 - **Supabase Status:** https://status.supabase.com/
-- **Dashboard:** https://supabase.com/dashboard/project/egehpwmjvvabyvfilehd
+- **Dashboard:** https://supabase.com/dashboard
 
 ---
 

@@ -66,7 +66,7 @@ ${articles.map((article, index) => {
   const hashtagsText = (Array.isArray(article.hashtags) && article.hashtags.length > 0) 
     ? article.hashtags.join(' ') 
     : '#TechNews #AI';
-  const fullContent = `${cleanContent}\n\n🔗 ${CONFIG.SITE_URL}/tech-news/${article.slug}\n\n${hashtagsText}`;
+  const fullContent = `${cleanContent}\n\n🔗 ${process.env.SITE_URL || 'https://cemkoyluoglu.codes'}/tech-news/${article.slug}\n\n${hashtagsText}`;
   
   return `${getScoreEmoji(article.ai_score)} <b>[${article.ai_score} puan]</b> ${article.title}
 
@@ -82,9 +82,12 @@ ${articles.map((article, index) => {
 3. İçeriği yapıştırın ve paylaşın
 4. Aşağıdaki butonla tamamlandığını bildirin`;
 
-    // Create inline keyboard for manual sharing
+    // Create inline keyboard with auto-post option
     const keyboard = {
       inline_keyboard: [
+        [
+          { text: '🚀 OTOMATİK PAYLAŞ', callback_data: 'approve_auto_post' },
+        ],
         [
           { text: '✅ MANUEL PAYLAŞTIM', callback_data: 'manual_shared' },
         ],

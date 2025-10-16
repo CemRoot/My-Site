@@ -24,7 +24,7 @@
 #### Local (.env)
 ```bash
 GROQ_API_KEY=your_groq_key_here
-FIRECRAWL_API_KEY=fc-91af995e81b647b4adf3d76455ad99d9
+FIRECRAWL_API_KEY=your_firecrawl_key_here
 ```
 
 #### GitHub Secrets
@@ -32,14 +32,14 @@ Go to: https://github.com/YOUR_USERNAME/YOUR_REPO/settings/secrets/actions
 
 Add these secrets:
 - `GROQ_API_KEY` → Copy from Vercel (already exists for chatbot)
-- `FIRECRAWL_API_KEY` → `fc-91af995e81b647b4adf3d76455ad99d9`
+- `FIRECRAWL_API_KEY` → Your Firecrawl API key
 
 #### Vercel Environment Variables  
 Go to: https://vercel.com/YOUR_PROJECT/settings/environment-variables
 
 Add (if not already present):
 - `GROQ_API_KEY` → ✅ Already exists
-- `FIRECRAWL_API_KEY` → Add: `fc-91af995e81b647b4adf3d76455ad99d9`
+- `FIRECRAWL_API_KEY` → Add your Firecrawl API key
 
 ---
 
@@ -102,7 +102,7 @@ git push origin main
 2. Navigate to: Settings → Secrets and variables → Actions
 3. Add:
    - Name: `FIRECRAWL_API_KEY`
-   - Value: `fc-91af995e81b647b4adf3d76455ad99d9`
+   - Value: Your Firecrawl API key
 
 #### Step 3: Add Vercel Environment Variable
 1. Go to Vercel dashboard
@@ -110,7 +110,7 @@ git push origin main
 3. Go to Settings → Environment Variables
 4. Add:
    - Key: `FIRECRAWL_API_KEY`
-   - Value: `fc-91af995e81b647b4adf3d76455ad99d9`
+   - Value: Your Firecrawl API key
    - Scope: Production, Preview, Development
 
 #### Step 4: Trigger Manual Workflow (Optional)

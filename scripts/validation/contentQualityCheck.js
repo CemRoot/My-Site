@@ -1,0 +1,207 @@
+/**
+ * Content Quality Check
+ * Validates scraped article content to ensure no unwanted elements remain
+ * Returns validation errors if any issues are found
+ */
+
+/**
+ * Validates article content for quality issues
+ * @param {Object} article - Article object with title, description, content
+ * @returns {Object} { isValid: boolean, errors: string[], warnings: string[] }
+ */
+export function validateArticleContent(article) {
+  const errors = [];
+  const warnings = [];
+  
+  const { title, description, content } = article;
+  
+  // ============================================
+  // CRITICAL ERRORS (Must not exist)
+  // ============================================
+  
+  // 1. Check for Nuvemmag branding
+  if (content.includes('nuvemmag.com') || content.includes('NuvemMag')) {
+    errors.push('❌ Contains Nuvemmag branding/URLs');
+  }
+  
+  // 2. Check for navigation/category links
+  if (content.includes('post-category')) {
+    errors.push('❌ Contains category URLs');
+  }
+  
+  // 3. Check for header navigation
+  const headerPatterns = [
+    'Ana Sayfa',
+    'Ana SayfaEn',
+    'En Son Haberler',
+    'Yapay Zeka Uygulamaları'
+  ];
+  
+  for (const pattern of headerPatterns) {
+    if (content.includes(pattern)) {
+      errors.push(`❌ Contains navigation text: "${pattern}"`);
+      break;
+    }
+  }
+  
+  // 4. Check if content starts with date (should not)
+  if (content.match(/^\d{1,2}\/\d{1,2}\/\d{4}/)) {
+    errors.push('❌ Content starts with date (header not removed)');
+  }
+  
+  // 5. Check for YouTube UI text
+  const youtubeUIPatterns = [
+    /youtube\.com\/channel/,
+    /embeds_referring_euri/,
+    /^\s*(Info|Share|Subscribe)\s*$/mi,
+    /\d+\.?\d*[KM]\s+subscribers/i
+  ];
+  
+  for (const pattern of youtubeUIPatterns) {
+    if (content.match(pattern)) {
+      errors.push('❌ Contains YouTube UI text');
+      break;
+    }
+  }
+  
+  // 6. Check for Rick Roll video ID
+  if (content.includes('dQw4w9WgXcQ')) {
+    errors.push('❌ CRITICAL: Contains Rick Roll video (dQw4w9WgXcQ)!');
+  }
+  
+  // 7. Check for translation instruction leakage
+  const instructionPatterns = [
+    'REMINDER:',
+    'Note: I have',
+    'Text to translate:',
+    'Keep all [[EMBED'
+  ];
+  
+  for (const pattern of instructionPatterns) {
+    if (content.includes(pattern) || title.includes(pattern) || description.includes(pattern)) {
+      errors.push(`❌ CRITICAL: Translation instruction leakage detected: "${pattern}"`);
+      break;
+    }
+  }
+  
+  // 8. Check for footer text
+  if (content.includes('Pinetent Digital') || content.includes('Tüm Hakları Saklıdır')) {
+    errors.push('❌ Contains footer text');
+  }
+  
+  // 9. Check for "İlginizi Çekebilir" (related articles section)
+  if (content.includes('İlginizi Çekebilir')) {
+    errors.push('❌ Contains related articles section');
+  }
+  
+  // 10. Check for empty markdown links
+  if (content.match(/\[\]\([^\)]*\)/)) {
+    errors.push('❌ Contains empty markdown links []()');
+  }
+  
+  // ============================================
+  // WARNINGS (Should be reviewed)
+  // ============================================
+  
+  // 1. Check for embed tokens (should have at least some embeds in social media articles)
+  const embedCount = (content.match(/\[\[EMBED:/g) || []).length;
+  if (embedCount === 0) {
+    warnings.push('⚠️  No embed tokens found (may be normal if article has no social media)');
+  }
+  
+  // 2. Check content length
+  if (content.length < 500) {
+    warnings.push('⚠️  Content is very short (< 500 chars)');
+  }
+  
+  // 3. Check for excessive whitespace
+  if (content.match(/\n{4,}/)) {
+    warnings.push('⚠️  Contains excessive whitespace (4+ newlines)');
+  }
+  
+  // 4. Check title length
+  if (title.length > 200) {
+    warnings.push('⚠️  Title is very long (> 200 chars)');
+  }
+  
+  // 5. Check for incomplete markdown
+  const openBrackets = (content.match(/\[/g) || []).length;
+  const closeBrackets = (content.match(/\]/g) || []).length;
+  const openParens = (content.match(/\(/g) || []).length;
+  const closeParens = (content.match(/\)/g) || []).length;
+  
+  if (openBrackets !== closeBrackets || openParens !== closeParens) {
+    warnings.push('⚠️  Unbalanced markdown brackets/parentheses');
+  }
+  
+  // ============================================
+  // RETURN VALIDATION RESULT
+  // ============================================
+  
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings,
+    stats: {
+      contentLength: content.length,
+      embedCount,
+      titleLength: title.length,
+      descriptionLength: description.length
+    }
+  };
+}
+
+/**
+ * Prints validation result to console
+ * @param {Object} result - Validation result from validateArticleContent
+ * @param {string} articleTitle - Title of the article
+ */
+export function printValidationResult(result, articleTitle) {
+  console.log('\n' + '='.repeat(80));
+  console.log('📋 CONTENT QUALITY CHECK');
+  console.log('='.repeat(80));
+  console.log(`Article: ${articleTitle.substring(0, 60)}...`);
+  console.log('-'.repeat(80));
+  
+  if (result.isValid) {
+    console.log('✅ PASSED - No critical issues found');
+  } else {
+    console.log('❌ FAILED - Critical issues detected:');
+    result.errors.forEach(error => console.log(`   ${error}`));
+  }
+  
+  if (result.warnings.length > 0) {
+    console.log('\n⚠️  WARNINGS:');
+    result.warnings.forEach(warning => console.log(`   ${warning}`));
+  }
+  
+  console.log('\n📊 STATS:');
+  console.log(`   Content Length: ${result.stats.contentLength} chars`);
+  console.log(`   Embed Count: ${result.stats.embedCount}`);
+  console.log(`   Title Length: ${result.stats.titleLength} chars`);
+  console.log(`   Description Length: ${result.stats.descriptionLength} chars`);
+  console.log('='.repeat(80) + '\n');
+  
+  return result.isValid;
+}
+
+/**
+ * Throws an error if validation fails (for use in scraper)
+ * @param {Object} article - Article object
+ * @throws {Error} If validation fails
+ */
+export function assertContentQuality(article) {
+  const result = validateArticleContent(article);
+  
+  if (!result.isValid) {
+    const errorMessage = `Content quality check failed:\n${result.errors.join('\n')}`;
+    throw new Error(errorMessage);
+  }
+  
+  // Log warnings but don't fail
+  if (result.warnings.length > 0) {
+    console.log('⚠️  Quality warnings (not blocking):');
+    result.warnings.forEach(w => console.log(`   ${w}`));
+  }
+}
+
