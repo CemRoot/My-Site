@@ -84,6 +84,16 @@ export function ChatWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Auto-focus textarea when chat opens
+  useEffect(() => {
+    if (isOpen && !isChatBlocked) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+    }
+  }, [isOpen, isChatBlocked]);
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -99,6 +109,10 @@ export function ChatWidget() {
       toast.warning('Sohbet geçici olarak kapalı', {
         description: '5 dakika sonra tekrar dene veya Cem hakkında soru sor.',
       });
+      // Refocus after showing error
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 150);
       return;
     }
 
@@ -109,8 +123,9 @@ export function ChatWidget() {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    // Clear input immediately for better UX
     setInputMessage('');
+    setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
     try {
@@ -217,10 +232,10 @@ export function ChatWidget() {
       setMessages((prev) => [...prev, fallbackMessage]);
     } finally {
       setIsLoading(false);
-      // Focus textarea after message is sent
+      // Focus textarea after message is sent - increased timeout for reliability on both desktop and mobile
       setTimeout(() => {
         textareaRef.current?.focus();
-      }, 100);
+      }, 150);
     }
   };
 
