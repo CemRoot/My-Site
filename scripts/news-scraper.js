@@ -562,9 +562,8 @@ async function scrapeArticleDetails(url) {
       .replace(/<a[^>]*href="https?:\/\/(?:www\.)?nuvemmag\.com\/?"[^>]*>\s*<img[\s\S]*?<\/a>/gi, '')
       .replace(/!\[[^\]]*\]\([^)]*NuvemMag-Logo[^)]*\)/gi, '');
     
-    // Step 6: Remove "Kaynak:" lines (duplicate of Original Article Source)
-    // Handles both plain URLs and markdown links
-    content = content.replace(/^Kaynak:\s*(?:https?:\/\/[^\n]+|\[[^\]]+\]\([^)]+\))$/gm, '');
+    // Step 6: Keep "Kaynak:" lines for now (will extract source later, then remove)
+    // DO NOT remove "Kaynak:" lines here - they're needed for source extraction!
     
     // Remove any remaining Nuvemmag URLs (that weren't caught in Step 0)
     content = content.replace(/\[([^\]]*)\]\(https?:\/\/(?:www\.)?nuvemmag\.com[^\)]*\)/gi, '');
@@ -697,6 +696,86 @@ async function scrapeArticleDetails(url) {
     
     content = cleanedLines.join('\n');
     
+    // ============================================
+    // EXTRACT ORIGINAL SOURCE BEFORE CLEANING
+    // Important: Extract from BOTH markdown AND content before removing "Kaynak:"
+    // ============================================
+    let extractedSource = null;
+    
+    // Strategy 1: Look for "Kaynak:" in ORIGINAL markdown first
+    // This is the most reliable source - catches 90%+ of cases
+    const kaynakInMarkdown = markdown.match(/Kaynak:\s*(?:\[([^\]]+)\]\()?([^\s\)<>\]]+)(?:\))?/i);
+    if (kaynakInMarkdown) {
+      extractedSource = kaynakInMarkdown[2];
+      console.log(`    📰 Found source (Strategy 1 - Kaynak in markdown): ${extractedSource}`);
+    }
+    
+    // Strategy 2: Look for "Kaynak:" in cleaned content (if not found in markdown)
+    if (!extractedSource) {
+      const kaynakInContent = content.match(/Kaynak:\s*(?:\[([^\]]+)\]\()?([^\s\)<>\]]+)(?:\))?/i);
+      if (kaynakInContent) {
+        extractedSource = kaynakInContent[2];
+        console.log(`    📰 Found source (Strategy 2 - Kaynak in content): ${extractedSource}`);
+      }
+    }
+    
+    // Strategy 3: Search for any external links in content (excluding social media)
+    if (!extractedSource) {
+      const allLinksInContent = content.match(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g) || [];
+      for (const linkMatch of allLinksInContent) {
+        const urlMatch = linkMatch.match(/\((https?:\/\/[^\)]+)\)/);
+        if (urlMatch) {
+          const linkUrl = urlMatch[1];
+          // Skip social media and nuvemmag links
+          if (!linkUrl.includes('nuvemmag.com') && 
+              !linkUrl.includes('twitter.com') && 
+              !linkUrl.includes('x.com') &&
+              !linkUrl.includes('youtube.com') && 
+              !linkUrl.includes('youtu.be') &&
+              !linkUrl.includes('tiktok.com') &&
+              !linkUrl.includes('instagram.com') &&
+              !linkUrl.includes('facebook.com') &&
+              !linkUrl.includes('linkedin.com')) {
+            extractedSource = linkUrl;
+            console.log(`    📰 Found source (Strategy 3 - content link): ${extractedSource}`);
+            break;
+          }
+        }
+      }
+    }
+    
+    // Strategy 4: Scan ALL URLs in markdown as last resort
+    if (!extractedSource) {
+      const allUrlsInMarkdown = markdown.match(/https?:\/\/[^\s<>()\[\]]+/gi) || [];
+      for (const foundUrl of allUrlsInMarkdown) {
+        // Skip social media, nuvemmag, CDN, and image links
+        if (!foundUrl.includes('nuvemmag.com') && 
+            !foundUrl.includes('twitter.com') && 
+            !foundUrl.includes('x.com') &&
+            !foundUrl.includes('youtube.com') && 
+            !foundUrl.includes('youtu.be') &&
+            !foundUrl.includes('tiktok.com') &&
+            !foundUrl.includes('instagram.com') &&
+            !foundUrl.includes('facebook.com') &&
+            !foundUrl.includes('linkedin.com') &&
+            !foundUrl.includes('cdn.prod.website-files.com') &&
+            !foundUrl.includes('.png') &&
+            !foundUrl.includes('.jpg') &&
+            !foundUrl.includes('.jpeg') &&
+            !foundUrl.includes('.gif') &&
+            !foundUrl.includes('.webp')) {
+          extractedSource = foundUrl.trim();
+          console.log(`    📰 Found source (Strategy 4 - markdown scan): ${extractedSource}`);
+          break;
+        }
+      }
+    }
+    
+    // Log if no source was found (this should be VERY rare now)
+    if (!extractedSource) {
+      console.log(`    ⚠️  No original source found (article may be original Nuvemmag content)`);
+    }
+    
     // Step 8: Clean up excessive whitespace
     content = content
       .replace(/(\r?\n){3,}/g, '\n\n')
@@ -704,25 +783,7 @@ async function scrapeArticleDetails(url) {
       .replace(/^\s*[\r\n]/gm, '\n')
       .trim();
     
-    // Extract source URL from content (usually at the end)
-    // Handle both markdown links [text](url) and plain URLs
-    let extractedSource = null;
-    
-    // First try to find markdown link format: [text](url) or [url](url)
-    // Extract URL from parentheses (the actual link)
-    const mdLinkMatch = content.match(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/);
-    if (mdLinkMatch) {
-      extractedSource = mdLinkMatch[2]; // Get the URL from parentheses
-    } else {
-      // Try plain URL extraction
-      const urlMatch = content.match(/(?:Kaynak:\s*)?(https?:\/\/[^\s<>)\]]+)/);
-      if (urlMatch) {
-        // Clean up URL from any brackets or angle brackets
-        extractedSource = urlMatch[1].trim();
-      }
-    }
-    
-    // Remove source attribution from content
+    // Remove source attribution from content (after extracting it)
     content = content.replace(/Kaynak:.*$/s, '').trim();
     
     // Remove "İlginizi Çekebilir" section and everything after

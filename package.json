@@ -79,6 +79,7 @@
             "test:webhook": "node scripts/test-webhook.js webhook",
             "test:webhook-ping": "node scripts/test-webhook.js connectivity",
             "linkedin:analyze-force": "MIN_AI_SCORE=50 node scripts/daily-linkedin-automation.js analyze",
-            "health:check": "node scripts/system-health-check.js"
+            "health:check": "node scripts/system-health-check.js",
+            "fix:original-sources": "node scripts/fix-original-sources-improved.js"
       }
 }
