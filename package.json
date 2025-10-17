@@ -67,6 +67,7 @@
       "scripts": {
             "dev": "vite",
             "build": "vite build",
+            "postbuild": "node scripts/post-build-telegram.js || true",
             "scrape:news": "node scripts/news-scraper.js",
             "test:translation": "node scripts/test-groq-translation.js",
             "migrate:supabase": "node scripts/migrate-to-supabase.js",
