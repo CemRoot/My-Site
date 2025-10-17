@@ -74,6 +74,59 @@ module.exports = async function handler(req, res) {
             update.message ? 'message' : 'unknown'
     });
 
+    // Handle text commands
+    if (update.message && update.message.text) {
+      const { message } = update;
+      const chatId = message.chat.id;
+      const text = message.text;
+
+      // Ensure the message is from the authorized chat ID
+      if (chatId.toString() !== CONFIG.TELEGRAM_CHAT_ID) {
+        console.warn(`Unauthorized Telegram message from chat ID: ${chatId}`);
+        return res.status(200).json({ success: false, message: 'Unauthorized chat ID' });
+      }
+
+      try {
+        // Import menu handler functions
+        const menuHandler = await import('../scripts/telegram-menu-handler.js');
+
+        // Handle commands
+        if (text.startsWith('/')) {
+          const command = text.split(' ')[0].substring(1).toLowerCase();
+          
+          switch (command) {
+            case 'start':
+              await menuHandler.handleStartCommand();
+              break;
+            case 'menu':
+              await menuHandler.handleMenuCommand();
+              break;
+            case 'status':
+              await menuHandler.handleStatusAction();
+              break;
+            case 'scrape':
+              await menuHandler.handleScrapeAction();
+              break;
+            case 'health':
+              await menuHandler.handleHealthAction();
+              break;
+            case 'help':
+              await menuHandler.handleHelpAction();
+              break;
+            default:
+              await menuHandler.sendTelegramMessage(
+                `❓ Bilinmeyen komut: ${command}\n\nKullanılabilir komutlar için /help yazın`
+              );
+          }
+        }
+
+        return res.status(200).json({ success: true, message: 'Command processed' });
+      } catch (error) {
+        console.error('❌ Command handler error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+      }
+    }
+
     // Handle callback queries (button presses)
     if (update.callback_query) {
       const { callback_query } = update;
@@ -89,6 +142,64 @@ module.exports = async function handler(req, res) {
       }
 
       try {
+        // Import menu handler functions
+        const menuHandler = await import('../scripts/telegram-menu-handler.js');
+
+        // Handle menu actions
+        if (data.startsWith('action_')) {
+          const action = data.replace('action_', '');
+          
+          // Answer callback query first
+          await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              callback_query_id: callback_query.id,
+              text: 'İşlem yapılıyor...'
+            })
+          });
+
+          switch (action) {
+            case 'scrape':
+              await menuHandler.handleScrapeAction();
+              break;
+            case 'health':
+              await menuHandler.handleHealthAction();
+              break;
+            case 'status':
+              await menuHandler.handleStatusAction();
+              break;
+            case 'stats':
+              await menuHandler.handleStatsAction();
+              break;
+            case 'database':
+              await menuHandler.handleDatabaseAction();
+              break;
+            case 'github':
+              await menuHandler.handleGitHubAction();
+              break;
+            case 'help':
+              await menuHandler.handleHelpAction();
+              break;
+            case 'refresh_menu':
+              await menuHandler.handleMenuCommand();
+              break;
+            case 'fix_sources':
+              await menuHandler.sendTelegramMessage(
+                '🔧 <b>Source Düzeltme</b>\n\n' +
+                'Lokal ortamda çalıştırmak için:\n' +
+                '<code>npm run fix:original-sources</code>\n\n' +
+                'GitHub Actions ile çalıştırma yakında eklenecek.'
+              );
+              break;
+            default:
+              await menuHandler.sendTelegramMessage('❓ Bilinmeyen aksiyon');
+          }
+
+          return res.status(200).json({ success: true, message: 'Menu action processed' });
+        }
+
+        // Handle LinkedIn post actions (legacy)
         let updateData = {};
         let responseText = '';
 

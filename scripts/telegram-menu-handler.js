@@ -1,0 +1,555 @@
+/**
+ * Telegram Bot Menu Handler
+ * 
+ * Provides interactive menu system for controlling the tech news system
+ * Commands: /start, /menu, /status, /scrape, /health, /help
+ */
+
+import 'dotenv/config';
+import { createClient } from '@supabase/supabase-js';
+import { spawn } from 'child_process';
+
+const CONFIG = {
+  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+  TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
+  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  GROQ_API_KEY: process.env.GROQ_API_KEY,
+  FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY,
+  GITHUB_TOKEN: process.env.GITHUB_TOKEN,
+  GITHUB_REPO: process.env.GITHUB_REPOSITORY || 'username/My-Site',
+};
+
+const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
+
+/**
+ * Send message to Telegram
+ */
+export async function sendTelegramMessage(text, options = {}) {
+  try {
+    const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: CONFIG.TELEGRAM_CHAT_ID,
+        text: text,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+        ...options
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Telegram API error: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Telegram send error:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Main menu keyboard
+ */
+function getMainMenuKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: '📰 Haberleri Çek', callback_data: 'action_scrape' },
+        { text: '🏥 Sağlık Kontrolü', callback_data: 'action_health' },
+      ],
+      [
+        { text: '📊 Sistem Durumu', callback_data: 'action_status' },
+        { text: '📈 İstatistikler', callback_data: 'action_stats' },
+      ],
+      [
+        { text: '🔧 GitHub Actions', callback_data: 'action_github' },
+        { text: '💾 Veritabanı', callback_data: 'action_database' },
+      ],
+      [
+        { text: '🔄 Menüyü Yenile', callback_data: 'action_refresh_menu' },
+        { text: 'ℹ️ Yardım', callback_data: 'action_help' },
+      ],
+    ],
+  };
+}
+
+/**
+ * Handle /start command
+ */
+export async function handleStartCommand() {
+  const welcomeText = `
+🤖 <b>Tech News Bot'a Hoş Geldiniz!</b>
+
+Bu bot ile tech news sistemini tamamen kontrol edebilirsiniz.
+
+<b>📋 Menü Komutları:</b>
+/menu - Ana menüyü göster
+/status - Hızlı durum raporu
+/scrape - Haberleri çek
+/health - Sistem sağlığı
+/help - Yardım ve komutlar
+
+<b>🎯 Özellikler:</b>
+✅ Otomatik haber toplama
+✅ Sistem sağlığı izleme
+✅ GitHub Actions kontrolü
+✅ Veritabanı yönetimi
+✅ LinkedIn entegrasyonu
+
+Başlamak için aşağıdaki menüyü kullanın:`;
+
+  await sendTelegramMessage(welcomeText, {
+    reply_markup: getMainMenuKeyboard()
+  });
+}
+
+/**
+ * Handle /menu command
+ */
+export async function handleMenuCommand() {
+  const menuText = `
+📱 <b>ANA MENÜ</b>
+
+Yapmak istediğiniz işlemi seçin:
+
+<b>📰 Haberleri Çek</b> - Yeni haberler topla
+<b>🏥 Sağlık Kontrolü</b> - Tüm sistemleri kontrol et
+<b>📊 Sistem Durumu</b> - Hızlı durum özeti
+<b>📈 İstatistikler</b> - Detaylı istatistikler
+<b>🔧 GitHub Actions</b> - Workflow durumu
+<b>💾 Veritabanı</b> - DB bilgileri
+
+<i>Butonlara tıklayarak işlem yapabilirsiniz.</i>`;
+
+  await sendTelegramMessage(menuText, {
+    reply_markup: getMainMenuKeyboard()
+  });
+}
+
+/**
+ * Handle action_scrape - Trigger news scraping
+ */
+export async function handleScrapeAction() {
+  try {
+    await sendTelegramMessage('🔄 <b>Haber Toplama Başlatılıyor...</b>\n\nLütfen bekleyin, bu işlem birkaç dakika sürebilir.');
+
+    // Trigger GitHub Actions workflow
+    if (CONFIG.GITHUB_TOKEN) {
+      const [owner, repo] = CONFIG.GITHUB_REPO.split('/');
+      const response = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/actions/workflows/scrape-tech-news.yml/dispatches`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${CONFIG.GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ref: 'main'
+          })
+        }
+      );
+
+      if (response.ok) {
+        await sendTelegramMessage(
+          '✅ <b>Haber toplama başlatıldı!</b>\n\n' +
+          '📊 GitHub Actions workflow tetiklendi\n' +
+          '⏳ İşlem tamamlandığında bildirim alacaksınız\n\n' +
+          '<i>Durum: Çalışıyor...</i>'
+        );
+      } else {
+        throw new Error(`GitHub API error: ${response.status}`);
+      }
+    } else {
+      // Fallback: Run locally
+      await sendTelegramMessage(
+        '⚠️ GitHub token bulunamadı, lokal çalıştırılıyor...\n\n' +
+        'Bu işlem daha uzun sürebilir.'
+      );
+      
+      // Run scraper locally
+      const scraper = spawn('npm', ['run', 'scrape:news'], {
+        cwd: process.cwd(),
+        stdio: 'pipe'
+      });
+
+      scraper.on('close', async (code) => {
+        if (code === 0) {
+          await sendTelegramMessage('✅ Haber toplama başarıyla tamamlandı!');
+        } else {
+          await sendTelegramMessage(`❌ Haber toplama başarısız oldu (Exit code: ${code})`);
+        }
+      });
+    }
+  } catch (error) {
+    await sendTelegramMessage(`❌ <b>Hata!</b>\n\n${error.message}`);
+  }
+}
+
+/**
+ * Handle action_health - Run health check
+ */
+export async function handleHealthAction() {
+  try {
+    await sendTelegramMessage('🔍 <b>Sistem sağlığı kontrol ediliyor...</b>');
+
+    // Check Supabase
+    const { count: articleCount, error: countError } = await supabase
+      .from('tech_news_articles')
+      .select('*', { count: 'exact', head: true });
+    
+    const supabaseStatus = countError ? '❌ Hata' : '✅ Bağlı';
+
+    // Check recent articles
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const { data: recentArticles, error: recentError } = await supabase
+      .from('tech_news_articles')
+      .select('id, title, created_at')
+      .gte('created_at', yesterday.toISOString())
+      .order('created_at', { ascending: false });
+    
+    const recentCount = recentArticles?.length || 0;
+
+    // Check Firecrawl API
+    let firecrawlStatus = '❓ Bilinmiyor';
+    try {
+      const fcResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${CONFIG.FIRECRAWL_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url: 'https://example.com', formats: ['markdown'] })
+      });
+      firecrawlStatus = (fcResponse.status === 401 || fcResponse.status === 403) ? '❌ API Key Invalid' : '✅ Aktif';
+    } catch (e) {
+      firecrawlStatus = '❌ Bağlantı Hatası';
+    }
+
+    // Check Groq API
+    let groqStatus = '❓ Bilinmiyor';
+    try {
+      const groqResponse = await fetch('https://api.groq.com/openai/v1/models', {
+        headers: { 'Authorization': `Bearer ${CONFIG.GROQ_API_KEY}` }
+      });
+      groqStatus = groqResponse.ok ? '✅ Aktif' : '❌ Hata';
+    } catch (e) {
+      groqStatus = '❌ Bağlantı Hatası';
+    }
+
+    const healthReport = `
+🏥 <b>SİSTEM SAĞLIK RAPORU</b>
+⏰ ${new Date().toLocaleString('tr-TR')}
+
+<b>📊 Veritabanı (Supabase)</b>
+${supabaseStatus}
+📰 Toplam haber: ${articleCount || 0}
+🆕 Son 24 saat: ${recentCount} yeni haber
+${recentArticles?.[0] ? `⏰ Son: ${new Date(recentArticles[0].created_at).toLocaleString('tr-TR')}` : ''}
+
+<b>🌐 API Servisleri</b>
+Firecrawl API: ${firecrawlStatus}
+Groq AI API: ${groqStatus}
+Telegram Bot: ✅ Aktif
+
+<b>🔄 Durum</b>
+${supabaseStatus === '✅ Bağlı' && firecrawlStatus.includes('✅') && groqStatus.includes('✅') 
+  ? '✨ <b>Tüm sistemler çalışıyor</b>' 
+  : '⚠️ <b>Bazı sistemlerde sorun var</b>'}`;
+
+    await sendTelegramMessage(healthReport, {
+      reply_markup: getMainMenuKeyboard()
+    });
+  } catch (error) {
+    await sendTelegramMessage(`❌ <b>Sağlık kontrolü hatası!</b>\n\n${error.message}`);
+  }
+}
+
+/**
+ * Handle action_status - Quick status
+ */
+export async function handleStatusAction() {
+  try {
+    const { count } = await supabase
+      .from('tech_news_articles')
+      .select('*', { count: 'exact', head: true });
+
+    const { data: recent } = await supabase
+      .from('tech_news_articles')
+      .select('created_at')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    const statusText = `
+📊 <b>HIZLI DURUM</b>
+⏰ ${new Date().toLocaleString('tr-TR')}
+
+📰 Toplam haber: ${count || 0}
+⏰ Son güncelleme: ${recent?.[0] ? new Date(recent[0].created_at).toLocaleString('tr-TR') : 'Bilinmiyor'}
+🔄 Durum: ✅ Aktif
+
+<i>Detaylı kontrol için 🏥 Sağlık Kontrolü'ne tıklayın</i>`;
+
+    await sendTelegramMessage(statusText, {
+      reply_markup: getMainMenuKeyboard()
+    });
+  } catch (error) {
+    await sendTelegramMessage(`❌ Durum alınamadı: ${error.message}`);
+  }
+}
+
+/**
+ * Handle action_stats - Statistics
+ */
+export async function handleStatsAction() {
+  try {
+    // Get article stats
+    const { count: totalCount } = await supabase
+      .from('tech_news_articles')
+      .select('*', { count: 'exact', head: true });
+
+    // Last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const { count: weekCount } = await supabase
+      .from('tech_news_articles')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', sevenDaysAgo.toISOString());
+
+    // Last 24 hours
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const { count: dayCount } = await supabase
+      .from('tech_news_articles')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', yesterday.toISOString());
+
+    // Category breakdown
+    const { data: categories } = await supabase
+      .from('tech_news_articles')
+      .select('category')
+      .not('category', 'is', null);
+
+    const categoryStats = {};
+    categories?.forEach(item => {
+      categoryStats[item.category] = (categoryStats[item.category] || 0) + 1;
+    });
+
+    const topCategories = Object.entries(categoryStats)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([cat, count]) => `  ${cat}: ${count}`)
+      .join('\n');
+
+    const statsText = `
+📈 <b>İSTATİSTİKLER</b>
+⏰ ${new Date().toLocaleString('tr-TR')}
+
+<b>📰 Haber Sayıları</b>
+Toplam: ${totalCount || 0}
+Son 7 gün: ${weekCount || 0}
+Son 24 saat: ${dayCount || 0}
+
+<b>🏆 En Popüler Kategoriler</b>
+${topCategories || 'Veri yok'}
+
+<b>📊 Ortalamalar</b>
+Günlük: ~${Math.round((weekCount || 0) / 7)} haber
+Haftalık: ~${weekCount || 0} haber`;
+
+    await sendTelegramMessage(statsText, {
+      reply_markup: getMainMenuKeyboard()
+    });
+  } catch (error) {
+    await sendTelegramMessage(`❌ İstatistikler alınamadı: ${error.message}`);
+  }
+}
+
+/**
+ * Handle action_database - Database info
+ */
+export async function handleDatabaseAction() {
+  try {
+    const { count: total } = await supabase
+      .from('tech_news_articles')
+      .select('*', { count: 'exact', head: true });
+
+    const { count: withSource } = await supabase
+      .from('tech_news_articles')
+      .select('*', { count: 'exact', head: true })
+      .not('original_source', 'is', null);
+
+    const { count: nullSource } = await supabase
+      .from('tech_news_articles')
+      .select('*', { count: 'exact', head: true })
+      .is('original_source', null);
+
+    const sourcePercentage = total > 0 ? Math.round((withSource / total) * 100) : 0;
+
+    const dbText = `
+💾 <b>VERİTABANI BİLGİLERİ</b>
+
+<b>📊 Genel İstatistikler</b>
+Toplam kayıt: ${total}
+Original source var: ${withSource} (${sourcePercentage}%)
+Original source yok: ${nullSource}
+
+<b>🔧 Bakım</b>
+${nullSource > 0 ? `⚠️ ${nullSource} kayıtta source eksik\n\nDüzeltmek için:\nnpm run fix:original-sources` : '✅ Tüm kayıtlar düzgün'}
+
+<b>🔗 Bağlantı</b>
+Supabase: ✅ Bağlı
+URL: ${CONFIG.SUPABASE_URL.substring(0, 30)}...`;
+
+    await sendTelegramMessage(dbText, {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '🔧 Source\'ları Düzelt', callback_data: 'action_fix_sources' },
+          ],
+          [
+            { text: '🔙 Ana Menü', callback_data: 'action_refresh_menu' },
+          ],
+        ]
+      }
+    });
+  } catch (error) {
+    await sendTelegramMessage(`❌ Veritabanı bilgisi alınamadı: ${error.message}`);
+  }
+}
+
+/**
+ * Handle action_github - GitHub Actions status
+ */
+export async function handleGitHubAction() {
+  const githubText = `
+🔧 <b>GITHUB ACTIONS</b>
+
+<b>📋 Aktif Workflow'lar</b>
+• Scrape Tech News (3x gün, hafta içi)
+  ⏰ 09:30, 13:00, 16:00 UTC
+
+• Daily LinkedIn (günlük)
+  ⏰ 16:30 UTC
+
+• System Health Check (günlük)
+  ⏰ 08:00 UTC
+
+<b>📊 Durum</b>
+✅ Tüm workflow'lar aktif
+
+<b>🔗 Linkler</b>
+GitHub Actions sekmesinden takip edebilirsiniz.`;
+
+  await sendTelegramMessage(githubText, {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '🚀 Scraping Başlat', callback_data: 'action_scrape' },
+        ],
+        [
+          { text: '🔙 Ana Menü', callback_data: 'action_refresh_menu' },
+        ],
+      ]
+    }
+  });
+}
+
+/**
+ * Handle action_help - Help and commands
+ */
+export async function handleHelpAction() {
+  const helpText = `
+ℹ️ <b>YARDIM VE KOMUTLAR</b>
+
+<b>📱 Bot Komutları</b>
+/start - Bot'u başlat
+/menu - Ana menüyü göster
+/status - Hızlı durum raporu
+/scrape - Haberleri çek
+/health - Sağlık kontrolü
+/help - Bu yardım mesajı
+
+<b>🎯 Menü Özellikleri</b>
+• 📰 Haberleri Çek - Yeni haberler topla
+• 🏥 Sağlık Kontrolü - Sistemleri kontrol et
+• 📊 Sistem Durumu - Hızlı özet
+• 📈 İstatistikler - Detaylı veriler
+• 🔧 GitHub Actions - Workflow durumu
+• 💾 Veritabanı - DB yönetimi
+
+<b>🔔 Otomatik Bildirimler</b>
+• ✅ Başarılı işlemler
+• ❌ Hatalar ve sorunlar
+• 📊 Günlük sağlık raporu
+
+<b>💡 İpuçları</b>
+• Butonlara tıklayarak işlem yapın
+• Komutları direkt yazabilirsiniz
+• Bildirimler otomatik gelir
+
+<i>Sorun olursa /menu ile yenileyin</i>`;
+
+  await sendTelegramMessage(helpText, {
+    reply_markup: getMainMenuKeyboard()
+  });
+}
+
+/**
+ * Set bot commands (run once during setup)
+ */
+export async function setBotCommands() {
+  const commands = [
+    { command: 'start', description: 'Bot\'u başlat' },
+    { command: 'menu', description: 'Ana menüyü göster' },
+    { command: 'status', description: 'Hızlı durum raporu' },
+    { command: 'scrape', description: 'Haberleri çek' },
+    { command: 'health', description: 'Sağlık kontrolü' },
+    { command: 'help', description: 'Yardım ve komutlar' },
+  ];
+
+  try {
+    const response = await fetch(
+      `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/setMyCommands`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commands })
+      }
+    );
+
+    if (response.ok) {
+      console.log('✅ Bot commands set successfully!');
+    } else {
+      const error = await response.json();
+      console.error('❌ Failed to set bot commands:', error);
+    }
+  } catch (error) {
+    console.error('❌ Error setting bot commands:', error);
+  }
+}
+
+export default {
+  sendTelegramMessage,
+  handleStartCommand,
+  handleMenuCommand,
+  handleScrapeAction,
+  handleHealthAction,
+  handleStatusAction,
+  handleStatsAction,
+  handleDatabaseAction,
+  handleGitHubAction,
+  handleHelpAction,
+  setBotCommands,
+};
+

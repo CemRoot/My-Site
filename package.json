@@ -80,6 +80,7 @@
             "test:webhook-ping": "node scripts/test-webhook.js connectivity",
             "linkedin:analyze-force": "MIN_AI_SCORE=50 node scripts/daily-linkedin-automation.js analyze",
             "health:check": "node scripts/system-health-check.js",
-            "fix:original-sources": "node scripts/fix-original-sources-improved.js"
+            "fix:original-sources": "node scripts/fix-original-sources-improved.js",
+            "telegram:setup-menu": "node scripts/setup-telegram-menu.js"
       }
 }
