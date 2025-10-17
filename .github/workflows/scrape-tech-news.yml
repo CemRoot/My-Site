@@ -46,6 +46,8 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           echo "🚀 Starting multi-category tech news scraper..."
           echo "📂 Categories: 7 (AI, Tech, Science, etc.)"
@@ -65,9 +67,50 @@ jobs:
           echo "💾 Storage: Supabase (no git commit needed)"
           echo "🔄 Website will fetch latest data from database automatically"
       
+      - name: 📱 Send success notification to Telegram
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Set to 'false' to disable success notifications (only get error alerts)
+          NOTIFY_SUCCESS: 'true'
+        run: |
+          if [ "$NOTIFY_SUCCESS" = "true" ]; then
+            CURRENT_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+            
+            # Check how many articles were added (parse from npm output if available)
+            # For now, send a simple success notification
+            MESSAGE="✅ <b>TECH NEWS SCRAPER - BAŞARILI</b>%0A%0A🎉 Haber toplama işlemi başarıyla tamamlandı!%0A⏰ Zaman: ${CURRENT_TIME}%0A💾 Veritabanı: Supabase PostgreSQL%0A🔄 Durum: Aktif%0A%0A<i>Tüm sistemler normal çalışıyor</i>"
+            
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -d "chat_id=${TELEGRAM_CHAT_ID}" \
+              -d "text=${MESSAGE}" \
+              -d "parse_mode=HTML" \
+              -d "disable_web_page_preview=true" > /dev/null
+            
+            echo "📱 Telegram bildirim gönderildi"
+          else
+            echo "📱 Başarı bildirimi devre dışı (sadece hata bildirimleri aktif)"
+          fi
+      
       - name: 📧 Send notification on failure
         if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           echo "❌ Scraping failed!"
-          echo "Check the logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          CURRENT_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          LOG_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
+          MESSAGE="🚨 <b>TECH NEWS SCRAPER - HATA!</b>%0A%0A❌ Haber toplama işlemi başarısız oldu%0A⏰ Zaman: ${CURRENT_TIME}%0A🔧 Workflow: Scrape Tech News%0A📊 Durum: Başarısız%0A%0A🔍 <b>Olası Sorunlar:</b>%0A• API anahtarı hatası (Firecrawl/Groq)%0A• Veritabanı bağlantı sorunu (Supabase)%0A• Rate limit aşımı%0A• Kaynak site erişim sorunu%0A%0A🔗 <a href='${LOG_URL}'>Log kayıtlarını incele</a>%0A%0A<i>⚠️ Güvenlik uyarısı: Sistem otomatik olarak tekrar deneyecek</i>"
+          
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=HTML" \
+            -d "disable_web_page_preview=false" > /dev/null
+          
+          echo "📱 Hata bildirimi Telegram'a gönderildi"
+          echo "Check the logs: ${LOG_URL}"
 
