@@ -141,44 +141,56 @@ graph TB
         I[Tech News API]
     end
     
-    subgraph "Automation Layer"
-        J[GitHub Actions] --> K[Scrape Tech News]
-        J --> L[LinkedIn Automation]
-        J --> M[Health Check]
-        J --> N[Telegram Setup]
+    subgraph "Automation Layer - GitHub Actions"
+        J[Scrape Tech News]
+        K[Health Check]
+        L[Telegram Setup]
+    end
+    
+    subgraph "Automation Layer - n8n"
+        M[LinkedIn Digest Workflow]
+        M1[Daily Schedule 16:30]
+        M2[Manual Trigger]
+        M3[Callback Handler]
     end
     
     subgraph "AI Services"
-        O[Groq AI] --> P[Translation]
-        O --> Q[Chat Responses]
-        R[Firecrawl] --> S[Web Scraping]
+        N[Groq AI] --> O[Translation]
+        N --> P[Chat Responses]
+        Q[OpenAI GPT-4o-mini] --> R[LinkedIn Digest]
+        S[Firecrawl] --> T[Web Scraping]
     end
     
     subgraph "Data Layer"
-        T[(Supabase)] --> U[Tech Articles]
-        T --> V[LinkedIn Posts]
-        T --> W[Analytics]
+        U[(Supabase)] --> V[Tech Articles]
+        U --> W[LinkedIn Digest Posts]
+        U --> X[Analytics]
     end
     
     subgraph "Messaging"
-        X[Telegram Bot] --> Y[Commands]
-        X --> Z[Notifications]
+        Y[Telegram Bot] --> Z[Commands]
+        Y --> AA[Notifications]
     end
     
     A --> I
-    B --> T
+    B --> U
     C --> H
-    D --> O
-    F --> J
-    G --> J
-    K --> R
-    K --> O
-    K --> T
-    L --> T
-    M --> T
-    M --> X
-    K --> X
-    N --> X
+    D --> N
+    F --> M
+    E --> M3
+    J --> S
+    J --> N
+    J --> U
+    K --> U
+    K --> Y
+    J --> Y
+    L --> Y
+    M --> U
+    M --> Q
+    M --> Y
+    M1 --> M
+    M2 --> M
+    M3 --> M
 ```
 
 ### 🔄 Data Flow
@@ -196,29 +208,39 @@ Telegram Notification (Success/Error)
 
 #### LinkedIn Digest Flow (n8n + Vercel)
 ```
-n8n Workflow #1: Daily Digest Generator (16:30 Daily)
+n8n Unified Workflow: LinkedIn Digest System
       ↓
-Fetch Today's Articles → OpenAI GPT-4 (Digest Generation)
+TRIGGER 1: Schedule (16:30 UTC Daily - Automatic)
+      OR
+TRIGGER 2: Manual Digest Button (/linkedin menu - User action)
+      ↓
+Workflow Configuration → Check Duplicate
+      ↓
+Fetch Today's Articles → OpenAI GPT-4o-mini (Digest Generation)
       ↓
 Save to linkedin_digest_posts (status: pending)
       ↓
-Telegram Message (4 Buttons: Approve/Reject/Edit/View)
+Telegram Message (4 Buttons: ✅ Approve / ❌ Reject / 👁️ View / ✏️ Edit)
       ↓
-User Clicks "Approve" → Telegram Bot API
+User Clicks Button → Telegram Bot API
       ↓
 Vercel Webhook (api/telegram-webhook.js) - Security Layer
-      ├── UUID Validation
-      ├── Rate Limiting
+      ├── UUID Validation (RFC 4122)
+      ├── Rate Limiting (10 req/min per user)
       ├── Chat Authorization
-      └── Forward to n8n →
+      └── Forward to n8n Callback Webhook →
                          ↓
-n8n Workflow #2: Callback Handler
+n8n Callback Handler (Same Workflow)
       ↓
-Parse Callback → Get Digest from DB
+Parse Callback → Switch (approve/reject/view/edit)
       ↓
-LinkedIn API Post (n8n OAuth Node)
+Get Digest from DB
       ↓
-Update DB (status: posted)
+Action Based on Button:
+   • APPROVE → Post to LinkedIn (n8n OAuth) → Update DB (posted) → ✅ Confirmation
+   • REJECT  → Update DB (rejected) → ❌ Rejected Message
+   • VIEW    → Send Full Digest Content → 👁️ Full Content
+   • EDIT    → "Coming Soon" Message → ✏️ Edit Mode
       ↓
 Telegram Confirmation ✅
 ```
@@ -243,7 +265,9 @@ Telegram Confirmation ✅
 |---------|---------|------|
 | **Supabase** | PostgreSQL Database | Free/Pro |
 | **Groq AI** | Translation & Chat | Free |
+| **OpenAI** | LinkedIn Digest Generation | Free Credits |
 | **Firecrawl** | Web Scraping | Free (500/mo) |
+| **n8n** | Workflow Automation | Free/Self-hosted |
 | **Telegram Bot API** | Notifications & Control | Free |
 | **GitHub Actions** | CI/CD & Automation | Free |
 
@@ -312,6 +336,7 @@ The Telegram bot provides complete system control from your mobile device:
 │     🤖 TECH NEWS BOT MENU       │
 ├─────────────────────────────────┤
 │  📰 Haberleri Çek               │
+│  📱 LinkedIn Posts              │
 │  🏥 Sağlık Kontrolü             │
 │  📊 Sistem Durumu               │
 │  📈 İstatistikler               │
@@ -319,6 +344,14 @@ The Telegram bot provides complete system control from your mobile device:
 │  💾 Veritabanı                  │
 │  🔄 Menüyü Yenile               │
 │  ℹ️ Yardım                      │
+└─────────────────────────────────┘
+
+LinkedIn Posts Sub-Menu:
+┌─────────────────────────────────┐
+│  🚀 Manuel Digest Oluştur       │
+│  📊 Pending Digests             │
+│  ✅ Posted Digests              │
+│  🔙 Ana Menü                    │
 └─────────────────────────────────┘
 ```
 
@@ -328,6 +361,7 @@ The Telegram bot provides complete system control from your mobile device:
 |---------|-------------|
 | `/start` | Initialize bot and show menu |
 | `/menu` | Display main control menu |
+| `/linkedin` | LinkedIn digest management |
 | `/status` | Quick system status |
 | `/scrape` | Trigger news scraping |
 | `/health` | Run health check |
@@ -421,7 +455,8 @@ GITHUB_REPOSITORY=username/repo         # Repository name
 VERCEL_ANALYTICS_ID=your_id            # Vercel Analytics
 
 # LinkedIn Automation (n8n Integration)
-N8N_LINKEDIN_CALLBACK_WEBHOOK=https://your-n8n.app.n8n.cloud/webhook/linkedin-digest-callback  # n8n callback webhook URL
+N8N_LINKEDIN_CALLBACK_WEBHOOK=https://your-n8n.app.n8n.cloud/webhook/linkedin-digest-callback  # n8n callback webhook
+N8N_MANUAL_DIGEST_WEBHOOK=https://your-n8n.app.n8n.cloud/webhook/manuel-start-linkedin         # n8n manual digest webhook
 ```
 
 ### GitHub Secrets
@@ -661,60 +696,82 @@ npm run telegram:webhook-remove # Remove webhook
 
 ### LinkedIn Automation (n8n + Vercel)
 
-**The new system uses TWO n8n workflows + Vercel for secure LinkedIn digest automation.**
+**The new system uses ONE unified n8n workflow + Vercel for secure LinkedIn digest automation.**
 
 #### Architecture:
 ```
-┌─────────────────────────────────────────────┐
-│  n8n Workflow #1: Daily Digest Generator   │
-│  ├── Schedule (16:30 UTC Daily)            │
-│  ├── Fetch articles from Supabase          │
-│  ├── Generate digest with OpenAI           │
-│  ├── Save to linkedin_digest_posts (pending)│
-│  └── Send Telegram message (4 buttons)     │
-└─────────────────────────────────────────────┘
-                    ↓ User clicks "Approve"
-┌─────────────────────────────────────────────┐
-│  Vercel Webhook: Security Layer             │
-│  ├── UUID validation                        │
-│  ├── Rate limiting (10 req/min)            │
-│  ├── Chat ID authorization                 │
-│  └── Forward to n8n callback webhook →     │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│  n8n Unified Workflow: LinkedIn Digest System       │
+│                                                      │
+│  ENTRY POINT 1: Daily Schedule (16:30 UTC Daily)   │
+│  ENTRY POINT 2: Manual Trigger (Telegram Button)   │
+│           ↓                                          │
+│  ├── Workflow Configuration                         │
+│  ├── Check Duplicate (Skip if exists)              │
+│  ├── Fetch articles from Supabase                  │
+│  ├── Generate digest with OpenAI GPT-4o-mini       │
+│  ├── Save to linkedin_digest_posts (pending)       │
+│  └── Send Telegram message (4 buttons)             │
+└──────────────────────────────────────────────────────┘
+                    ↓ User clicks "Approve/Reject/View/Edit"
+┌──────────────────────────────────────────────────────┐
+│  Vercel Webhook: Security Layer                     │
+│  ├── UUID validation (RFC 4122)                    │
+│  ├── Rate limiting (10 req/min per user)           │
+│  ├── Chat ID authorization                         │
+│  └── Forward to n8n callback webhook →             │
+└──────────────────────────────────────────────────────┘
                     ↓
-┌─────────────────────────────────────────────┐
-│  n8n Workflow #2: Callback Handler         │
-│  ├── Parse callback data                   │
-│  ├── Get digest from DB                    │
-│  ├── Post to LinkedIn (n8n OAuth)          │
-│  ├── Update DB (status: posted)            │
-│  └── Send Telegram confirmation            │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│  n8n Callback Handler (Same Workflow)               │
+│  ├── Parse callback data                            │
+│  ├── Switch (approve/reject/view/edit)             │
+│  ├── Get digest from DB                            │
+│  ├── Post to LinkedIn (n8n OAuth)                  │
+│  ├── Update DB (status: posted/rejected)           │
+│  └── Send Telegram confirmation                     │
+└──────────────────────────────────────────────────────┘
 ```
 
 #### Setup Requirements:
 1. **n8n LinkedIn OAuth** (in n8n credentials)
    - Connect LinkedIn account in n8n
    - OAuth handles token refresh automatically
-2. **Two n8n Workflows** (see `docs/LINKEDIN_DIGEST_SYSTEM.md`)
-3. **Vercel Environment Variable:**
+2. **One Unified n8n Workflow** (see `docs/n8n-linkedin-digest-FINAL.json`)
+3. **Vercel Environment Variables:**
    ```bash
    N8N_LINKEDIN_CALLBACK_WEBHOOK=https://your-n8n.app.n8n.cloud/webhook/linkedin-digest-callback
+   N8N_MANUAL_DIGEST_WEBHOOK=https://your-n8n.app.n8n.cloud/webhook/manuel-start-linkedin
    ```
 
 #### How It Works:
-1. **n8n Daily Workflow** generates digest at 16:30 (Weekdays)
-2. **Telegram** sends approval message with 4 buttons
-3. **User clicks "Approve"** → Telegram forwards to Vercel
-4. **Vercel** performs security checks & forwards to n8n
-5. **n8n Callback Workflow** posts to LinkedIn (OAuth)
-6. **Confirmation** sent to Telegram ✅
+
+**Automatic Daily Digest:**
+1. **n8n Schedule Trigger** activates at 16:30 UTC (Weekdays)
+2. **Workflow** checks for duplicates, fetches articles
+3. **OpenAI GPT-4o-mini** generates LinkedIn digest
+4. **Telegram** sends approval message with 4 buttons
+
+**Manual Digest (New Feature!):**
+1. **User** opens `/linkedin` command or menu
+2. **Clicks** "🚀 Manuel Digest Oluştur" button
+3. **Vercel** forwards request to n8n
+4. **n8n** generates digest for today's articles
+5. **Telegram** sends approval message immediately
+
+**Approval Flow:**
+1. **User clicks "Approve"** → Telegram forwards to Vercel
+2. **Vercel** performs security checks & forwards to n8n
+3. **n8n Callback Handler** posts to LinkedIn (OAuth)
+4. **Confirmation** sent to Telegram ✅
 
 #### Why This Design?
 - ✅ **No LinkedIn API tokens in Vercel** (Security)
 - ✅ **n8n handles OAuth** (Automatic refresh)
 - ✅ **Vercel provides security layer** (Rate limiting, validation)
-- ✅ **Separation of concerns** (Generation vs. Approval)
+- ✅ **Unified workflow** (Easier maintenance, single source of truth)
+- ✅ **Manual + Automatic** (Flexibility for both scheduled and on-demand)
+- ✅ **Duplicate prevention** (Check database before creation)
 
 #### Legacy Commands (Deprecated):
 ```bash
@@ -742,7 +799,9 @@ npm run test:webhook            # Test webhook
 - [x] GitHub Actions automation
 - [x] Supabase migration
 - [x] Health monitoring system
-- [x] LinkedIn integration
+- [x] LinkedIn digest automation (n8n + Vercel)
+- [x] Manual digest creation (Telegram)
+- [x] LinkedIn OAuth integration (n8n)
 - [x] Email newsletter signup
 
 ### 🚧 In Progress
@@ -842,7 +901,7 @@ copies or substantial portions of the Software.
 
 ---
 
-**Last Updated**: October 17, 2025 | **Version**: 2.0.0
+**Last Updated**: October 18, 2025 | **Version**: 2.1.0
 
 [![Built with Love](https://img.shields.io/badge/Built%20with-❤️-red?style=flat-square)](https://github.com/CemRoot/My-Site)
 [![Maintained](https://img.shields.io/badge/Maintained-Yes-green?style=flat-square)](https://github.com/CemRoot/My-Site)
