@@ -46,52 +46,8 @@ function checkRateLimit(userId, maxRequests = 10, windowMs = 60000) {
   return true;
 }
 
-// Helper function: Post to LinkedIn
-async function postToLinkedIn(content) {
-  const LINKEDIN_ACCESS_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN;
-  const LINKEDIN_PERSON_URN = process.env.LINKEDIN_PERSON_URN;
-  
-  if (!LINKEDIN_ACCESS_TOKEN || !LINKEDIN_PERSON_URN) {
-    throw new Error('LinkedIn credentials not configured. Set LINKEDIN_ACCESS_TOKEN and LINKEDIN_PERSON_URN in environment variables.');
-  }
-  
-  // LinkedIn Share API v2
-  const url = 'https://api.linkedin.com/v2/ugcPosts';
-  
-  const postData = {
-    author: LINKEDIN_PERSON_URN,
-    lifecycleState: 'PUBLISHED',
-    specificContent: {
-      'com.linkedin.ugc.ShareContent': {
-        shareCommentary: {
-          text: content
-        },
-        shareMediaCategory: 'NONE'
-      }
-    },
-    visibility: {
-      'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
-    }
-  };
-  
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
-      'Content-Type': 'application/json',
-      'X-Restli-Protocol-Version': '2.0.0'
-    },
-    body: JSON.stringify(postData)
-  });
-  
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`LinkedIn API error (${response.status}): ${error}`);
-  }
-  
-  const result = await response.json();
-  return result.id; // Returns the post ID
-}
+// Note: LinkedIn posting is now handled by n8n workflow
+// This keeps the webhook lightweight and delegates OAuth-based posting to n8n
 
 // Helper function to send Telegram messages
 async function sendTelegramMessage(text, options = {}) {
@@ -277,7 +233,7 @@ module.exports = async function handler(req, res) {
           return res.status(200).json({ success: true, message: 'Menu action processed' });
         }
 
-        // Handle LinkedIn Digest actions (new system)
+        // Handle LinkedIn Digest actions - Forward to n8n workflow
         if (data.match(/^(approve|reject|edit|view)_[0-9a-f-]+$/i)) {
           const [action, digestId] = data.split('_');
           
@@ -306,122 +262,45 @@ module.exports = async function handler(req, res) {
               })
             });
 
-            // Fetch digest from database
-            const { data: digest, error: fetchError } = await supabase
-              .from('linkedin_digest_posts')
-              .select('*')
-              .eq('id', digestId)
-              .single();
-
-            if (fetchError || !digest) {
-              console.error('Digest not found:', fetchError?.message || 'Not found');
-              await sendTelegramMessage(`❌ Digest bulunamadı. ID: ${digestId}`);
-              return res.status(404).json({ success: false, message: 'Digest not found' });
+            // Forward to n8n callback workflow
+            const N8N_WEBHOOK_URL = process.env.N8N_LINKEDIN_CALLBACK_WEBHOOK;
+            
+            if (!N8N_WEBHOOK_URL) {
+              throw new Error('N8N_LINKEDIN_CALLBACK_WEBHOOK environment variable not configured');
             }
 
-            // Check if already processed
-            if (digest.status === 'posted' && action === 'approve') {
-              await sendTelegramMessage('⚠️ Bu digest zaten paylaşılmış!');
-              return res.status(200).json({ success: false, message: 'Already posted' });
+            console.log(`📤 Forwarding LinkedIn digest callback to n8n: ${action}_${digestId}`);
+            
+            const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                callback_query: callback_query,
+                action: action,
+                digest_id: digestId,
+                chat_id: chatId,
+                message_id: messageId,
+                from_id: fromId
+              })
+            });
+
+            if (!n8nResponse.ok) {
+              const errorText = await n8nResponse.text();
+              throw new Error(`n8n webhook error (${n8nResponse.status}): ${errorText}`);
             }
 
-            let responseText = '';
-            let updateData = {};
-
-            switch (action) {
-              case 'approve':
-                // Post to LinkedIn
-                try {
-                  await sendTelegramMessage('🚀 LinkedIn\'e gönderiliyor...');
-                  
-                  const linkedInPostId = await postToLinkedIn(digest.suggested_content);
-                  
-                  // Update database
-                  updateData = {
-                    status: 'posted',
-                    linkedin_post_id: linkedInPostId,
-                    posted_at: new Date().toISOString()
-                  };
-                  
-                  const { error: updateError } = await supabase
-                    .from('linkedin_digest_posts')
-                    .update(updateData)
-                    .eq('id', digestId);
-                  
-                  if (updateError) {
-                    throw new Error(`Database update error: ${updateError.message}`);
-                  }
-                  
-                  responseText = `✅ Başarıyla LinkedIn'de paylaşıldı!\n\n📊 Digest ID: ${digestId}\n🔗 Post ID: ${linkedInPostId}\n⏰ ${new Date().toLocaleString('tr-TR')}`;
-                  
-                } catch (linkedInError) {
-                  console.error('LinkedIn posting error:', linkedInError);
-                  
-                  // Update status to failed
-                  await supabase
-                    .from('linkedin_digest_posts')
-                    .update({ status: 'failed' })
-                    .eq('id', digestId);
-                  
-                  responseText = `❌ LinkedIn paylaşım hatası:\n${linkedInError.message}`;
-                }
-                break;
-
-              case 'reject':
-                // Update status to rejected
-                updateData = { status: 'rejected' };
-                
-                const { error: rejectError } = await supabase
-                  .from('linkedin_digest_posts')
-                  .update(updateData)
-                  .eq('id', digestId);
-                
-                if (rejectError) {
-                  throw new Error(`Database update error: ${rejectError.message}`);
-                }
-                
-                responseText = `❌ Digest reddedildi.\n\n📊 Digest ID: ${digestId}\n⏰ ${new Date().toLocaleString('tr-TR')}`;
-                break;
-
-              case 'edit':
-                // Provide content for manual editing
-                responseText = `✏️ İçeriği düzenlemek için:\n\n1. Aşağıdaki içeriği kopyalayın\n2. Düzenleyin\n3. LinkedIn'e manuel olarak yapıştırın\n\n---\n\n${digest.suggested_content}\n\n---\n\nDüzenledikten sonra "View" butonuna basarak orijinal halini görebilirsiniz.`;
-                break;
-
-              case 'view':
-                // Show full content
-                const contentPreview = digest.suggested_content.length > 1000 
-                  ? digest.suggested_content.substring(0, 1000) + '...\n\n(Tam içerik için veritabanını kontrol edin)'
-                  : digest.suggested_content;
-                
-                responseText = `👁️ Tam İçerik:\n\n${contentPreview}\n\n---\n\n📊 Digest ID: ${digestId}\n📅 Tarih: ${digest.digest_date}\n📰 Haber sayısı: ${digest.article_count}\n📌 Durum: ${digest.status}`;
-                break;
-
-              default:
-                responseText = 'Bilinmeyen işlem.';
-            }
-
-            // Send response to Telegram
-            await sendTelegramMessage(responseText);
-
-            // Edit original message to remove buttons (except for view)
-            if (action !== 'view' && action !== 'edit') {
-              await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/editMessageReplyMarkup`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  chat_id: chatId,
-                  message_id: messageId,
-                  reply_markup: { inline_keyboard: [] }
-                })
-              });
-            }
-
-            return res.status(200).json({ success: true, message: responseText });
+            console.log('✅ Successfully forwarded to n8n workflow');
+            
+            return res.status(200).json({ 
+              success: true, 
+              message: 'Request forwarded to n8n workflow for processing' 
+            });
 
           } catch (error) {
-            console.error('❌ Digest handler error:', error);
-            await sendTelegramMessage(`🚨 Hata: ${error.message}`);
+            console.error('❌ Error forwarding to n8n:', error);
+            await sendTelegramMessage(
+              `❌ İşlem sırasında hata oluştu:\n\n${error.message}\n\nLütfen tekrar deneyin veya /help ile destek alın.`
+            );
             return res.status(500).json({ success: false, message: error.message });
           }
         }

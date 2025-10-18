@@ -15,39 +15,59 @@ The LinkedIn Digest System automatically generates and posts daily tech news dig
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                   LINKEDIN DIGEST FLOW                       │
+│               (2 n8n Workflows + Vercel)                     │
 └─────────────────────────────────────────────────────────────┘
 
-1️⃣ n8n Workflow (Content Generation)
+1️⃣ n8n Workflow #1: Daily Digest Generator
    ├── Schedule: Daily at 16:30 weekdays
    ├── Checks: linkedin_digest_posts duplicate prevention
    ├── Fetches: Today's tech_news_articles (limit 15)
-   ├── AI Generation: OpenAI GPT-4 creates digest
-   └── Stores: linkedin_digest_posts (status: pending)
+   ├── AI Generation: OpenAI GPT-4o-mini creates digest
+   ├── Stores: linkedin_digest_posts (status: pending)
+   └── Telegram: Sends digest with 4 buttons
+       ├── ✅ Approve & Post
+       ├── ✏️ Edit & Approve
+       ├── ❌ Reject
+       └── 👁️ View Full
 
-2️⃣ Telegram Notification
-   ├── Sends: Digest preview with 4 buttons
-   │   ├── ✅ Approve & Post
-   │   ├── ✏️ Edit & Approve
-   │   ├── ❌ Reject
-   │   └── 👁️ View Full
-   └── Webhook: https://cemkoyluoglu.codes/api/telegram-webhook
+                    ↓ User clicks button
+
+2️⃣ Telegram Bot API
+   └── Sends callback to: https://cemkoyluoglu.codes/api/telegram-webhook
+
+                    ↓
 
 3️⃣ Vercel Webhook Handler (api/telegram-webhook.js)
-   ├── Security: UUID validation, rate limiting, chat auth
-   ├── Action Handlers:
-   │   ├── approve: Posts to LinkedIn API
-   │   ├── reject: Updates status to 'rejected'
-   │   ├── edit: Shows content for manual edit
-   │   └── view: Displays full content
-   └── Database: Updates linkedin_digest_posts status
+   ├── Security Layer:
+   │   ├── UUID validation (RFC 4122)
+   │   ├── Rate limiting (10 req/min)
+   │   └── Chat ID authorization
+   └── Forwards to: n8n Callback Webhook
+       └── URL: N8N_LINKEDIN_CALLBACK_WEBHOOK (env var)
 
-4️⃣ LinkedIn API Integration
-   ├── Endpoint: POST /v2/ugcPosts
-   ├── Auth: Bearer token (LINKEDIN_ACCESS_TOKEN)
+                    ↓
+
+4️⃣ n8n Workflow #2: Callback Handler
+   ├── Parse: Callback data (action, digest_id)
+   ├── Fetch: Get digest from linkedin_digest_posts
+   ├── Process Action:
+   │   ├── approve → Post to LinkedIn (n8n OAuth)
+   │   ├── reject → Update status to 'rejected'
+   │   ├── edit → Show content for manual edit
+   │   └── view → Display full content
+   └── Database: Updates linkedin_digest_posts
+
+                    ↓
+
+5️⃣ LinkedIn API Integration (n8n OAuth Node)
+   ├── Node: n8n LinkedIn node
+   ├── Auth: OAuth 2.0 (automatic refresh)
    ├── Content: digest.suggested_content
    └── Response: linkedin_post_id
 
-5️⃣ Confirmation
+                    ↓
+
+6️⃣ Confirmation
    └── Telegram: Success/error notification
 ```
 
@@ -123,43 +143,82 @@ if (chatId.toString() !== CONFIG.TELEGRAM_CHAT_ID) {
 
 ### Required Environment Variables
 
+#### Vercel
 ```bash
 # Telegram
 TELEGRAM_BOT_TOKEN=your_bot_token
 TELEGRAM_CHAT_ID=your_chat_id
 
-# LinkedIn
-LINKEDIN_ACCESS_TOKEN=your_access_token
-LINKEDIN_PERSON_URN=urn:li:person:YOUR_ID
+# n8n Integration
+N8N_LINKEDIN_CALLBACK_WEBHOOK=https://your-n8n.app.n8n.cloud/webhook/linkedin-digest-callback
 
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 SUPABASE_SERVICE_ROLE_KEY=your_service_key
 ```
 
-### LinkedIn OAuth Setup
+#### n8n
+```bash
+# Supabase credentials in n8n
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_service_key
 
-1. **Create LinkedIn App:**
-   - Go to: https://www.linkedin.com/developers/apps
-   - Create app with permissions: `w_member_social`
+# LinkedIn OAuth in n8n
+# Set up via n8n UI: Credentials → Add New → LinkedIn OAuth2
+```
 
-2. **Get Access Token:**
-   ```bash
-   # Use LinkedIn OAuth 2.0 flow
-   # Scope: w_member_social
-   ```
+### Setup Steps
 
-3. **Get Person URN:**
-   ```bash
-   curl -X GET 'https://api.linkedin.com/v2/me' \
-     -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-   ```
+#### 1. n8n LinkedIn OAuth Setup
 
-4. **Add to Vercel:**
-   ```bash
-   vercel env add LINKEDIN_ACCESS_TOKEN
-   vercel env add LINKEDIN_PERSON_URN
-   ```
+1. **In n8n Dashboard:**
+   - Go to: Settings → Credentials
+   - Click: "Add Credential"
+   - Select: "LinkedIn OAuth2"
+   - Click: "Connect My Account"
+
+2. **LinkedIn Authorization:**
+   - Login to your LinkedIn account
+   - Authorize n8n to post on your behalf
+   - OAuth tokens stored securely in n8n (automatic refresh)
+
+3. **Verify Connection:**
+   - Create test LinkedIn node in workflow
+   - Select your credential
+   - Execute test post
+
+#### 2. Vercel Environment Variable Setup
+
+Add n8n webhook URL to Vercel:
+
+```bash
+# Via Vercel CLI
+vercel env add N8N_LINKEDIN_CALLBACK_WEBHOOK
+# Paste: https://your-n8n-instance.app.n8n.cloud/webhook/linkedin-digest-callback
+
+# Via Vercel Dashboard
+# Settings → Environment Variables → Add
+# Name: N8N_LINKEDIN_CALLBACK_WEBHOOK
+# Value: https://your-n8n-instance.app.n8n.cloud/webhook/linkedin-digest-callback
+
+# Redeploy
+vercel --prod
+```
+
+#### 3. Get n8n Webhook URL
+
+1. Open n8n Workflow #2 (Callback Handler)
+2. Click on "Telegram Callback Webhook" node
+3. Copy "Production URL"
+4. Example: `https://your-n8n.app.n8n.cloud/webhook/linkedin-digest-callback`
+
+#### 4. Import n8n Workflows
+
+Import the two workflow JSON files:
+1. `n8n-workflow-1-daily-digest.json` (Daily Generator)
+2. `n8n-workflow-2-callback-handler.json` (Approval Handler)
+
+See the "n8n Workflows" section below for JSON.
 
 ---
 
@@ -202,11 +261,15 @@ if (data.match(/^(approve|reject|edit|view)_[0-9a-f-]+$/i)) {
 #### Step 2: Test Approve Button
 ```bash
 1. Click "✅ Approve & Post" in Telegram
-2. Expected:
-   ✅ "🚀 LinkedIn'e gönderiliyor..." message
-   ✅ Post appears on LinkedIn
+2. Expected Flow:
+   ✅ "İşleniyor..." callback acknowledgment
+   ✅ Vercel webhook receives callback
+   ✅ Security checks pass (UUID, rate limit, auth)
+   ✅ Forwarded to n8n Callback Workflow
+   ✅ n8n posts to LinkedIn (OAuth node)
    ✅ Database status = 'posted'
    ✅ linkedin_post_id populated
+   ✅ Confirmation message in Telegram
    ✅ "✅ Başarıyla LinkedIn'de paylaşıldı!" confirmation
 ```
 

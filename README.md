@@ -194,9 +194,9 @@ Firecrawl Scraping → Groq Translation → Supabase Storage
 Telegram Notification (Success/Error)
 ```
 
-#### LinkedIn Digest Flow (New System)
+#### LinkedIn Digest Flow (n8n + Vercel)
 ```
-n8n Scheduler (16:30 Daily)
+n8n Workflow #1: Daily Digest Generator (16:30 Daily)
       ↓
 Fetch Today's Articles → OpenAI GPT-4 (Digest Generation)
       ↓
@@ -204,13 +204,23 @@ Save to linkedin_digest_posts (status: pending)
       ↓
 Telegram Message (4 Buttons: Approve/Reject/Edit/View)
       ↓
-User Clicks "Approve" → Vercel Webhook (api/telegram-webhook.js)
+User Clicks "Approve" → Telegram Bot API
       ↓
-Security Checks (UUID validation, Rate limiting, Auth)
+Vercel Webhook (api/telegram-webhook.js) - Security Layer
+      ├── UUID Validation
+      ├── Rate Limiting
+      ├── Chat Authorization
+      └── Forward to n8n →
+                         ↓
+n8n Workflow #2: Callback Handler
       ↓
-LinkedIn API Post → Update DB (status: posted)
+Parse Callback → Get Digest from DB
       ↓
-Telegram Confirmation
+LinkedIn API Post (n8n OAuth Node)
+      ↓
+Update DB (status: posted)
+      ↓
+Telegram Confirmation ✅
 ```
 
 ---
@@ -410,9 +420,8 @@ GITHUB_REPOSITORY=username/repo         # Repository name
 # Analytics
 VERCEL_ANALYTICS_ID=your_id            # Vercel Analytics
 
-# LinkedIn Automation (New Digest System)
-LINKEDIN_ACCESS_TOKEN=your_linkedin_access_token     # From LinkedIn OAuth
-LINKEDIN_PERSON_URN=urn:li:person:YOUR_LINKEDIN_ID   # Your LinkedIn person URN
+# LinkedIn Automation (n8n Integration)
+N8N_LINKEDIN_CALLBACK_WEBHOOK=https://your-n8n.app.n8n.cloud/webhook/linkedin-digest-callback  # n8n callback webhook URL
 ```
 
 ### GitHub Secrets
@@ -583,7 +592,7 @@ Please report security vulnerabilities to: **cemkoyluoglu@icloud.com**
 - ✅ **SQL Injection Prevention** (Parameterized queries)
 - ✅ **XSS Protection** (HTML sanitization)
 - ✅ **CORS Configuration** (Origin whitelisting)
-- ✅ **LinkedIn API Token Security** (Server-side only)
+- ✅ **LinkedIn OAuth Security** (n8n handles authentication)
 - ✅ **Duplicate Post Prevention** (Status checks)
 - ✅ **Error Message Sanitization** (No sensitive data exposure)
 
@@ -650,33 +659,71 @@ npm run telegram:webhook-setup  # Configure webhook
 npm run telegram:webhook-remove # Remove webhook
 ```
 
-### LinkedIn Automation (New Digest System)
+### LinkedIn Automation (n8n + Vercel)
 
-**The new system uses n8n + Vercel webhook for LinkedIn digest automation.**
+**The new system uses TWO n8n workflows + Vercel for secure LinkedIn digest automation.**
+
+#### Architecture:
+```
+┌─────────────────────────────────────────────┐
+│  n8n Workflow #1: Daily Digest Generator   │
+│  ├── Schedule (16:30 UTC Daily)            │
+│  ├── Fetch articles from Supabase          │
+│  ├── Generate digest with OpenAI           │
+│  ├── Save to linkedin_digest_posts (pending)│
+│  └── Send Telegram message (4 buttons)     │
+└─────────────────────────────────────────────┘
+                    ↓ User clicks "Approve"
+┌─────────────────────────────────────────────┐
+│  Vercel Webhook: Security Layer             │
+│  ├── UUID validation                        │
+│  ├── Rate limiting (10 req/min)            │
+│  ├── Chat ID authorization                 │
+│  └── Forward to n8n callback webhook →     │
+└─────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────┐
+│  n8n Workflow #2: Callback Handler         │
+│  ├── Parse callback data                   │
+│  ├── Get digest from DB                    │
+│  ├── Post to LinkedIn (n8n OAuth)          │
+│  ├── Update DB (status: posted)            │
+│  └── Send Telegram confirmation            │
+└─────────────────────────────────────────────┘
+```
 
 #### Setup Requirements:
-1. **n8n Workflow** (provided in docs)
-2. **Vercel Webhook** (`api/telegram-webhook.js` - already configured)
-3. **Environment Variables:**
+1. **n8n LinkedIn OAuth** (in n8n credentials)
+   - Connect LinkedIn account in n8n
+   - OAuth handles token refresh automatically
+2. **Two n8n Workflows** (see `docs/LINKEDIN_DIGEST_SYSTEM.md`)
+3. **Vercel Environment Variable:**
    ```bash
-   LINKEDIN_ACCESS_TOKEN=your_token
-   LINKEDIN_PERSON_URN=urn:li:person:YOUR_ID
+   N8N_LINKEDIN_CALLBACK_WEBHOOK=https://your-n8n.app.n8n.cloud/webhook/linkedin-digest-callback
    ```
 
 #### How It Works:
-1. n8n generates daily digest at 16:30
-2. Telegram sends message with 4 buttons
-3. Click "Approve" → Automatically posts to LinkedIn
-4. All handled by `api/telegram-webhook.js`
+1. **n8n Daily Workflow** generates digest at 16:30 (Weekdays)
+2. **Telegram** sends approval message with 4 buttons
+3. **User clicks "Approve"** → Telegram forwards to Vercel
+4. **Vercel** performs security checks & forwards to n8n
+5. **n8n Callback Workflow** posts to LinkedIn (OAuth)
+6. **Confirmation** sent to Telegram ✅
+
+#### Why This Design?
+- ✅ **No LinkedIn API tokens in Vercel** (Security)
+- ✅ **n8n handles OAuth** (Automatic refresh)
+- ✅ **Vercel provides security layer** (Rate limiting, validation)
+- ✅ **Separation of concerns** (Generation vs. Approval)
 
 #### Legacy Commands (Deprecated):
 ```bash
-npm run linkedin:analyze        # Old system - use n8n instead
-npm run linkedin:post           # Old system - use Telegram approval
-npm run linkedin:test           # Test LinkedIn credentials
+npm run linkedin:analyze        # Deprecated - Use n8n Workflow #1
+npm run linkedin:post           # Deprecated - Use Telegram approval
+npm run linkedin:test           # Not needed - n8n OAuth handles auth
 ```
 
-**Note:** The legacy `linkedin_posts` table system is deprecated. New system uses `linkedin_digest_posts` with better security and UX.
+**Note:** The legacy `linkedin_posts` table and Vercel-based LinkedIn posting are deprecated. New system uses `linkedin_digest_posts` with n8n OAuth for better security and UX.
 
 ### Monitoring
 ```bash
