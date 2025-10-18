@@ -490,8 +490,15 @@ export async function handleLinkedInCommand() {
         '📱 <b>LinkedIn Digest\'ler</b>\n\n' +
         'ℹ️ Henüz digest bulunamadı.\n\n' +
         'Digest\'ler her gün saat 16:30\'da otomatik olarak oluşturulur.\n\n' +
-        '<i>Manuel oluşturma için n8n workflow\'unu çalıştırın.</i>',
-        { reply_markup: getMainMenuKeyboard() }
+        '👇 Manuel olarak digest oluşturmak için butona tıklayın:',
+        {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🚀 Manuel Digest Oluştur', callback_data: 'action_create_digest' }],
+              [{ text: '🔙 Ana Menü', callback_data: 'action_menu' }]
+            ]
+          }
+        }
       );
       return;
     }
