@@ -270,7 +270,6 @@ module.exports = async function handler(req, res) {
         // Handle source confirmation callbacks
         if (data.startsWith('source_')) {
           const [_, confirmation] = data.split('_');
-          cleanupOldStates(); // Clean up expired states
           
           await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
             method: 'POST',
