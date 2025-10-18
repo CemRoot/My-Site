@@ -18,6 +18,20 @@ const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
 // Rate limiting cache (in-memory, resets on function restart)
 const rateLimitCache = new Map();
 
+// Conversation state management (in-memory, 10 min timeout)
+const conversationStates = new Map(); // userId -> { step, articleUrl, originalSource, timestamp }
+
+// Helper function: Clean up old conversation states
+function cleanupOldStates() {
+  const now = Date.now();
+  for (const [userId, state] of conversationStates.entries()) {
+    if (now - state.timestamp > 10 * 60 * 1000) { // 10 minutes
+      conversationStates.delete(userId);
+      console.log(`🧹 Cleaned up expired state for user: ${userId}`);
+    }
+  }
+}
+
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -155,6 +169,23 @@ module.exports = async function handler(req, res) {
                 `❓ Bilinmeyen komut: ${command}\n\nKullanılabilir komutlar için /help yazın`
               );
           }
+        } else {
+          // Handle text messages for conversation flow (non-command messages)
+          const userId = message.from.id;
+          cleanupOldStates(); // Clean up expired states
+          const state = conversationStates.get(userId);
+          
+          if (state) {
+            const menuHandler = await import('../scripts/telegram-menu-handler.js');
+            
+            if (state.step === 'awaiting_url') {
+              await menuHandler.handleArticleUrlInput(text, userId, conversationStates);
+            } else if (state.step === 'awaiting_original_source') {
+              await menuHandler.handleOriginalSourceInput(text, userId, state.articleUrl, conversationStates);
+            }
+            
+            return res.status(200).json({ success: true, message: 'Conversation message processed' });
+          }
         }
 
         return res.status(200).json({ success: true, message: 'Command processed' });
@@ -227,6 +258,9 @@ module.exports = async function handler(req, res) {
             case 'refresh_menu':
               await menuHandler.handleMenuCommand();
               break;
+            case 'add_article':
+              await menuHandler.handleAddArticleAction(conversationStates, fromId);
+              break;
             case 'fix_sources':
               await menuHandler.sendTelegramMessage(
                 '🔧 <b>Source Düzeltme</b>\n\n' +
@@ -240,6 +274,27 @@ module.exports = async function handler(req, res) {
           }
 
           return res.status(200).json({ success: true, message: 'Menu action processed' });
+        }
+
+        // Handle source confirmation callbacks
+        if (data.startsWith('source_')) {
+          const [_, confirmation] = data.split('_');
+          cleanupOldStates(); // Clean up expired states
+          
+          await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              callback_query_id: callback_query.id,
+              text: 'İşleniyor...'
+            })
+          });
+          
+          if (confirmation === 'yes' || confirmation === 'no') {
+            await menuHandler.handleSourceConfirmation(confirmation === 'yes', fromId, conversationStates);
+          }
+          
+          return res.status(200).json({ success: true, message: 'Source confirmation processed' });
         }
 
         // Handle LinkedIn Digest actions - Forward to n8n workflow

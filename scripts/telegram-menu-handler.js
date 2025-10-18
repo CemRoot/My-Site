@@ -60,21 +60,22 @@ function getMainMenuKeyboard() {
     inline_keyboard: [
       [
         { text: '📰 Haberleri Çek', callback_data: 'action_scrape' },
+        { text: '➕ Manuel Haber Ekle', callback_data: 'action_add_article' },
+      ],
+      [
         { text: '📱 LinkedIn Posts', callback_data: 'action_linkedin' },
-      ],
-      [
         { text: '🏥 Sağlık Kontrolü', callback_data: 'action_health' },
+      ],
+      [
         { text: '📊 Sistem Durumu', callback_data: 'action_status' },
-      ],
-      [
         { text: '📈 İstatistikler', callback_data: 'action_stats' },
+      ],
+      [
         { text: '💾 Veritabanı', callback_data: 'action_database' },
-      ],
-      [
         { text: '🔧 GitHub Actions', callback_data: 'action_github' },
-        { text: 'ℹ️ Yardım', callback_data: 'action_help' },
       ],
       [
+        { text: 'ℹ️ Yardım', callback_data: 'action_help' },
         { text: '🔄 Menüyü Yenile', callback_data: 'action_refresh_menu' },
       ],
     ],
@@ -665,6 +666,217 @@ export async function handleHelpAction() {
 }
 
 /**
+ * Handle action_add_article - Start manual article addition flow
+ */
+export async function handleAddArticleAction(conversationStates, userId) {
+  try {
+    // Initialize conversation state
+    conversationStates.set(userId, {
+      step: 'awaiting_url',
+      timestamp: Date.now()
+    });
+
+    await sendTelegramMessage(
+      '➕ <b>Manuel Haber Ekleme</b>\n\n' +
+      '📎 Lütfen eklemek istediğiniz haberin URL\'sini gönderin:\n\n' +
+      '<i>Örnek: https://techcrunch.com/article-123</i>\n\n' +
+      '⏱️ 10 dakika içinde işlem yapmazsanız süreç iptal olur.'
+    );
+  } catch (error) {
+    console.error('Add article action error:', error);
+    await sendTelegramMessage(
+      `❌ <b>Hata!</b>\n\n${error.message}\n\nLütfen tekrar deneyin veya /help ile destek alın.`
+    );
+  }
+}
+
+/**
+ * Handle article URL input
+ */
+export async function handleArticleUrlInput(url, userId, conversationStates) {
+  try {
+    const state = conversationStates.get(userId);
+    if (!state || state.step !== 'awaiting_url') {
+      return; // Invalid state
+    }
+
+    // Validate URL
+    const { isValidUrl } = await import('./manual-article-scraper.js');
+    if (!isValidUrl(url)) {
+      await sendTelegramMessage(
+        '❌ <b>Geçersiz URL formatı!</b>\n\n' +
+        'Lütfen geçerli bir URL gönderin:\n' +
+        '<i>Örnek: https://techcrunch.com/article-123</i>'
+      );
+      return;
+    }
+
+    // Update state and ask for confirmation
+    conversationStates.set(userId, {
+      step: 'confirm_source',
+      articleUrl: url,
+      timestamp: Date.now()
+    });
+
+    await sendTelegramMessage(
+      '🔗 <b>URL Alındı!</b>\n\n' +
+      `📎 ${url}\n\n` +
+      '📰 Bu URL\'i "Original Article Source" olarak kullanabilir miyim?\n\n' +
+      '<i>• <b>Evet:</b> Paylaştığınız link kaynak olarak kullanılacak</i>\n' +
+      '<i>• <b>Hayır:</b> Farklı bir kaynak URL\'i girebilirsiniz</i>',
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '✅ Evet', callback_data: 'source_yes' },
+              { text: '❌ Hayır', callback_data: 'source_no' }
+            ]
+          ]
+        }
+      }
+    );
+  } catch (error) {
+    console.error('URL input error:', error);
+    await sendTelegramMessage(
+      `❌ <b>Hata!</b>\n\n${error.message}\n\nLütfen tekrar deneyin.`
+    );
+    conversationStates.delete(userId);
+  }
+}
+
+/**
+ * Handle source confirmation
+ */
+export async function handleSourceConfirmation(useOriginal, userId, conversationStates) {
+  try {
+    const state = conversationStates.get(userId);
+    if (!state || state.step !== 'confirm_source') {
+      await sendTelegramMessage('❌ Oturum zaman aşımına uğradı. Lütfen /menu ile tekrar başlayın.');
+      conversationStates.delete(userId);
+      return;
+    }
+
+    if (useOriginal) {
+      // Use article URL as original source, start processing
+      await sendTelegramMessage(
+        '⚙️ <b>İşlem Başlıyor...</b>\n\n' +
+        '🔄 Makale scrape ediliyor...\n' +
+        '🤖 AI işleme yapılıyor...\n' +
+        '💾 Veritabanına kaydediliyor...\n\n' +
+        '⏳ Bu işlem 30-60 saniye sürebilir, lütfen bekleyin...'
+      );
+
+      // Process article
+      const { processManualArticle } = await import('./manual-article-scraper.js');
+      const result = await processManualArticle(state.articleUrl, state.articleUrl);
+
+      // Clear state
+      conversationStates.delete(userId);
+
+      // Send success message
+      await sendTelegramMessage(
+        '✅ <b>Haber Başarıyla Eklendi!</b>\n\n' +
+        `📰 <b>Başlık:</b> ${result.article.title}\n\n` +
+        `📂 <b>Kategori:</b> ${result.article.category}\n` +
+        `📊 <b>Okuma Süresi:</b> ${result.readingTime} dk\n` +
+        `🔗 <b>URL:</b> https://cemkoyluoglu.codes/tech-news/${result.article.slug}\n\n` +
+        `<i>AI Optimizasyonu: ${result.optimizationNotes}</i>`,
+        {
+          reply_markup: getMainMenuKeyboard()
+        }
+      );
+    } else {
+      // Ask for different original source
+      conversationStates.set(userId, {
+        step: 'awaiting_original_source',
+        articleUrl: state.articleUrl,
+        timestamp: Date.now()
+      });
+
+      await sendTelegramMessage(
+        '📝 <b>Original Source URL\'ini girin:</b>\n\n' +
+        '<i>Örnek: https://originalsource.com/article</i>\n\n' +
+        '⏱️ 10 dakika içinde göndermezsaniz işlem iptal olur.'
+      );
+    }
+  } catch (error) {
+    console.error('Source confirmation error:', error);
+    await sendTelegramMessage(
+      `❌ <b>Hata Oluştu!</b>\n\n${error.message}\n\n` +
+      'Lütfen tekrar deneyin veya /help ile destek alın.',
+      {
+        reply_markup: getMainMenuKeyboard()
+      }
+    );
+    conversationStates.delete(userId);
+  }
+}
+
+/**
+ * Handle original source URL input
+ */
+export async function handleOriginalSourceInput(originalUrl, userId, articleUrl, conversationStates) {
+  try {
+    const state = conversationStates.get(userId);
+    if (!state || state.step !== 'awaiting_original_source') {
+      return; // Invalid state
+    }
+
+    // Validate URL
+    const { isValidUrl } = await import('./manual-article-scraper.js');
+    if (!isValidUrl(originalUrl)) {
+      await sendTelegramMessage(
+        '❌ <b>Geçersiz URL formatı!</b>\n\n' +
+        'Lütfen geçerli bir URL gönderin:\n' +
+        '<i>Örnek: https://originalsource.com/article</i>'
+      );
+      return;
+    }
+
+    // Start processing
+    await sendTelegramMessage(
+      '⚙️ <b>İşlem Başlıyor...</b>\n\n' +
+      '🔄 Makale scrape ediliyor...\n' +
+      '🤖 AI işleme yapılıyor...\n' +
+      '💾 Veritabanına kaydediliyor...\n\n' +
+      '⏳ Bu işlem 30-60 saniye sürebilir, lütfen bekleyin...'
+    );
+
+    // Process article with custom original source
+    const { processManualArticle } = await import('./manual-article-scraper.js');
+    const result = await processManualArticle(articleUrl, originalUrl);
+
+    // Clear state
+    conversationStates.delete(userId);
+
+    // Send success message
+    await sendTelegramMessage(
+      '✅ <b>Haber Başarıyla Eklendi!</b>\n\n' +
+      `📰 <b>Başlık:</b> ${result.article.title}\n\n` +
+      `📂 <b>Kategori:</b> ${result.article.category}\n` +
+      `📊 <b>Okuma Süresi:</b> ${result.readingTime} dk\n` +
+      `🔗 <b>Article URL:</b> ${articleUrl}\n` +
+      `📰 <b>Original Source:</b> ${originalUrl}\n` +
+      `🌐 <b>Site URL:</b> https://cemkoyluoglu.codes/tech-news/${result.article.slug}\n\n` +
+      `<i>AI Optimizasyonu: ${result.optimizationNotes}</i>`,
+      {
+        reply_markup: getMainMenuKeyboard()
+      }
+    );
+  } catch (error) {
+    console.error('Original source input error:', error);
+    await sendTelegramMessage(
+      `❌ <b>Hata Oluştu!</b>\n\n${error.message}\n\n` +
+      'Lütfen tekrar deneyin veya /help ile destek alın.',
+      {
+        reply_markup: getMainMenuKeyboard()
+      }
+    );
+    conversationStates.delete(userId);
+  }
+}
+
+/**
  * Set bot commands (run once during setup)
  */
 export async function setBotCommands() {
@@ -704,6 +916,10 @@ export default {
   handleMenuCommand,
   handleLinkedInCommand,
   handleCreateDigestAction,
+  handleAddArticleAction,
+  handleArticleUrlInput,
+  handleSourceConfirmation,
+  handleOriginalSourceInput,
   handleScrapeAction,
   handleHealthAction,
   handleStatusAction,
