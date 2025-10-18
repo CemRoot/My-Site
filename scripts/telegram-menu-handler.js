@@ -60,19 +60,22 @@ function getMainMenuKeyboard() {
     inline_keyboard: [
       [
         { text: '📰 Haberleri Çek', callback_data: 'action_scrape' },
+        { text: '📱 LinkedIn Posts', callback_data: 'action_linkedin' },
+      ],
+      [
         { text: '🏥 Sağlık Kontrolü', callback_data: 'action_health' },
-      ],
-      [
         { text: '📊 Sistem Durumu', callback_data: 'action_status' },
-        { text: '📈 İstatistikler', callback_data: 'action_stats' },
       ],
       [
-        { text: '🔧 GitHub Actions', callback_data: 'action_github' },
+        { text: '📈 İstatistikler', callback_data: 'action_stats' },
         { text: '💾 Veritabanı', callback_data: 'action_database' },
       ],
       [
-        { text: '🔄 Menüyü Yenile', callback_data: 'action_refresh_menu' },
+        { text: '🔧 GitHub Actions', callback_data: 'action_github' },
         { text: 'ℹ️ Yardım', callback_data: 'action_help' },
+      ],
+      [
+        { text: '🔄 Menüyü Yenile', callback_data: 'action_refresh_menu' },
       ],
     ],
   };
@@ -466,6 +469,154 @@ GitHub Actions sekmesinden takip edebilirsiniz.`;
 }
 
 /**
+ * Handle /linkedin command - Show pending LinkedIn digests
+ */
+export async function handleLinkedInCommand() {
+  try {
+    await sendTelegramMessage('📱 <b>LinkedIn Digest\'ler Yükleniyor...</b>');
+
+    // Get pending and recent digests
+    const { data: digests, error } = await supabase
+      .from('linkedin_digest_posts')
+      .select('*')
+      .in('status', ['pending', 'posted', 'rejected'])
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+
+    if (!digests || digests.length === 0) {
+      await sendTelegramMessage(
+        '📱 <b>LinkedIn Digest\'ler</b>\n\n' +
+        'ℹ️ Henüz digest bulunamadı.\n\n' +
+        'Digest\'ler her gün saat 16:30\'da otomatik olarak oluşturulur.\n\n' +
+        '<i>Manuel oluşturma için n8n workflow\'unu çalıştırın.</i>',
+        { reply_markup: getMainMenuKeyboard() }
+      );
+      return;
+    }
+
+    // Group by status
+    const pending = digests.filter(d => d.status === 'pending');
+    const posted = digests.filter(d => d.status === 'posted');
+    const rejected = digests.filter(d => d.status === 'rejected');
+
+    let messageText = '📱 <b>LINKEDİN DIGEST YÖNETİMİ</b>\n\n';
+
+    // Pending digests
+    if (pending.length > 0) {
+      messageText += '<b>⏳ Onay Bekleyen:</b>\n';
+      pending.forEach(d => {
+        messageText += `📅 ${d.digest_date} | 📊 ${d.article_count} haber\n`;
+      });
+      messageText += '\n';
+    }
+
+    // Posted digests
+    if (posted.length > 0) {
+      messageText += '<b>✅ Paylaşılan:</b>\n';
+      posted.slice(0, 3).forEach(d => {
+        const date = new Date(d.posted_at).toLocaleDateString('tr-TR');
+        messageText += `✓ ${d.digest_date} (${date})\n`;
+      });
+      if (posted.length > 3) {
+        messageText += `<i>... ve ${posted.length - 3} daha</i>\n`;
+      }
+      messageText += '\n';
+    }
+
+    // Rejected digests
+    if (rejected.length > 0) {
+      messageText += '<b>❌ Reddedilen:</b>\n';
+      rejected.slice(0, 2).forEach(d => {
+        messageText += `✗ ${d.digest_date}\n`;
+      });
+      messageText += '\n';
+    }
+
+    // Create buttons for pending digests
+    const buttons = [];
+    
+    if (pending.length > 0) {
+      pending.forEach(digest => {
+        buttons.push([
+          {
+            text: `📅 ${digest.digest_date} - Görüntüle`,
+            callback_data: `view_${digest.id}`
+          },
+          {
+            text: '✅ Onayla',
+            callback_data: `approve_${digest.id}`
+          }
+        ]);
+      });
+    }
+
+    // Add manual create button
+    buttons.push([
+      { text: '🚀 Manuel Digest Oluştur', callback_data: 'action_create_digest' }
+    ]);
+    
+    buttons.push([
+      { text: '🔙 Ana Menü', callback_data: 'action_refresh_menu' }
+    ]);
+
+    await sendTelegramMessage(messageText, {
+      reply_markup: { inline_keyboard: buttons }
+    });
+
+  } catch (error) {
+    console.error('LinkedIn command error:', error);
+    await sendTelegramMessage(`❌ <b>Hata!</b>\n\n${error.message}`);
+  }
+}
+
+/**
+ * Handle action_create_digest - Trigger manual digest creation
+ */
+export async function handleCreateDigestAction() {
+  try {
+    await sendTelegramMessage('🚀 <b>Manuel Digest Oluşturuluyor...</b>\n\nLütfen bekleyin, bu işlem 30-60 saniye sürebilir.');
+
+    const N8N_WEBHOOK_URL = process.env.N8N_MANUAL_DIGEST_WEBHOOK;
+    
+    if (!N8N_WEBHOOK_URL) {
+      throw new Error('N8N_MANUAL_DIGEST_WEBHOOK environment variable not configured');
+    }
+
+    // Trigger n8n workflow
+    const response = await fetch(N8N_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        trigger: 'manual',
+        chat_id: CONFIG.TELEGRAM_CHAT_ID,
+        timestamp: new Date().toISOString()
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`n8n webhook error (${response.status}): ${errorText}`);
+    }
+
+    await sendTelegramMessage(
+      '✅ <b>Digest oluşturma başlatıldı!</b>\n\n' +
+      '📊 n8n workflow tetiklendi\n' +
+      '⏳ İşlem tamamlandığında digest ile birlikte bildirim alacaksınız\n\n' +
+      '<i>Digest oluşturulduğunda onay butonları ile mesaj gelecek.</i>'
+    );
+
+  } catch (error) {
+    console.error('Create digest error:', error);
+    await sendTelegramMessage(
+      `❌ <b>Digest oluşturma hatası!</b>\n\n${error.message}\n\n` +
+      'Lütfen tekrar deneyin veya /help ile destek alın.'
+    );
+  }
+}
+
+/**
  * Handle action_help - Help and commands
  */
 export async function handleHelpAction() {
@@ -475,6 +626,7 @@ export async function handleHelpAction() {
 <b>📱 Bot Komutları</b>
 /start - Bot'u başlat
 /menu - Ana menüyü göster
+/linkedin - LinkedIn digest'leri yönet
 /status - Hızlı durum raporu
 /scrape - Haberleri çek
 /health - Sağlık kontrolü
@@ -543,6 +695,8 @@ export default {
   sendTelegramMessage,
   handleStartCommand,
   handleMenuCommand,
+  handleLinkedInCommand,
+  handleCreateDigestAction,
   handleScrapeAction,
   handleHealthAction,
   handleStatusAction,

@@ -135,6 +135,9 @@ module.exports = async function handler(req, res) {
             case 'menu':
               await menuHandler.handleMenuCommand();
               break;
+            case 'linkedin':
+              await menuHandler.handleLinkedInCommand();
+              break;
             case 'status':
               await menuHandler.handleStatusAction();
               break;
@@ -196,6 +199,12 @@ module.exports = async function handler(req, res) {
           switch (action) {
             case 'scrape':
               await menuHandler.handleScrapeAction();
+              break;
+            case 'linkedin':
+              await menuHandler.handleLinkedInCommand();
+              break;
+            case 'create_digest':
+              await menuHandler.handleCreateDigestAction();
               break;
             case 'health':
               await menuHandler.handleHealthAction();
