@@ -671,7 +671,7 @@ export async function handleHelpAction() {
 export async function handleAddArticleAction(userId) {
   try {
     // Initialize conversation state in Supabase
-    const { setConversationState } = await import('../lib/supabase.js');
+    const { setConversationState } = await import('../lib/conversation-state.js');
     await setConversationState(userId, 'awaiting_url');
 
     await sendTelegramMessage(
@@ -693,7 +693,7 @@ export async function handleAddArticleAction(userId) {
  */
 export async function handleArticleUrlInput(url, userId) {
   try {
-    const { getConversationState, setConversationState, deleteConversationState } = await import('../lib/supabase.js');
+    const { getConversationState, setConversationState, deleteConversationState } = await import('../lib/conversation-state.js');
     
     const state = await getConversationState(userId);
     if (!state || state.step !== 'awaiting_url') {
@@ -736,7 +736,7 @@ export async function handleArticleUrlInput(url, userId) {
     await sendTelegramMessage(
       `❌ <b>Hata!</b>\n\n${error.message}\n\nLütfen tekrar deneyin.`
     );
-    const { deleteConversationState } = await import('../lib/supabase.js');
+    const { deleteConversationState } = await import('../lib/conversation-state.js');
     await deleteConversationState(userId);
   }
 }
@@ -746,7 +746,7 @@ export async function handleArticleUrlInput(url, userId) {
  */
 export async function handleSourceConfirmation(useOriginal, userId) {
   try {
-    const { getConversationState, setConversationState, deleteConversationState } = await import('../lib/supabase.js');
+    const { getConversationState, setConversationState, deleteConversationState } = await import('../lib/conversation-state.js');
     
     const state = await getConversationState(userId);
     if (!state || state.step !== 'confirm_source') {
@@ -803,7 +803,7 @@ export async function handleSourceConfirmation(useOriginal, userId) {
         reply_markup: getMainMenuKeyboard()
       }
     );
-    const { deleteConversationState } = await import('../lib/supabase.js');
+    const { deleteConversationState } = await import('../lib/conversation-state.js');
     await deleteConversationState(userId);
   }
 }
@@ -813,7 +813,7 @@ export async function handleSourceConfirmation(useOriginal, userId) {
  */
 export async function handleOriginalSourceInput(originalUrl, userId, articleUrl) {
   try {
-    const { getConversationState, deleteConversationState } = await import('../lib/supabase.js');
+    const { getConversationState, deleteConversationState } = await import('../lib/conversation-state.js');
     
     const state = await getConversationState(userId);
     if (!state || state.step !== 'awaiting_original_source') {
@@ -870,7 +870,7 @@ export async function handleOriginalSourceInput(originalUrl, userId, articleUrl)
         reply_markup: getMainMenuKeyboard()
       }
     );
-    const { deleteConversationState } = await import('../lib/supabase.js');
+    const { deleteConversationState } = await import('../lib/conversation-state.js');
     await deleteConversationState(userId);
   }
 }

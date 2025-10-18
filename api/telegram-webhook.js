@@ -163,7 +163,7 @@ module.exports = async function handler(req, res) {
           const userId = message.from.id;
           
           // Get conversation state from Supabase
-          const { getConversationState } = await import('../lib/supabase.js');
+          const { getConversationState } = await import('../lib/conversation-state.js');
           const state = await getConversationState(userId);
           
           if (state) {
