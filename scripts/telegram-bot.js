@@ -1,6 +1,12 @@
 /**
  * Telegram Bot Handler for LinkedIn Automation
  * Handles approval workflow and notifications
+ * 
+ * ⚠️ DEPRECATED: This file uses the old linkedin_posts table system.
+ * New system uses linkedin_digest_posts handled by api/telegram-webhook.js
+ * 
+ * This file is kept for backward compatibility but should not be used for new features.
+ * Consider migrating to the new digest-based system.
  */
 
 import 'dotenv/config';

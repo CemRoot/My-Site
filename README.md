@@ -183,6 +183,7 @@ graph TB
 
 ### 🔄 Data Flow
 
+#### News Aggregation Flow
 ```
 User Request → Vercel Edge Function → Supabase → Response
       ↓
@@ -190,7 +191,26 @@ GitHub Actions (Scheduled)
       ↓
 Firecrawl Scraping → Groq Translation → Supabase Storage
       ↓
-Telegram Notification → User Approval → LinkedIn Post
+Telegram Notification (Success/Error)
+```
+
+#### LinkedIn Digest Flow (New System)
+```
+n8n Scheduler (16:30 Daily)
+      ↓
+Fetch Today's Articles → OpenAI GPT-4 (Digest Generation)
+      ↓
+Save to linkedin_digest_posts (status: pending)
+      ↓
+Telegram Message (4 Buttons: Approve/Reject/Edit/View)
+      ↓
+User Clicks "Approve" → Vercel Webhook (api/telegram-webhook.js)
+      ↓
+Security Checks (UUID validation, Rate limiting, Auth)
+      ↓
+LinkedIn API Post → Update DB (status: posted)
+      ↓
+Telegram Confirmation
 ```
 
 ---
@@ -390,9 +410,9 @@ GITHUB_REPOSITORY=username/repo         # Repository name
 # Analytics
 VERCEL_ANALYTICS_ID=your_id            # Vercel Analytics
 
-# LinkedIn (if using automation)
-LINKEDIN_ACCESS_TOKEN=...
-LINKEDIN_PERSON_ID=...
+# LinkedIn Automation (New Digest System)
+LINKEDIN_ACCESS_TOKEN=your_linkedin_access_token     # From LinkedIn OAuth
+LINKEDIN_PERSON_URN=urn:li:person:YOUR_LINKEDIN_ID   # Your LinkedIn person URN
 ```
 
 ### GitHub Secrets
@@ -555,12 +575,17 @@ Please report security vulnerabilities to: **cemkoyluoglu@icloud.com**
 
 ### Security Features
 
-- ✅ API rate limiting
-- ✅ Environment variable encryption
-- ✅ Webhook signature verification
-- ✅ SQL injection prevention
-- ✅ XSS protection
-- ✅ CORS configuration
+- ✅ **API Rate Limiting** (10 requests/minute per user)
+- ✅ **UUID Validation** (RFC 4122 compliant)
+- ✅ **Chat ID Authorization** (Telegram webhook)
+- ✅ **Environment Variable Encryption**
+- ✅ **Webhook Signature Verification**
+- ✅ **SQL Injection Prevention** (Parameterized queries)
+- ✅ **XSS Protection** (HTML sanitization)
+- ✅ **CORS Configuration** (Origin whitelisting)
+- ✅ **LinkedIn API Token Security** (Server-side only)
+- ✅ **Duplicate Post Prevention** (Status checks)
+- ✅ **Error Message Sanitization** (No sensitive data exposure)
 
 ### Best Practices
 
@@ -625,12 +650,33 @@ npm run telegram:webhook-setup  # Configure webhook
 npm run telegram:webhook-remove # Remove webhook
 ```
 
-### LinkedIn Automation
+### LinkedIn Automation (New Digest System)
+
+**The new system uses n8n + Vercel webhook for LinkedIn digest automation.**
+
+#### Setup Requirements:
+1. **n8n Workflow** (provided in docs)
+2. **Vercel Webhook** (`api/telegram-webhook.js` - already configured)
+3. **Environment Variables:**
+   ```bash
+   LINKEDIN_ACCESS_TOKEN=your_token
+   LINKEDIN_PERSON_URN=urn:li:person:YOUR_ID
+   ```
+
+#### How It Works:
+1. n8n generates daily digest at 16:30
+2. Telegram sends message with 4 buttons
+3. Click "Approve" → Automatically posts to LinkedIn
+4. All handled by `api/telegram-webhook.js`
+
+#### Legacy Commands (Deprecated):
 ```bash
-npm run linkedin:analyze        # Analyze articles
-npm run linkedin:post           # Post to LinkedIn
-npm run linkedin:test           # Test setup
+npm run linkedin:analyze        # Old system - use n8n instead
+npm run linkedin:post           # Old system - use Telegram approval
+npm run linkedin:test           # Test LinkedIn credentials
 ```
+
+**Note:** The legacy `linkedin_posts` table system is deprecated. New system uses `linkedin_digest_posts` with better security and UX.
 
 ### Monitoring
 ```bash

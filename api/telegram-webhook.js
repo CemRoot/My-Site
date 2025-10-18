@@ -15,6 +15,84 @@ const CONFIG = {
 
 const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
 
+// Rate limiting cache (in-memory, resets on function restart)
+const rateLimitCache = new Map();
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Helper function: Validate UUID
+function isValidUUID(uuid) {
+  return UUID_REGEX.test(uuid);
+}
+
+// Helper function: Rate limiting check
+function checkRateLimit(userId, maxRequests = 10, windowMs = 60000) {
+  const now = Date.now();
+  const userKey = `user_${userId}`;
+  
+  if (!rateLimitCache.has(userKey)) {
+    rateLimitCache.set(userKey, []);
+  }
+  
+  const requests = rateLimitCache.get(userKey).filter(time => now - time < windowMs);
+  
+  if (requests.length >= maxRequests) {
+    return false; // Rate limit exceeded
+  }
+  
+  requests.push(now);
+  rateLimitCache.set(userKey, requests);
+  return true;
+}
+
+// Helper function: Post to LinkedIn
+async function postToLinkedIn(content) {
+  const LINKEDIN_ACCESS_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN;
+  const LINKEDIN_PERSON_URN = process.env.LINKEDIN_PERSON_URN;
+  
+  if (!LINKEDIN_ACCESS_TOKEN || !LINKEDIN_PERSON_URN) {
+    throw new Error('LinkedIn credentials not configured. Set LINKEDIN_ACCESS_TOKEN and LINKEDIN_PERSON_URN in environment variables.');
+  }
+  
+  // LinkedIn Share API v2
+  const url = 'https://api.linkedin.com/v2/ugcPosts';
+  
+  const postData = {
+    author: LINKEDIN_PERSON_URN,
+    lifecycleState: 'PUBLISHED',
+    specificContent: {
+      'com.linkedin.ugc.ShareContent': {
+        shareCommentary: {
+          text: content
+        },
+        shareMediaCategory: 'NONE'
+      }
+    },
+    visibility: {
+      'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
+    }
+  };
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
+      'Content-Type': 'application/json',
+      'X-Restli-Protocol-Version': '2.0.0'
+    },
+    body: JSON.stringify(postData)
+  });
+  
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`LinkedIn API error (${response.status}): ${error}`);
+  }
+  
+  const result = await response.json();
+  return result.id; // Returns the post ID
+}
+
 // Helper function to send Telegram messages
 async function sendTelegramMessage(text, options = {}) {
   const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`;
@@ -197,6 +275,155 @@ module.exports = async function handler(req, res) {
           }
 
           return res.status(200).json({ success: true, message: 'Menu action processed' });
+        }
+
+        // Handle LinkedIn Digest actions (new system)
+        if (data.match(/^(approve|reject|edit|view)_[0-9a-f-]+$/i)) {
+          const [action, digestId] = data.split('_');
+          
+          // Security: Validate UUID format
+          if (!isValidUUID(digestId)) {
+            console.warn(`Invalid UUID format in callback: ${digestId}`);
+            await sendTelegramMessage('❌ Geçersiz istek formatı.');
+            return res.status(400).json({ success: false, message: 'Invalid UUID format' });
+          }
+          
+          // Security: Rate limiting check
+          if (!checkRateLimit(fromId, 10, 60000)) {
+            console.warn(`Rate limit exceeded for user: ${fromId}`);
+            await sendTelegramMessage('⏱️ Çok fazla istek gönderdiniz. Lütfen 1 dakika bekleyin.');
+            return res.status(429).json({ success: false, message: 'Rate limit exceeded' });
+          }
+
+          try {
+            // Answer callback query immediately
+            await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                callback_query_id: callback_query.id,
+                text: 'İşleniyor...'
+              })
+            });
+
+            // Fetch digest from database
+            const { data: digest, error: fetchError } = await supabase
+              .from('linkedin_digest_posts')
+              .select('*')
+              .eq('id', digestId)
+              .single();
+
+            if (fetchError || !digest) {
+              console.error('Digest not found:', fetchError?.message || 'Not found');
+              await sendTelegramMessage(`❌ Digest bulunamadı. ID: ${digestId}`);
+              return res.status(404).json({ success: false, message: 'Digest not found' });
+            }
+
+            // Check if already processed
+            if (digest.status === 'posted' && action === 'approve') {
+              await sendTelegramMessage('⚠️ Bu digest zaten paylaşılmış!');
+              return res.status(200).json({ success: false, message: 'Already posted' });
+            }
+
+            let responseText = '';
+            let updateData = {};
+
+            switch (action) {
+              case 'approve':
+                // Post to LinkedIn
+                try {
+                  await sendTelegramMessage('🚀 LinkedIn\'e gönderiliyor...');
+                  
+                  const linkedInPostId = await postToLinkedIn(digest.suggested_content);
+                  
+                  // Update database
+                  updateData = {
+                    status: 'posted',
+                    linkedin_post_id: linkedInPostId,
+                    posted_at: new Date().toISOString()
+                  };
+                  
+                  const { error: updateError } = await supabase
+                    .from('linkedin_digest_posts')
+                    .update(updateData)
+                    .eq('id', digestId);
+                  
+                  if (updateError) {
+                    throw new Error(`Database update error: ${updateError.message}`);
+                  }
+                  
+                  responseText = `✅ Başarıyla LinkedIn'de paylaşıldı!\n\n📊 Digest ID: ${digestId}\n🔗 Post ID: ${linkedInPostId}\n⏰ ${new Date().toLocaleString('tr-TR')}`;
+                  
+                } catch (linkedInError) {
+                  console.error('LinkedIn posting error:', linkedInError);
+                  
+                  // Update status to failed
+                  await supabase
+                    .from('linkedin_digest_posts')
+                    .update({ status: 'failed' })
+                    .eq('id', digestId);
+                  
+                  responseText = `❌ LinkedIn paylaşım hatası:\n${linkedInError.message}`;
+                }
+                break;
+
+              case 'reject':
+                // Update status to rejected
+                updateData = { status: 'rejected' };
+                
+                const { error: rejectError } = await supabase
+                  .from('linkedin_digest_posts')
+                  .update(updateData)
+                  .eq('id', digestId);
+                
+                if (rejectError) {
+                  throw new Error(`Database update error: ${rejectError.message}`);
+                }
+                
+                responseText = `❌ Digest reddedildi.\n\n📊 Digest ID: ${digestId}\n⏰ ${new Date().toLocaleString('tr-TR')}`;
+                break;
+
+              case 'edit':
+                // Provide content for manual editing
+                responseText = `✏️ İçeriği düzenlemek için:\n\n1. Aşağıdaki içeriği kopyalayın\n2. Düzenleyin\n3. LinkedIn'e manuel olarak yapıştırın\n\n---\n\n${digest.suggested_content}\n\n---\n\nDüzenledikten sonra "View" butonuna basarak orijinal halini görebilirsiniz.`;
+                break;
+
+              case 'view':
+                // Show full content
+                const contentPreview = digest.suggested_content.length > 1000 
+                  ? digest.suggested_content.substring(0, 1000) + '...\n\n(Tam içerik için veritabanını kontrol edin)'
+                  : digest.suggested_content;
+                
+                responseText = `👁️ Tam İçerik:\n\n${contentPreview}\n\n---\n\n📊 Digest ID: ${digestId}\n📅 Tarih: ${digest.digest_date}\n📰 Haber sayısı: ${digest.article_count}\n📌 Durum: ${digest.status}`;
+                break;
+
+              default:
+                responseText = 'Bilinmeyen işlem.';
+            }
+
+            // Send response to Telegram
+            await sendTelegramMessage(responseText);
+
+            // Edit original message to remove buttons (except for view)
+            if (action !== 'view' && action !== 'edit') {
+              await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/editMessageReplyMarkup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  message_id: messageId,
+                  reply_markup: { inline_keyboard: [] }
+                })
+              });
+            }
+
+            return res.status(200).json({ success: true, message: responseText });
+
+          } catch (error) {
+            console.error('❌ Digest handler error:', error);
+            await sendTelegramMessage(`🚨 Hata: ${error.message}`);
+            return res.status(500).json({ success: false, message: error.message });
+          }
         }
 
         // Handle LinkedIn post actions (legacy)

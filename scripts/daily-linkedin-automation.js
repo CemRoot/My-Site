@@ -1,6 +1,16 @@
 /**
  * Daily LinkedIn Automation
  * Main script that orchestrates the daily news analysis and LinkedIn posting
+ * 
+ * ⚠️ DEPRECATED: This file uses the old linkedin_posts table and individual article posting.
+ * New system uses linkedin_digest_posts with daily digest format (n8n + api/telegram-webhook.js)
+ * 
+ * This file is kept for backward compatibility but is no longer the primary automation method.
+ * The new workflow is:
+ * 1. n8n generates daily digest from multiple articles
+ * 2. Stores in linkedin_digest_posts table
+ * 3. Telegram approval via api/telegram-webhook.js
+ * 4. Direct LinkedIn API posting
  */
 
 import 'dotenv/config';

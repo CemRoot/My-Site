@@ -127,19 +127,33 @@ try {
     process.env.SUPABASE_SERVICE_ROLE_KEY
   );
   
-  // Check if linkedin_posts table exists
+  // Check if linkedin_digest_posts table exists (new system)
+  const { data: digestData, error: digestError } = await supabase
+    .from('linkedin_digest_posts')
+    .select('count')
+    .limit(1);
+    
+  if (digestError && digestError.code === 'PGRST116') {
+    console.log('   ❌ Database schema: linkedin_digest_posts table not found');
+    console.log('   📝 Run SQL from docs/tech-news-schema.sql (digest section)');
+  } else if (digestError) {
+    throw digestError;
+  } else {
+    console.log('   ✅ Database schema: linkedin_digest_posts table OK');
+  }
+  
+  // Check legacy linkedin_posts table (deprecated, optional)
   const { data, error } = await supabase
     .from('linkedin_posts')
     .select('count')
     .limit(1);
     
   if (error && error.code === 'PGRST116') {
-    console.log('   ❌ Database schema: linkedin_posts table not found');
-    console.log('   📝 Run: docs/linkedin-posts-schema.sql in Supabase');
+    console.log('   ℹ️  Legacy table: linkedin_posts not found (expected - deprecated)');
   } else if (error) {
-    throw error;
+    console.log('   ⚠️  Legacy table error:', error.message);
   } else {
-    console.log('   ✅ Database schema: OK');
+    console.log('   ⚠️  Legacy table: linkedin_posts exists (deprecated, consider removing)');
   }
 } catch (error) {
   console.log('   ❌ Database schema: FAILED');
