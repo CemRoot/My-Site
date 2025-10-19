@@ -100,7 +100,8 @@ export async function scrapeArticleWithFirecrawl(url) {
       url: url,
       formats: ['markdown', 'html'],
       onlyMainContent: true,
-      waitFor: 2000,
+      includeTags: ['article', 'main', 'img'],
+      waitFor: 3000,
     }),
   });
 
@@ -120,6 +121,7 @@ export async function scrapeArticleWithFirecrawl(url) {
     html: result.data.html || '',
     title: result.data.metadata?.title || 'Untitled',
     description: result.data.metadata?.description || '',
+    ogImage: result.data.metadata?.ogImage || result.data.metadata?.image || '',
   };
 }
 
@@ -141,7 +143,8 @@ Return this exact JSON structure:
   "category": "AI|Cloud|Security|Development|Hardware|Business|Other",
   "title_en": "Engaging English title",
   "description_en": "2-3 sentence summary in English",
-  "content_en": "Full article in English",
+  "content_en": "Full article in English with all details, quotes, and context",
+  "image_url": "Featured image URL if available",
   "reading_time": 5,
   "optimization_notes": "Brief notes on changes"
 }
@@ -160,15 +163,18 @@ Rules:
    - Business: Tech business, startups, funding, M&A
    - Other: Everything else
 6. Keep original facts and meaning, just make it more engaging
+7. Extract FULL article content - don't truncate, include all paragraphs, quotes, details
+8. For image_url: Use the OG image provided, or extract the first featured/hero image from content
 
 Article URL: ${articleUrl}
 Original Source: ${originalSource}
 
 Scraped Title: ${scrapedContent.title}
 Scraped Description: ${scrapedContent.description}
+OG Image: ${scrapedContent.ogImage || 'None'}
 
-Scraped Content (first 3000 chars):
-${scrapedContent.markdown.substring(0, 3000)}
+Full Scraped Content:
+${scrapedContent.markdown.substring(0, 15000)}
 
 Return ONLY the JSON object, nothing else.`;
 
@@ -300,6 +306,7 @@ export async function processManualArticle(articleUrl, originalSourceUrl) {
       description: aiResult.description_en,
       content: aiResult.content_en,
       category: aiResult.category,
+      image_url: aiResult.image_url || scrapedContent.ogImage || null,
       source_url: articleUrl,
       original_source: originalSourceUrl,
       date: new Date().toISOString().split('T')[0],
