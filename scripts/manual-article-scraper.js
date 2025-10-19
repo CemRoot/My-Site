@@ -101,6 +101,8 @@ export async function scrapeArticleWithFirecrawl(url) {
       formats: ['markdown', 'html'],
       onlyMainContent: true,
       includeTags: ['article', 'main', 'img'],
+      excludeTags: ['nav', 'footer', 'aside', 'form', 'button', 'iframe', 'script', 'style'],
+      removeBase64Images: true,
       waitFor: 3000,
     }),
   });
@@ -123,6 +125,36 @@ export async function scrapeArticleWithFirecrawl(url) {
     description: result.data.metadata?.description || '',
     ogImage: result.data.metadata?.ogImage || result.data.metadata?.image || '',
   };
+}
+
+/**
+ * Clean unwanted promotional content from article text
+ */
+function cleanPromotionalContent(text) {
+  if (!text) return text;
+  
+  // Patterns to remove
+  const unwantedPatterns = [
+    /Don't miss out on.*?newsletter/gi,
+    /Sign up for.*?(?:newsletter|digest|updates)/gi,
+    /Subscribe to.*?(?:newsletter|digest|updates)/gi,
+    /Follow us on.*?(?:Twitter|Facebook|LinkedIn|Instagram)/gi,
+    /Read more (?:articles|stories) (?:on|at).*$/gim,
+    /Related (?:articles|stories|content):?.*$/gim,
+    /\[Advertisement\]/gi,
+    /Click here to.*$/gim,
+    /For more information.*$/gim,
+  ];
+  
+  let cleaned = text;
+  for (const pattern of unwantedPatterns) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+  
+  // Remove multiple consecutive newlines
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+  
+  return cleaned.trim();
 }
 
 /**
@@ -165,6 +197,17 @@ Rules:
 6. Keep original facts and meaning, just make it more engaging
 7. Extract FULL article content - don't truncate, include all paragraphs, quotes, details
 8. For image_url: Use the OG image provided, or extract the first featured/hero image from content
+9. REMOVE these types of content from the article:
+   - Newsletter signup prompts ("Sign up for...", "Subscribe to...", "Don't miss out...")
+   - Author bios and contact info (unless essential to the story)
+   - Social media follow buttons/links
+   - Related articles sections
+   - Cookie notices and privacy pop-ups
+   - Comments sections
+   - Advertisement text
+   - Footer content
+   - "Read more on..." promotional text
+   Only keep the core news article content
 
 Article URL: ${articleUrl}
 Original Source: ${originalSource}
@@ -226,6 +269,12 @@ Return ONLY the JSON object, nothing else.`;
 
   try {
     const parsed = JSON.parse(jsonText);
+    
+    // Clean promotional content from the article
+    if (parsed.content_en) {
+      parsed.content_en = cleanPromotionalContent(parsed.content_en);
+    }
+    
     console.log(`✅ Gemini processing complete`);
     console.log(`   Language: ${parsed.language}`);
     console.log(`   Category: ${parsed.category}`);
