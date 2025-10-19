@@ -1,0 +1,49 @@
+name: Manual Article Scraper
+
+on:
+  workflow_dispatch:
+    inputs:
+      article_url:
+        description: 'Article URL to scrape'
+        required: true
+        type: string
+      original_source:
+        description: 'Original article source URL'
+        required: true
+        type: string
+      telegram_user_id:
+        description: 'Telegram user ID for notifications'
+        required: true
+        type: string
+
+jobs:
+  scrape-and-process:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Process manual article
+        env:
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          node scripts/manual-article-scraper.js \
+            "${{ github.event.inputs.article_url }}" \
+            "${{ github.event.inputs.original_source }}" \
+            "${{ github.event.inputs.telegram_user_id }}"
+

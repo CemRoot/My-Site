@@ -329,3 +329,107 @@ export async function processManualArticle(articleUrl, originalSourceUrl) {
   }
 }
 
+/**
+ * Send Telegram notification
+ */
+async function sendTelegramNotification(message, userId) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  
+  if (!botToken || !chatId) {
+    console.warn('⚠️  Telegram credentials not configured, skipping notification');
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.telegram.org/bot${botToken}/sendMessage`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: message,
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🏠 Ana Menü', callback_data: 'action_refresh_menu' }]
+            ]
+          }
+        })
+      }
+    );
+    
+    if (!response.ok) {
+      console.error('❌ Telegram notification failed:', await response.text());
+    }
+  } catch (error) {
+    console.error('❌ Telegram notification error:', error);
+  }
+}
+
+/**
+ * CLI Handler - for GitHub Actions
+ */
+if (process.argv[1]?.includes('manual-article-scraper.js')) {
+  const [, , articleUrl, originalSource, telegramUserId] = process.argv;
+  
+  if (!articleUrl || !originalSource) {
+    console.error('❌ Usage: node manual-article-scraper.js <article_url> <original_source> [telegram_user_id]');
+    process.exit(1);
+  }
+
+  (async () => {
+    try {
+      console.log('🚀 Starting manual article scraper...');
+      console.log(`   Article URL: ${articleUrl}`);
+      console.log(`   Original Source: ${originalSource}`);
+      
+      // Send initial notification
+      if (telegramUserId) {
+        await sendTelegramNotification(
+          '⚙️ <b>İşlem Başlıyor...</b>\n\n' +
+          '⏳ Makale scrape ediliyor...\n' +
+          '⏹️ AI işleme yapılıyor...\n' +
+          '⏹️ Veritabanına kaydediliyor...\n\n' +
+          '<i>Bu işlem 30-60 saniye sürebilir...</i>',
+          telegramUserId
+        );
+      }
+
+      // Process article
+      const result = await processManualArticle(articleUrl, originalSource);
+
+      // Send success notification
+      if (telegramUserId) {
+        await sendTelegramNotification(
+          '✅ <b>Haber Başarıyla Eklendi!</b>\n\n' +
+          `📰 <b>Başlık:</b> ${result.article.title}\n\n` +
+          `📂 <b>Kategori:</b> ${result.article.category}\n` +
+          `📊 <b>Okuma Süresi:</b> ${result.readingTime} dk\n` +
+          `🔗 <b>URL:</b> https://cemkoyluoglu.codes/tech-news/${result.article.slug}\n\n` +
+          `<i>✨ ${result.optimizationNotes}</i>`,
+          telegramUserId
+        );
+      }
+
+      console.log('\n✅ Manual article processing completed successfully!');
+      process.exit(0);
+    } catch (error) {
+      console.error('\n❌ Manual article processing failed:', error);
+      
+      // Send error notification
+      if (telegramUserId) {
+        await sendTelegramNotification(
+          `❌ <b>Hata Oluştu!</b>\n\n` +
+          `<code>${error.message}</code>\n\n` +
+          'Lütfen tekrar deneyin veya /help ile destek alın.',
+          telegramUserId
+        );
+      }
+      
+      process.exit(1);
+    }
+  })();
+}
+

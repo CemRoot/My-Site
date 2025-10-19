@@ -666,107 +666,47 @@ export async function handleHelpAction() {
 }
 
 /**
- * Process article asynchronously with progress updates
+ * Trigger GitHub Actions workflow to process article
  */
-async function processArticleAsync(articleUrl, originalSourceUrl, userId, messageId) {
-  try {
-    // Step 1: Scraping
-    if (messageId) {
-      await editTelegramMessage(messageId, 
-        '⚙️ <b>İşlem Başlıyor...</b>\n\n' +
-        '✅ Makale scrape ediliyor...\n' +
-        '⏳ AI işleme yapılıyor...\n' +
-        '⏹️ Veritabanına kaydediliyor...\n\n' +
-        '<i>Lütfen bekleyin...</i>'
-      );
-    }
-
-    const { processManualArticle } = await import('./manual-article-scraper.js');
-    
-    // Start processing (this takes 30-60 seconds)
-    const result = await processManualArticle(articleUrl, originalSourceUrl);
-
-    // Step 2: Success - send final message
-    await sendTelegramMessage(
-      '✅ <b>Haber Başarıyla Eklendi!</b>\n\n' +
-      `📰 <b>Başlık:</b> ${result.article.title}\n\n` +
-      `📂 <b>Kategori:</b> ${result.article.category}\n` +
-      `📊 <b>Okuma Süresi:</b> ${result.readingTime} dk\n` +
-      `🔗 <b>URL:</b> https://cemkoyluoglu.codes/tech-news/${result.article.slug}\n\n` +
-      `<i>✨ ${result.optimizationNotes}</i>`,
-      {
-        reply_markup: getMainMenuKeyboard()
-      }
-    );
-
-    // Delete the "İşlem Başlıyor" message
-    if (messageId) {
-      await deleteTelegramMessage(messageId);
-    }
-
-  } catch (error) {
-    console.error('Async article processing error:', error);
-    
-    // Send error message
-    await sendTelegramMessage(
-      `❌ <b>Hata Oluştu!</b>\n\n` +
-      `<code>${error.message}</code>\n\n` +
-      'Lütfen tekrar deneyin veya /help ile destek alın.',
-      {
-        reply_markup: getMainMenuKeyboard()
-      }
-    );
-
-    // Delete the "İşlem Başlıyor" message
-    if (messageId) {
-      await deleteTelegramMessage(messageId);
-    }
+async function triggerGitHubActionsWorkflow(articleUrl, originalSourceUrl, userId) {
+  const githubToken = process.env.GITHUB_TOKEN;
+  const githubRepo = process.env.GITHUB_REPOSITORY || 'CemRoot/My-Site';
+  
+  if (!githubToken) {
+    throw new Error('GITHUB_TOKEN environment variable not configured');
   }
-}
 
-/**
- * Edit a Telegram message
- */
-async function editTelegramMessage(messageId, text) {
   try {
     const response = await fetch(
-      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/editMessageText`,
+      `https://api.github.com/repos/${githubRepo}/actions/workflows/manual-article-scraper.yml/dispatches`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'Authorization': `token ${githubToken}`,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          chat_id: process.env.TELEGRAM_CHAT_ID,
-          message_id: messageId,
-          text,
-          parse_mode: 'HTML'
-        })
+          ref: 'main',
+          inputs: {
+            article_url: articleUrl,
+            original_source: originalSourceUrl,
+            telegram_user_id: userId.toString(),
+          },
+        }),
       }
     );
-    return await response.json();
-  } catch (error) {
-    console.error('Edit message error:', error);
-    return null;
-  }
-}
 
-/**
- * Delete a Telegram message
- */
-async function deleteTelegramMessage(messageId) {
-  try {
-    await fetch(
-      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/deleteMessage`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: process.env.TELEGRAM_CHAT_ID,
-          message_id: messageId
-        })
-      }
-    );
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`GitHub API error: ${response.status} - ${errorText}`);
+    }
+
+    console.log('✅ GitHub Actions workflow triggered successfully');
+    return true;
   } catch (error) {
-    console.error('Delete message error:', error);
+    console.error('❌ GitHub Actions trigger error:', error);
+    throw error;
   }
 }
 
@@ -864,17 +804,31 @@ export async function handleSourceConfirmation(useOriginal, userId) {
       // Clear state immediately to prevent duplicates
       await deleteConversationState(userId);
       
-      // Send initial message
-      const initialMsg = await sendTelegramMessage(
-        '⚙️ <b>İşlem Başlıyor...</b>\n\n' +
-        '⏳ Makale scrape ediliyor...\n' +
-        '⏹️ AI işleme yapılıyor...\n' +
-        '⏹️ Veritabanına kaydediliyor...\n\n' +
-        '<i>Bu işlem 30-60 saniye sürebilir, lütfen bekleyin...</i>'
-      );
-
-      // Process article ASYNCHRONOUSLY (don't block webhook response)
-      processArticleAsync(state.article_url, state.article_url, userId, initialMsg?.result?.message_id);
+      try {
+        // Trigger GitHub Actions workflow
+        await triggerGitHubActionsWorkflow(state.article_url, state.article_url, userId);
+        
+        // Send confirmation message
+        await sendTelegramMessage(
+          '🚀 <b>İşlem Başlatıldı!</b>\n\n' +
+          '📊 GitHub Actions workflow tetiklendi\n' +
+          '⏳ Makale işleniyor...\n\n' +
+          '<i>İşlem tamamlandığında bildirim alacaksınız (30-60 saniye)</i>',
+          {
+            reply_markup: getMainMenuKeyboard()
+          }
+        );
+      } catch (error) {
+        console.error('GitHub Actions trigger error:', error);
+        await sendTelegramMessage(
+          `❌ <b>İşlem Başlatılamadı!</b>\n\n` +
+          `<code>${error.message}</code>\n\n` +
+          'Lütfen tekrar deneyin veya /help ile destek alın.',
+          {
+            reply_markup: getMainMenuKeyboard()
+          }
+        );
+      }
     } else {
       // Ask for different original source
       await setConversationState(userId, 'awaiting_original_source', { articleUrl: state.article_url });
@@ -925,17 +879,31 @@ export async function handleOriginalSourceInput(originalUrl, userId, articleUrl)
     // Clear state immediately to prevent duplicates
     await deleteConversationState(userId);
     
-    // Start processing
-    const initialMsg = await sendTelegramMessage(
-      '⚙️ <b>İşlem Başlıyor...</b>\n\n' +
-      '⏳ Makale scrape ediliyor...\n' +
-      '⏹️ AI işleme yapılıyor...\n' +
-      '⏹️ Veritabanına kaydediliyor...\n\n' +
-      '<i>Bu işlem 30-60 saniye sürebilir, lütfen bekleyin...</i>'
-    );
-
-    // Process article ASYNCHRONOUSLY (don't block webhook response)
-    processArticleAsync(state.article_url, originalUrl, userId, initialMsg?.result?.message_id);
+    try {
+      // Trigger GitHub Actions workflow
+      await triggerGitHubActionsWorkflow(state.article_url, originalUrl, userId);
+      
+      // Send confirmation message
+      await sendTelegramMessage(
+        '🚀 <b>İşlem Başlatıldı!</b>\n\n' +
+        '📊 GitHub Actions workflow tetiklendi\n' +
+        '⏳ Makale işleniyor...\n\n' +
+        '<i>İşlem tamamlandığında bildirim alacaksınız (30-60 saniye)</i>',
+        {
+          reply_markup: getMainMenuKeyboard()
+        }
+      );
+    } catch (error) {
+      console.error('GitHub Actions trigger error:', error);
+      await sendTelegramMessage(
+        `❌ <b>İşlem Başlatılamadı!</b>\n\n` +
+        `<code>${error.message}</code>\n\n` +
+        'Lütfen tekrar deneyin veya /help ile destek alın.',
+        {
+          reply_markup: getMainMenuKeyboard()
+        }
+      );
+    }
   } catch (error) {
     console.error('Original source input error:', error);
     await sendTelegramMessage(
