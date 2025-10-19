@@ -127,70 +127,165 @@
 ## 🏗️ Architecture
 
 ```mermaid
-graph TB
-    subgraph "Client Layer"
-        A[React SPA] --> B[Tech News UI]
-        A --> C[Portfolio UI]
-        A --> D[Chat Widget]
-    end
-    
-    subgraph "API Layer - Vercel Edge Functions"
-        E[Telegram Webhook] --> F[Menu Handler]
-        E --> G[Control API]
-        H[Newsletter API]
-        I[Tech News API]
-    end
-    
-    subgraph "Automation Layer - GitHub Actions"
-        J[Scrape Tech News]
-        K[Health Check]
-        L[Telegram Setup]
-    end
-    
-    subgraph "Automation Layer - n8n"
-        M[LinkedIn Digest Workflow]
-        M1[Daily Schedule 16:30]
-        M2[Manual Trigger]
-        M3[Callback Handler]
-    end
-    
-    subgraph "AI Services"
-        N[Groq AI] --> O[Translation]
-        N --> P[Chat Responses]
-        Q[OpenAI GPT-4o-mini] --> R[LinkedIn Digest]
-        S[Firecrawl] --> T[Web Scraping]
-    end
-    
-    subgraph "Data Layer"
-        U[(Supabase)] --> V[Tech Articles]
-        U --> W[LinkedIn Digest Posts]
-        U --> X[Analytics]
-    end
-    
-    subgraph "Messaging"
-        Y[Telegram Bot] --> Z[Commands]
-        Y --> AA[Notifications]
-    end
-    
-    A --> I
-    B --> U
-    C --> H
-    D --> N
-    F --> M
-    E --> M3
-    J --> S
-    J --> N
-    J --> U
-    K --> U
-    K --> Y
-    J --> Y
-    L --> Y
-    M --> U
-    M --> Q
-    M --> Y
-    M1 --> M
-    M2 --> M
-    M3 --> M
+%%{init: {
+  "theme": "base",
+  "flowchart": { "curve": "basis", "nodeSpacing": 44, "rankSpacing": 72, "htmlLabels": true }
+}}%%
+flowchart LR
+
+%% ---------- KATMAN STİLLERİ ----------
+classDef client fill:#0ea5e9,stroke:#0284c7,color:#fff,rx:12,ry:12
+classDef api fill:#22c55e,stroke:#16a34a,color:#083b17,rx:12,ry:12
+classDef auto fill:#f59e0b,stroke:#d97706,color:#3b2600,rx:12,ry:12
+classDef ai fill:#a78bfa,stroke:#7c3aed,color:#1f1147,rx:12,ry:12
+classDef data fill:#94a3b8,stroke:#64748b,color:#0b1220,rx:12,ry:12
+classDef msg fill:#ef4444,stroke:#b91c1c,color:#fff,rx:12,ry:12
+classDef light fill:#f8fafc,stroke:#cbd5e1,color:#0f172a,rx:12,ry:12
+
+%% ---------- SUBGRAFLAR ----------
+subgraph S1["Client Layer"]
+A[React SPA]:::client
+B[Tech News UI]:::client
+C[Portfolio UI]:::client
+D[Chat Widget]:::client
+end
+
+subgraph S2["API Layer · Vercel Edge Functions"]
+E[Telegram Webhook]:::api
+F[Menu Handler]:::api
+G[Control API]:::api
+H[Newsletter API]:::api
+I[Tech News API]:::api
+end
+
+subgraph S3["Automation · GitHub Actions"]
+J[Scrape Tech News]:::auto
+K[Health Check]:::auto
+L[Telegram Setup]:::auto
+end
+
+subgraph S4["Automation · n8n"]
+M[LinkedIn Digest Workflow]:::auto
+M1[Daily Schedule 16:30]:::light
+M2[Manual Trigger]:::light
+M3[Callback Handler]:::light
+end
+
+subgraph S5["AI Services"]
+N[Groq AI]:::ai
+O[Translation]:::ai
+P[Chat Responses]:::ai
+Q[OpenAI GPT-4o-mini]:::ai
+R[LinkedIn Digest]:::ai
+S[Firecrawl]:::ai
+T[Web Scraping]:::ai
+end
+
+subgraph S6["Data Layer · Supabase"]
+U[(Supabase)]:::data
+V[Tech Articles]:::data
+W[LinkedIn Digest Posts]:::data
+X[Analytics]:::data
+end
+
+subgraph S7["Messaging"]
+Y[Telegram Bot]:::msg
+Z[Commands]:::light
+AA[Notifications]:::light
+end
+
+%% ---------- ANA AKIŞ (ok sırası önemlidir) ----------
+%% Client fan-out
+A --> I
+A --> B
+A --> C
+A --> D
+
+%% Client/API -> Data & AI
+B --> U
+C --> H
+D --> N
+
+%% API -> n8n
+E --> F
+F --> M
+E --> M3
+M3 --> M
+G -. control .- M
+
+%% GitHub Actions
+J --> S
+S --> T
+J --> N
+J --> U
+K --> U
+K --> Y
+J --> Y
+L --> Y
+
+%% n8n -> Data/AI/Messaging & Triggers
+M --> U
+M --> Q
+Q --> R
+M --> Y
+M1 --> M
+M2 --> M
+
+%% Groq AI subtasks
+N --> O
+N --> P
+
+%% Messaging fan-out
+Y --> Z
+Y --> AA
+
+%% Supabase fan-out
+U --> V
+U --> W
+U --> X
+
+%% ---------- OK RENKLERİ (index'e göre) ----------
+%% 0-based index: İlk ok A-->I = 0
+%% Client fan-out (mavi)
+linkStyle 0,1,2,3 stroke:#3b82f6,stroke-width:2px
+
+%% Client/API -> Data (slate)
+linkStyle 4,5 stroke:#475569,stroke-width:2px
+
+%% Client -> AI (mor)
+linkStyle 6 stroke:#7c3aed,stroke-width:2px
+
+%% API -> n8n (turuncu)
+linkStyle 7,8,9,10 stroke:#d97706,stroke-width:2px
+
+%% (11) dotted control zaten noktalı; renklendirmiyoruz
+
+%% GitHub Actions akışı (amber)
+linkStyle 12,13,14,15,16,17,18,19 stroke:#f59e0b,stroke-width:2px
+
+%% n8n → Data/AI/Messaging (yeşil ton)
+linkStyle 20,21,23 stroke:#16a34a,stroke-width:2px
+
+%% Schedules (gri açık)
+linkStyle 24,25 stroke:#94a3b8,stroke-width:2px
+
+%% Q → R (AI zinciri lavanta)
+linkStyle 22 stroke:#a78bfa,stroke-width:2px
+
+%% Groq AI subtasks (lavanta)
+linkStyle 26,27 stroke:#a78bfa,stroke-width:2px
+
+%% Messaging fan-out (kırmızı)
+linkStyle 28,29 stroke:#ef4444,stroke-width:2px
+
+%% Supabase fan-out (slate koyu)
+linkStyle 30,31,32 stroke:#334155,stroke-width:2px
+
+%% ---------- LEJAND ----------
+subgraph Legend["Legend"]
+direction LR
+LC[Client]:::client --- LAI[AI]:::ai --- LAPI[API]:::api --- LAU[Automation]:::auto --- LD[Data]:::data --- LM[Messaging]:::msg
+end
 ```
 
 ### 🔄 Data Flow
