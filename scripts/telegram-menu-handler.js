@@ -584,6 +584,60 @@ export async function handleLinkedInCommand() {
  */
 export async function handleCreateDigestAction() {
   try {
+    await sendTelegramMessage('🔍 <b>Digest kontrolü yapılıyor...</b>');
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // Check if digest already exists for today
+    const { data: existingDigest, error: checkError } = await supabase
+      .from('linkedin_digest_posts')
+      .select('*')
+      .eq('digest_date', today)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      // PGRST116 = no rows found (which is OK)
+      throw checkError;
+    }
+
+    // If digest exists
+    if (existingDigest) {
+      if (existingDigest.status === 'pending') {
+        // Already pending - just resend it
+        await sendTelegramMessage(
+          '⚠️ <b>Bugün için digest zaten mevcut!</b>\n\n' +
+          `📅 Tarih: ${existingDigest.digest_date}\n` +
+          `📊 Durum: ${existingDigest.status}\n` +
+          `📝 Haber sayısı: ${existingDigest.article_count}\n\n` +
+          'Digest zaten oluşturulmuş ve onay bekliyor.\n' +
+          'LinkedIn Posts menüsünden görüntüleyebilirsiniz.'
+        );
+        return;
+      } else if (existingDigest.status === 'posted') {
+        // Already posted
+        await sendTelegramMessage(
+          '✅ <b>Bugün için digest zaten paylaşılmış!</b>\n\n' +
+          `📅 Tarih: ${existingDigest.digest_date}\n` +
+          `📊 Paylaşım: ${new Date(existingDigest.posted_at).toLocaleString('tr-TR')}\n\n` +
+          'Yeni bir digest oluşturmak için yarın tekrar deneyin.'
+        );
+        return;
+      } else if (existingDigest.status === 'rejected') {
+        // Rejected - delete it and create new one
+        await sendTelegramMessage('🔄 <b>Reddedilen digest siliniyor, yenisi oluşturuluyor...</b>');
+        
+        const { error: deleteError } = await supabase
+          .from('linkedin_digest_posts')
+          .delete()
+          .eq('id', existingDigest.id);
+
+        if (deleteError) {
+          throw new Error(`Silme hatası: ${deleteError.message}`);
+        }
+      }
+    }
+
+    // Proceed with creation
     await sendTelegramMessage('🚀 <b>Manuel Digest Oluşturuluyor...</b>\n\nLütfen bekleyin, bu işlem 30-60 saniye sürebilir.');
 
     const N8N_WEBHOOK_URL = process.env.N8N_MANUAL_DIGEST_WEBHOOK;
@@ -599,7 +653,8 @@ export async function handleCreateDigestAction() {
       body: JSON.stringify({
         trigger: 'manual',
         chat_id: CONFIG.TELEGRAM_CHAT_ID,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        force_recreate: existingDigest?.status === 'rejected' // Flag for n8n
       })
     });
 
@@ -618,7 +673,7 @@ export async function handleCreateDigestAction() {
   } catch (error) {
     console.error('Create digest error:', error);
     await sendTelegramMessage(
-      `❌ <b>Digest oluşturma hatası!</b>\n\n${error.message}\n\n` +
+      `❌ <b>Digest oluşturma hatası!</b>\n\n<code>${error.message}</code>\n\n` +
       'Lütfen tekrar deneyin veya /help ile destek alın.'
     );
   }

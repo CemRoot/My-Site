@@ -316,6 +316,43 @@ module.exports = async function handler(req, res) {
               })
             });
 
+            // Check digest status BEFORE forwarding to n8n
+            const { data: digest, error: digestError } = await supabase
+              .from('linkedin_digest_posts')
+              .select('*')
+              .eq('id', digestId)
+              .single();
+
+            if (digestError) {
+              throw new Error(`Digest bulunamadı: ${digestError.message}`);
+            }
+
+            if (!digest) {
+              throw new Error('Digest bulunamadı');
+            }
+
+            // STATUS VALIDATION: Only allow approve/reject on pending digests
+            if (action === 'approve' || action === 'reject') {
+              if (digest.status !== 'pending') {
+                let errorMsg = '';
+                if (digest.status === 'posted') {
+                  errorMsg = `❌ Bu digest zaten paylaşılmış!\n\n📅 Tarih: ${digest.digest_date}\n📊 Paylaşım: ${new Date(digest.posted_at).toLocaleString('tr-TR')}\n\n⚠️ Zaten paylaşılan bir digest üzerinde işlem yapamazsınız.`;
+                } else if (digest.status === 'rejected') {
+                  errorMsg = `❌ Bu digest zaten reddedilmiş!\n\n📅 Tarih: ${digest.digest_date}\n\n⚠️ Reddedilen bir digest'i onaylayamazsınız.\n\n💡 Yeni bir digest oluşturmak için /linkedin komutunu kullanın.`;
+                } else {
+                  errorMsg = `❌ Bu digest üzerinde işlem yapılamıyor!\n\n📊 Mevcut durum: ${digest.status}\n\n⚠️ Sadece "pending" durumundaki digest'ler onaylanabilir veya reddedilebilir.`;
+                }
+
+                await sendTelegramMessage(errorMsg);
+                console.warn(`⚠️ Status validation failed: ${action} on ${digest.status} digest`);
+                
+                return res.status(400).json({ 
+                  success: false, 
+                  message: `Cannot ${action} a ${digest.status} digest` 
+                });
+              }
+            }
+
             // Forward to n8n callback workflow
             const N8N_WEBHOOK_URL = process.env.N8N_LINKEDIN_CALLBACK_WEBHOOK;
             
@@ -323,7 +360,7 @@ module.exports = async function handler(req, res) {
               throw new Error('N8N_LINKEDIN_CALLBACK_WEBHOOK environment variable not configured');
             }
 
-            console.log(`📤 Forwarding LinkedIn digest callback to n8n: ${action}_${digestId}`);
+            console.log(`📤 Forwarding LinkedIn digest callback to n8n: ${action}_${digestId} (status: ${digest.status})`);
             
             const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
               method: 'POST',
@@ -334,7 +371,8 @@ module.exports = async function handler(req, res) {
                 digest_id: digestId,
                 chat_id: chatId,
                 message_id: messageId,
-                from_id: fromId
+                from_id: fromId,
+                digest_status: digest.status // Pass status to n8n for double-check
               })
             });
 
@@ -353,7 +391,7 @@ module.exports = async function handler(req, res) {
           } catch (error) {
             console.error('❌ Error forwarding to n8n:', error);
             await sendTelegramMessage(
-              `❌ İşlem sırasında hata oluştu:\n\n${error.message}\n\nLütfen tekrar deneyin veya /help ile destek alın.`
+              `❌ İşlem sırasında hata oluştu:\n\n<code>${error.message}</code>\n\nLütfen tekrar deneyin veya /help ile destek alın.`
             );
             return res.status(500).json({ success: false, message: error.message });
           }
