@@ -18,6 +18,9 @@ const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
 // Rate limiting cache (in-memory, resets on function restart)
 const rateLimitCache = new Map();
 
+// Callback query deduplication cache (prevent infinite loops)
+const processedCallbacks = new Map();
+
 // Conversation state management moved to Supabase (lib/supabase.js)
 // to handle Vercel serverless cold starts properly
 
@@ -298,23 +301,46 @@ module.exports = async function handler(req, res) {
             return res.status(400).json({ success: false, message: 'Invalid UUID format' });
           }
           
-          // Security: Rate limiting check
-          if (!checkRateLimit(fromId, 10, 60000)) {
-            console.warn(`Rate limit exceeded for user: ${fromId}`);
-            await sendTelegramMessage('⏱️ Çok fazla istek gönderdiniz. Lütfen 1 dakika bekleyin.');
-            return res.status(429).json({ success: false, message: 'Rate limit exceeded' });
+          // CRITICAL: Answer callback query IMMEDIATELY to prevent Telegram retries
+          const callbackQueryId = callback_query.id;
+          
+          // Check if this callback was already processed (deduplication)
+          if (processedCallbacks.has(callbackQueryId)) {
+            console.log(`⚠️ Callback already processed: ${callbackQueryId}`);
+            return res.status(200).json({ 
+              success: true, 
+              message: 'Already processed (deduplicated)' 
+            });
           }
-
+          
+          // Mark as processed (expires in 5 minutes)
+          processedCallbacks.set(callbackQueryId, Date.now());
+          setTimeout(() => processedCallbacks.delete(callbackQueryId), 300000);
+          
+          // Answer callback query IMMEDIATELY (before any DB checks)
           try {
-            // Answer callback query immediately
             await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                callback_query_id: callback_query.id,
-                text: 'İşleniyor...'
+                callback_query_id: callbackQueryId,
+                text: '⏳ İşleniyor...',
+                show_alert: false
               })
             });
+            console.log(`✅ Callback acknowledged: ${callbackQueryId}`);
+          } catch (ackError) {
+            console.error('⚠️ Failed to acknowledge callback:', ackError.message);
+          }
+          
+          // Security: Rate limiting check
+          if (!checkRateLimit(fromId, 10, 60000)) {
+            console.warn(`Rate limit exceeded for user: ${fromId}`);
+            await sendTelegramMessage('⏱️ Çok fazla istek gönderdiniz. Lütfen 1 dakika bekleyin.');
+            return res.status(200).json({ success: true, message: 'Rate limited but callback acknowledged' });
+          }
+
+          try {
 
             // Check digest status BEFORE forwarding to n8n
             const { data: digest, error: digestError } = await supabase
@@ -346,9 +372,10 @@ module.exports = async function handler(req, res) {
                 await sendTelegramMessage(errorMsg);
                 console.warn(`⚠️ Status validation failed: ${action} on ${digest.status} digest`);
                 
-                return res.status(400).json({ 
+                // CRITICAL: Return 200 OK to prevent Telegram retry loop!
+                return res.status(200).json({ 
                   success: false, 
-                  message: `Cannot ${action} a ${digest.status} digest` 
+                  message: `Cannot ${action} a ${digest.status} digest (validation failed but callback acknowledged)` 
                 });
               }
             }
@@ -393,7 +420,11 @@ module.exports = async function handler(req, res) {
             await sendTelegramMessage(
               `❌ İşlem sırasında hata oluştu:\n\n<code>${error.message}</code>\n\nLütfen tekrar deneyin veya /help ile destek alın.`
             );
-            return res.status(500).json({ success: false, message: error.message });
+            // CRITICAL: Return 200 OK even on error to prevent Telegram retry loop!
+            return res.status(200).json({ 
+              success: false, 
+              message: `Error: ${error.message} (callback acknowledged)` 
+            });
           }
         }
 
