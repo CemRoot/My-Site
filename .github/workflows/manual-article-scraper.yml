@@ -34,10 +34,11 @@ jobs:
         run: npm ci
 
       - name: Process manual article
+        id: process_article
         env:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -46,4 +47,15 @@ jobs:
             "${{ github.event.inputs.article_url }}" \
             "${{ github.event.inputs.original_source }}" \
             "${{ github.event.inputs.telegram_user_id }}"
+      
+      - name: Notify on failure
+        if: failure()
+        run: |
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "chat_id": "${{ github.event.inputs.telegram_user_id }}",
+              "text": "❌ <b>GitHub Actions Hatası!</b>\n\n🔧 <b>Workflow:</b> Manual Article Scraper\n⚠️ <b>Durum:</b> Failed\n🔗 <b>URL:</b> ${{ github.event.inputs.article_url }}\n\n📋 <b>Detaylar:</b>\n<a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\">GitHub Actions Log</a>\n\n💡 Lütfen log'\''ları kontrol edin.",
+              "parse_mode": "HTML"
+            }'
 
