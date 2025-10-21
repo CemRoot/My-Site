@@ -8,8 +8,30 @@
       "destination": "/api/:path*"
     },
     {
+      "source": "/tech-news/:slug",
+      "destination": "/api/og-meta?slug=:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|LinkedInBot|WhatsApp|Twitterbot|Slackbot|TelegramBot|Discordbot|SkypeUriPreview|pinterest|reddit|vkShare).*"
+        }
+      ]
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/og-meta",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400"
+        }
+      ]
     }
   ],
   "functions": {

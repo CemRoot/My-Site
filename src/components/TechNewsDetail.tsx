@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { usePageContext } from '../lib/context/PageContext';
 import SmartMarkdown from './markdown/SmartMarkdown';
 import { supabase } from '../../lib/supabase.js';
+import { SEO } from './SEO';
 
 interface Article {
   id: string;
@@ -316,11 +317,21 @@ export function TechNewsDetail() {
   const estimatedMinutes = estimateReadTime(sanitizedContent);
 
   return (
-    <main
-      className="min-h-screen bg-gradient-to-b from-background to-muted/20 pb-24"
-      style={{ paddingTop: 'calc(var(--nav-height, 120px) + 56px)' }}
-    >
-      <div className="container mx-auto px-4 max-w-4xl">
+    <>
+      {/* Dynamic SEO for Article */}
+      <SEO
+        title={`${article.title} | Tech News`}
+        description={article.description}
+        ogTitle={article.title}
+        ogDescription={article.description}
+        ogImage={article.image || 'https://cemkoyluoglu.codes/og-image.png'}
+      />
+      
+      <main
+        className="min-h-screen bg-gradient-to-b from-background to-muted/20 pb-24"
+        style={{ paddingTop: 'calc(var(--nav-height, 120px) + 56px)' }}
+      >
+        <div className="container mx-auto px-4 max-w-4xl">
         {/* Back Button */}
         <Button
           variant="ghost"
@@ -468,5 +479,6 @@ export function TechNewsDetail() {
         )}
       </div>
     </main>
+    </>
   );
 }
