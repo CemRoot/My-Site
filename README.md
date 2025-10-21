@@ -132,236 +132,185 @@
 
 ## 🏗️ Architecture
 
+### System Overview
+
 ```mermaid
-%%{init: {
-  "theme": "base",
-  "flowchart": { "curve": "basis", "nodeSpacing": 44, "rankSpacing": 72, "htmlLabels": true }
-}}%%
-flowchart LR
+%%{init: {"theme": "base", "themeVariables": {"primaryColor":"#0ea5e9","primaryTextColor":"#fff","primaryBorderColor":"#0284c7","lineColor":"#64748b","secondaryColor":"#22c55e","tertiaryColor":"#f59e0b"}}}%%
 
-%% ---------- KATMAN STİLLERİ ----------
-classDef client fill:#0ea5e9,stroke:#0284c7,color:#fff,rx:12,ry:12
-classDef api fill:#22c55e,stroke:#16a34a,color:#083b17,rx:12,ry:12
-classDef auto fill:#f59e0b,stroke:#d97706,color:#3b2600,rx:12,ry:12
-classDef ai fill:#a78bfa,stroke:#7c3aed,color:#1f1147,rx:12,ry:12
-classDef data fill:#94a3b8,stroke:#64748b,color:#0b1220,rx:12,ry:12
-classDef msg fill:#ef4444,stroke:#b91c1c,color:#fff,rx:12,ry:12
-classDef light fill:#f8fafc,stroke:#cbd5e1,color:#0f172a,rx:12,ry:12
+graph TB
+    subgraph CLIENT["🌐 Client Layer"]
+        A[React SPA]
+        B[Tech News UI]
+        C[Portfolio]
+    end
 
-%% ---------- SUBGRAFLAR ----------
-subgraph S1["Client Layer"]
-A[React SPA]:::client
-B[Tech News UI]:::client
-C[Portfolio UI]:::client
-D[Chat Widget]:::client
-end
+    subgraph API["⚡ Vercel Serverless"]
+        D[Telegram Webhook]
+        E[Menu Handler]
+        F[Tech News API]
+    end
 
-subgraph S2["API Layer · Vercel Edge Functions"]
-E[Telegram Webhook]:::api
-F[Menu Handler]:::api
-G[Control API]:::api
-H[Newsletter API]:::api
-I[Tech News API]:::api
-end
+    subgraph AUTO["🤖 Automation"]
+        G[GitHub Actions<br/>News Scraping]
+        H[n8n Workflows<br/>LinkedIn Digest]
+    end
 
-subgraph S3["Automation · GitHub Actions"]
-J[Scrape Tech News]:::auto
-J1[Manual Article Scraper]:::auto
-K[Health Check]:::auto
-K1[Vercel Status Monitor]:::auto
-L[Telegram Setup]:::auto
-end
+    subgraph AI["🧠 AI Services"]
+        I[Groq AI<br/>Translation]
+        J[OpenAI<br/>Digest Generation]
+        K[Firecrawl<br/>Web Scraping]
+    end
 
-subgraph S4["Automation · n8n"]
-M[LinkedIn Digest Workflow]:::auto
-M1[Daily Schedule 16:30]:::light
-M2[Manual Trigger]:::light
-M3[Callback Handler]:::light
-end
+    subgraph DATA["💾 Data Layer"]
+        L[(Supabase<br/>PostgreSQL)]
+    end
 
-subgraph S5["AI Services"]
-N[Groq AI]:::ai
-O[Translation]:::ai
-P[Chat Responses]:::ai
-Q[OpenAI GPT-4o-mini]:::ai
-R[LinkedIn Digest]:::ai
-S[Firecrawl]:::ai
-T[Web Scraping]:::ai
-end
+    subgraph MSG["📱 Messaging"]
+        M[Telegram Bot]
+    end
 
-subgraph S6["Data Layer · Supabase"]
-U[(Supabase)]:::data
-V[Tech Articles]:::data
-W[LinkedIn Digest Posts]:::data
-W1[Vercel Status Notifications]:::data
-X[Analytics]:::data
-end
+    A --> F
+    B --> L
+    M --> D
+    D --> E
+    E --> H
+    G --> K
+    G --> I
+    G --> L
+    H --> J
+    H --> L
+    H --> M
+    K --> L
+    I --> L
 
-subgraph S7["Messaging"]
-Y[Telegram Bot]:::msg
-Z[Commands]:::light
-AA[Notifications]:::light
-end
-
-%% ---------- ANA AKIŞ (ok sırası önemlidir) ----------
-%% Client fan-out
-A --> I
-A --> B
-A --> C
-A --> D
-
-%% Client/API -> Data & AI
-B --> U
-C --> H
-D --> N
-
-%% API -> n8n
-E --> F
-F --> M
-E --> M3
-M3 --> M
-G -. control .- M
-
-%% GitHub Actions - Scraping
-J --> S
-S --> T
-J --> N
-J --> U
-J --> Y
-
-%% GitHub Actions - Manual Article Scraper
-J1 --> S
-J1 --> N
-J1 --> U
-J1 --> Y
-
-%% GitHub Actions - Health Check & Status
-K --> U
-K --> Y
-K1 --> U
-K1 --> Y
-
-%% GitHub Actions - Setup
-L --> Y
-
-%% n8n -> Data/AI/Messaging & Triggers
-M --> U
-M --> Q
-Q --> R
-M --> Y
-M1 --> M
-M2 --> M
-
-%% Groq AI subtasks
-N --> O
-N --> P
-
-%% Messaging fan-out
-Y --> Z
-Y --> AA
-
-%% Supabase fan-out
-U --> V
-U --> W
-U --> W1
-U --> X
-
-%% ---------- OK RENKLERİ (index'e göre) ----------
-%% 0-based index: İlk ok A-->I = 0
-%% Client fan-out (mavi)
-linkStyle 0,1,2,3 stroke:#3b82f6,stroke-width:2px
-
-%% Client/API -> Data (slate)
-linkStyle 4,5 stroke:#475569,stroke-width:2px
-
-%% Client -> AI (mor)
-linkStyle 6 stroke:#7c3aed,stroke-width:2px
-
-%% API -> n8n (turuncu)
-linkStyle 7,8,9,10 stroke:#d97706,stroke-width:2px
-
-%% (11) dotted control zaten noktalı; renklendirmiyoruz
-
-%% GitHub Actions akışı (amber)
-%% J: 12-16 (5 ok), J1: 17-20 (4 ok), K/K1: 21-24 (4 ok), L: 25 (1 ok)
-linkStyle 12,13,14,15,16,17,18,19,20,21,22,23,24,25 stroke:#f59e0b,stroke-width:2px
-
-%% n8n → Data/AI/Messaging (yeşil ton)
-linkStyle 26,27,29 stroke:#16a34a,stroke-width:2px
-
-%% Schedules (gri açık)
-linkStyle 30,31 stroke:#94a3b8,stroke-width:2px
-
-%% Q → R (AI zinciri lavanta)
-linkStyle 28 stroke:#a78bfa,stroke-width:2px
-
-%% Groq AI subtasks (lavanta)
-linkStyle 32,33 stroke:#a78bfa,stroke-width:2px
-
-%% Messaging fan-out (kırmızı)
-linkStyle 34,35 stroke:#ef4444,stroke-width:2px
-
-%% Supabase fan-out (slate koyu)
-linkStyle 36,37,38,39 stroke:#334155,stroke-width:2px
-
-%% ---------- LEJAND ----------
-subgraph Legend["Legend"]
-direction LR
-LC[Client]:::client --- LAI[AI]:::ai --- LAPI[API]:::api --- LAU[Automation]:::auto --- LD[Data]:::data --- LM[Messaging]:::msg
-end
+    style CLIENT fill:#0ea5e9,stroke:#0284c7,color:#fff
+    style API fill:#22c55e,stroke:#16a34a,color:#fff
+    style AUTO fill:#f59e0b,stroke:#d97706,color:#fff
+    style AI fill:#a78bfa,stroke:#7c3aed,color:#fff
+    style DATA fill:#64748b,stroke:#475569,color:#fff
+    style MSG fill:#ef4444,stroke:#b91c1c,color:#fff
 ```
+
+---
+
+### 📊 LinkedIn Digest Workflow (n8n)
+
+```mermaid
+%%{init: {"theme": "base"}}%%
+
+graph LR
+    subgraph TRIGGER["🎯 Triggers"]
+        T1[Daily Schedule<br/>16:30 UTC]
+        T2[Manual /linkedin]
+        T3[Callback Approve/Reject/Edit]
+    end
+
+    subgraph PROCESS["⚙️ Processing"]
+        P1[Fetch Articles<br/>from Supabase]
+        P2[OpenAI GPT-4<br/>Generate Digest]
+        P3[Save to Database<br/>status: pending]
+    end
+
+    subgraph ACTION["✅ Actions"]
+        A1[Edit Content<br/>Conversation State]
+        A2[Approve<br/>Post to LinkedIn]
+        A3[Reject<br/>Mark as Rejected]
+    end
+
+    subgraph OUTPUT["📤 Output"]
+        O1[Telegram<br/>Digest Message]
+        O2[LinkedIn<br/>Professional Post]
+        O3[Supabase<br/>Status Updated]
+    end
+
+    T1 --> P1
+    T2 --> P1
+    P1 --> P2
+    P2 --> P3
+    P3 --> O1
+    O1 --> T3
+    T3 --> A1
+    T3 --> A2
+    T3 --> A3
+    A1 --> A2
+    A2 --> O2
+    A2 --> O3
+    A3 --> O3
+
+    style TRIGGER fill:#0ea5e9,stroke:#0284c7,color:#fff
+    style PROCESS fill:#22c55e,stroke:#16a34a,color:#fff
+    style ACTION fill:#f59e0b,stroke:#d97706,color:#fff
+    style OUTPUT fill:#a78bfa,stroke:#7c3aed,color:#fff
+```
+
+---
 
 ### 🔄 Data Flow
 
-#### News Aggregation Flow
-```
-User Request → Vercel Edge Function → Supabase → Response
-      ↓
-GitHub Actions (Scheduled)
-      ↓
-Firecrawl Scraping → Groq Translation → Supabase Storage
-      ↓
-Telegram Notification (Success/Error)
+```mermaid
+%%{init: {"theme": "base"}}%%
+
+sequenceDiagram
+    participant U as 👤 User (Telegram)
+    participant V as ⚡ Vercel
+    participant N as 🤖 n8n
+    participant AI as 🧠 OpenAI
+    participant DB as 💾 Supabase
+    participant LI as 💼 LinkedIn
+
+    Note over U,LI: Daily Digest Creation
+    N->>DB: Fetch today's articles
+    DB-->>N: Return articles
+    N->>AI: Generate digest
+    AI-->>N: Optimized content
+    N->>DB: Save (status: pending)
+    N->>U: Send for approval
+
+    Note over U,LI: User Interaction
+    U->>V: Click "Edit"
+    V->>DB: Set conversation state
+    V->>U: Show content
+    U->>V: Send edited text
+    V->>DB: Update edited_content
+    V->>U: Show Approve button
+
+    Note over U,LI: LinkedIn Posting
+    U->>V: Click "Approve"
+    V->>N: Forward callback
+    N->>DB: Fetch digest
+    N->>N: Clean markdown
+    N->>LI: Post content
+    LI-->>N: Post ID
+    N->>DB: Update (status: posted)
+    N->>U: Success message
 ```
 
-#### LinkedIn Digest Flow (n8n + Vercel)
-```
-n8n Unified Workflow: LinkedIn Digest System
-      ↓
-TRIGGER 1: Schedule (16:30 UTC Daily - Automatic)
-      OR
-TRIGGER 2: Manual Digest Button (/linkedin menu - User action)
-      ↓
-Workflow Configuration → Check Duplicate
-      ↓
-Fetch Today's Articles → OpenAI GPT-4o-mini (Digest Generation)
-      ↓
-Save to linkedin_digest_posts (status: pending)
-      ↓
-Telegram Message (4 Buttons: ✅ Approve / ❌ Reject / 👁️ View / ✏️ Edit)
-      ↓
-User Clicks Button → Telegram Bot API
-      ↓
-Vercel Webhook (api/telegram-webhook.js) - Security Layer
-      ├── UUID Validation (RFC 4122)
-      ├── Rate Limiting (10 req/min per user)
-      ├── Chat Authorization
-      └── Forward to n8n Callback Webhook →
-                         ↓
-n8n Callback Handler (Same Workflow)
-      ↓
-Parse Callback → Switch (approve/reject/view/edit)
-      ↓
-Get Digest from DB
-      ↓
-Action Based on Button:
-   • APPROVE → Post to LinkedIn (n8n OAuth) → Update DB (posted) → ✅ Confirmation
-   • REJECT  → Update DB (rejected) → ❌ Rejected Message
-   • VIEW    → Send Full Digest Content → 👁️ Full Content
-   • EDIT    → "Coming Soon" Message → ✏️ Edit Mode
-      ↓
-Telegram Confirmation ✅
-```
+---
+
+### 🗂️ Key Components
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| **Frontend** | React + TypeScript + Vite | User interface & portfolio |
+| **Backend** | Vercel Serverless Functions | API endpoints & webhooks |
+| **Database** | Supabase (PostgreSQL) | Data storage & real-time subscriptions |
+| **Automation** | GitHub Actions + n8n | Scheduled tasks & workflows |
+| **AI Translation** | Groq AI (Llama 3.3 70B) | Turkish → English translation |
+| **AI Digest** | OpenAI GPT-4o-mini | LinkedIn content generation |
+| **Web Scraping** | Firecrawl API | Article extraction |
+| **Messaging** | Telegram Bot API | Interactive control & notifications |
+| **Hosting** | Vercel Edge Network | Global CDN & serverless deployment |
+
+---
+
+### 🔐 Security Architecture
+
+- **API Keys**: Stored in GitHub Secrets & Vercel Environment Variables
+- **Rate Limiting**: Implemented in Vercel Edge Functions
+- **Webhook Validation**: Telegram webhook signature verification
+- **Database Security**: Row Level Security (RLS) in Supabase
+- **Conversation State**: Time-limited sessions (10 minutes)
+- **Callback Deduplication**: Prevents infinite loops & retries
 
 ---
 

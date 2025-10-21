@@ -27,7 +27,7 @@ Automated system that analyzes tech news daily using Google Gemini AI, sends app
 
 2. **Add to GitHub Secrets:**
    ```
-   GEMINI_API_KEY=AIzaSyDEHXJ-24LWczcysEwWOGmxEAMJvUXz4uA
+   GEMINI_API_KEY=AIzaSy...your_api_key_here
    ```
 
 ### 2. Telegram Bot Setup
@@ -98,7 +98,7 @@ Add these to GitHub Secrets:
 
 ```bash
 # Google Gemini AI
-GEMINI_API_KEY=AIzaSyDEHXJ-24LWczcysEwWOGmxEAMJvUXz4uA
+GEMINI_API_KEY=AIzaSy...your_api_key_here
 
 # Telegram Bot
 TELEGRAM_BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz

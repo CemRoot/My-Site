@@ -1,13 +1,24 @@
-name: Daily LinkedIn Automation
+name: Daily LinkedIn Automation (DEPRECATED - Now Managed by n8n)
 
-# Daily schedule for LinkedIn automation
+# ⚠️ IMPORTANT: This workflow is now DEPRECATED and DISABLED
+# LinkedIn digest automation has been moved to n8n for better reliability and features
+# 
+# New System (Active):
+# - n8n handles digest creation, editing, approval, and LinkedIn posting
+# - Telegram bot integration for interactive management
+# - Real-time editing capability with conversation states
+# - No more GitHub Actions limitations (timeouts, rate limits)
+# 
+# This file is kept for reference and as an alternative implementation example
+# To use this method instead of n8n, uncomment the schedule trigger below
+
 on:
-  schedule:
-    # Analysis phase: 16:30 UTC (16:30 Ireland time) - waits for final news scraping then sends to Telegram
-    - cron: '30 16 * * *'
-    # Posting is now manual - users copy content from Telegram and paste to LinkedIn
+  # schedule:
+  #   # Analysis phase: 16:30 UTC (17:30 Dublin time in winter, 18:30 in summer)
+  #   # Adjust cron for Dublin time: UTC+0 (winter) or UTC+1 (summer)
+  #   - cron: '30 16 * * *'  # 16:30 UTC = 16:30 Dublin (winter) / 17:30 Dublin (summer)
   
-  # Manual trigger for testing
+  # Manual trigger for testing (still available)
   workflow_dispatch:
     inputs:
       mode:
