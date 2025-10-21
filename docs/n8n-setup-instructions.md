@@ -253,13 +253,11 @@ return {
 
 ### **A. Fetch Digest by ID (Supabase)**
 1. "+" → "Supabase"
-2. **Operation:** Execute Query
-3. **Query:**
-```sql
-SELECT * FROM linkedin_digest_posts 
-WHERE id = '{{ $('Parse Trigger Type').item.json.callbackData.digest_id }}' 
-LIMIT 1
-```
+2. **Operation:** Get
+3. **Table:** `linkedin_digest_posts`
+4. **Row ID:** `{{ $('Parse Trigger Type').item.json.callbackData.digest_id }}`
+
+**Note:** Uses "Get" operation to fetch a single digest by UUID. This is more efficient than Execute Query.
 
 ### **B. Route Callback Action (Switch)**
 1. "+" → "Switch"

@@ -423,7 +423,9 @@
     },
     {
       "parameters": {
-        "operation": "executeQuery"
+        "operation": "get",
+        "tableId": "linkedin_digest_posts",
+        "rowId": "={{ $('Parse Trigger Type').item.json.callbackData.digest_id }}"
       },
       "id": "d8b04e5c-1ddd-4b4a-957b-c013375f788a",
       "name": "Fetch Digest by ID",

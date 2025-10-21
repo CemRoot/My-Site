@@ -166,3 +166,4 @@ convert public/og-image.png -resize 1200x630^ -gravity center -extent 1200x630 p
 **Son Güncelleme:** 21 Ekim 2025
 **Durum:** ✅ Aktif ve Test Edildi
 
+

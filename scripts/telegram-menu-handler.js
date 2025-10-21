@@ -978,6 +978,98 @@ export async function handleOriginalSourceInput(originalUrl, userId, articleUrl)
 }
 
 /**
+ * Handle digest edit input (LinkedIn digest editing)
+ */
+export async function handleDigestEditInput(editedContent, userId, digestId) {
+  try {
+    const { deleteConversationState } = await import('../lib/conversation-state.js');
+    
+    // Validate content length (LinkedIn limit: 3000 characters)
+    if (editedContent.length > 3000) {
+      await sendTelegramMessage(
+        `❌ <b>İçerik çok uzun!</b>\n\n` +
+        `📏 Mevcut: ${editedContent.length} karakter\n` +
+        `📏 Maksimum: 3000 karakter\n\n` +
+        `Lütfen içeriği kısaltın ve tekrar gönderin.`
+      );
+      return;
+    }
+
+    // Clear conversation state immediately
+    await deleteConversationState(userId);
+
+    // Update digest with edited content
+    const { data: digest, error: updateError } = await supabase
+      .from('linkedin_digest_posts')
+      .update({
+        approved_content: editedContent,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', digestId)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw new Error(`Digest güncelleme hatası: ${updateError.message}`);
+    }
+
+    // Send confirmation with approve/reject buttons
+    await sendTelegramMessage(
+      `✅ <b>İçerik Güncellendi!</b>\n\n` +
+      `📝 Düzenlenmiş içerik kaydedildi.\n` +
+      `📊 Karakter sayısı: ${editedContent.length}/3000\n\n` +
+      `<b>📋 Önizleme:</b>\n` +
+      `${editedContent.substring(0, 500)}${editedContent.length > 500 ? '...' : ''}\n\n` +
+      `👇 Şimdi ne yapmak istersiniz?`,
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: '✅ Approve & Post to LinkedIn',
+                callback_data: `approve_${digestId}`
+              }
+            ],
+            [
+              {
+                text: '❌ Reject',
+                callback_data: `reject_${digestId}`
+              }
+            ],
+            [
+              {
+                text: '👁️ View Full Content',
+                callback_data: `view_${digestId}`
+              }
+            ],
+            [
+              {
+                text: '🔙 Back to Menu',
+                callback_data: 'action_refresh_menu'
+              }
+            ]
+          ]
+        }
+      }
+    );
+
+    console.log(`✅ Digest ${digestId} updated with edited content by user ${userId}`);
+
+  } catch (error) {
+    console.error('Digest edit input error:', error);
+    await sendTelegramMessage(
+      `❌ <b>Hata Oluştu!</b>\n\n${error.message}\n\n` +
+      'Lütfen tekrar deneyin veya /help ile destek alın.',
+      {
+        reply_markup: getMainMenuKeyboard()
+      }
+    );
+    const { deleteConversationState } = await import('../lib/conversation-state.js');
+    await deleteConversationState(userId);
+  }
+}
+
+/**
  * Set bot commands (run once during setup)
  */
 export async function setBotCommands() {
@@ -1021,6 +1113,7 @@ export default {
   handleArticleUrlInput,
   handleSourceConfirmation,
   handleOriginalSourceInput,
+  handleDigestEditInput,
   handleScrapeAction,
   handleHealthAction,
   handleStatusAction,

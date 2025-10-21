@@ -176,6 +176,9 @@ module.exports = async function handler(req, res) {
               await menuHandler.handleArticleUrlInput(text, userId);
             } else if (state.step === 'awaiting_original_source') {
               await menuHandler.handleOriginalSourceInput(text, userId, state.article_url);
+            } else if (state.step === 'awaiting_digest_edit') {
+              // LinkedIn digest edit handler
+              await menuHandler.handleDigestEditInput(text, userId, state.digest_id);
             }
             
             return res.status(200).json({ success: true, message: 'Conversation message processed' });
