@@ -13,7 +13,7 @@ export function SEO({
   author = PERSONAL_INFO.name,
   ogTitle = `${PERSONAL_INFO.name} - ${PERSONAL_INFO.title}`,
   ogDescription = `AI Engineer with ${EDUCATION.degree} (${EDUCATION.classification}). Expert in LLMs, NLP, Computer Vision, Azure & Microsoft 365. Based in ${PERSONAL_INFO.location}, available for freelance & full-time opportunities.`,
-  ogImage = 'https://portfolio.cemkoyluoglu.com/og-image.jpg',
+  ogImage = 'https://cemkoyluoglu.codes/og-image.png',
   twitterCard = 'summary_large_image',
 }: SEOMetadata = {}) {
   useEffect(() => {
