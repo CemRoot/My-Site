@@ -11,7 +11,8 @@ import { usePageContext } from '../lib/context/PageContext';
  */
 const WIDGET_CONFIG = {
   showDelay: 2000, // Show widget after 2 seconds
-  initialMessage: `👋 Hey! I'm Cem's AI assistant. Ask me anything about Cem's experience, skills, availability, or projects!`,
+  initialMessage: `👋 Hey! I'm Cem's AI assistant. Ask me anything about Cem, his work, or this website!`,
+  offTopicThreshold: 5, // Allow 5 off-topic questions before warning
 } as const;
 
 const BLOCK_DURATION_MS = 5 * 60 * 1000;
@@ -106,8 +107,8 @@ export function ChatWidget() {
       setOffTopicCount(0);
       setAwaitingRelevantQuestion(false);
     } else if (blockedUntil && attemptTimestamp < blockedUntil) {
-      toast.warning('Sohbet geçici olarak kapalı', {
-        description: '5 dakika sonra tekrar dene veya Cem hakkında soru sor.',
+      toast.warning('Chat temporarily closed', {
+        description: 'Please wait a few minutes or ask about Cem\'s work.',
       });
       // Refocus after showing error
       setTimeout(() => {
@@ -167,7 +168,7 @@ export function ChatWidget() {
           nextOffTopicCount = 0;
         } else {
           nextOffTopicCount = potentialCount;
-          if (potentialCount >= 3) {
+          if (potentialCount >= WIDGET_CONFIG.offTopicThreshold) {
             issueWarning = true;
           }
         }
@@ -182,7 +183,7 @@ export function ChatWidget() {
           id: createMessageId(),
           role: 'assistant',
           content:
-            "Hey! Ben ChatGPT değilim; Cem Koyluoğlu hakkında soru sor ya da sohbeti kapatmak zorunda kalacağım.",
+            "⚠️ Friendly reminder: I'm specifically designed to help with questions about Cem Koyluoglu and this website. Please ask relevant questions or I'll need to temporarily close the chat. Thanks for understanding! 😊",
           timestamp: new Date(),
         });
       }
@@ -194,11 +195,11 @@ export function ChatWidget() {
           id: createMessageId(),
           role: 'assistant',
           content:
-            'Sohbet Cem Koyluoğlu dışındaki konular sorulduğu için 5 dakika boyunca kapalı. Lütfen daha sonra tekrar dene.',
+            '🔒 Chat temporarily closed due to off-topic questions. Please come back in 5 minutes or ask questions about Cem Koyluoglu and his work. Thanks!',
           timestamp: new Date(),
         });
-        toast.warning('Sohbet geçici olarak kapatıldı', {
-          description: '5 dakika sonra tekrar deneyebilir veya Cem hakkında soru sorabilirsin.',
+        toast.warning('Chat temporarily closed', {
+          description: 'Come back in 5 minutes or ask about Cem\'s work to continue chatting.',
         });
       }
 
@@ -250,8 +251,8 @@ export function ChatWidget() {
       }
 
       if (blockedUntil && toggleTimestamp < blockedUntil) {
-        toast.warning('Sohbet geçici olarak kapalı', {
-          description: '5 dakika sonra tekrar deneyebilir veya Cem hakkında soru sorabilirsin.',
+        toast.warning('Chat temporarily closed', {
+          description: 'Come back in a few minutes or ask about Cem\'s work.',
         });
         return;
       }
@@ -371,7 +372,7 @@ export function ChatWidget() {
                 <div className="flex gap-1.5 sm:gap-2 items-end">
                   <Textarea
                     ref={textareaRef}
-                    placeholder={isChatBlocked ? 'Sohbet geçici olarak kapalı' : 'Ask me about Cem...'}
+                    placeholder={isChatBlocked ? 'Chat temporarily closed...' : 'Ask me about Cem or this website...'}
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     onKeyDown={(e) => {
@@ -402,7 +403,7 @@ export function ChatWidget() {
                 </div>
                 {isChatBlocked && (
                   <p className="text-xs text-destructive text-center mt-2 leading-relaxed">
-                    Sohbet {remainingBlockMinutes} dakika sonra yeniden açılacak. Cem hakkında sorularını bekliyorum.
+                    Chat reopens in {remainingBlockMinutes} minute{remainingBlockMinutes > 1 ? 's' : ''}. Ask about Cem's work to chat again!
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground text-center mt-2 leading-relaxed">
