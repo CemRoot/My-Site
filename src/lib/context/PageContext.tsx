@@ -5,7 +5,11 @@ export interface PageContextInfo {
   path: string;
   title: string;
   summary: string;
-  highlights?: string[];
+  description?: string; // Additional description for more context
+  highlights?: string[]; // Key highlights or bullet points
+  features?: string[]; // Key features (for project/service pages)
+  technologies?: string[]; // Technologies used (for project pages)
+  content?: string; // Main content or detailed information
   lastUpdated?: string;
 }
 
