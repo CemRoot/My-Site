@@ -42,6 +42,15 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Slug parameter required' });
   }
 
+  // Security: Validate slug input
+  if (typeof slug !== 'string' || slug.length > 200) {
+    return res.status(400).json({ error: 'Invalid slug format' });
+  }
+  if (!/^[a-z0-9-]+$/i.test(slug)) {
+    console.warn('Invalid slug characters detected:', slug);
+    return res.status(400).json({ error: 'Slug contains invalid characters' });
+  }
+
   try {
     // Fetch article from Supabase
     const { data: article, error } = await supabase

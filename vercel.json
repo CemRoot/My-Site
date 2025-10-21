@@ -25,6 +25,35 @@
   ],
   "headers": [
     {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "geolocation=(), microphone=(), camera=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live https://va.vercel-scripts.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://api.groq.com https://api.firecrawl.dev https://api.telegram.org; frame-src 'self' https://www.youtube.com https://platform.twitter.com https://www.tiktok.com; media-src 'self' https: blob:;"
+        }
+      ]
+    },
+    {
       "source": "/api/og-meta",
       "headers": [
         {
@@ -35,9 +64,17 @@
     }
   ],
   "functions": {
+    "api/chat.js": {
+      "memory": 1024,
+      "maxDuration": 30
+    },
+    "api/og-meta.js": {
+      "memory": 1024,
+      "maxDuration": 20
+    },
     "api/**/*.js": {
       "memory": 1024,
-      "maxDuration": 10
+      "maxDuration": 15
     }
   }
 }

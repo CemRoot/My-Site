@@ -1,4 +1,5 @@
 import Groq from 'groq-sdk';
+import { checkRateLimit, getClientIdentifier, sendRateLimitResponse } from '../lib/rate-limit.js';
 
 function formatPageContext(context) {
   if (!context || typeof context !== 'object') {
@@ -35,8 +36,17 @@ function formatPageContext(context) {
 
 // Vercel Serverless Function
 export default async function handler(req, res) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // CORS headers - Security: Only allow requests from trusted origins
+  const ALLOWED_ORIGINS = [
+    'https://cemkoyluoglu.codes',
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+  ].filter(Boolean);
+  
+  const origin = req.headers.origin;
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -46,6 +56,15 @@ export default async function handler(req, res) {
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Security: Rate limiting - 10 requests per minute per IP
+  const clientId = getClientIdentifier(req);
+  const rateLimit = checkRateLimit(clientId, 10, 60000);
+  
+  if (!rateLimit.success) {
+    console.warn(`Rate limit exceeded for ${clientId}`);
+    return sendRateLimitResponse(res, rateLimit);
   }
 
   try {

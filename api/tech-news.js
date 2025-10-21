@@ -13,8 +13,17 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // CORS headers - Security: Only allow requests from trusted origins
+  const ALLOWED_ORIGINS = [
+    'https://cemkoyluoglu.codes',
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+  ].filter(Boolean);
+  
+  const origin = req.headers.origin;
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -38,6 +47,23 @@ export default async function handler(req, res) {
       category,
       slug 
     } = req.query;
+
+    // Security: Validate slug input
+    if (slug) {
+      if (typeof slug !== 'string' || slug.length > 200) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid slug format' 
+        });
+      }
+      if (!/^[a-z0-9-]+$/i.test(slug)) {
+        console.warn('Invalid slug characters detected:', slug);
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Slug contains invalid characters' 
+        });
+      }
+    }
 
     // If slug is provided, return single article
     if (slug) {

@@ -1,0 +1,14 @@
+# Gitleaks ignore file
+# Add false positives here to prevent gitleaks from flagging them
+
+# Documentation example credentials (not real secrets)
+docs/linkedin-automation-setup.md:*
+docs/VERCEL_ENV_CHECKLIST.md:*
+README.md:*
+
+# Example env files
+.env.example:*
+
+# JWT examples in docs (not real tokens)
+docs/SUPABASE_MIGRATION_GUIDE.md:*
+

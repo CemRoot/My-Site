@@ -21,9 +21,17 @@ const CONFIG = {
   FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY || '',
   GITHUB_TOKEN: process.env.GITHUB_TOKEN || '',
   GITHUB_REPO: process.env.GITHUB_REPOSITORY || 'username/My-Site',
-  // Security: API key for authentication
+  // Security: API key for authentication (REQUIRED)
   API_SECRET: process.env.TELEGRAM_CONTROL_API_SECRET || '',
 };
+
+// SECURITY: Enforce API authentication - this endpoint can trigger workflows and send messages
+if (!CONFIG.API_SECRET) {
+  console.error('CRITICAL: TELEGRAM_CONTROL_API_SECRET is not set! This endpoint is vulnerable.');
+  // In production, this should throw an error, but we'll log a warning for now
+  // Uncomment the line below to enforce authentication:
+  // throw new Error('TELEGRAM_CONTROL_API_SECRET must be set for security');
+}
 
 const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
 
@@ -223,8 +231,17 @@ ${supabaseStatus === '✅ Bağlı' ? '✨ Sistemler çalışıyor' : '⚠️ Sor
  * Main handler
  */
 module.exports = async function handler(req, res) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // CORS headers - Security: Only allow requests from trusted origins
+  const ALLOWED_ORIGINS = [
+    'https://cemkoyluoglu.codes',
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+  ].filter(Boolean);
+  
+  const origin = req.headers.origin;
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   
@@ -233,17 +250,31 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    // Security: Check API secret (if configured)
+    // Security: Check API secret (STRONGLY RECOMMENDED)
     if (CONFIG.API_SECRET) {
       const authHeader = req.headers.authorization;
-      const providedSecret = authHeader?.replace('Bearer ', '');
       
-      if (providedSecret !== CONFIG.API_SECRET) {
-        return res.status(401).json({
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.warn('Unauthorized access attempt to telegram-control API');
+        return res.status(401).json({ 
           success: false,
-          message: 'Unauthorized: Invalid API secret'
+          error: 'Unauthorized',
+          message: 'Bearer token required in Authorization header' 
         });
       }
+      
+      const providedSecret = authHeader.replace('Bearer ', '');
+      if (providedSecret !== CONFIG.API_SECRET) {
+        console.warn('Invalid API secret provided to telegram-control API');
+        return res.status(403).json({ 
+          success: false,
+          error: 'Forbidden',
+          message: 'Invalid API secret'
+        });
+      }
+    } else {
+      // Log warning if API_SECRET is not configured
+      console.warn('⚠️  WARNING: TELEGRAM_CONTROL_API_SECRET not set - endpoint is unprotected!');
     }
 
     // Get action from query or body
