@@ -36,3 +36,9 @@ scripts/test-translation.js
 # Private data
 data/newsletter-subscribers.json
 .env*.local
+# Security scan reports - contain sensitive data
+gitleaks-report.json
+npm-audit-report.json
+semgrep-report.json
+snyk-report.json
+*-report.json
