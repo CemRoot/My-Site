@@ -998,7 +998,7 @@ export async function handleDigestEditInput(editedContent, userId, digestId) {
     const { data: digest, error: updateError } = await supabase
       .from('linkedin_digest_posts')
       .update({
-        approved_content: editedContent,
+        edited_content: editedContent,
         updated_at: new Date().toISOString()
       })
       .eq('id', digestId)
