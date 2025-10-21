@@ -87,10 +87,12 @@
 
 #### Interactive Menu System
 - 📰 Manual scraping trigger
+- ➕ Manual article addition
 - 🏥 System health checks
 - 📊 Real-time statistics
 - 💾 Database management
 - 🔧 GitHub Actions control
+- 📱 LinkedIn digest management
 
 </td>
 <td width="50%">
@@ -100,6 +102,7 @@
 - ❌ Error alerts with details
 - 📈 Daily health summaries
 - 🚀 Deployment notifications
+- 🚨 Vercel status alerts
 - 📱 Real-time updates
 
 </td>
@@ -108,10 +111,13 @@
 
 ### 🔄 Full Automation
 
-- **Scheduled Scraping**: 3x daily on weekdays, health checks
+- **Scheduled Scraping**: 3x daily on weekdays (09:30, 13:00, 16:00 UTC)
+- **Manual Article Scraper**: On-demand article processing via Telegram
+- **LinkedIn Digest**: Daily automated post generation (16:30 UTC via n8n)
+- **Vercel Status Monitor**: 30-min interval platform health checks
 - **Auto Deployment**: Vercel CI/CD with post-build hooks
 - **Self-Healing**: Automatic retries, fallback mechanisms
-- **Monitoring**: System health tracking, API status checks
+- **Monitoring**: System health tracking, API status checks, RSS monitoring
 - **GitHub Integration**: Workflow triggers, status reporting
 
 ### 💼 Portfolio Website
@@ -160,7 +166,9 @@ end
 
 subgraph S3["Automation · GitHub Actions"]
 J[Scrape Tech News]:::auto
+J1[Manual Article Scraper]:::auto
 K[Health Check]:::auto
+K1[Vercel Status Monitor]:::auto
 L[Telegram Setup]:::auto
 end
 
@@ -185,6 +193,7 @@ subgraph S6["Data Layer · Supabase"]
 U[(Supabase)]:::data
 V[Tech Articles]:::data
 W[LinkedIn Digest Posts]:::data
+W1[Vercel Status Notifications]:::data
 X[Analytics]:::data
 end
 
@@ -213,14 +222,26 @@ E --> M3
 M3 --> M
 G -. control .- M
 
-%% GitHub Actions
+%% GitHub Actions - Scraping
 J --> S
 S --> T
 J --> N
 J --> U
+J --> Y
+
+%% GitHub Actions - Manual Article Scraper
+J1 --> S
+J1 --> N
+J1 --> U
+J1 --> Y
+
+%% GitHub Actions - Health Check & Status
 K --> U
 K --> Y
-J --> Y
+K1 --> U
+K1 --> Y
+
+%% GitHub Actions - Setup
 L --> Y
 
 %% n8n -> Data/AI/Messaging & Triggers
@@ -242,6 +263,7 @@ Y --> AA
 %% Supabase fan-out
 U --> V
 U --> W
+U --> W1
 U --> X
 
 %% ---------- OK RENKLERİ (index'e göre) ----------
@@ -261,25 +283,26 @@ linkStyle 7,8,9,10 stroke:#d97706,stroke-width:2px
 %% (11) dotted control zaten noktalı; renklendirmiyoruz
 
 %% GitHub Actions akışı (amber)
-linkStyle 12,13,14,15,16,17,18,19 stroke:#f59e0b,stroke-width:2px
+%% J: 12-16 (5 ok), J1: 17-20 (4 ok), K/K1: 21-24 (4 ok), L: 25 (1 ok)
+linkStyle 12,13,14,15,16,17,18,19,20,21,22,23,24,25 stroke:#f59e0b,stroke-width:2px
 
 %% n8n → Data/AI/Messaging (yeşil ton)
-linkStyle 20,21,23 stroke:#16a34a,stroke-width:2px
+linkStyle 26,27,29 stroke:#16a34a,stroke-width:2px
 
 %% Schedules (gri açık)
-linkStyle 24,25 stroke:#94a3b8,stroke-width:2px
+linkStyle 30,31 stroke:#94a3b8,stroke-width:2px
 
 %% Q → R (AI zinciri lavanta)
-linkStyle 22 stroke:#a78bfa,stroke-width:2px
+linkStyle 28 stroke:#a78bfa,stroke-width:2px
 
 %% Groq AI subtasks (lavanta)
-linkStyle 26,27 stroke:#a78bfa,stroke-width:2px
+linkStyle 32,33 stroke:#a78bfa,stroke-width:2px
 
 %% Messaging fan-out (kırmızı)
-linkStyle 28,29 stroke:#ef4444,stroke-width:2px
+linkStyle 34,35 stroke:#ef4444,stroke-width:2px
 
 %% Supabase fan-out (slate koyu)
-linkStyle 30,31,32 stroke:#334155,stroke-width:2px
+linkStyle 36,37,38,39 stroke:#334155,stroke-width:2px
 
 %% ---------- LEJAND ----------
 subgraph Legend["Legend"]
@@ -487,8 +510,10 @@ npm run telegram:setup-menu
 | Workflow | Schedule | Purpose |
 |----------|----------|---------|
 | **Scrape Tech News** | 09:30, 13:00, 16:00 UTC (M-F) | Collect & translate news |
+| **Manual Article Scraper** | On-demand via Telegram | Process single articles |
 | **System Health Check** | 08:00 UTC (Daily) | Monitor system health |
-| **LinkedIn Automation** | 16:30 UTC (Daily) | Analyze & post content |
+| **Vercel Status Monitor** | Every 30 minutes | Monitor Vercel platform status |
+| **LinkedIn Digest** | 16:30 UTC (Daily) | Generate & post digest (n8n) |
 
 ### Manual Triggers
 
@@ -499,8 +524,15 @@ All workflows can be triggered manually:
 Actions → [Workflow Name] → Run workflow
 
 # Via Telegram Bot
-/scrape   # Trigger news scraping
-/health   # Run health check
+/menu      # Open interactive menu
+/scrape    # Trigger news scraping
+/health    # Run health check
+/linkedin  # Manage LinkedIn digests
+
+# Via npm scripts
+npm run scrape:news          # Manual scraping
+npm run health:check         # Health check
+npm run vercel:status        # Check Vercel status
 
 # Via API
 curl -X POST "https://your-site.com/api/telegram-control?action=trigger-scrape" \
@@ -549,9 +581,8 @@ GITHUB_REPOSITORY=username/repo         # Repository name
 # Analytics
 VERCEL_ANALYTICS_ID=your_id            # Vercel Analytics
 
-# LinkedIn Automation (n8n Integration)
-N8N_LINKEDIN_CALLBACK_WEBHOOK=https://your-n8n.app.n8n.cloud/webhook/linkedin-digest-callback  # n8n callback webhook
-N8N_MANUAL_DIGEST_WEBHOOK=https://your-n8n.app.n8n.cloud/webhook/manuel-start-linkedin         # n8n manual digest webhook
+# n8n Integration (Unified Workflow)
+N8N_LINKEDIN_WORKFLOW_WEBHOOK=https://your-n8n.app.n8n.cloud/webhook/linkedin-digest  # Unified LinkedIn digest workflow
 ```
 
 ### GitHub Secrets
@@ -621,14 +652,24 @@ npm run telegram:setup-menu
 ### Health Checks
 
 ```bash
-# Manual health check
+# System health check
 npm run health:check
 
 # Automated (daily at 08:00 UTC)
 # - Supabase connection
 # - API services status
 # - Recent article count
+# - Vercel platform status
 # - System metrics
+
+# Vercel status monitoring
+npm run vercel:status
+
+# Automated (every 30 minutes)
+# - RSS feed monitoring
+# - Incident detection
+# - Duplicate prevention
+# - Telegram alerts
 ```
 
 ### Telegram Notifications
@@ -638,6 +679,8 @@ Automatic notifications for:
 - ❌ Errors with detailed logs
 - 🏥 Daily health reports
 - 🚀 Deployment notifications
+- 🚨 Vercel platform incidents
+- 📱 LinkedIn digest updates
 - 📊 Weekly summaries
 
 ### System Dashboard
@@ -659,6 +702,7 @@ Access via Telegram bot:
 - [📱 Telegram Bot Setup](./docs/TELEGRAM_NOTIFICATIONS_SETUP.md) - Bot configuration
 - [🔧 General Setup](./docs/SETUP.md) - Initial project setup
 - [💼 LinkedIn n8n Setup](./docs/n8n-setup-instructions.md) - **NEW!** Step-by-step n8n workflow setup
+- [🚨 Vercel Status Monitor](./docs/VERCEL_STATUS_SETUP.md) - **NEW!** Platform monitoring setup
 
 ### System Documentation
 - [🏗️ Architecture](./docs/IMPLEMENTATION_SUMMARY.md) - System architecture
@@ -666,6 +710,7 @@ Access via Telegram bot:
 - [📊 Monitoring](./docs/TECH_NEWS_MONITORING.md) - Monitoring system
 - [🗃️ Database Schema](./docs/supabase-schema.sql) - PostgreSQL schema
 - [📋 LinkedIn Workflow Guide](./docs/N8N_UNIFIED_WORKFLOW_GUIDE.md) - **NEW!** Unified workflow architecture
+- [📝 Vercel Status Changelog](./docs/CHANGELOG_VERCEL_STATUS.md) - **NEW!** Recent system updates
 
 ### Deployment Guides
 - [🚀 Deployment Checklist](./docs/DEPLOYMENT_CHECKLIST.md) - Pre-deployment checks

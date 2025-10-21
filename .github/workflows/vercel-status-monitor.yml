@@ -1,0 +1,51 @@
+name: Vercel Status Monitor
+
+on:
+  # Her 30 dakikada bir çalış
+  schedule:
+    - cron: '*/30 * * * *' # Her 30 dakikada
+  
+  # Manuel tetikleme
+  workflow_dispatch:
+
+jobs:
+  check-vercel-status:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm install --production
+          npm install xml2js
+
+      - name: Check Vercel Status
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run vercel:status
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"chat_id\": \"${TELEGRAM_CHAT_ID}\",
+              \"text\": \"❌ <b>Vercel Status Monitor HATA</b>\\n\\nWorkflow başarısız oldu!\\n\\n🔗 <a href='https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'>GitHub Actions Log</a>\",
+              \"parse_mode\": \"HTML\"
+            }"
+

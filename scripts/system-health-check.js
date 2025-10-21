@@ -221,6 +221,44 @@ async function checkGitHubActions() {
 }
 
 /**
+ * Check Vercel Status
+ */
+async function checkVercelStatus() {
+  try {
+    console.log('🔍 Checking Vercel status...');
+    
+    const response = await fetch('https://www.vercel-status.com/history.rss');
+    if (!response.ok) {
+      throw new Error(`RSS fetch error: ${response.status}`);
+    }
+    
+    const rssText = await response.text();
+    
+    // Quick check: look for recent incidents in RSS
+    const hasRecentIncidents = rssText.includes('Investigating') || 
+                               rssText.includes('Identified') ||
+                               rssText.includes('Monitoring');
+    
+    // Extract most recent incident title if exists
+    const titleMatch = rssText.match(/<title>(?!Vercel Status)(.*?)<\/title>/);
+    const recentIncident = titleMatch ? titleMatch[1] : null;
+    
+    console.log('✅ Vercel Status: OK');
+    return {
+      status: hasRecentIncidents ? 'degraded' : 'healthy',
+      recentIncident: recentIncident || 'No recent incidents',
+      statusPage: 'https://www.vercel-status.com'
+    };
+  } catch (error) {
+    console.error('❌ Vercel Status: FAILED');
+    return {
+      status: 'unknown',
+      error: error.message
+    };
+  }
+}
+
+/**
  * Generate health report
  */
 function generateReport(checks) {
@@ -282,6 +320,20 @@ function generateReport(checks) {
   report += `⏰ Çalışma: Pazartesi-Cuma 09:30, 13:00, 16:00 UTC\n`;
   report += `\n`;
   
+  // Vercel Status
+  report += `<b>☁️ Vercel Platform</b>\n`;
+  if (checks.vercel.status === 'healthy') {
+    report += `✅ Durum: Tüm sistemler çalışıyor\n`;
+  } else if (checks.vercel.status === 'degraded') {
+    report += `⚠️ Durum: Sorun tespit edildi\n`;
+    report += `📋 Son olay: ${checks.vercel.recentIncident}\n`;
+  } else {
+    report += `❓ Durum: Bilinmiyor\n`;
+    report += `🔍 Hata: ${checks.vercel.error}\n`;
+  }
+  report += `🔗 <a href="${checks.vercel.statusPage || 'https://www.vercel-status.com'}">Status Page</a>\n`;
+  report += `\n`;
+  
   // Overall status
   if (allHealthy) {
     report += `<i>✨ Tüm sistemler normal çalışıyor</i>`;
@@ -300,12 +352,13 @@ async function runHealthCheck() {
   
   try {
     // Run all checks in parallel
-    const [supabase, firecrawl, groq, telegram, github] = await Promise.all([
+    const [supabase, firecrawl, groq, telegram, github, vercel] = await Promise.all([
       checkSupabase(),
       checkFirecrawl(),
       checkGroq(),
       checkTelegram(),
-      checkGitHubActions()
+      checkGitHubActions(),
+      checkVercelStatus()
     ]);
     
     const checks = {
@@ -313,7 +366,8 @@ async function runHealthCheck() {
       firecrawl,
       groq,
       telegram,
-      github
+      github,
+      vercel
     };
     
     // Generate report

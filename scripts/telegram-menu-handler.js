@@ -443,14 +443,17 @@ export async function handleGitHubAction() {
 • Scrape Tech News (3x gün, hafta içi)
   ⏰ 09:30, 13:00, 16:00 UTC
 
-• Daily LinkedIn (günlük)
-  ⏰ 16:30 UTC
+• Manual Article Scraper (on-demand)
+  🎯 Manuel haber ekleme için
 
 • System Health Check (günlük)
   ⏰ 08:00 UTC
 
 <b>📊 Durum</b>
 ✅ Tüm workflow'lar aktif
+
+<b>ℹ️ Not</b>
+LinkedIn digest'ler artık n8n tarafından yönetiliyor (16:30 UTC)
 
 <b>🔗 Linkler</b>
 GitHub Actions sekmesinden takip edebilirsiniz.`;
