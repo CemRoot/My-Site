@@ -667,12 +667,8 @@ export async function handleCreateDigestAction() {
       throw new Error(`n8n webhook error (${response.status}): ${errorText}`);
     }
 
-    await sendTelegramMessage(
-      '✅ <b>Digest oluşturma başlatıldı!</b>\n\n' +
-      '📊 n8n workflow tetiklendi\n' +
-      '⏳ İşlem tamamlandığında digest ile birlikte bildirim alacaksınız\n\n' +
-      '<i>Digest oluşturulduğunda onay butonları ile mesaj gelecek.</i>'
-    );
+    // Simple feedback - detailed message will come from n8n
+    await sendTelegramMessage('⏳ <b>Digest oluşturuluyor...</b>');
 
   } catch (error) {
     console.error('Create digest error:', error);
