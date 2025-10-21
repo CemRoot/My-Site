@@ -658,17 +658,23 @@ Access via Telegram bot:
 - [🗄️ Supabase Setup](./docs/SUPABASE_SETUP.md) - Database configuration
 - [📱 Telegram Bot Setup](./docs/TELEGRAM_NOTIFICATIONS_SETUP.md) - Bot configuration
 - [🔧 General Setup](./docs/SETUP.md) - Initial project setup
+- [💼 LinkedIn n8n Setup](./docs/n8n-setup-instructions.md) - **NEW!** Step-by-step n8n workflow setup
 
 ### System Documentation
 - [🏗️ Architecture](./docs/IMPLEMENTATION_SUMMARY.md) - System architecture
 - [🔄 Automation](./docs/SYSTEM_RELIABILITY.md) - Reliability & automation
 - [📊 Monitoring](./docs/TECH_NEWS_MONITORING.md) - Monitoring system
 - [🗃️ Database Schema](./docs/supabase-schema.sql) - PostgreSQL schema
+- [📋 LinkedIn Workflow Guide](./docs/N8N_UNIFIED_WORKFLOW_GUIDE.md) - **NEW!** Unified workflow architecture
 
 ### Deployment Guides
 - [🚀 Deployment Checklist](./docs/DEPLOYMENT_CHECKLIST.md) - Pre-deployment checks
 - [📦 Vercel Setup](./docs/VERCEL_SETUP_GUIDE.md) - Vercel configuration
 - [🔧 Tech News Deployment](./docs/TECH_NEWS_DEPLOYMENT.md) - News system deployment
+- [✅ Vercel Env Checklist](./docs/VERCEL_ENV_CHECKLIST.md) - **NEW!** Environment variables guide
+
+### Testing & Quality
+- [🧪 Test Scenarios](./docs/TEST_SCENARIOS.md) - **NEW!** Complete testing guide for LinkedIn system
 
 ### API Documentation
 - [📡 Telegram Webhook](./api/telegram-webhook.js) - Webhook handler
@@ -832,12 +838,14 @@ npm run telegram:webhook-remove # Remove webhook
 1. **n8n LinkedIn OAuth** (in n8n credentials)
    - Connect LinkedIn account in n8n
    - OAuth handles token refresh automatically
-2. **One Unified n8n Workflow** (see `docs/n8n-linkedin-digest-FINAL.json`)
+2. **One Unified n8n Workflow** (see `docs/n8n-setup-instructions.md` for step-by-step guide)
 3. **Vercel Environment Variables:**
    ```bash
-   N8N_LINKEDIN_CALLBACK_WEBHOOK=https://your-n8n.app.n8n.cloud/webhook/linkedin-digest-callback
-   N8N_MANUAL_DIGEST_WEBHOOK=https://your-n8n.app.n8n.cloud/webhook/manuel-start-linkedin
+   N8N_LINKEDIN_WORKFLOW_WEBHOOK=https://your-n8n.app.n8n.cloud/webhook/linkedin-digest
    ```
+   **Note:** This is the ONLY webhook needed. Old webhook variables are deprecated:
+   - ~~N8N_LINKEDIN_CALLBACK_WEBHOOK~~ (Deprecated)
+   - ~~N8N_MANUAL_DIGEST_WEBHOOK~~ (Deprecated)
 
 #### How It Works:
 

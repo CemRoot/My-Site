@@ -1,0 +1,1108 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 16 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "b920e9f8-f2bc-48af-b5bd-43e7cba85694",
+      "name": "Daily Schedule (16:30 UTC)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2336,
+        112
+      ],
+      "webhookId": "schedule-trigger-id",
+      "notesInFlow": true,
+      "notes": "Triggers daily at 16:30 UTC Mon-Fri (after news scraping at 16:00)"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "linkedin-digest",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "3dd6f9f0-ee4a-4128-a0dd-c6674e025344",
+      "name": "Webhook Trigger (Manual + Callbacks)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2336,
+        336
+      ],
+      "webhookId": "webhook-unified-id",
+      "notesInFlow": true,
+      "notes": "Handles both manual triggers and Telegram callbacks"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse trigger source and prepare workflow data\nconst items = $input.all();\nconst firstItem = items[0];\n\nlet triggerType = 'schedule';\nlet webhookData = null;\nlet callbackData = null;\n\n// Check if this came from webhook (has body)\nif (firstItem && firstItem.json && firstItem.json.body) {\n  webhookData = firstItem.json.body;\n  \n  // Check if it's a callback (has action and digest_id)\n  if (webhookData.action && webhookData.digest_id) {\n    triggerType = 'callback';\n    callbackData = {\n      action: webhookData.action,\n      digest_id: webhookData.digest_id,\n      callback_query_id: webhookData.callback_query_id,\n      chat_id: webhookData.chat_id,\n      message_id: webhookData.message_id,\n      edited_content: webhookData.edited_content || null\n    };\n  } \n  // Otherwise it's a manual trigger\n  else if (webhookData.trigger === 'manual') {\n    triggerType = 'manual';\n  }\n}\n\n// Get today's date in consistent format (YYYY-MM-DD)\nconst today = new Date();\nconst todayDate = today.toISOString().split('T')[0];\n\n// Get Telegram Chat ID\n// Priority: webhook data > hardcoded\nconst telegramChatId = (webhookData && webhookData.chat_id) \n  ? webhookData.chat_id \n  : '1925139795'; // ← SENIN TELEGRAM CHAT ID'N\n\n// Prepare output\nreturn {\n  triggerType: triggerType,\n  todayDate: todayDate,\n  timestamp: new Date().toISOString(),\n  webhookData: webhookData,\n  callbackData: callbackData,\n  telegramChatId: telegramChatId\n};"
+      },
+      "id": "2e63fd3d-b18b-411a-a15f-516b2867c7c1",
+      "name": "Parse Trigger Type",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2112,
+        208
+      ],
+      "notesInFlow": true,
+      "notes": "Determines: schedule, manual, or callback"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "condition-callback",
+              "leftValue": "={{ $json.triggerType }}",
+              "rightValue": "callback",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "948772a3-3dce-4478-b2a3-18b7fcbb4d86",
+      "name": "Route by Trigger Type",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1888,
+        208
+      ],
+      "notesInFlow": true,
+      "notes": "TRUE = Callback | FALSE = Schedule/Manual"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "linkedin_digest_posts",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "digest_date",
+              "condition": "eq",
+              "keyValue": "={{ $json.todayDate }}"
+            }
+          ]
+        }
+      },
+      "id": "eba9b994-03b7-4e4a-afbe-7e488ae4cabd",
+      "name": "Check If Digest Exists",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1680,
+        368
+      ],
+      "notesInFlow": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "dvmUr2Dgi4sLdpsN",
+          "name": "Supabase account"
+        }
+      },
+      "notes": "Prevents duplicate digests for the same day"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "condition-no-digest",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "86f219c2-c724-4ba1-abe9-428b0dde8181",
+      "name": "Digest Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1456,
+        528
+      ],
+      "notesInFlow": true,
+      "notes": "TRUE = Already exists | FALSE = Create new"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "tech_news_articles",
+        "limit": 15,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "created_at",
+              "condition": "gte",
+              "keyValue": "={{ $('Parse Trigger Type').item.json.todayDate }}T00:00:00.000Z"
+            },
+            {
+              "keyName": "created_at",
+              "condition": "lt",
+              "keyValue": "={{ $('Parse Trigger Type').item.json.todayDate }}T23:59:59.999Z"
+            }
+          ]
+        }
+      },
+      "id": "5ce3911a-276c-4bb6-9576-873580b36c6c",
+      "name": "Fetch Today's Articles",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1200,
+        800
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "dvmUr2Dgi4sLdpsN",
+          "name": "Supabase account"
+        }
+      },
+      "notes": "Get all articles published today"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Group articles into a single array\nconst items = $input.all();\nconst articles = items.map(item => ({\n  id: item.json.id,\n  title: item.json.title,\n  title_en: item.json.title_en,\n  summary_en: item.json.summary_en,\n  content_en: item.json.content_en,\n  slug: item.json.slug,\n  category: item.json.category,\n  source_url: item.json.source_url,\n  created_at: item.json.created_at\n}));\n\nreturn {\n  articles: articles,\n  articleCount: articles.length,\n  todayDate: $('Parse Trigger Type').item.json.todayDate\n};"
+      },
+      "id": "ce03ba89-0404-42fb-9ced-c4bd51e41495",
+      "name": "Prepare Articles for AI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -960,
+        800
+      ],
+      "notesInFlow": true,
+      "notes": "Format articles for OpenAI prompt"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a LinkedIn Growth Editor crafting high-engagement tech news posts in ENGLISH.\n\nOBJECTIVE\nMaximize reach (dwell time, comments, saves, shares).\nUse UNICODE BOLD (Mathematical Bold) for the main headline and up to TWO short key phrases per item. Do NOT use markdown **bold**.\n\nCONFIG\n- MAX_ITEMS: 5–8\n- MAX_CHARS_TOTAL: 2800\n- LINK_BASE: https://cemkoyluoglu.codes/tech-news/\n\nSELECTION RULES\n- Choose the MOST INTERESTING 5–8 items (novelty, real-world impact, trend momentum, surprise).\n- Ensure topical diversity (AI, data, cybersecurity, cloud, hardware, policy, etc.).\n- Avoid duplicates and trivial incremental updates.\n\nWRITING RULES\n- Tone: smart, concise, conversational (no hype, no corp-jargon).\n- First line = HOOK (10–18 words) in UNICODE BOLD.\n- Each item: different emoji + 1–2 sentence summary + one-line \"why it matters\".\n- In each item, convert ≤2 short key phrases to UNICODE BOLD (e.g., model/product/law).\n- Vary sentence openings; no repeated emojis.\n- Keep total length under MAX_CHARS_TOTAL.\n\nHASHTAGS (no branded tags)\n- Generate 3–6 from this curated set (no duplicates): \n  #TechNews #AI #ArtificialIntelligence #GenerativeAI #MachineLearning #ML\n  #DataScience #MLOps #Cybersecurity #InfoSec #CloudComputing #EdgeComputing\n  #Semiconductors #ChipDesign #GPUs #OpenSource #Startup #Innovation\n  #AIResearch #NLP #ComputerVision #Privacy #AIRegulation #TechPolicy\n- Prefer 1–2 broad + 2–3 niche based on selected items.\n\nOUTPUT FORMAT (single post; links stay inside the post)\n𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭𝐬: [HOOK line in Unicode bold]\n(if you want to make it bold not use ** , use unicode bold)\n\n[EMOJI] [1–2 sentence summary + why it matters; include up to 2 Unicode-bold phrases]\n🔗 LINK_BASE[slug]\n\n(Repeat for all selected)\n\n[Hashtags line: 3–6 from the curated set]\n\nARTICLES JSON:\n{{ JSON.stringify($json.articles, null, 2) }}"
+            }
+          ]
+        },
+        "options": {
+          "maxTokens": 2000,
+          "temperature": 0.7
+        }
+      },
+      "id": "233b5011-7746-43e7-9843-9430fba1dba2",
+      "name": "OpenAI - Generate Digest",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.3,
+      "position": [
+        -816,
+        1072
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "SfjYlGw19d5MU8fP",
+          "name": "n8n free OpenAI API credits"
+        }
+      },
+      "notes": "Uses $100 free OpenAI credit"
+    },
+    {
+      "parameters": {
+        "tableId": "linkedin_digest_posts",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "digest_date",
+              "fieldValue": "={{ $('Parse Trigger Type').first().json.todayDate }}"
+            },
+            {
+              "fieldId": "article_ids",
+              "fieldValue": "={{ $('Prepare Articles for AI').first().json.articles.map(a => a.id) }}"
+            },
+            {
+              "fieldId": "article_count",
+              "fieldValue": "={{ $('Prepare Articles for AI').first().json.articleCount }}"
+            },
+            {
+              "fieldId": "suggested_content",
+              "fieldValue": "={{ $input.first().json.message.content }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "pending"
+            }
+          ]
+        }
+      },
+      "id": "2f64b61b-3429-41be-a438-1a5cc6a083a3",
+      "name": "Save Digest to Database",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -544,
+        784
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "dvmUr2Dgi4sLdpsN",
+          "name": "Supabase account"
+        }
+      },
+      "notes": "Insert with status: pending"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Telegram message with inline buttons\nconst digest = $input.first().json;\nconst content = digest.suggested_content || 'No content generated';\n\n// Telegram has 4096 char limit - show as much as possible\nconst maxLength = 3500; // Leave room for header and buttons\nconst displayContent = content.length > maxLength \n  ? content.substring(0, maxLength) + '\\n\\n⚠️ [Content truncated due to Telegram limit - full version will be posted to LinkedIn]'\n  : content;\n\nconst message = `📰 *Daily LinkedIn Digest Ready!*\\n\\n📅 Date: ${digest.digest_date}\\n📊 Articles: ${digest.article_count}\\n\\n${displayContent}\\n\\n✅ Choose an action:`;\n\n// Inline keyboard - removed \"View Full\" button\nconst replyMarkup = {\n  inline_keyboard: [\n    [\n      { text: '✅ Approve & Post', callback_data: `approve_${digest.id}` },\n      { text: '❌ Reject', callback_data: `reject_${digest.id}` }\n    ],\n    [\n      { text: '✏️ Edit & Approve', callback_data: `edit_${digest.id}` }\n    ]\n  ]\n};\n\nreturn {\n  chatId: $('Parse Trigger Type').first().json.telegramChatId,\n  text: message,\n  replyMarkup: replyMarkup,\n  digestId: digest.id,\n  digestDate: digest.digest_date\n};"
+      },
+      "id": "520e3be8-8874-4cd0-81d3-877ba0ea65a9",
+      "name": "Prepare Telegram Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        784
+      ],
+      "notesInFlow": true,
+      "notes": "Format message with Approve/Reject/Edit/View buttons"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.replyMarkup.inline_keyboard[0][0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.replyMarkup.inline_keyboard[0][0].callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.replyMarkup.inline_keyboard[0][1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.replyMarkup.inline_keyboard[0][1].callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.replyMarkup.inline_keyboard[1][0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.replyMarkup.inline_keyboard[1][0].callback_data }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "f0ec8da8-2d6e-4379-b505-32f3d27f08dc",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -64,
+        784
+      ],
+      "notesInFlow": true,
+      "webhookId": "307492ad-c357-4cef-b89e-f67aa10fab50",
+      "credentials": {
+        "telegramApi": {
+          "id": "CMTv6QLZ8EBCFuQB",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Send digest with interactive buttons"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Digest created and sent to Telegram', digest_id: $('Save Digest to Database').item.json.id } }}",
+        "options": {}
+      },
+      "id": "065c1642-9304-47be-80dd-45eb22fda788",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Trigger Type').item.json.telegramChatId }}",
+        "text": "=⚠️ *Daily digest already exists for today!\nStatus: *{{ $json.status }}*\nCreated: {{ $json.created_at }}\nNo action needed.",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "82657a8c-7346-46e6-8e48-4f0bfec2d3fe",
+      "name": "Notify Duplicate",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1216,
+        512
+      ],
+      "notesInFlow": true,
+      "webhookId": "cf63a846-811b-4604-aab5-88c76aed3b73",
+      "credentials": {
+        "telegramApi": {
+          "id": "CMTv6QLZ8EBCFuQB",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Inform user that digest already exists"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, message: 'Digest already exists for today', digest: $json } }}",
+        "options": {}
+      },
+      "id": "0345e331-3ad1-4d60-8af9-803904da70cd",
+      "name": "Respond Duplicate",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -992,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery"
+      },
+      "id": "d8b04e5c-1ddd-4b4a-957b-c013375f788a",
+      "name": "Fetch Digest by ID",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1680,
+        48
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "dvmUr2Dgi4sLdpsN",
+          "name": "Supabase account"
+        }
+      },
+      "notes": "Get digest for callback action"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Parse Trigger Type').item.json.callbackData.action }}",
+                    "rightValue": "approve",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "df6bef86-bfc8-4687-af2f-0fa6105ef7ef"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Parse Trigger Type').item.json.callbackData.action }}",
+                    "rightValue": "reject",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ce9f825a-becb-4203-bba2-1ff4528c1f80"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Parse Trigger Type').item.json.callbackData.action }}",
+                    "rightValue": "view",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cab90c02-b512-4905-a320-4ea83f6110f5"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Parse Trigger Type').item.json.callbackData.action }}",
+                    "rightValue": "edit",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "db7d28da-5ac1-44aa-b31b-756eaaf21c4d"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": false
+        }
+      },
+      "id": "a731ee4a-51b7-4207-8863-673d6c5bbdd4",
+      "name": "Route Callback Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -1472,
+        -160
+      ],
+      "notesInFlow": true,
+      "notes": "Route to: approve / reject / view / edit"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery"
+      },
+      "id": "30b47b19-b384-4d92-9eea-3c599f699791",
+      "name": "Update Status: Posting",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1248,
+        -400
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "dvmUr2Dgi4sLdpsN",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "share"
+      },
+      "id": "9ffd0c1b-d2dd-43fb-aa8b-dd247aa3a551",
+      "name": "Post to LinkedIn",
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        -992,
+        -400
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "xuHiw4D9Ges1aOr2",
+          "name": "LinkedIn account"
+        }
+      },
+      "notes": "n8n OAuth handles LinkedIn posting"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery"
+      },
+      "id": "f49870b0-a449-44f8-8fb2-0a909d40f7a9",
+      "name": "Update Status: Posted",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -768,
+        -400
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "dvmUr2Dgi4sLdpsN",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Trigger Type').item.json.callbackData.chat_id }}",
+        "text": "=✅ *Digest posted to LinkedIn!*\\n\\n📅 Date: {{ $('Fetch Digest by ID').item.json.digest_date }}\\n🔗 Post ID: {{ $json.linkedin_post_id }}\\n\\nThis message was sent automatically with n8n",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "3cc1f727-3525-47dd-b43a-415b01398918",
+      "name": "Telegram: Approve Success",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -528,
+        -400
+      ],
+      "webhookId": "e057ab3d-6ab3-47fc-99e2-541287812570",
+      "credentials": {
+        "telegramApi": {
+          "id": "CMTv6QLZ8EBCFuQB",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Digest approved and posted to LinkedIn' } }}",
+        "options": {}
+      },
+      "id": "f36c7487-c057-4701-a08f-89137ccc8273",
+      "name": "Respond: Approve",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -272,
+        -400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery"
+      },
+      "id": "1d4190e8-ddf6-484d-8294-dade1ce4aa3f",
+      "name": "Update Status: Rejected",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1232,
+        -160
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "dvmUr2Dgi4sLdpsN",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Trigger Type').item.json.callbackData.chat_id }}",
+        "text": "=❌ *Digest rejected.*\\n\\nThe digest has been marked as rejected.\\n\\nThis message was sent automatically with n8n",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "fd9f1b73-7735-4f60-825d-0ce968926dd7",
+      "name": "Telegram: Reject Success",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -992,
+        -160
+      ],
+      "webhookId": "7a6cfb1c-c48d-44d0-8043-90ec3523de01",
+      "credentials": {
+        "telegramApi": {
+          "id": "CMTv6QLZ8EBCFuQB",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Digest rejected' } }}",
+        "options": {}
+      },
+      "id": "2f02729b-d513-4196-8db5-d798b39a95b5",
+      "name": "Respond: Reject",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -800,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const digest = $('Fetch Digest by ID').item.json;\nconst fullContent = digest.suggested_content;\n\nconst message = `📰 *Full Digest Content*\\n\\n${fullContent}\\n\\n📅 Date: ${digest.digest_date}\\n📊 Articles: ${digest.article_count}`;\n\nreturn {\n  chatId: $('Parse Trigger Type').item.json.callbackData.chat_id,\n  text: message\n};"
+      },
+      "id": "a5b27bdd-838a-4016-9502-6663228c3d3d",
+      "name": "Prepare Full Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1232,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "015c2a37-e786-4eb0-ace1-051e11089f2f",
+      "name": "Telegram: View Full",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -992,
+        64
+      ],
+      "webhookId": "5d12bc41-6422-4076-adbe-8d36d7aeb46a",
+      "credentials": {
+        "telegramApi": {
+          "id": "CMTv6QLZ8EBCFuQB",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Full content sent' } }}",
+        "options": {}
+      },
+      "id": "2a6ca21d-6bfd-46a1-a651-7b5383ad8c4c",
+      "name": "Respond: View",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -800,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Trigger Type').item.json.callbackData.chat_id }}",
+        "text": "=✏️ *Edit Mode*\\n\\nThis feature will be available soon.\\n\\nFor now, you can:\\n• Reject this digest\\n• Create a new one manually\\n\\nThis message was sent automatically with n8n",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "2f520f38-4a64-4e59-b3d2-ab1f4b42c51f",
+      "name": "Telegram: Edit (Coming Soon)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1232,
+        256
+      ],
+      "webhookId": "40e39b5e-e3b4-4e54-b542-f0e16161cb01",
+      "credentials": {
+        "telegramApi": {
+          "id": "CMTv6QLZ8EBCFuQB",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Edit mode (coming soon)' } }}",
+        "options": {}
+      },
+      "id": "04dad103-cb2e-4dd6-abeb-0007e4c30ce8",
+      "name": "Respond: Edit",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -992,
+        256
+      ]
+    }
+  ],
+  "connections": {
+    "Daily Schedule (16:30 UTC)": {
+      "main": [
+        [
+          {
+            "node": "Parse Trigger Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger (Manual + Callbacks)": {
+      "main": [
+        [
+          {
+            "node": "Parse Trigger Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Trigger Type": {
+      "main": [
+        [
+          {
+            "node": "Route by Trigger Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Trigger Type": {
+      "main": [
+        [
+          {
+            "node": "Fetch Digest by ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check If Digest Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check If Digest Exists": {
+      "main": [
+        [
+          {
+            "node": "Digest Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Digest Exists?": {
+      "main": [
+        [
+          {
+            "node": "Notify Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Today's Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Today's Articles": {
+      "main": [
+        [
+          {
+            "node": "Prepare Articles for AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Articles for AI": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Generate Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Generate Digest": {
+      "main": [
+        [
+          {
+            "node": "Save Digest to Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Digest to Database": {
+      "main": [
+        [
+          {
+            "node": "Prepare Telegram Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Telegram Message": {
+      "main": [
+        [
+          {
+            "node": "Send to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Telegram": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Duplicate": {
+      "main": [
+        [
+          {
+            "node": "Respond Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Digest by ID": {
+      "main": [
+        [
+          {
+            "node": "Route Callback Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Callback Action": {
+      "main": [
+        [
+          {
+            "node": "Update Status: Posting",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Status: Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Full Content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram: Edit (Coming Soon)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status: Posting": {
+      "main": [
+        [
+          {
+            "node": "Post to LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "Update Status: Posted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status: Posted": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Approve Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram: Approve Success": {
+      "main": [
+        [
+          {
+            "node": "Respond: Approve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status: Rejected": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Reject Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram: Reject Success": {
+      "main": [
+        [
+          {
+            "node": "Respond: Reject",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Full Content": {
+      "main": [
+        [
+          {
+            "node": "Telegram: View Full",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram: View Full": {
+      "main": [
+        [
+          {
+            "node": "Respond: View",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram: Edit (Coming Soon)": {
+      "main": [
+        [
+          {
+            "node": "Respond: Edit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "99b54f36199a89d24e7606a098535758072c3e084cc5e58426583a906d26c81e"
+  }
+}

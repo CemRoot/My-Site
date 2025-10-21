@@ -381,10 +381,11 @@ module.exports = async function handler(req, res) {
             }
 
             // Forward to n8n callback workflow
-            const N8N_WEBHOOK_URL = process.env.N8N_LINKEDIN_CALLBACK_WEBHOOK;
+            // Use unified workflow webhook (handles all callback actions)
+            const N8N_WEBHOOK_URL = process.env.N8N_LINKEDIN_WORKFLOW_WEBHOOK;
             
             if (!N8N_WEBHOOK_URL) {
-              throw new Error('N8N_LINKEDIN_CALLBACK_WEBHOOK environment variable not configured');
+              throw new Error('N8N_LINKEDIN_WORKFLOW_WEBHOOK environment variable not configured. Please add it to Vercel.');
             }
 
             console.log(`📤 Forwarding LinkedIn digest callback to n8n: ${action}_${digestId} (status: ${digest.status})`);

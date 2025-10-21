@@ -640,13 +640,14 @@ export async function handleCreateDigestAction() {
     // Proceed with creation
     await sendTelegramMessage('🚀 <b>Manuel Digest Oluşturuluyor...</b>\n\nLütfen bekleyin, bu işlem 30-60 saniye sürebilir.');
 
-    const N8N_WEBHOOK_URL = process.env.N8N_MANUAL_DIGEST_WEBHOOK;
+    // Use unified workflow webhook
+    const N8N_WEBHOOK_URL = process.env.N8N_LINKEDIN_WORKFLOW_WEBHOOK;
     
     if (!N8N_WEBHOOK_URL) {
-      throw new Error('N8N_MANUAL_DIGEST_WEBHOOK environment variable not configured');
+      throw new Error('N8N_LINKEDIN_WORKFLOW_WEBHOOK environment variable not configured. Please add it to Vercel.');
     }
 
-    // Trigger n8n workflow
+    // Trigger n8n unified workflow (manual trigger)
     const response = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
