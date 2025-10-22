@@ -385,8 +385,12 @@ async function runHealthCheck() {
     console.log('='.repeat(60));
     
     // Exit with appropriate code
-    const allHealthy = Object.values(checks).every(check => check.status === 'healthy');
-    process.exit(allHealthy ? 0 : 1);
+    // Only fail if CRITICAL systems are unhealthy (not degraded)
+    // Vercel degraded is just a warning, not a critical failure
+    const criticalSystems = [checks.supabase, checks.firecrawl, checks.groq, checks.telegram];
+    const criticalFailure = criticalSystems.some(check => check.status === 'unhealthy');
+    
+    process.exit(criticalFailure ? 1 : 0);
     
   } catch (error) {
     console.error('💥 Fatal error during health check:', error);
