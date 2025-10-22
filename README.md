@@ -9,6 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18.3-61dafb)](https://reactjs.org/)
 [![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-000000?logo=vercel)](https://vercel.com)
+[![Sentry](https://img.shields.io/badge/Monitored%20by-Sentry-362d59?logo=sentry)](https://sentry.io)
 
 [Live Demo](https://cemkoyluoglu.codes) · [Documentation](#-documentation) · [Report Bug](https://github.com/CemRoot/My-Site/issues) · [Request Feature](https://github.com/CemRoot/My-Site/issues)
 
@@ -44,9 +45,10 @@
 - **🤖 AI-Powered**: Unlimited-length translation using Groq AI (Llama 3.3 70B)
 - **📱 Telegram Control Center**: Full system control from your phone
 - **🔄 100% Automated**: GitHub Actions + Vercel integration
-- **📊 Production-Ready**: Monitoring, health checks, error handling
+- **📊 Production-Ready**: Sentry monitoring, health checks, deployment tracking
 - **⚡ Lightning Fast**: Supabase backend, optimized queries
 - **🔒 Enterprise Security**: Rate limiting, API secrets, fail-safe mechanisms
+- **👁️ Real-Time Monitoring**: Error tracking, performance monitoring, session replay
 
 ---
 
@@ -132,64 +134,134 @@
 
 ## 🏗️ Architecture
 
-### System Overview
+> **Enterprise-Grade System Design** following Google Cloud Architecture best practices
+
+### 🎨 High-Level Architecture
 
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"primaryColor":"#0ea5e9","primaryTextColor":"#fff","primaryBorderColor":"#0284c7","lineColor":"#64748b","secondaryColor":"#22c55e","tertiaryColor":"#f59e0b"}}}%%
 
 graph TB
-    subgraph CLIENT["🌐 Client Layer"]
-        A[React SPA]
-        B[Tech News UI]
-        C[Portfolio]
+    subgraph EDGE["🌍 Edge Layer (Global CDN)"]
+        direction TB
+        CDN[Vercel Edge Network<br/>200+ Locations]
+        CACHE[Static Asset Cache<br/>Images, CSS, JS]
     end
 
-    subgraph API["⚡ Vercel Serverless"]
-        D[Telegram Webhook]
-        E[Menu Handler]
-        F[Tech News API]
+    subgraph CLIENT["💻 Presentation Layer"]
+        direction TB
+        SPA[React 18 SPA<br/>TypeScript + Vite]
+        UI[Tech News Interface<br/>Real-time Updates]
+        PORTFOLIO[Portfolio Website<br/>Liquid Glass Design]
+        CHAT[AI Chat Widget<br/>Groq Integration]
     end
 
-    subgraph AUTO["🤖 Automation"]
-        G[GitHub Actions<br/>News Scraping]
-        H[n8n Workflows<br/>LinkedIn Digest]
+    subgraph API["⚡ API Gateway (Serverless)"]
+        direction TB
+        WEBHOOK[Telegram Webhook<br/>Event Handler]
+        MENU[Interactive Menu<br/>Command Router]
+        NEWS[Tech News API<br/>REST Endpoints]
+        CONTROL[Control API<br/>System Management]
+        DEPLOY[Deployment Webhook<br/>Status Tracking]
     end
 
-    subgraph AI["🧠 AI Services"]
-        I[Groq AI<br/>Translation]
-        J[OpenAI<br/>Digest Generation]
-        K[Firecrawl<br/>Web Scraping]
+    subgraph ORCHESTRATION["🎭 Orchestration Layer"]
+        direction TB
+        GHA[GitHub Actions<br/>Scheduled Workflows]
+        N8N[n8n Automation<br/>LinkedIn Digest]
+        CRON[Cron Jobs<br/>Health Checks]
     end
 
-    subgraph DATA["💾 Data Layer"]
-        L[(Supabase<br/>PostgreSQL)]
+    subgraph AI_SERVICES["🧠 AI/ML Services"]
+        direction TB
+        GROQ[Groq AI<br/>Llama 3.3 70B<br/>Translation & Chat]
+        OPENAI[OpenAI GPT-4<br/>Content Generation]
+        FIRECRAWL[Firecrawl API<br/>Web Scraping]
     end
 
-    subgraph MSG["📱 Messaging"]
-        M[Telegram Bot]
+    subgraph MONITORING["👁️ Observability"]
+        direction TB
+        SENTRY[Sentry.io<br/>Error Tracking<br/>Performance Monitoring]
+        HEALTH[Health Checks<br/>System Status]
+        LOGS[Structured Logging<br/>Vercel + GitHub]
     end
 
-    A --> F
-    B --> L
-    M --> D
-    D --> E
-    E --> H
-    G --> K
-    G --> I
-    G --> L
-    H --> J
-    H --> L
-    H --> M
-    K --> L
-    I --> L
+    subgraph DATA_LAYER["💾 Data Layer"]
+        direction TB
+        POSTGRES[(Supabase PostgreSQL<br/>Primary Database)]
+        CACHE_DB[Redis Cache<br/>Future]
+        STORAGE[Supabase Storage<br/>Assets]
+    end
 
+    subgraph MESSAGING["📱 Communication Layer"]
+        direction TB
+        TELEGRAM[Telegram Bot<br/>Interactive Control]
+        LINKEDIN[LinkedIn API<br/>Content Distribution]
+        EMAIL[Email Service<br/>Newsletter]
+    end
+
+    %% Edge to Client
+    CDN --> SPA
+    CACHE --> SPA
+
+    %% Client to API
+    SPA --> NEWS
+    UI --> NEWS
+    CHAT --> NEWS
+    PORTFOLIO --> NEWS
+
+    %% Messaging to API
+    TELEGRAM --> WEBHOOK
+    WEBHOOK --> MENU
+    WEBHOOK --> CONTROL
+
+    %% API to Data
+    NEWS --> POSTGRES
+    CONTROL --> POSTGRES
+    DEPLOY --> POSTGRES
+
+    %% Orchestration
+    GHA --> FIRECRAWL
+    GHA --> GROQ
+    GHA --> POSTGRES
+    N8N --> OPENAI
+    N8N --> POSTGRES
+    N8N --> LINKEDIN
+    CRON --> HEALTH
+
+    %% Monitoring
+    API --> SENTRY
+    CLIENT --> SENTRY
+    ORCHESTRATION --> HEALTH
+    HEALTH --> TELEGRAM
+
+    %% Notifications
+    GHA --> TELEGRAM
+    N8N --> TELEGRAM
+    DEPLOY --> TELEGRAM
+
+    style EDGE fill:#1e293b,stroke:#0f172a,color:#fff
     style CLIENT fill:#0ea5e9,stroke:#0284c7,color:#fff
     style API fill:#22c55e,stroke:#16a34a,color:#fff
-    style AUTO fill:#f59e0b,stroke:#d97706,color:#fff
-    style AI fill:#a78bfa,stroke:#7c3aed,color:#fff
-    style DATA fill:#64748b,stroke:#475569,color:#fff
-    style MSG fill:#ef4444,stroke:#b91c1c,color:#fff
+    style ORCHESTRATION fill:#f59e0b,stroke:#d97706,color:#fff
+    style AI_SERVICES fill:#a78bfa,stroke:#7c3aed,color:#fff
+    style MONITORING fill:#ef4444,stroke:#b91c1c,color:#fff
+    style DATA_LAYER fill:#64748b,stroke:#475569,color:#fff
+    style MESSAGING fill:#ec4899,stroke:#be185d,color:#fff
 ```
+
+### 📊 Component Architecture
+
+| Layer | Components | Technology | Purpose |
+|-------|-----------|------------|---------|
+| **Edge** | CDN, Cache | Vercel Edge Network | Global content delivery, <100ms latency |
+| **Frontend** | React SPA, UI Components | React 18, TypeScript, Vite | User interface, real-time updates |
+| **API Gateway** | Serverless Functions | Vercel Edge Functions | Request routing, authentication |
+| **Orchestration** | Workflows, Schedulers | GitHub Actions, n8n | Automation, scheduled tasks |
+| **AI/ML** | Translation, Generation | Groq AI, OpenAI, Firecrawl | Content processing, intelligence |
+| **Observability** | Monitoring, Logging | Sentry, Custom Health Checks | Error tracking, performance monitoring |
+| **Data** | Database, Storage | Supabase PostgreSQL | Persistent storage, real-time sync |
+| **Communication** | Messaging, Notifications | Telegram Bot, LinkedIn API | User interaction, distribution |
 
 ---
 
@@ -287,30 +359,70 @@ sequenceDiagram
 
 ---
 
-### 🗂️ Key Components
+### 🗂️ System Components
 
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| **Frontend** | React + TypeScript + Vite | User interface & portfolio |
-| **Backend** | Vercel Serverless Functions | API endpoints & webhooks |
-| **Database** | Supabase (PostgreSQL) | Data storage & real-time subscriptions |
-| **Automation** | GitHub Actions + n8n | Scheduled tasks & workflows |
-| **AI Translation** | Groq AI (Llama 3.3 70B) | Turkish → English translation |
-| **AI Digest** | OpenAI GPT-4o-mini | LinkedIn content generation |
-| **Web Scraping** | Firecrawl API | Article extraction |
-| **Messaging** | Telegram Bot API | Interactive control & notifications |
-| **Hosting** | Vercel Edge Network | Global CDN & serverless deployment |
+| Layer | Component | Technology | Version | Purpose |
+|-------|-----------|------------|---------|---------|
+| **Frontend** | React SPA | React + TypeScript | 18.3 | Modern, responsive UI |
+| | Build Tool | Vite | 6.4 | Fast build & HMR |
+| | State Management | Context API | - | Global state handling |
+| | Styling | Tailwind CSS + Radix UI | 3.x | Component library |
+| **Backend** | API Gateway | Vercel Edge Functions | - | Serverless endpoints |
+| | Webhooks | Telegram, Deployment | - | Event handling |
+| | Security | Rate Limiting, CORS | - | API protection |
+| **Database** | Primary DB | Supabase PostgreSQL | 15.x | Structured data storage |
+| | Real-time | Supabase Subscriptions | - | Live data sync |
+| | Storage | Supabase Storage | - | File/asset storage |
+| **Orchestration** | Workflows | GitHub Actions | - | Scheduled automation |
+| | Business Logic | n8n | - | Complex workflows |
+| | Cron Jobs | GitHub Actions Cron | - | Time-based triggers |
+| **AI/ML** | Translation | Groq AI (Llama 3.3 70B) | - | Multi-language support |
+| | Content Gen | OpenAI GPT-4o-mini | - | LinkedIn digests |
+| | Web Scraping | Firecrawl API | v1 | Article extraction |
+| | Chat Widget | Groq AI (Llama 3.3) | - | User interaction |
+| **Observability** | Error Tracking | Sentry | 7.119 | Frontend & backend |
+| | Performance | Sentry Performance | - | APM, traces, spans |
+| | Session Replay | Sentry Replay | - | User session recording |
+| | Health Checks | Custom Scripts | - | System monitoring |
+| | Logging | Vercel Logs + GitHub | - | Centralized logging |
+| **Communication** | Bot Platform | Telegram Bot API | - | Interactive control |
+| | Social Media | LinkedIn API (n8n OAuth) | - | Content distribution |
+| | Email | Newsletter System | - | Subscriber management |
+| **Infrastructure** | Hosting | Vercel Edge Network | - | Global CDN, <100ms |
+| | CI/CD | GitHub Actions + Vercel | - | Automated deployments |
+| | DNS | Custom Domain | - | cemkoyluoglu.codes |
 
 ---
 
 ### 🔐 Security Architecture
 
-- **API Keys**: Stored in GitHub Secrets & Vercel Environment Variables
-- **Rate Limiting**: Implemented in Vercel Edge Functions
-- **Webhook Validation**: Telegram webhook signature verification
-- **Database Security**: Row Level Security (RLS) in Supabase
-- **Conversation State**: Time-limited sessions (10 minutes)
-- **Callback Deduplication**: Prevents infinite loops & retries
+#### Authentication & Authorization
+- **API Keys**: Encrypted storage in GitHub Secrets & Vercel Environment Variables
+- **Webhook Validation**: Telegram webhook signature verification with secret tokens
+- **Chat ID Authorization**: Restricted access to authorized Telegram users
+- **n8n OAuth**: Secure LinkedIn authentication with automatic token refresh
+- **UUID Validation**: RFC 4122 compliant identifier verification
+
+#### Data Protection
+- **Database Security**: Row Level Security (RLS) in Supabase PostgreSQL
+- **SQL Injection Prevention**: Parameterized queries, input sanitization
+- **XSS Protection**: HTML sanitization, Content Security Policy
+- **CORS Configuration**: Origin whitelisting, allowed domains only
+- **Conversation State**: Time-limited sessions (10 minutes), auto-cleanup
+
+#### Application Security
+- **Rate Limiting**: 10 requests/minute per user (Vercel Edge Functions)
+- **Callback Deduplication**: Prevents infinite loops & duplicate processing
+- **Error Message Sanitization**: No sensitive data in client-facing errors
+- **Sentry Data Filtering**: PII masking, sensitive data exclusion
+- **Deployment Webhooks**: Secure webhook endpoints with secret validation
+
+#### Infrastructure Security
+- **HTTPS Only**: TLS 1.3 encryption for all communications
+- **Environment Isolation**: Separate credentials for dev/preview/production
+- **Secrets Rotation**: Regular API key rotation policy (90 days)
+- **DDoS Protection**: Vercel Edge Network built-in protection
+- **Dependency Scanning**: Automated vulnerability detection (GitHub Dependabot)
 
 ---
 
@@ -328,15 +440,16 @@ sequenceDiagram
 | **React Markdown** | 10.1 | Content Rendering |
 
 ### Backend & APIs
-| Service | Purpose | Tier |
-|---------|---------|------|
+| Service | Purpose | Tier/Plan |
+|---------|---------|-----------|
 | **Supabase** | PostgreSQL Database | Free/Pro |
-| **Groq AI** | Translation & Chat | Free |
+| **Groq AI** | Translation & Chat | Free (Unlimited) |
 | **OpenAI** | LinkedIn Digest Generation | Free Credits |
 | **Firecrawl** | Web Scraping | Free (500/mo) |
 | **n8n** | Workflow Automation | Free/Self-hosted |
-| **Telegram Bot API** | Notifications & Control | Free |
-| **GitHub Actions** | CI/CD & Automation | Free |
+| **Telegram Bot API** | Notifications & Control | Free (Unlimited) |
+| **GitHub Actions** | CI/CD & Automation | Free (2000 min/mo) |
+| **Sentry** | Error Tracking & Monitoring | Developer (5K errors/mo) |
 
 ### Infrastructure
 | Platform | Purpose | Cost |
@@ -522,6 +635,17 @@ TELEGRAM_CHAT_ID=123456789              # Your chat ID
 ```env
 # Security
 TELEGRAM_CONTROL_API_SECRET=random_key  # API endpoint security
+DEPLOYMENT_WEBHOOK_SECRET=random_hex    # Deployment webhook security
+
+# Sentry Error Tracking & Monitoring
+VITE_SENTRY_DSN=https://key@org.ingest.sentry.io/project  # Frontend DSN
+VITE_SENTRY_ENVIRONMENT=production      # Environment name
+VITE_APP_VERSION=1.0.0                  # Release version
+SENTRY_DSN=https://key@org.ingest.sentry.io/project       # Backend DSN
+SENTRY_ENVIRONMENT=production           # Backend environment
+SENTRY_AUTH_TOKEN=your_auth_token       # Upload source maps (optional)
+SENTRY_ORG=your-org-slug                # Organization slug (optional)
+SENTRY_PROJECT=your-project-slug        # Project slug (optional)
 
 # GitHub Integration
 GITHUB_TOKEN=ghp_...                    # For workflow triggers
@@ -598,48 +722,132 @@ npm run telegram:setup-menu
 
 ## 📊 Monitoring & Observability
 
-### Health Checks
+> **Production-grade monitoring** following industry best practices
+
+### 🔍 Error Tracking (Sentry)
+
+**Real-time error monitoring across frontend and backend:**
+
+```typescript
+// Frontend Error Tracking
+- Automatic error capture (React Error Boundaries)
+- Performance monitoring (Core Web Vitals)
+- Session replay (video-like recordings)
+- Breadcrumbs (user action timeline)
+- Source maps (readable stack traces)
+- User context tracking
+- Release tracking per deployment
+
+// Backend Error Tracking  
+- API endpoint errors
+- Serverless function failures
+- Database connection issues
+- Third-party API failures
+- Request context (headers, query params)
+- Environment tagging (production/preview)
+```
+
+**Sentry Dashboard Features:**
+- 📊 **Issues**: Grouped errors with stack traces
+- ⚡ **Performance**: Slow transactions & API calls
+- 🎬 **Session Replay**: Watch user sessions with errors
+- 📈 **Releases**: Track errors per deployment
+- 🔔 **Alerts**: Slack/Email notifications for critical errors
+
+**Limits (Developer Plan):**
+- 5,000 errors/month
+- 50 session replays/month
+- 5M performance spans/month
+- 5 GB logs/month
+
+### 🏥 Health Checks
 
 ```bash
-# System health check
+# Comprehensive system health check
 npm run health:check
 
 # Automated (daily at 08:00 UTC)
-# - Supabase connection
-# - API services status
-# - Recent article count
-# - Vercel platform status
-# - System metrics
+✅ Supabase database connectivity
+✅ Firecrawl API availability  
+✅ Groq AI API status
+✅ Telegram Bot responsiveness
+✅ Vercel platform health
+✅ Recent article metrics
+✅ System resource usage
 
 # Vercel status monitoring
 npm run vercel:status
 
 # Automated (every 30 minutes)
-# - RSS feed monitoring
-# - Incident detection
-# - Duplicate prevention
-# - Telegram alerts
+🔍 RSS feed monitoring
+🚨 Incident detection & alerts
+📊 Duplicate prevention
+📱 Telegram notifications
+⏰ Status change tracking
 ```
 
-### Telegram Notifications
+### 📱 Telegram Notifications
 
-Automatic notifications for:
-- ✅ Successful scraping runs
-- ❌ Errors with detailed logs
-- 🏥 Daily health reports
-- 🚀 Deployment notifications
-- 🚨 Vercel platform incidents
-- 📱 LinkedIn digest updates
-- 📊 Weekly summaries
+**Automatic notifications for all system events:**
 
-### System Dashboard
+| Event | Notification Type | Frequency |
+|-------|------------------|-----------|
+| ✅ **Scraping Success** | Success report + stats | Per workflow run |
+| ❌ **Scraping Errors** | Error details + logs | Immediate |
+| 🏥 **Health Reports** | System status summary | Daily 09:00 |
+| 🚀 **Build Completed** | Build success | Per deployment |
+| 📦 **Deploy Success** | Deployment confirmed | Per deployment |
+| ⚠️ **Deploy Failed** | Error notification | Immediate |
+| 🚨 **Vercel Incidents** | Platform status alerts | Real-time |
+| 📱 **LinkedIn Digest** | Approval requests | Daily 16:30 |
+| 💾 **Database Issues** | Connection failures | Immediate |
+| 🔐 **Security Alerts** | Rate limit exceeded | Immediate |
 
-Access via Telegram bot:
-- Real-time statistics
-- API status monitoring
-- Database metrics
-- Error logs
-- Performance metrics
+### 📈 System Dashboard
+
+**Access via Telegram bot (`/menu`):**
+
+```
+📊 Real-Time Metrics:
+├── Total articles in database
+├── Articles added today (last 24h)
+├── Last article timestamp  
+├── Supabase connection status
+├── API services health status
+├── Vercel platform status
+├── GitHub Actions workflow status
+└── System uptime percentage
+
+🔍 Monitoring Features:
+├── Live error tracking (Sentry)
+├── Performance metrics
+├── API response times
+├── Database query performance
+├── User session analytics
+└── Deployment history
+```
+
+### 📋 Logging Strategy
+
+**Multi-tier logging system:**
+
+| Level | Platform | Content | Retention |
+|-------|----------|---------|-----------|
+| **Application** | Vercel Logs | API requests, errors | 7 days (Free) |
+| **Workflow** | GitHub Actions | Build logs, automation | 90 days |
+| **Errors** | Sentry | Stack traces, context | 90 days |
+| **Database** | Supabase | Query logs, slow queries | 7 days |
+| **Custom** | Telegram | Critical events | Permanent |
+
+### 🎯 Observability Best Practices
+
+- ✅ **Structured logging** with consistent formats
+- ✅ **Correlation IDs** for request tracing
+- ✅ **Performance budgets** (<200ms API responses)
+- ✅ **Error rate thresholds** (<1% failure rate)
+- ✅ **Automated alerting** for critical issues
+- ✅ **Post-mortem analysis** for incidents
+- ✅ **Regular health check reviews** (weekly)
 
 ---
 
@@ -650,8 +858,10 @@ Access via Telegram bot:
 - [🗄️ Supabase Setup](./docs/SUPABASE_SETUP.md) - Database configuration
 - [📱 Telegram Bot Setup](./docs/TELEGRAM_NOTIFICATIONS_SETUP.md) - Bot configuration
 - [🔧 General Setup](./docs/SETUP.md) - Initial project setup
-- [💼 LinkedIn n8n Setup](./docs/n8n-setup-instructions.md) - **NEW!** Step-by-step n8n workflow setup
-- [🚨 Vercel Status Monitor](./docs/VERCEL_STATUS_SETUP.md) - **NEW!** Platform monitoring setup
+- [💼 LinkedIn n8n Setup](./docs/n8n-setup-instructions.md) - Step-by-step n8n workflow setup
+- [🚨 Vercel Status Monitor](./docs/VERCEL_STATUS_SETUP.md) - Platform monitoring setup
+- [👁️ Sentry Integration](./docs/SENTRY_SETUP.md) - **NEW!** Error tracking & monitoring setup
+- [🔔 Deployment Webhooks](./docs/DEPLOYMENT_WEBHOOK_SETUP.md) - **NEW!** Deployment status notifications
 
 ### System Documentation
 - [🏗️ Architecture](./docs/IMPLEMENTATION_SUMMARY.md) - System architecture
@@ -998,7 +1208,7 @@ copies or substantial portions of the Software.
 
 ---
 
-**Last Updated**: October 18, 2025 | **Version**: 2.1.0
+**Last Updated**: October 22, 2025 | **Version**: 2.2.0
 
 [![Built with Love](https://img.shields.io/badge/Built%20with-❤️-red?style=flat-square)](https://github.com/CemRoot/My-Site)
 [![Maintained](https://img.shields.io/badge/Maintained-Yes-green?style=flat-square)](https://github.com/CemRoot/My-Site)
