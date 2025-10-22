@@ -99,20 +99,20 @@ async function postBuildSetup() {
     console.log('\n1️⃣ Setting up bot commands...');
     await setupBotCommands();
 
-    // Send deployment notification
-    console.log('\n2️⃣ Sending deployment notification...');
-    const deploymentMessage = `
-🚀 <b>DEPLOYMENT BAŞARILI</b>
+    // Send build notification (not deployment - that's handled by webhook)
+    console.log('\n2️⃣ Sending build notification...');
+    const buildMessage = `
+⚙️ <b>BUILD TAMAMLANDI</b>
 
-✅ Production build tamamlandı
+✅ Build süreci başarıyla tamamlandı
 ⏰ ${new Date().toLocaleString('tr-TR')}
 🔗 ${CONFIG.VERCEL_URL ? `https://${CONFIG.VERCEL_URL}` : 'URL bilgisi yok'}
 📦 ${CONFIG.VERCEL_GIT_COMMIT_MESSAGE}
 
-<i>Bot menüsü otomatik güncellendi</i>
-<i>/menu yazarak yeni menüyü görebilirsiniz</i>`;
+<i>Bot menüsü güncellendi - /menu</i>
+<i>⏳ Deployment durumu ayrıca bildirilecek...</i>`;
 
-    await sendTelegramMessage(deploymentMessage);
+    await sendTelegramMessage(buildMessage);
 
     console.log('\n✅ Post-build setup completed successfully!');
     console.log('='.repeat(60));
