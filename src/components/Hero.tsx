@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Github, Linkedin, Download, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
-import portraitImage from 'figma:asset/b2434507c36da971cecf1c8e91f157fb86abbf62.png';
+import portraitImage from '../assets/b2434507c36da971cecf1c8e91f157fb86abbf62.png';
 
 export function Hero() {
   const roles = [
@@ -90,14 +90,14 @@ export function Hero() {
             {/* Name & Title */}
             <div className="space-y-4">
               <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl">
-                <span className="block bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-transparent">
+                <span className="block bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-transparent" style={{ paddingTop: '0.1em', paddingBottom: '0.1em' }}>
                   Cem
                 </span>
-                <span className="block bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent tracking-wide antialiased" style={{ fontFamily: "'Space Grotesk', 'Inter', sans-serif", fontWeight: 600, letterSpacing: '0.05em' }}>
+                <span className="block bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent tracking-wide antialiased" style={{ fontFamily: "'Space Grotesk', 'Inter', sans-serif", fontWeight: 600, letterSpacing: '0.05em', paddingTop: '0.1em', paddingBottom: '0.15em', lineHeight: '1.2' }}>
                   Koyluoglu
                 </span>
               </h1>
-              <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto lg:mx-0">
+              <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto lg:mx-0" style={{ paddingTop: '0.25em', paddingBottom: '0.25em', lineHeight: '1.6' }}>
                 Software Engineer with MSc in AI (First Class Honours) specializing in Python, backend development, REST APIs, and Azure cloud automation
               </p>
             </div>

@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Newspaper } from 'lucide-react';
 import { Button } from './ui/button';
-import coinLogo from 'figma:asset/5a044018a2d01618456d3b6a76d961bdd5099599.png';
+import coinLogo from '../assets/5a044018a2d01618456d3b6a76d961bdd5099599.png';
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -68,10 +68,10 @@ export function Navbar() {
               ? 'liquid-glass-strong neon-border-primary' 
               : 'bg-transparent border-transparent'
           }`}>
-            <div className="flex items-center justify-between px-6 py-4">
+            <div className="flex items-center justify-between px-6 py-5">
               {/* Logo - CK Coin */}
-              <Link to="/" className="group flex items-center space-x-3">
-                <div className="w-12 h-12 relative" style={{ perspective: '2000px' }}>
+              <Link to="/" className="group flex items-center space-x-3" style={{ overflow: 'visible' }}>
+                <div className="w-12 h-12 relative flex-shrink-0" style={{ perspective: '2000px' }}>
                   <div 
                     className="w-full h-full relative transition-all duration-700 ease-out group-hover:scale-110"
                     style={{
@@ -152,6 +152,11 @@ export function Navbar() {
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
                     filter: 'drop-shadow(0 0 8px rgba(91, 231, 255, 0.3))',
+                    lineHeight: '1.8',
+                    paddingTop: '4px',
+                    paddingBottom: '4px',
+                    display: 'inline-block',
+                    overflow: 'visible',
                   }}
                 >
                   CEM KOYLUOGLU
