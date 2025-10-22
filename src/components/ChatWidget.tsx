@@ -267,13 +267,13 @@ export function ChatWidget() {
     <>
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-20 sm:bottom-24 right-4 sm:right-8 left-auto box-border w-[92vw] sm:w-[400px] max-w-[92vw] sm:max-w-[400px] min-w-[320px] sm:min-w-[400px] z-50 animate-in slide-in-from-bottom-5 duration-300">
-          <div className="relative group w-full max-w-full">
+        <div className="fixed bottom-20 sm:bottom-24 right-2 left-2 sm:right-8 sm:left-auto sm:w-[400px] max-w-[calc(100vw-1rem)] z-50 animate-in slide-in-from-bottom-5 duration-300">
+          <div className="relative group">
             {/* Glow effect */}
             <div className="absolute -inset-1 sm:-inset-2 bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20 sm:from-primary/30 sm:via-secondary/30 sm:to-accent/30 rounded-2xl sm:rounded-3xl blur-lg sm:blur-xl opacity-40 sm:opacity-50" />
             
             {/* Main container */}
-            <div className="relative w-full max-w-full flex-none bg-background/98 backdrop-blur-2xl border border-primary/30 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl">
+            <div className="relative bg-background/98 backdrop-blur-2xl border border-primary/30 rounded-2xl sm:rounded-3xl shadow-2xl" style={{ overflow: 'hidden' }}>
               {/* Header */}
               <div className="bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 border-b border-white/10 p-3 sm:p-4">
                 <div className="flex items-center justify-between">
@@ -303,17 +303,16 @@ export function ChatWidget() {
 
               {/* Chat Messages */}
               <div 
-                className="p-2 sm:p-4 space-y-2 sm:space-y-4 h-[320px] sm:h-[420px] overflow-y-auto overflow-x-hidden overscroll-contain w-full max-w-full"
+                className="p-2 sm:p-4 space-y-2 sm:space-y-4 max-h-[300px] sm:max-h-[400px] overflow-y-auto overflow-x-hidden overscroll-contain"
                 style={{ 
                   WebkitOverflowScrolling: 'touch',
-                  touchAction: 'pan-y',
-                  overflowX: 'hidden'
+                  touchAction: 'pan-y'
                 }}
               >
                 {messages.map((msg) => (
                   <div 
                     key={msg.id} 
-                    className={`flex items-start gap-2 w-full max-w-full ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+                    className={`flex items-start gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
                   >
                     <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
                       {msg.role === 'assistant' ? (
@@ -323,7 +322,7 @@ export function ChatWidget() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0 max-w-[calc(100%-2.5rem)]">
-                      <div className={`rounded-xl sm:rounded-2xl p-2.5 sm:p-3 w-full max-w-full ${
+                      <div className={`rounded-xl sm:rounded-2xl p-2.5 sm:p-3 ${
                         msg.role === 'assistant' 
                           ? 'bg-primary/10 border border-primary/20 rounded-tl-sm' 
                           : 'bg-accent/10 border border-accent/20 rounded-tr-sm'
@@ -332,7 +331,7 @@ export function ChatWidget() {
                           className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words"
                           style={{ 
                             wordBreak: 'break-word', 
-                            overflowWrap: 'anywhere',
+                            overflowWrap: 'break-word',
                             hyphens: 'auto'
                           }}
                         >
@@ -345,12 +344,12 @@ export function ChatWidget() {
                 
                 {/* Loading indicator */}
                 {isLoading && (
-                  <div className="flex items-start gap-2 w-full max-w-full">
+                  <div className="flex items-start gap-2">
                     <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
                       <Bot className="w-4 h-4 text-black" />
                     </div>
                     <div className="flex-1 min-w-0 max-w-[calc(100%-2.5rem)]">
-                      <div className="bg-primary/10 border border-primary/20 rounded-xl sm:rounded-2xl rounded-tl-sm p-2.5 sm:p-3 w-full max-w-full">
+                      <div className="bg-primary/10 border border-primary/20 rounded-xl sm:rounded-2xl rounded-tl-sm p-2.5 sm:p-3">
                         <div className="flex gap-1">
                           <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                           <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
