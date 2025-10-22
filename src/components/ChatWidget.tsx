@@ -303,18 +303,17 @@ export function ChatWidget() {
 
               {/* Chat Messages */}
               <div 
-                className="p-2 sm:p-4 space-y-2 sm:space-y-4 max-h-[300px] sm:max-h-[400px] overflow-y-auto overscroll-contain"
+                className="p-2 sm:p-4 space-y-2 sm:space-y-4 max-h-[300px] sm:max-h-[400px] overflow-y-auto overscroll-contain w-full"
                 style={{ 
                   WebkitOverflowScrolling: 'touch',
                   touchAction: 'pan-y',
-                  overflowX: 'hidden',
-                  maxWidth: '100%'
+                  overflowX: 'hidden'
                 }}
               >
                 {messages.map((msg) => (
                   <div 
                     key={msg.id} 
-                    className={`flex items-start gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+                    className={`flex items-start gap-2 w-full max-w-full ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
                   >
                     <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
                       {msg.role === 'assistant' ? (
@@ -323,20 +322,18 @@ export function ChatWidget() {
                         <User className="w-4 h-4 text-black" />
                       )}
                     </div>
-                    <div className="flex-1 min-w-0 max-w-full sm:max-w-[85%]">
-                      <div className={`rounded-xl sm:rounded-2xl p-2.5 sm:p-3 ${
+                    <div className="flex-1 min-w-0 max-w-[calc(100%-40px)]">
+                      <div className={`rounded-xl sm:rounded-2xl p-2.5 sm:p-3 w-full max-w-full ${
                         msg.role === 'assistant' 
                           ? 'bg-primary/10 border border-primary/20 rounded-tl-sm' 
                           : 'bg-accent/10 border border-accent/20 rounded-tr-sm'
                       }`}>
                         <p
-                          className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words"
+                          className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words w-full"
                           style={{ 
                             wordBreak: 'break-word', 
                             overflowWrap: 'anywhere',
-                            hyphens: 'auto',
-                            maxWidth: '100%',
-                            minWidth: 0
+                            hyphens: 'auto'
                           }}
                         >
                           {msg.content}
@@ -348,12 +345,12 @@ export function ChatWidget() {
                 
                 {/* Loading indicator */}
                 {isLoading && (
-                  <div className="flex items-start gap-2">
+                  <div className="flex items-start gap-2 w-full max-w-full">
                     <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
                       <Bot className="w-4 h-4 text-black" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="bg-primary/10 border border-primary/20 rounded-xl sm:rounded-2xl rounded-tl-sm p-2.5 sm:p-3">
+                    <div className="flex-1 min-w-0 max-w-[calc(100%-40px)]">
+                      <div className="bg-primary/10 border border-primary/20 rounded-xl sm:rounded-2xl rounded-tl-sm p-2.5 sm:p-3 w-full max-w-full">
                         <div className="flex gap-1">
                           <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                           <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
