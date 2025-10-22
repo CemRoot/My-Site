@@ -66,8 +66,8 @@ export function ChatWidget() {
   const [offTopicCount, setOffTopicCount] = useState(0);
   const [awaitingRelevantQuestion, setAwaitingRelevantQuestion] = useState(false);
   const [blockedUntil, setBlockedUntil] = useState<number | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const now = Date.now();
   const isChatBlocked = blockedUntil !== null && blockedUntil > now;
   const remainingBlockMinutes = isChatBlocked
@@ -79,11 +79,13 @@ export function ChatWidget() {
     const timer = setTimeout(() => setShowWidget(true), WIDGET_CONFIG.showDelay);
     return () => clearTimeout(timer);
   }, []);
-
-  // Scroll to bottom when new messages arrive
+  
+  // Auto-scroll to bottom when messages change (like Deep Chat)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages, isLoading]);
 
   // Auto-focus textarea when chat opens
   useEffect(() => {
@@ -267,7 +269,13 @@ export function ChatWidget() {
     <>
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-20 sm:bottom-24 right-2 left-2 sm:right-8 sm:left-auto sm:w-[400px] max-w-[calc(100vw-1rem)] z-50 animate-in slide-in-from-bottom-5 duration-300">
+        <div 
+          className="fixed bottom-20 sm:bottom-24 right-4 sm:right-8 z-50 animate-in slide-in-from-bottom-5 duration-300"
+          style={{ 
+            width: window.innerWidth >= 640 ? '400px' : 'calc(100vw - 2rem)',
+            maxWidth: '400px'
+          }}
+        >
           <div className="relative group">
             {/* Glow effect */}
             <div className="absolute -inset-1 sm:-inset-2 bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20 sm:from-primary/30 sm:via-secondary/30 sm:to-accent/30 rounded-2xl sm:rounded-3xl blur-lg sm:blur-xl opacity-40 sm:opacity-50" />
@@ -303,8 +311,10 @@ export function ChatWidget() {
 
               {/* Chat Messages */}
               <div 
-                className="p-2 sm:p-4 space-y-2 sm:space-y-4 max-h-[300px] sm:max-h-[400px] overflow-y-auto overflow-x-hidden overscroll-contain"
+                ref={messagesContainerRef}
+                className="p-2 sm:p-4 flex flex-col gap-2 sm:gap-4 overflow-y-auto overflow-x-hidden overscroll-contain"
                 style={{ 
+                  height: '350px',
                   WebkitOverflowScrolling: 'touch',
                   touchAction: 'pan-y'
                 }}
@@ -359,13 +369,11 @@ export function ChatWidget() {
                     </div>
                   </div>
                 )}
-                
-                <div ref={messagesEndRef} />
               </div>
 
               {/* Message Input */}
-              <form onSubmit={sendMessage} className="border-t border-white/10 p-2 sm:p-4 bg-background/50 w-full max-w-full">
-                <div className="flex gap-1.5 sm:gap-2 items-end w-full max-w-full">
+              <form onSubmit={sendMessage} className="border-t border-white/10 p-2 sm:p-4 bg-background/50">
+                <div className="flex gap-1.5 sm:gap-2 items-end">
                   <Textarea
                     ref={textareaRef}
                     placeholder={isChatBlocked ? 'Chat temporarily closed...' : 'Ask me about Cem or this website...'}
