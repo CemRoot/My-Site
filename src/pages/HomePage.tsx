@@ -22,7 +22,7 @@ export function HomePage() {
       path: '/',
       title: 'Cem Koyluoglu - AI Engineer & System Operations Specialist',
       summary:
-        'Portfolio homepage showcasing Cem Koyluoglu's AI engineering expertise, professional services, signature projects, work experience, technical skills, and contact information.',
+        "Portfolio homepage showcasing Cem Koyluoglu's AI engineering expertise, professional services, signature projects, work experience, technical skills, and contact information.",
       description:
         'This is the main landing page featuring comprehensive information about Cem Koyluoglu, an AI Engineer and System Operations Specialist based in Dublin, Ireland with 3+ years of Python experience.',
       highlights: [
@@ -56,7 +56,7 @@ export function HomePage() {
         'Deep Learning',
       ],
       content:
-        'The homepage provides a complete overview of Cem's professional profile, from his educational background (MSc in AI from National College of Ireland) to his technical expertise in Large Language Models, Natural Language Processing, and Cloud Solutions. Visitors can explore his services, view his project portfolio, understand his career journey, and easily get in touch via email (cemkoyluoglu@icloud.com) or WhatsApp (+353 87 344 5918).',
+        "The homepage provides a complete overview of Cem's professional profile, from his educational background (MSc in AI from National College of Ireland) to his technical expertise in Large Language Models, Natural Language Processing, and Cloud Solutions. Visitors can explore his services, view his project portfolio, understand his career journey, and easily get in touch via email (cemkoyluoglu@icloud.com) or WhatsApp (+353 87 344 5918).",
     });
 
     return () => setPageInfo(null);
