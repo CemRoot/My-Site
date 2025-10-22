@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
@@ -267,26 +267,26 @@ export function ChatWidget() {
     <>
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-20 sm:bottom-24 right-2 left-2 sm:right-8 sm:left-auto sm:w-[400px] max-w-[400px] z-50 animate-in slide-in-from-bottom-5 duration-300">
-          <div className="relative group">
+        <div className="fixed bottom-20 sm:bottom-24 right-2 left-2 sm:right-8 sm:left-auto w-full sm:w-[400px] max-w-[400px] z-50 animate-in slide-in-from-bottom-5 duration-300">
+          <div className="relative group w-full">
             {/* Glow effect */}
             <div className="absolute -inset-1 sm:-inset-2 bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20 sm:from-primary/30 sm:via-secondary/30 sm:to-accent/30 rounded-2xl sm:rounded-3xl blur-lg sm:blur-xl opacity-40 sm:opacity-50" />
             
             {/* Main container */}
-            <div className="relative bg-background/98 backdrop-blur-2xl border border-primary/30 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl">
+            <div className="relative w-full bg-background/98 backdrop-blur-2xl border border-primary/30 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl">
               {/* Header */}
-              <div className="bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 border-b border-white/10 p-3 sm:p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="relative">
+              <div className="w-full bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 border-b border-white/10 p-3 sm:p-4">
+                <div className="flex items-center justify-between w-full max-w-full">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                    <div className="relative flex-shrink-0">
                       <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
                         <Bot className="w-5 h-5 text-black" />
                       </div>
                       <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded-full border-2 border-background animate-pulse" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <h3 className="font-medium text-sm sm:text-base truncate">AI Assistant</h3>
-                      <p className="text-xs text-green-500">● Powered by Cem Koyluoglu</p>
+                      <p className="text-xs text-green-500 truncate">● Powered by Cem Koyluoglu</p>
                     </div>
                   </div>
                   <Button
@@ -365,8 +365,8 @@ export function ChatWidget() {
               </div>
 
               {/* Message Input */}
-              <form onSubmit={sendMessage} className="border-t border-white/10 p-2 sm:p-4 bg-background/50">
-                <div className="flex gap-1.5 sm:gap-2 items-end">
+              <form onSubmit={sendMessage} className="w-full border-t border-white/10 p-2 sm:p-4 bg-background/50">
+                <div className="flex gap-1.5 sm:gap-2 items-end w-full">
                   <Textarea
                     ref={textareaRef}
                     placeholder={isChatBlocked ? 'Chat temporarily closed...' : 'Ask me about Cem or this website...'}
@@ -380,12 +380,11 @@ export function ChatWidget() {
                     }}
                     disabled={isLoading || isChatBlocked}
                     rows={2}
-                    className="flex-1 bg-input-background border-primary/20 focus:border-primary/40 rounded-xl resize-none text-base leading-relaxed py-2 px-3"
+                    className="flex-1 min-w-0 bg-input-background border-primary/20 focus:border-primary/40 rounded-xl resize-none text-base leading-relaxed py-2 px-3"
                     style={{ 
                       fontSize: '16px',
                       wordBreak: 'break-word',
-                      overflowWrap: 'anywhere',
-                      maxWidth: '100%'
+                      overflowWrap: 'anywhere'
                     }}
                   />
                   <Button
