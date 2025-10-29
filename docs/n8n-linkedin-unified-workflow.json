@@ -169,14 +169,9 @@
         "filters": {
           "conditions": [
             {
-              "keyName": "created_at",
-              "condition": "gte",
-              "keyValue": "={{ $('Parse Trigger Type').item.json.todayDate }}T00:00:00.000Z"
-            },
-            {
-              "keyName": "created_at",
-              "condition": "lt",
-              "keyValue": "={{ $('Parse Trigger Type').item.json.todayDate }}T23:59:59.999Z"
+              "keyName": "date",
+              "condition": "eq",
+              "keyValue": "={{ $('Parse Trigger Type').item.json.todayDate }}"
             }
           ]
         }
@@ -682,7 +677,7 @@
       "typeVersion": 1.1,
       "position": [
         -2048,
-        -544
+        -528
       ]
     },
     {
@@ -757,8 +752,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        -2064,
-        -304
+        -2032,
+        -288
       ]
     },
     {
@@ -773,7 +768,7 @@
       "typeVersion": 1.1,
       "position": [
         -2048,
-        -48
+        -32
       ]
     },
     {
