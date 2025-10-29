@@ -1,6 +1,6 @@
 import { Briefcase, GraduationCap, Award, Shield, Code2, Rocket, Globe } from 'lucide-react';
 
-export function Experience() {
+function Experience() {
   const experiences = [
     {
       type: 'work',
@@ -263,3 +263,5 @@ export function Experience() {
     </section>
   );
 }
+
+export default Experience;

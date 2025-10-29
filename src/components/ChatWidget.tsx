@@ -49,7 +49,7 @@ const parseAssistantReply = (reply: string): { topic: TopicTag; content: string 
  * AI-Powered Chat Widget Component
  * Provides intelligent responses about Cem Koyluoglu
  */
-export function ChatWidget() {
+function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [showWidget, setShowWidget] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -460,3 +460,5 @@ export function ChatWidget() {
     </>
   );
 }
+
+export default ChatWidget;

@@ -81,7 +81,7 @@ function sanitizeArticleContent(content: string) {
   return sanitized.trim();
 }
 
-export function TechNewsDetail() {
+function TechNewsDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [article, setArticle] = useState<Article | null>(null);
@@ -396,6 +396,7 @@ export function TechNewsDetail() {
                 src={article.image}
                 alt={article.title}
                 className="w-full h-full object-cover"
+                loading="lazy"
                 onError={(e) => {
                   e.currentTarget.parentElement!.style.display = 'none';
                 }}
@@ -482,3 +483,5 @@ export function TechNewsDetail() {
     </>
   );
 }
+
+export default TechNewsDetail;

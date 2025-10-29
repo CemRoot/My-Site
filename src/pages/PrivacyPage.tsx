@@ -8,7 +8,7 @@ import { usePageContext } from '../lib/context/PageContext';
  * Privacy Policy Page
  * GDPR-compliant privacy policy for Ireland-based business
  */
-export function PrivacyPage() {
+function PrivacyPage() {
   const { setPageInfo } = usePageContext();
 
   useEffect(() => {
@@ -280,3 +280,5 @@ export function PrivacyPage() {
     </main>
   );
 }
+
+export default PrivacyPage;

@@ -37,6 +37,10 @@
       'import.meta.env.VITE_SENTRY_ENVIRONMENT': JSON.stringify(env.VITE_SENTRY_ENVIRONMENT || 'development'),
       'import.meta.env.VITE_APP_VERSION': JSON.stringify(env.VITE_APP_VERSION || env.VERCEL_GIT_COMMIT_SHA || 'unknown'),
     },
+    optimizeDeps: {
+      include: ['lucide-react'],
+      exclude: [],
+    },
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
@@ -47,7 +51,6 @@
         'react-hook-form@7.55.0': 'react-hook-form',
         'react-day-picker@8.10.1': 'react-day-picker',
         'next-themes@0.4.6': 'next-themes',
-        'lucide-react@0.487.0': 'lucide-react',
         'input-otp@1.4.2': 'input-otp',
         'figma:asset/b2434507c36da971cecf1c8e91f157fb86abbf62.png': path.resolve(__dirname, './src/assets/b2434507c36da971cecf1c8e91f157fb86abbf62.png'),
         'figma:asset/5a044018a2d01618456d3b6a76d961bdd5099599.png': path.resolve(__dirname, './src/assets/5a044018a2d01618456d3b6a76d961bdd5099599.png'),
@@ -88,6 +91,25 @@
       outDir: 'build',
       // Generate source maps for Sentry
       sourcemap: mode === 'production',
+      // Optimize bundle size
+      cssCodeSplit: true,
+      // Aggressive minification for production
+      minify: 'terser',
+      terserOptions: {
+        compress: {
+          drop_console: mode === 'production',
+          drop_debugger: true,
+          pure_funcs: mode === 'production' ? ['console.log', 'console.info'] : [],
+        },
+      },
+      // Manual chunk splitting for better caching
+      rollupOptions: {
+        output: {
+          manualChunks: undefined, // Let Vite handle chunking automatically
+        },
+      },
+      // Chunk size warnings
+      chunkSizeWarningLimit: 500,
     },
     server: {
       port: 3000,

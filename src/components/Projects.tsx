@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Badge } from './ui/badge';
 
-export function Projects() {
+function Projects() {
   const [selectedProject, setSelectedProject] = useState<typeof projects[0] | null>(null);
 
   const projects = [
@@ -302,3 +302,5 @@ export function Projects() {
     </section>
   );
 }
+
+export default Projects;

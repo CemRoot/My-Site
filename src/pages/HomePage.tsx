@@ -1,20 +1,38 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { Hero } from '../components/Hero';
 import { Stats } from '../components/Stats';
 import { About } from '../components/About';
 import { Services } from '../components/Services';
-import { Projects } from '../components/Projects';
-import { Experience } from '../components/Experience';
 import { Skills } from '../components/Skills';
 import { CV } from '../components/CV';
 import { Contact } from '../components/Contact';
 import { usePageContext } from '../lib/context/PageContext';
 
+// Lazy load heavy components that are below the fold
+const Projects = lazy(() => import('../components/Projects'));
+const Experience = lazy(() => import('../components/Experience'));
+
+// Simple loading skeleton for below-the-fold components
+function SectionSkeleton() {
+  return (
+    <div className="container mx-auto px-6 py-20">
+      <div className="space-y-4 animate-pulse">
+        <div className="h-8 bg-muted/20 rounded w-1/4 mx-auto" />
+        <div className="h-4 bg-muted/20 rounded w-1/2 mx-auto" />
+        <div className="grid gap-6 mt-8">
+          <div className="h-48 bg-muted/20 rounded" />
+          <div className="h-48 bg-muted/20 rounded" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Home Page Component
  * Main portfolio landing page with all sections
  */
-export function HomePage() {
+function HomePage() {
   const { setPageInfo } = usePageContext();
 
   useEffect(() => {
@@ -68,11 +86,17 @@ export function HomePage() {
       <Stats />
       <About />
       <Services />
-      <Projects />
-      <Experience />
+      <Suspense fallback={<SectionSkeleton />}>
+        <Projects />
+      </Suspense>
+      <Suspense fallback={<SectionSkeleton />}>
+        <Experience />
+      </Suspense>
       <Skills />
       <CV />
       <Contact />
     </>
   );
 }
+
+export default HomePage;

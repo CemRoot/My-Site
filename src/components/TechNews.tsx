@@ -34,7 +34,7 @@ interface NewsDatabase {
  * Tech News Component
  * Displays latest tech news articles translated from Turkish to English
  */
-export function TechNews() {
+function TechNews() {
   const [newsData, setNewsData] = useState<NewsDatabase | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -458,3 +458,5 @@ export function TechNews() {
     </main>
   );
 }
+
+export default TechNews;

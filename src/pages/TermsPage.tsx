@@ -8,7 +8,7 @@ import { usePageContext } from '../lib/context/PageContext';
  * Terms & Conditions Page
  * GDPR-compliant terms for Ireland-based business
  */
-export function TermsPage() {
+function TermsPage() {
   const { setPageInfo } = usePageContext();
 
   useEffect(() => {
@@ -190,3 +190,5 @@ export function TermsPage() {
     </main>
   );
 }
+
+export default TermsPage;

@@ -84,6 +84,7 @@ export function Navbar() {
                       src={coinLogo}
                       alt="CK Coin"
                       className="w-full h-full object-cover rounded-full"
+                      loading="lazy"
                       style={{
                         filter: 'drop-shadow(0 0 15px rgba(255, 215, 0, 0.5)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6)) brightness(1.1) contrast(1.15)',
                         transition: 'all 0.3s ease',

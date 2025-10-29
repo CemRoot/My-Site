@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Github, Linkedin, Download, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 import portraitImage from '../assets/b2434507c36da971cecf1c8e91f157fb86abbf62.png';
@@ -17,9 +17,11 @@ export function Hero() {
   const [scrambledText, setScrambledText] = useState(roles[0]);
   const [isScrambling, setIsScrambling] = useState(false);
   
-  // Mouse tracking for 3D portrait effect
+  // Mouse tracking for 3D portrait effect - optimized with RAF
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
+  const rafRef = useRef<number>();
+  const lastUpdateRef = useRef<number>(0);
 
   // Auto-rotate roles every 3 seconds
   useEffect(() => {
@@ -30,7 +32,7 @@ export function Hero() {
     return () => clearInterval(rotateInterval);
   }, []);
 
-  // Scramble effect when role changes
+  // Scramble effect when role changes - optimized interval
   useEffect(() => {
     const currentRole = roles[currentRoleIndex];
     const chars = '!<>-_\\/[]{}—=+*^?#________';
@@ -39,30 +41,67 @@ export function Hero() {
 
     setIsScrambling(true);
 
-    const interval = setInterval(() => {
-      setScrambledText(
-        currentRole
-          .split('')
-          .map((char, index) => {
-            if (index < iterations) {
-              return currentRole[index];
-            }
-            return chars[Math.floor(Math.random() * chars.length)];
-          })
-          .join('')
-      );
+    // Use requestAnimationFrame for better performance
+    let lastTime = performance.now();
+    let animationFrame: number;
+    
+    const animate = (currentTime: number) => {
+      if (currentTime - lastTime >= 50) { // 50ms delay between updates
+        setScrambledText(
+          currentRole
+            .split('')
+            .map((char, index) => {
+              if (index < iterations) {
+                return currentRole[index];
+              }
+              return chars[Math.floor(Math.random() * chars.length)];
+            })
+            .join('')
+        );
 
-      iterations += 1 / 2;
+        iterations += 1 / 2;
+        lastTime = currentTime;
+      }
 
       if (iterations >= maxIterations) {
-        clearInterval(interval);
         setScrambledText(currentRole);
         setIsScrambling(false);
+      } else {
+        animationFrame = requestAnimationFrame(animate);
       }
-    }, 50);
+    };
 
-    return () => clearInterval(interval);
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
   }, [currentRoleIndex]);
+  
+  // Throttled mouse handler with RAF
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const now = performance.now();
+    // Throttle to max 60fps (16ms)
+    if (now - lastUpdateRef.current < 16) return;
+    
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+    }
+    
+    rafRef.current = requestAnimationFrame(() => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = (e.clientX - rect.left - rect.width / 2) / rect.width;
+      const y = (e.clientY - rect.top - rect.height / 2) / rect.height;
+      setMousePos({ x, y });
+      lastUpdateRef.current = now;
+    });
+  }, []);
+  
+  // Cleanup RAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8 pt-20">
@@ -182,16 +221,14 @@ export function Hero() {
             <div 
               className="relative group max-w-md mx-auto" 
               style={{ perspective: '1500px' }}
-              onMouseMove={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = (e.clientX - rect.left - rect.width / 2) / rect.width;
-                const y = (e.clientY - rect.top - rect.height / 2) / rect.height;
-                setMousePos({ x, y });
-              }}
+              onMouseMove={handleMouseMove}
               onMouseEnter={() => setIsHovering(true)}
               onMouseLeave={() => {
                 setIsHovering(false);
                 setMousePos({ x: 0, y: 0 });
+                if (rafRef.current) {
+                  cancelAnimationFrame(rafRef.current);
+                }
               }}
             >
               {/* Subtle glow effect */}
@@ -204,6 +241,8 @@ export function Hero() {
                   src={portraitImage}
                   alt="Cem Koyluoglu - AI Engineer"
                   className="w-full h-auto relative rounded-3xl"
+                  loading="eager"
+                  fetchPriority="high"
                   style={{
                     transform: isHovering 
                       ? `perspective(1200px) translateZ(60px) translateY(-20px) translateX(12px) rotateY(${-8 + mousePos.x * 10}deg) rotateX(${4 - mousePos.y * 10}deg) scale(1.12)`

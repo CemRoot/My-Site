@@ -43,20 +43,19 @@ export function initSentry() {
         matchRoutes,
       }),
       
-      // Replay integration for session recording
-      Sentry.replayIntegration({
-        // Mask all text content, images, and sensitive data
-        maskAllText: true,
-        blockAllMedia: true,
-        // Only record sessions with errors
-        replaysSessionSampleRate: 0.1, // 10% of sessions
-        replaysOnErrorSampleRate: 1.0, // 100% of sessions with errors
-      }),
+      // Replay integration DISABLED for better performance
+      // Only enable when debugging specific issues
+      // Sentry.replayIntegration({
+      //   maskAllText: true,
+      //   blockAllMedia: true,
+      //   replaysSessionSampleRate: 0,
+      //   replaysOnErrorSampleRate: 0.5,
+      // }),
     ],
 
-    // Performance traces sample rate
-    // 1.0 = 100% of transactions, adjust for production
-    tracesSampleRate: import.meta.env.PROD ? 0.2 : 1.0,
+    // Performance traces sample rate - reduced for better INP
+    // Lower sample rate = less overhead on main thread
+    tracesSampleRate: import.meta.env.PROD ? 0.05 : 0.5,
 
     // Capture unhandled promise rejections
     attachStacktrace: true,

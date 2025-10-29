@@ -1,21 +1,37 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ArrowUp } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
-import { ChatWidget } from './components/ChatWidget';
 import { SEO } from './components/SEO';
 import { Button } from './components/ui/button';
 import { Toaster } from './components/ui/sonner';
 import { useScrollTop } from './lib/hooks/useScrollTop';
 import { useSmoothScroll } from './lib/hooks/useSmoothScroll';
 import { PageContextProvider } from './lib/context/PageContext';
-import { HomePage } from './pages/HomePage';
-import { TechNews } from './components/TechNews';
-import { TechNewsDetail } from './components/TechNewsDetail';
-import { TermsPage } from './pages/TermsPage';
-import { PrivacyPage } from './pages/PrivacyPage';
+
+// Lazy load routes for code splitting
+const HomePage = lazy(() => import('./pages/HomePage'));
+const TechNews = lazy(() => import('./components/TechNews'));
+const TechNewsDetail = lazy(() => import('./components/TechNewsDetail'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+
+// Lazy load ChatWidget - it's heavy and not immediately needed
+const ChatWidget = lazy(() => import('./components/ChatWidget'));
+
+// Loading fallback component
+function RouteLoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    </div>
+  );
+}
 
 function ScrollToTopOnRouteChange() {
   const { pathname } = useLocation();
@@ -48,13 +64,15 @@ export default function App() {
 
           {/* Main Content with Routes */}
           <main>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/tech-news" element={<TechNews />} />
-              <Route path="/tech-news/:slug" element={<TechNewsDetail />} />
-              <Route path="/terms" element={<TermsPage />} />
-              <Route path="/privacy-policy" element={<PrivacyPage />} />
-            </Routes>
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/tech-news" element={<TechNews />} />
+                <Route path="/tech-news/:slug" element={<TechNewsDetail />} />
+                <Route path="/terms" element={<TermsPage />} />
+                <Route path="/privacy-policy" element={<PrivacyPage />} />
+              </Routes>
+            </Suspense>
           </main>
 
           {/* Footer */}
@@ -72,8 +90,10 @@ export default function App() {
             </Button>
           )}
 
-          {/* Chat Widget */}
-          <ChatWidget />
+          {/* Chat Widget - Lazy loaded */}
+          <Suspense fallback={null}>
+            <ChatWidget />
+          </Suspense>
 
           {/* Toast Notifications */}
           <Toaster />
