@@ -169,9 +169,14 @@
         "filters": {
           "conditions": [
             {
-              "keyName": "date",
-              "condition": "eq",
-              "keyValue": "={{ $('Parse Trigger Type').item.json.todayDate }}"
+              "keyName": "created_at",
+              "condition": "gte",
+              "keyValue": "={{ $('Parse Trigger Type').item.json.todayDate }}T00:00:00.000Z"
+            },
+            {
+              "keyName": "created_at",
+              "condition": "lt",
+              "keyValue": "={{ $('Parse Trigger Type').item.json.todayDate }}T23:59:59.999Z"
             }
           ]
         }
@@ -888,42 +893,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://cemkoyluoglu.codes/api/conversation-state",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "user_id",
-              "value": "={{ $('Parse Trigger Type').item.json.callbackData.chat_id }}"
-            },
-            {
-              "name": "step",
-              "value": "awaiting_digest_edit"
-            },
-            {
-              "name": "digest_id",
-              "value": "={{ $('Fetch Digest by ID').item.json.id }}"
-            }
-          ]
-        },
-        "options": {
-          "response": {
-            "response": {}
-          }
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -1808,
-        -16
-      ],
-      "id": "5b72d476-84ac-4625-a1e3-082b9a020081",
-      "name": "Set Conversation State"
-    },
-    {
-      "parameters": {
         "chatId": "={{ $('Parse Trigger Type').item.json.callbackData.chat_id }}",
         "text": "=✏️ <b>LinkedIn Digest İçeriği Düzenleme</b>\n\nAşağıdaki içeriği istediğiniz gibi düzenleyip bana geri gönderin.\n\n📝 <b>Mevcut İçerik:</b>\n\n{{ $('Fetch Digest by ID').item.json.suggested_content }}\n\n━━━━━━━━━━━━━━━━━━━━\n\n<b>📋 Nasıl Düzenlerim?</b>\n1️⃣ Yukarıdaki içeriği kopyalayın\n2️⃣ İstediğiniz değişiklikleri yapın\n3️⃣ Düzenlenmiş içeriği bu sohbete GÖNDERİN (metin olarak)\n\n<b>⚠️ Önemli Notlar:</b>\n• Maksimum 3000 karakter\n• Emoji ve formatlamalar korunur\n• Hashtag'leri korumayı unutmayın\n• İptal etmek için /menu yazın\n\n<b>⏱️ 10 dakika içinde göndermezseniz işlem iptal olur.</b>",
         "additionalFields": {
@@ -958,6 +927,51 @@
       ],
       "id": "343c4a9c-687a-4a33-b538-1d3a6945c4b2",
       "name": "Clean Content for LinkedIn"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://cemkoyluoglu.codes/api/conversation-state",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 7ed06716732ddc6bdd7d1d76694d738c0ce66ee001255641ac18f09d8edefce5"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "={{ $('Parse Trigger Type').item.json.callbackData.chat_id }}"
+            },
+            {
+              "name": "step",
+              "value": "awaiting_digest_edit"
+            },
+            {
+              "name": "digest_id",
+              "value": "={{ $('Fetch Digest by ID').item.json.id }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1792,
+        -32
+      ],
+      "id": "84576065-ef9b-450e-8eab-b6f788b9a17f",
+      "name": "Set Conversation State"
     }
   ],
   "connections": {
@@ -1278,22 +1292,22 @@
         ]
       ]
     },
-    "Set Conversation State": {
+    "Clean Content for LinkedIn": {
       "main": [
         [
           {
-            "node": "Send Edit Instructions",
+            "node": "Post to LinkedIn",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Clean Content for LinkedIn": {
+    "Set Conversation State": {
       "main": [
         [
           {
-            "node": "Post to LinkedIn",
+            "node": "Send Edit Instructions",
             "type": "main",
             "index": 0
           }
