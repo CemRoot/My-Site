@@ -4,12 +4,13 @@
 CREATE TABLE IF NOT EXISTS conversation_states (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id BIGINT NOT NULL, -- Telegram user ID
-  step TEXT NOT NULL, -- Current step: 'awaiting_url', 'confirm_source', 'awaiting_original_source'
+  step TEXT NOT NULL, -- Current step: 'awaiting_url', 'confirm_source', 'awaiting_original_source', 'awaiting_digest_edit'
   article_url TEXT, -- The article URL being processed
   original_source TEXT, -- Custom original source URL (if different)
+  digest_id BIGINT, -- LinkedIn digest ID (for digest editing workflow)
   created_at TIMESTAMPTZ DEFAULT NOW(),
   expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '10 minutes'), -- Auto-expire after 10 minutes
-  
+
   CONSTRAINT unique_user_conversation UNIQUE (user_id)
 );
 
