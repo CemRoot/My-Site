@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Github, Linkedin, Download, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
+import { OptimizedImage } from './OptimizedImage';
 import portraitImage from '../assets/b2434507c36da971cecf1c8e91f157fb86abbf62.png';
 
 export function Hero() {
@@ -17,11 +18,12 @@ export function Hero() {
   const [scrambledText, setScrambledText] = useState(roles[0]);
   const [isScrambling, setIsScrambling] = useState(false);
   
-  // Mouse tracking for 3D portrait effect - optimized with RAF
+  // Mouse tracking for 3D portrait effect - optimized with RAF and debouncing
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
   const rafRef = useRef<number>();
   const lastUpdateRef = useRef<number>(0);
+  const mousePosRef = useRef({ x: 0, y: 0 }); // Use ref to avoid state updates on every move
 
   // Auto-rotate roles every 3 seconds
   useEffect(() => {
@@ -75,21 +77,26 @@ export function Hero() {
     return () => cancelAnimationFrame(animationFrame);
   }, [currentRoleIndex]);
   
-  // Throttled mouse handler with RAF
+  // Highly optimized mouse handler with RAF and aggressive throttling
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const now = performance.now();
-    // Throttle to max 60fps (16ms)
-    if (now - lastUpdateRef.current < 16) return;
-    
+    // Aggressive throttle to 30fps (33ms) for better performance
+    if (now - lastUpdateRef.current < 33) return;
+
     if (rafRef.current) {
       cancelAnimationFrame(rafRef.current);
     }
-    
+
     rafRef.current = requestAnimationFrame(() => {
       const rect = e.currentTarget.getBoundingClientRect();
       const x = (e.clientX - rect.left - rect.width / 2) / rect.width;
       const y = (e.clientY - rect.top - rect.height / 2) / rect.height;
-      setMousePos({ x, y });
+
+      // Only update state if change is significant (>0.05 difference)
+      if (Math.abs(mousePosRef.current.x - x) > 0.05 || Math.abs(mousePosRef.current.y - y) > 0.05) {
+        mousePosRef.current = { x, y };
+        setMousePos({ x, y });
+      }
       lastUpdateRef.current = now;
     });
   }, []);
@@ -236,21 +243,23 @@ export function Hero() {
               
               {/* Liquid Glass Frame - REMOVED overflow-hidden */}
               <div className="relative rounded-3xl liquid-border">
-                {/* Image - POP OUT EFFECT with MOUSE TRACKING */}
-                <img
+                {/* Image - POP OUT EFFECT with MOUSE TRACKING - Optimized with modern formats */}
+                <OptimizedImage
                   src={portraitImage}
                   alt="Cem Koyluoglu - AI Engineer"
                   className="w-full h-auto relative rounded-3xl"
                   loading="eager"
                   fetchPriority="high"
+                  width={800}
+                  height={800}
                   style={{
-                    transform: isHovering 
+                    transform: isHovering
                       ? `perspective(1200px) translateZ(60px) translateY(-20px) translateX(12px) rotateY(${-8 + mousePos.x * 10}deg) rotateX(${4 - mousePos.y * 10}deg) scale(1.12)`
                       : 'perspective(1200px) translateZ(40px) translateY(-12px) translateX(8px) rotateY(-5deg) rotateX(3deg) scale(1.08)',
                     transformStyle: 'preserve-3d',
                     transition: isHovering ? 'transform 0.15s ease-out, box-shadow 0.3s ease' : 'transform 0.7s ease-out, box-shadow 0.7s ease',
                     zIndex: 50,
-                    boxShadow: isHovering 
+                    boxShadow: isHovering
                       ? `
                         0 50px 100px -20px rgba(0, 0, 0, 0.9),
                         -40px 30px 80px -10px rgba(91, 231, 255, 0.7),

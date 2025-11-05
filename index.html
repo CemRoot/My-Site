@@ -51,11 +51,21 @@
     
     <!-- DNS Prefetch & Preconnect for faster external resources -->
     <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
     <link rel="dns-prefetch" href="https://vercel.live" />
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
-    
-    <!-- Resource hints for critical assets -->
-    <link rel="preload" href="/favicon.png" as="image" type="image/png" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Preload critical resources for LCP optimization -->
+    <link rel="preload" href="/src/main.tsx" as="script" type="module" />
+    <link rel="preload" href="/src/index.css" as="style" />
+
+    <!-- Preload hero portrait image - critical for LCP -->
+    <link rel="preload" href="/src/assets/b2434507c36da971cecf1c8e91f157fb86abbf62.webp" as="image" type="image/webp" />
+    <link rel="preload" href="/src/assets/b2434507c36da971cecf1c8e91f157fb86abbf62.avif" as="image" type="image/avif" />
+
+    <!-- Prefetch non-critical resources -->
+    <link rel="prefetch" href="/src/assets/5a044018a2d01618456d3b6a76d961bdd5099599.webp" as="image" type="image/webp" />
   </head>
 
   <body>

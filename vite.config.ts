@@ -38,8 +38,21 @@
       'import.meta.env.VITE_APP_VERSION': JSON.stringify(env.VITE_APP_VERSION || env.VERCEL_GIT_COMMIT_SHA || 'unknown'),
     },
     optimizeDeps: {
-      include: ['lucide-react'],
-      exclude: [],
+      include: [
+        'lucide-react',
+        'react',
+        'react-dom',
+        'react-router-dom',
+      ],
+      exclude: [
+        '@vercel/analytics',
+        '@vercel/speed-insights',
+      ],
+    },
+    // Enable esbuild optimizations
+    esbuild: {
+      logOverride: { 'this-is-undefined-in-esm': 'silent' },
+      treeShaking: true,
     },
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
@@ -100,12 +113,56 @@
           drop_console: mode === 'production',
           drop_debugger: true,
           pure_funcs: mode === 'production' ? ['console.log', 'console.info'] : [],
+          passes: 2, // Multiple passes for better compression
+        },
+        mangle: {
+          safari10: true,
         },
       },
-      // Manual chunk splitting for better caching
+      // Manual chunk splitting for better caching and performance
       rollupOptions: {
         output: {
-          manualChunks: undefined, // Let Vite handle chunking automatically
+          manualChunks: (id) => {
+            // Vendor chunks - split large libraries
+            if (id.includes('node_modules')) {
+              // React core - critical, keep together
+              if (id.includes('react') || id.includes('react-dom')) {
+                return 'vendor-react';
+              }
+
+              // Radix UI - group all radix components together
+              if (id.includes('@radix-ui')) {
+                return 'vendor-radix';
+              }
+
+              // Analytics and monitoring - can be loaded later
+              if (id.includes('@vercel') || id.includes('@sentry')) {
+                return 'vendor-analytics';
+              }
+
+              // Router - critical
+              if (id.includes('react-router')) {
+                return 'vendor-router';
+              }
+
+              // UI utilities
+              if (id.includes('lucide-react') || id.includes('class-variance-authority') || id.includes('clsx') || id.includes('tailwind-merge')) {
+                return 'vendor-ui-utils';
+              }
+
+              // Large libraries
+              if (id.includes('gsap')) {
+                return 'vendor-gsap';
+              }
+
+              // Other vendor code
+              return 'vendor-misc';
+            }
+          },
+          // Optimize chunk names for better caching
+          chunkFileNames: 'assets/[name]-[hash].js',
+          entryFileNames: 'assets/[name]-[hash].js',
+          assetFileNames: 'assets/[name]-[hash].[ext]',
         },
       },
       // Chunk size warnings

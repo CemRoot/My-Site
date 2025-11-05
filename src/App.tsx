@@ -1,7 +1,6 @@
 import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ArrowUp } from 'lucide-react';
-import { Analytics } from '@vercel/analytics/react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { SEO } from './components/SEO';
@@ -20,6 +19,11 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 
 // Lazy load ChatWidget - it's heavy and not immediately needed
 const ChatWidget = lazy(() => import('./components/ChatWidget'));
+
+// Lazy load Analytics - load after initial render to improve FCP/LCP
+const Analytics = lazy(() =>
+  import('@vercel/analytics/react').then((mod) => ({ default: mod.Analytics }))
+);
 
 // Loading fallback component
 function RouteLoadingFallback() {
@@ -98,8 +102,10 @@ export default function App() {
           {/* Toast Notifications */}
           <Toaster />
 
-          {/* Vercel Analytics */}
-          <Analytics />
+          {/* Vercel Analytics - Lazy loaded to not block initial render */}
+          <Suspense fallback={null}>
+            <Analytics />
+          </Suspense>
         </div>
       </PageContextProvider>
     </Router>
