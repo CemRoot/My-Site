@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 
 interface OptimizedImageProps {
   src: string;
+  srcWebp?: string;
+  srcAvif?: string;
   alt: string;
   className?: string;
   loading?: 'lazy' | 'eager';
@@ -13,10 +15,19 @@ interface OptimizedImageProps {
 
 /**
  * Optimized Image Component with modern format support
- * Automatically uses WebP/AVIF when available, falls back to original
+ * Works correctly with Vite's asset hashing by accepting separate imports for each format
+ *
+ * Usage:
+ * import imgPng from './image.png';
+ * import imgWebp from './image.webp';
+ * import imgAvif from './image.avif';
+ *
+ * <OptimizedImage src={imgPng} srcWebp={imgWebp} srcAvif={imgAvif} ... />
  */
 export function OptimizedImage({
   src,
+  srcWebp,
+  srcAvif,
   alt,
   className = '',
   loading = 'lazy',
@@ -27,18 +38,6 @@ export function OptimizedImage({
 }: OptimizedImageProps) {
   const [imageSrc, setImageSrc] = useState(src);
   const [isLoaded, setIsLoaded] = useState(false);
-
-  // Generate WebP and AVIF paths (if they exist)
-  const getModernFormats = (originalSrc: string) => {
-    const withoutExt = originalSrc.replace(/\.(png|jpg|jpeg)$/i, '');
-    return {
-      avif: `${withoutExt}.avif`,
-      webp: `${withoutExt}.webp`,
-      original: originalSrc,
-    };
-  };
-
-  const formats = getModernFormats(src);
 
   useEffect(() => {
     // Preload critical images
@@ -52,10 +51,10 @@ export function OptimizedImage({
   return (
     <picture>
       {/* AVIF - best compression, modern browsers */}
-      <source type="image/avif" srcSet={formats.avif} />
+      {srcAvif && <source type="image/avif" srcSet={srcAvif} />}
 
       {/* WebP - good compression, wider support */}
-      <source type="image/webp" srcSet={formats.webp} />
+      {srcWebp && <source type="image/webp" srcSet={srcWebp} />}
 
       {/* Original format - fallback */}
       <img
@@ -70,7 +69,7 @@ export function OptimizedImage({
         onLoad={() => setIsLoaded(true)}
         onError={() => {
           // Fallback to original if modern formats fail
-          setImageSrc(formats.original);
+          setImageSrc(src);
         }}
         decoding={loading === 'eager' ? 'sync' : 'async'}
       />

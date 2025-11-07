@@ -2,7 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Github, Linkedin, Download, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 import { OptimizedImage } from './OptimizedImage';
-import portraitImage from '../assets/b2434507c36da971cecf1c8e91f157fb86abbf62.png';
+
+// Import all image formats for Vite's asset hashing
+import portraitPng from '../assets/b2434507c36da971cecf1c8e91f157fb86abbf62.png';
+import portraitWebp from '../assets/b2434507c36da971cecf1c8e91f157fb86abbf62.webp';
+import portraitAvif from '../assets/b2434507c36da971cecf1c8e91f157fb86abbf62.avif';
 
 export function Hero() {
   const roles = [
@@ -245,7 +249,9 @@ export function Hero() {
               <div className="relative rounded-3xl liquid-border">
                 {/* Image - POP OUT EFFECT with MOUSE TRACKING - Optimized with modern formats */}
                 <OptimizedImage
-                  src={portraitImage}
+                  src={portraitPng}
+                  srcWebp={portraitWebp}
+                  srcAvif={portraitAvif}
                   alt="Cem Koyluoglu - AI Engineer"
                   className="w-full h-auto relative rounded-3xl"
                   loading="eager"

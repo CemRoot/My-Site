@@ -2,7 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Newspaper } from 'lucide-react';
 import { Button } from './ui/button';
-import coinLogo from '../assets/5a044018a2d01618456d3b6a76d961bdd5099599.png';
+import { OptimizedImage } from './OptimizedImage';
+
+// Import all logo formats for Vite's asset hashing
+import coinLogoPng from '../assets/5a044018a2d01618456d3b6a76d961bdd5099599.png';
+import coinLogoWebp from '../assets/5a044018a2d01618456d3b6a76d961bdd5099599.webp';
+import coinLogoAvif from '../assets/5a044018a2d01618456d3b6a76d961bdd5099599.avif';
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -79,12 +84,17 @@ export function Navbar() {
                       animation: 'coinFlip 6s ease-in-out infinite',
                     }}
                   >
-                    {/* Coin Image */}
-                    <img
-                      src={coinLogo}
+                    {/* Coin Image - Optimized with modern formats */}
+                    <OptimizedImage
+                      src={coinLogoPng}
+                      srcWebp={coinLogoWebp}
+                      srcAvif={coinLogoAvif}
                       alt="CK Coin"
                       className="w-full h-full object-cover rounded-full"
                       loading="lazy"
+                      fetchPriority="low"
+                      width={48}
+                      height={48}
                       style={{
                         filter: 'drop-shadow(0 0 15px rgba(255, 215, 0, 0.5)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6)) brightness(1.1) contrast(1.15)',
                         transition: 'all 0.3s ease',
