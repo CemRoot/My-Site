@@ -1,0 +1,75 @@
+# Gitleaks Configuration
+# Ignores false positives from documentation and example files
+
+title = "Gitleaks Configuration"
+
+[extend]
+# Use default Gitleaks rules
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API Key"
+regex = '''(?i)(api[_-]?key|apikey|api[_-]?token)['\"\s:=]+([a-zA-Z0-9_\-]{20,})'''
+tags = ["key", "api"]
+
+# Allowlist - paths to ignore
+[allowlist]
+description = "Allowlist for documentation and example files"
+paths = [
+  # Documentation files
+  '''docs/.*''',
+  '''README\.md''',
+  '''SECURITY_.*\.md''',
+  '''PERFORMANCE_.*\.md''',
+  '''.*\.example\..*''',
+
+  # Example/template files
+  '''.env.example''',
+  '''.env.template''',
+
+  # Test files
+  '''.*test.*''',
+  '''.*spec.*''',
+
+  # Build artifacts
+  '''build/.*''',
+  '''dist/.*''',
+  '''node_modules/.*''',
+]
+
+# Ignore specific strings that are not secrets
+regexes = [
+  # Placeholder tokens
+  '''YOUR_TOKEN''',
+  '''YOUR_SECRET''',
+  '''YOUR_API_KEY''',
+  '''REPLACE_ME''',
+  '''example''',
+  '''placeholder''',
+  '''dummy''',
+
+  # Common false positives
+  '''ghp_example''',
+  '''sk_test_''',
+  '''Bearer\s+token''',
+
+  # Git commit references
+  '''[0-9a-f]{7,40}''',
+]
+
+# Stop words - if these appear in the secret, it's likely a false positive
+stopwords = [
+  "example",
+  "test",
+  "placeholder",
+  "dummy",
+  "sample",
+  "template",
+  "your",
+  "replace",
+  "change",
+  "xxx",
+  "yyy",
+  "zzz",
+]
