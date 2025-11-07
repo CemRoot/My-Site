@@ -86,6 +86,9 @@ export function Hero() {
     }
     
     rafRef.current = requestAnimationFrame(() => {
+      // Null check to prevent getBoundingClientRect error
+      if (!e.currentTarget) return;
+      
       const rect = e.currentTarget.getBoundingClientRect();
       const x = (e.clientX - rect.left - rect.width / 2) / rect.width;
       const y = (e.clientY - rect.top - rect.height / 2) / rect.height;
