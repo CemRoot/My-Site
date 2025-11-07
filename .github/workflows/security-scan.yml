@@ -56,26 +56,28 @@ jobs:
         with:
           fail-on-severity: moderate
 
-  codeql-analysis:
-    name: CodeQL Security Analysis
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: javascript
-          queries: security-and-quality
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+  # CodeQL analysis disabled - requires GitHub Advanced Security
+  # Uncomment when Advanced Security is enabled
+  # codeql-analysis:
+  #   name: CodeQL Security Analysis
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     actions: read
+  #     contents: read
+  #     security-events: write
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Initialize CodeQL
+  #       uses: github/codeql-action/init@v3
+  #       with:
+  #         languages: javascript
+  #         queries: security-and-quality
+  #
+  #     - name: Perform CodeQL Analysis
+  #       uses: github/codeql-action/analyze@v3
 
   secret-scan:
     name: Secret Scanning
