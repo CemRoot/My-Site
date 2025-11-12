@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/react';
 import { Component, ReactNode } from 'react';
 import { Button } from './ui/button';
+import { reportReactError } from '../lib/frontend-monitor';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -37,6 +38,9 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
       });
       Sentry.captureException(error);
     });
+
+    // Report to frontend monitoring (Telegram notification)
+    reportReactError(error, errorInfo);
 
     this.setState({
       error,
