@@ -515,9 +515,11 @@ export async function handleN8nStatusAction() {
     console.log('Status calculated:', status);
     const { startDate, endDate, durationDays, daysPassed, daysRemaining, isExpired } = status;
 
-    // Progress bar
-    const progress = Math.round((daysPassed / durationDays) * 100);
-    const progressBar = '▓'.repeat(Math.floor(progress / 10)) + '░'.repeat(10 - Math.floor(progress / 10));
+    // Progress bar (safe for expired trials)
+    const progress = Math.min(100, Math.max(0, Math.round((daysPassed / durationDays) * 100)));
+    const filledBars = Math.min(10, Math.max(0, Math.floor(progress / 10)));
+    const emptyBars = Math.max(0, 10 - filledBars);
+    const progressBar = '▓'.repeat(filledBars) + '░'.repeat(emptyBars);
 
     let statusText = `
 🤖 <b>n8n DENEME SÜRESİ DURUMU</b>
