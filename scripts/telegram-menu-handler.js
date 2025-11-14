@@ -505,10 +505,14 @@ export async function handleN8nStatusAction() {
   try {
     await sendTelegramMessage('🔍 <b>n8n Durumu Kontrol Ediliyor...</b>\n\nLütfen bekleyin...');
 
+    console.log('Importing n8n-trial-status module...');
+    
     // Import n8n trial status functions
     const { calculateRemainingDays } = await import('./n8n-trial-status.js');
     
+    console.log('Calculating remaining days...');
     const status = await calculateRemainingDays();
+    console.log('Status calculated:', status);
     const { startDate, endDate, durationDays, daysPassed, daysRemaining, isExpired } = status;
 
     // Progress bar
@@ -594,10 +598,17 @@ Sistem normal çalışıyor. ${daysRemaining <= 7 ? 'Hazırlık yapmaya başlaya
     }
 
   } catch (error) {
+    console.error('❌ n8n status error:', error);
+    console.error('Error stack:', error.stack);
+    
     await sendTelegramMessage(
       `❌ <b>n8n Durumu Alınamadı!</b>\n\n` +
-      `<code>${error.message}</code>\n\n` +
-      `Lütfen Supabase bağlantısını kontrol edin.`,
+      `<b>Hata:</b> <code>${error.message}</code>\n\n` +
+      `<b>Detay:</b> ${error.stack ? error.stack.split('\n')[0] : 'Bilinmiyor'}\n\n` +
+      `💡 Kontrol edin:\n` +
+      `• Supabase system_settings tablosu var mı?\n` +
+      `• SUPABASE_SERVICE_ROLE_KEY doğru mu?\n` +
+      `• Vercel env variables güncel mi?`,
       { reply_markup: getSystemManagementKeyboard() }
     );
   }

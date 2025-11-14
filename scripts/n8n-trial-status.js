@@ -357,8 +357,10 @@ async function main() {
   }
 }
 
-// Run main function when script is executed directly
-main();
+// Only run main when executed directly (not when imported)
+if (process.argv[1]?.includes('n8n-trial-status.js')) {
+  main();
+}
 
 // Export functions for use in other modules
 export {
