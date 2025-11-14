@@ -357,10 +357,8 @@ async function main() {
   }
 }
 
-// Run if called directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main();
-}
+// Run main function when script is executed directly
+main();
 
 // Export functions for use in other modules
 export {
