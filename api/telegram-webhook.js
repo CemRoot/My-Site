@@ -267,6 +267,18 @@ module.exports = async function handler(req, res) {
             case 'add_article':
               await menuHandler.handleAddArticleAction(fromId);
               break;
+            case 'system_management':
+              await menuHandler.handleSystemManagementMenu();
+              break;
+            case 'n8n_status':
+              await menuHandler.handleN8nStatusAction();
+              break;
+            case 'webhook_reset':
+              await menuHandler.handleWebhookResetAction();
+              break;
+            case 'n8n_trial_reset':
+              await menuHandler.handleN8nTrialResetAction();
+              break;
             case 'fix_sources':
               await menuHandler.sendTelegramMessage(
                 '🔧 <b>Source Düzeltme</b>\n\n' +

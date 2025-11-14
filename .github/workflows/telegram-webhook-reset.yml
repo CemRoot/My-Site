@@ -1,0 +1,121 @@
+name: Telegram Webhook Reset
+
+# Manual trigger only (from Telegram bot)
+on:
+  workflow_dispatch:
+
+# Prevent multiple runs
+concurrency:
+  group: telegram-webhook-reset
+  cancel-in-progress: true
+
+jobs:
+  reset-webhook:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: 📦 Install dependencies
+        run: npm ci
+      
+      - name: 🔄 Reset Telegram webhook
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          WEBHOOK_URL: https://cemkoyluoglu.codes/api/telegram-webhook
+        run: |
+          echo "🔄 Starting Telegram webhook reset..."
+          echo "📅 Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          echo "🌐 Webhook URL: ${WEBHOOK_URL}"
+          echo ""
+          
+          node scripts/reset-telegram-webhook.js reset
+          
+          echo ""
+          echo "✅ Webhook reset completed"
+      
+      - name: 📝 Update last reset date in Supabase
+        if: success()
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "📝 Updating last reset date in database..."
+          
+          # Create a simple Node.js script to update Supabase
+          cat > update-reset-date.js << 'EOF'
+          import { createClient } from '@supabase/supabase-js';
+          
+          const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+          );
+          
+          const today = new Date().toISOString().split('T')[0];
+          
+          const { error } = await supabase
+            .from('system_settings')
+            .update({ 
+              setting_value: today,
+              updated_by: 'github-actions',
+              updated_at: new Date().toISOString()
+            })
+            .eq('setting_key', 'webhook_last_reset_date');
+          
+          if (error) {
+            console.error('Error updating reset date:', error);
+            process.exit(1);
+          }
+          
+          console.log('✅ Last reset date updated:', today);
+          EOF
+          
+          node update-reset-date.js || echo "⚠️ Could not update reset date in database (non-critical)"
+          rm update-reset-date.js
+      
+      - name: ✅ Send success notification to Telegram
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          CURRENT_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          
+          MESSAGE="✅ <b>TELEGRAM WEBHOOK RESET - BAŞARILI</b>%0A%0A🎉 Webhook başarıyla sıfırlandı!%0A⏰ Zaman: ${CURRENT_TIME}%0A%0A<b>📊 Yapılan İşlemler:</b>%0A✅ Eski webhook silindi%0A✅ Pending updates temizlendi%0A✅ Yeni webhook kuruldu%0A✅ Durum doğrulandı%0A%0A<b>🔍 Sonuç:</b>%0A• Webhook URL: cemkoyluoglu.codes/api/telegram-webhook%0A• Pending Updates: 0%0A• Durum: Aktif%0A%0A💚 <b>Telegram botunuz çalışmaya hazır!</b>%0A%0A<i>Artık mesajlarınız kuyrukta sıkışmayacak.</i>"
+          
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=HTML" \
+            -d "disable_web_page_preview=true" > /dev/null
+          
+          echo "📱 Success notification sent to Telegram"
+      
+      - name: ❌ Send failure notification to Telegram
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          CURRENT_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          LOG_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
+          MESSAGE="🚨 <b>TELEGRAM WEBHOOK RESET - HATA!</b>%0A%0A❌ Webhook reset işlemi başarısız oldu%0A⏰ Zaman: ${CURRENT_TIME}%0A🔧 Workflow: Telegram Webhook Reset%0A%0A🔍 <b>Olası Sorunlar:</b>%0A• TELEGRAM_BOT_TOKEN eksik veya hatalı%0A• Telegram API bağlantı sorunu%0A• Webhook URL erişilemez%0A• Internet bağlantısı sorunu%0A%0A💡 <b>Çözüm Önerileri:</b>%0A1. Vercel env variables kontrol edin%0A2. Bot token'ın geçerli olduğunu doğrulayın%0A3. Birkaç dakika sonra tekrar deneyin%0A4. Gerekirse lokal reset yapın:%0A   <code>npm run telegram:reset</code>%0A%0A🔗 <a href='${LOG_URL}'>Log kayıtlarını incele</a>"
+          
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=HTML" \
+            -d "disable_web_page_preview=false" > /dev/null || true
+          
+          echo "📱 Failure notification sent to Telegram"
+          echo "Check the logs: ${LOG_URL}"
+

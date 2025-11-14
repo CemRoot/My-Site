@@ -53,30 +53,47 @@ export async function sendTelegramMessage(text, options = {}) {
 }
 
 /**
- * Main menu keyboard
+ * Main menu keyboard - Reorganized with System Management section
  */
 function getMainMenuKeyboard() {
   return {
     inline_keyboard: [
       [
         { text: '📰 Haberleri Çek', callback_data: 'action_scrape' },
-        { text: '➕ Manuel Haber Ekle', callback_data: 'action_add_article' },
+        { text: '➕ Manuel Ekle', callback_data: 'action_add_article' },
       ],
       [
-        { text: '📱 LinkedIn Posts', callback_data: 'action_linkedin' },
-        { text: '🏥 Sağlık Kontrolü', callback_data: 'action_health' },
+        { text: '📱 LinkedIn', callback_data: 'action_linkedin' },
+        { text: '🔧 Sistem Yönetimi', callback_data: 'action_system_management' },
       ],
       [
-        { text: '📊 Sistem Durumu', callback_data: 'action_status' },
+        { text: '📊 Durum', callback_data: 'action_status' },
         { text: '📈 İstatistikler', callback_data: 'action_stats' },
       ],
       [
         { text: '💾 Veritabanı', callback_data: 'action_database' },
+        { text: 'ℹ️ Yardım', callback_data: 'action_help' },
+      ],
+    ],
+  };
+}
+
+/**
+ * System Management submenu keyboard
+ */
+function getSystemManagementKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: '🤖 n8n Durumu', callback_data: 'action_n8n_status' },
+        { text: '🔄 Webhook Reset', callback_data: 'action_webhook_reset' },
+      ],
+      [
+        { text: '🏥 Sağlık Kontrolü', callback_data: 'action_health' },
         { text: '🔧 GitHub Actions', callback_data: 'action_github' },
       ],
       [
-        { text: 'ℹ️ Yardım', callback_data: 'action_help' },
-        { text: '🔄 Menüyü Yenile', callback_data: 'action_refresh_menu' },
+        { text: '🔙 Ana Menü', callback_data: 'action_refresh_menu' },
       ],
     ],
   };
@@ -89,7 +106,7 @@ export async function handleStartCommand() {
   const welcomeText = `
 🤖 <b>Tech News Bot'a Hoş Geldiniz!</b>
 
-Bu bot ile tech news sistemini tamamen kontrol edebilirsiniz.
+Bu bot ile tüm sistemlerinizi Telegram'dan yönetin!
 
 <b>📋 Menü Komutları:</b>
 /menu - Ana menüyü göster
@@ -100,10 +117,16 @@ Bu bot ile tech news sistemini tamamen kontrol edebilirsiniz.
 
 <b>🎯 Özellikler:</b>
 ✅ Otomatik haber toplama
+✅ LinkedIn digest yönetimi
+✅ n8n trial takibi
+✅ Webhook yönetimi (reset)
 ✅ Sistem sağlığı izleme
 ✅ GitHub Actions kontrolü
-✅ Veritabanı yönetimi
-✅ LinkedIn entegrasyonu
+
+<b>🆕 Yeni!</b> Sistem Yönetimi menüsünden:
+• n8n deneme süresini takip edin
+• Telegram webhook'u resetleyin
+• Tüm sistemi tek yerden yönetin
 
 Başlamak için aşağıdaki menüyü kullanın:`;
 
@@ -121,12 +144,20 @@ export async function handleMenuCommand() {
 
 Yapmak istediğiniz işlemi seçin:
 
-<b>📰 Haberleri Çek</b> - Yeni haberler topla
-<b>🏥 Sağlık Kontrolü</b> - Tüm sistemleri kontrol et
-<b>📊 Sistem Durumu</b> - Hızlı durum özeti
-<b>📈 İstatistikler</b> - Detaylı istatistikler
-<b>🔧 GitHub Actions</b> - Workflow durumu
-<b>💾 Veritabanı</b> - DB bilgileri
+<b>📰 İçerik Yönetimi</b>
+• Haberleri Çek - Yeni haberler topla
+• Manuel Ekle - Tek haber ekle
+
+<b>📱 LinkedIn</b> - Digest yönetimi
+
+<b>🔧 Sistem Yönetimi</b> [Yeni!]
+• n8n Durumu - Trial takibi
+• Webhook Reset - Kuyruk temizle
+• Sağlık Kontrolü - Sistem durumu
+• GitHub Actions - Workflow'lar
+
+<b>📊 Raporlar</b>
+• Durum, İstatistikler, Veritabanı
 
 <i>Butonlara tıklayarak işlem yapabilirsiniz.</i>`;
 
@@ -429,6 +460,247 @@ URL: ${CONFIG.SUPABASE_URL.substring(0, 30)}...`;
     });
   } catch (error) {
     await sendTelegramMessage(`❌ Veritabanı bilgisi alınamadı: ${error.message}`);
+  }
+}
+
+/**
+ * Handle action_system_management - Show System Management submenu
+ */
+export async function handleSystemManagementMenu() {
+  const systemText = `
+🔧 <b>SİSTEM YÖNETİMİ</b>
+
+Sistemlerinizi buradan yönetin:
+
+<b>🤖 n8n Durumu</b>
+• Deneme süresi takibi
+• Kalan gün kontrolü
+• Trial sıfırlama
+
+<b>🔄 Webhook Reset</b>
+• Telegram webhook'u sıfırla
+• Kuyrukta sıkışan mesajları temizle
+• GitHub Actions ile otomatik
+
+<b>🏥 Sağlık Kontrolü</b>
+• Tüm sistemleri kontrol et
+• API durumları
+• Veritabanı bağlantısı
+
+<b>🔧 GitHub Actions</b>
+• Workflow durumları
+• Manuel tetikleme
+
+<i>Yapmak istediğiniz işlemi seçin:</i>`;
+
+  await sendTelegramMessage(systemText, {
+    reply_markup: getSystemManagementKeyboard()
+  });
+}
+
+/**
+ * Handle action_n8n_status - Show n8n trial status
+ */
+export async function handleN8nStatusAction() {
+  try {
+    await sendTelegramMessage('🔍 <b>n8n Durumu Kontrol Ediliyor...</b>\n\nLütfen bekleyin...');
+
+    // Import n8n trial status functions
+    const { calculateRemainingDays } = await import('./n8n-trial-status.js');
+    
+    const status = await calculateRemainingDays();
+    const { startDate, endDate, durationDays, daysPassed, daysRemaining, isExpired } = status;
+
+    // Progress bar
+    const progress = Math.round((daysPassed / durationDays) * 100);
+    const progressBar = '▓'.repeat(Math.floor(progress / 10)) + '░'.repeat(10 - Math.floor(progress / 10));
+
+    let statusText = `
+🤖 <b>n8n DENEME SÜRESİ DURUMU</b>
+
+<b>📅 Tarih Bilgileri:</b>
+Başlangıç: ${startDate}
+Bitiş: ${endDate}
+Toplam süre: ${durationDays} gün
+
+<b>📊 İlerleme:</b>
+${progressBar} ${progress}%
+✅ Geçen: ${daysPassed} gün
+⏳ Kalan: ${daysRemaining} gün
+
+<b>🔔 Durum:</b>`;
+
+    if (isExpired) {
+      statusText += `
+❌ Deneme süresi ${Math.abs(daysRemaining)} gün önce sona erdi!
+
+<b>⚠️ Yapılması Gerekenler:</b>
+1. Yeni n8n hesabı oluştur
+2. Workflow'u yeni hesaba aktar  
+3. Vercel webhook URL'ini güncelle
+4. "14 Günü Yeniden Başlat" butonuna bas
+
+<i>Not: Yeni hesap kurduktan sonra trial'ı sıfırlayın.</i>`;
+      
+      // Add reset button
+      const keyboard = {
+        inline_keyboard: [
+          [
+            { text: '🔄 14 Günü Yeniden Başlat', callback_data: 'action_n8n_trial_reset' }
+          ],
+          [
+            { text: '🔙 Sistem Yönetimi', callback_data: 'action_system_management' }
+          ]
+        ]
+      };
+      
+      await sendTelegramMessage(statusText, { reply_markup: keyboard });
+    } else if (daysRemaining <= 1) {
+      statusText += `
+⚠️ <b>KRİTİK!</b> Deneme süreniz yarın bitiyor!
+
+Yeni n8n hesabı için hazırlık yapın:
+• Workflow'u export edin
+• Yeni hesap oluşturun
+• Webhook URL'lerini güncelleyin
+
+<i>Süre bitince trial'ı sıfırlayabilirsiniz.</i>`;
+      
+      await sendTelegramMessage(statusText, {
+        reply_markup: getSystemManagementKeyboard()
+      });
+    } else if (daysRemaining <= 3) {
+      statusText += `
+⚠️ <b>UYARI!</b> ${daysRemaining} gün kaldı.
+
+Yeni n8n hesabı için hazırlık yapmayı unutmayın!
+
+<i>Günlük otomatik kontroller devam edecek.</i>`;
+      
+      await sendTelegramMessage(statusText, {
+        reply_markup: getSystemManagementKeyboard()
+      });
+    } else {
+      statusText += `
+✅ <b>Her şey yolunda!</b> ${daysRemaining} gün kaldı.
+
+Sistem normal çalışıyor. ${daysRemaining <= 7 ? 'Hazırlık yapmaya başlayabilirsiniz.' : ''}
+
+<i>Günlük otomatik kontroller aktif.</i>`;
+      
+      await sendTelegramMessage(statusText, {
+        reply_markup: getSystemManagementKeyboard()
+      });
+    }
+
+  } catch (error) {
+    await sendTelegramMessage(
+      `❌ <b>n8n Durumu Alınamadı!</b>\n\n` +
+      `<code>${error.message}</code>\n\n` +
+      `Lütfen Supabase bağlantısını kontrol edin.`,
+      { reply_markup: getSystemManagementKeyboard() }
+    );
+  }
+}
+
+/**
+ * Handle action_webhook_reset - Trigger GitHub Action to reset webhook
+ */
+export async function handleWebhookResetAction() {
+  try {
+    await sendTelegramMessage(
+      '🔄 <b>Telegram Webhook Reset Başlatılıyor...</b>\n\n' +
+      'GitHub Actions workflow tetikleniyor...\n' +
+      'Bu işlem 1-2 dakika sürebilir.'
+    );
+
+    // Trigger GitHub Actions workflow
+    if (CONFIG.GITHUB_TOKEN) {
+      const [owner, repo] = CONFIG.GITHUB_REPO.split('/');
+      const response = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/actions/workflows/telegram-webhook-reset.yml/dispatches`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${CONFIG.GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ref: 'main'
+          })
+        }
+      );
+
+      if (response.ok) {
+        await sendTelegramMessage(
+          '✅ <b>Webhook Reset Başlatıldı!</b>\n\n' +
+          '📊 GitHub Actions workflow tetiklendi\n' +
+          '⏳ İşlemler:\n' +
+          '  1️⃣ Eski webhook siliniyor...\n' +
+          '  2️⃣ Pending updates temizleniyor...\n' +
+          '  3️⃣ Yeni webhook kuruluyor...\n' +
+          '  4️⃣ Durum doğrulanıyor...\n\n' +
+          '🔔 Tamamlandığında bildirim alacaksınız (30-60 saniye)\n\n' +
+          '<i>GitHub Actions sekmesinden takip edebilirsiniz.</i>',
+          { reply_markup: getSystemManagementKeyboard() }
+        );
+      } else {
+        throw new Error(`GitHub API error: ${response.status}`);
+      }
+    } else {
+      throw new Error('GITHUB_TOKEN not configured');
+    }
+  } catch (error) {
+    await sendTelegramMessage(
+      `❌ <b>Webhook Reset Başlatılamadı!</b>\n\n` +
+      `<code>${error.message}</code>\n\n` +
+      `💡 Alternatif:\n` +
+      `Lokal olarak çalıştırın:\n` +
+      `<code>npm run telegram:reset</code>`,
+      { reply_markup: getSystemManagementKeyboard() }
+    );
+  }
+}
+
+/**
+ * Handle action_n8n_trial_reset - Reset n8n trial period (start new 14 days)
+ */
+export async function handleN8nTrialResetAction() {
+  try {
+    await sendTelegramMessage(
+      '🔄 <b>n8n Trial Sıfırlanıyor...</b>\n\n' +
+      'Yeni 14 günlük süre başlatılıyor...'
+    );
+
+    // Import reset function
+    const { resetTrialPeriod, calculateRemainingDays } = await import('./n8n-trial-status.js');
+    
+    // Reset trial
+    const newStatus = await resetTrialPeriod('telegram-user');
+    
+    const { startDate, endDate, durationDays } = newStatus;
+
+    await sendTelegramMessage(
+      '✅ <b>n8n Trial Sıfırlandı!</b>\n\n' +
+      `📅 <b>Yeni Süre:</b>\n` +
+      `Başlangıç: ${startDate}\n` +
+      `Bitiş: ${endDate}\n` +
+      `Toplam: ${durationDays} gün\n\n` +
+      `💚 Yeni 14 günlük deneme süresi başladı!\n\n` +
+      `⏰ Her gün otomatik kontrol edilecek.\n` +
+      `🔔 ${durationDays - 3} gün sonra uyarı mesajları başlayacak.\n\n` +
+      `<i>Not: Yeni n8n hesabı oluşturduktan sonra bu işlemi yapın.</i>`,
+      { reply_markup: getSystemManagementKeyboard() }
+    );
+
+  } catch (error) {
+    await sendTelegramMessage(
+      `❌ <b>Trial Sıfırlama Başarısız!</b>\n\n` +
+      `<code>${error.message}</code>\n\n` +
+      `Lütfen Supabase bağlantısını kontrol edin.`,
+      { reply_markup: getSystemManagementKeyboard() }
+    );
   }
 }
 

@@ -90,10 +90,13 @@
 #### Interactive Menu System
 - 📰 Manual scraping trigger
 - ➕ Manual article addition
-- 🏥 System health checks
+- 🔧 **System Management** [NEW!]
+  - 🤖 n8n trial tracking
+  - 🔄 Webhook reset (GitHub Actions)
+  - 🏥 Health checks
+  - 🔧 GitHub Actions control
 - 📊 Real-time statistics
 - 💾 Database management
-- 🔧 GitHub Actions control
 - 📱 LinkedIn digest management
 
 </td>
@@ -706,16 +709,19 @@ npm run vercel:status
 - [🔧 General Setup](./docs/SETUP.md) - Initial project setup
 - [💼 LinkedIn n8n Setup](./docs/n8n-setup-instructions.md) - Step-by-step n8n workflow setup
 - [🚨 Vercel Status Monitor](./docs/VERCEL_STATUS_SETUP.md) - Platform monitoring setup
-- [👁️ Sentry Integration](./docs/SENTRY_SETUP.md) - **NEW!** Error tracking & monitoring setup
-- [🔔 Deployment Webhooks](./docs/DEPLOYMENT_WEBHOOK_SETUP.md) - **NEW!** Deployment status notifications
+- [👁️ Sentry Integration](./docs/SENTRY_SETUP.md) - Error tracking & monitoring setup
+- [🔔 Deployment Webhooks](./docs/DEPLOYMENT_WEBHOOK_SETUP.md) - Deployment status notifications
+- [🤖 n8n Trial Management](./docs/N8N_TRIAL_MANAGEMENT.md) - **NEW!** n8n trial tracking & automation
+- [🔄 Telegram Webhook Reset](./docs/TELEGRAM_RESET_GUIDE.md) - **NEW!** Webhook reset guide
 
 ### System Documentation
 - [🏗️ Architecture](./docs/IMPLEMENTATION_SUMMARY.md) - System architecture
 - [🔄 Automation](./docs/SYSTEM_RELIABILITY.md) - Reliability & automation
 - [📊 Monitoring](./docs/TECH_NEWS_MONITORING.md) - Monitoring system
 - [🗃️ Database Schema](./docs/supabase-schema.sql) - PostgreSQL schema
-- [📋 LinkedIn Workflow Guide](./docs/N8N_UNIFIED_WORKFLOW_GUIDE.md) - **NEW!** Unified workflow architecture
-- [📝 Vercel Status Changelog](./docs/CHANGELOG_VERCEL_STATUS.md) - **NEW!** Recent system updates
+- [📋 LinkedIn Workflow Guide](./docs/N8N_UNIFIED_WORKFLOW_GUIDE.md) - Unified workflow architecture
+- [📝 Vercel Status Changelog](./docs/CHANGELOG_VERCEL_STATUS.md) - Recent system updates
+- [🔧 Telegram Webhook System](./docs/TELEGRAM_WEBHOOK_SYSTEM_EXPLAINED.md) - **NEW!** Complete webhook system explanation
 
 ### Deployment Guides
 - [🚀 Deployment Checklist](./docs/DEPLOYMENT_CHECKLIST.md) - Pre-deployment checks
@@ -843,6 +849,15 @@ npm run test:translation        # Test translation quality
 npm run telegram:setup-menu     # Setup bot menu
 npm run telegram:webhook-setup  # Configure webhook
 npm run telegram:webhook-remove # Remove webhook
+npm run telegram:reset          # Reset webhook & clear queue
+npm run telegram:check          # Check webhook status
+```
+
+### n8n Trial Management
+```bash
+npm run n8n:status              # Check trial status (no notification)
+npm run n8n:check               # Check & send Telegram notification
+npm run n8n:reset               # Reset trial period (start new 14 days)
 ```
 
 ### LinkedIn Automation (n8n + Vercel)
@@ -956,6 +971,9 @@ npm run test:webhook            # Test webhook
 - [x] Manual digest creation (Telegram)
 - [x] LinkedIn OAuth integration (n8n)
 - [x] Email newsletter signup
+- [x] n8n trial tracking & management
+- [x] Telegram webhook reset (GitHub Actions)
+- [x] System Management menu (Telegram)
 
 ### 🚧 In Progress
 - [ ] RSS feed generation

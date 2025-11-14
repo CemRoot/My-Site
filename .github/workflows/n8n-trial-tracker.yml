@@ -1,0 +1,104 @@
+name: n8n Trial Tracker
+
+# Daily check of n8n trial period
+on:
+  schedule:
+    # Run at 09:00 UTC every day
+    - cron: '0 9 * * *'
+  
+  # Manual trigger (can be triggered from Telegram)
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: false
+        default: 'check'
+        type: choice
+        options:
+          - check
+          - reset
+          - status
+
+# Prevent multiple runs
+concurrency:
+  group: n8n-trial-tracker
+  cancel-in-progress: true
+
+jobs:
+  check-trial-status:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: 📦 Install dependencies
+        run: npm ci
+      
+      - name: 🔍 Check n8n trial status
+        if: github.event.inputs.action == 'check' || github.event.inputs.action == '' || github.event_name == 'schedule'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "🔍 Checking n8n trial period..."
+          echo "📅 Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          node scripts/n8n-trial-status.js
+      
+      - name: 📊 Show trial status (no notification)
+        if: github.event.inputs.action == 'status'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "📊 Getting trial status..."
+          node scripts/n8n-trial-status.js status
+      
+      - name: 🔄 Reset trial period
+        if: github.event.inputs.action == 'reset'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "🔄 Resetting n8n trial period..."
+          echo "📅 New start date: $(date -u +'%Y-%m-%d')"
+          node scripts/n8n-trial-status.js reset
+      
+      - name: ✅ Job completed
+        if: success()
+        run: |
+          echo "✅ n8n trial tracker completed successfully"
+          echo "⏰ Completed at: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+      
+      - name: ❌ Job failed
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "❌ n8n trial tracker failed"
+          CURRENT_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          LOG_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
+          MESSAGE="🚨 <b>n8n TRIAL TRACKER - HATA!</b>%0A%0A❌ Trial kontrol işlemi başarısız oldu%0A⏰ Zaman: ${CURRENT_TIME}%0A🔧 Workflow: n8n Trial Tracker%0A%0A🔍 <b>Olası Sorunlar:</b>%0A• Supabase bağlantı sorunu%0A• system_settings tablosu eksik%0A• Telegram API hatası%0A%0A🔗 <a href='${LOG_URL}'>Log kayıtlarını incele</a>"
+          
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=HTML" \
+            -d "disable_web_page_preview=false" > /dev/null || true
+          
+          echo "📱 Error notification sent to Telegram"
+
