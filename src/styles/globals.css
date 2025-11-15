@@ -138,12 +138,6 @@ html, body {
       radial-gradient(circle at 80% 80%, rgba(167, 139, 250, 0.03) 0%, transparent 50%);
   }
 
-  @font-face {
-    font-family: 'Inter';
-    font-style: normal;
-    font-weight: 400 700;
-    font-display: swap;
-  }
 }
 
 /**

@@ -53,6 +53,8 @@ export interface ContactMethod {
   href: string;
   color: ColorVariant;
   description: string;
+  meta: string;
+  cta: string;
   featured?: boolean;
 }
 

@@ -78,7 +78,7 @@
 
 @layer theme {
   :root, :host {
-    --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --font-sans: 'Geist Sans', ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     --color-green-500: oklch(.723 .219 149.579);
     --color-black: #000;
@@ -174,6 +174,7 @@
 
   body {
     line-height: inherit;
+    font-family: var(--default-font-family, 'Geist Sans', ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");
   }
 
   hr {
@@ -420,12 +421,6 @@
     background-image: radial-gradient(circle at 20%, #5be7ff08 0%, #0000 50%), radial-gradient(circle at 80% 80%, #a78bfa08 0%, #0000 50%);
   }
 
-  @font-face {
-    font-family: Inter;
-    font-style: normal;
-    font-weight: 400 700;
-    font-display: swap;
-  }
 
   :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) h1 {
     font-size: var(--text-2xl);
@@ -2152,6 +2147,10 @@
 
   .font-\[Space_Grotesk\] {
     font-family: Space Grotesk;
+  }
+
+  .font-\[Hobo_BT\] {
+    font-family: 'Hobo BT', sans-serif;
   }
 
   .font-mono {

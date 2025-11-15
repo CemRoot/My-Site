@@ -293,8 +293,8 @@ function ChatWidget() {
                       <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded-full border-2 border-background animate-pulse" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-medium text-sm sm:text-base truncate">AI Assistant</h3>
-                      <p className="text-xs text-green-500 truncate">● Powered by Cem Koyluoglu</p>
+                      <h3 className="font-medium text-sm sm:text-base truncate font-[Hobo_BT]">AI Assistant</h3>
+                      <p className="text-xs text-green-500 truncate font-[Hobo_BT]">● Powered by Cem Koyluoglu</p>
                     </div>
                   </div>
                   <Button
@@ -338,7 +338,7 @@ function ChatWidget() {
                           : 'bg-accent/10 border border-accent/20 rounded-tr-sm'
                       }`}>
                         <p
-                          className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words"
+                          className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words font-[Hobo_BT]"
                           style={{ 
                             wordBreak: 'break-word', 
                             overflowWrap: 'break-word',
@@ -387,7 +387,7 @@ function ChatWidget() {
                     }}
                     disabled={isLoading || isChatBlocked}
                     rows={2}
-                    className="flex-1 min-w-0 bg-input-background border-primary/20 focus:border-primary/40 rounded-xl resize-none text-base leading-relaxed py-2 px-3"
+                    className="flex-1 min-w-0 bg-input-background border-primary/20 focus:border-primary/40 rounded-xl resize-none text-base leading-relaxed py-2 px-3 font-[Hobo_BT]"
                     style={{ 
                       fontSize: '16px'
                     }}
@@ -403,11 +403,11 @@ function ChatWidget() {
                   </Button>
                 </div>
                 {isChatBlocked && (
-                  <p className="text-xs text-destructive text-center mt-2 leading-relaxed">
+                  <p className="text-xs text-destructive text-center mt-2 leading-relaxed font-[Hobo_BT]">
                     Chat reopens in {remainingBlockMinutes} minute{remainingBlockMinutes > 1 ? 's' : ''}. Ask about Cem's work to chat again!
                   </p>
                 )}
-                <p className="text-xs text-muted-foreground text-center mt-2 leading-relaxed">
+                <p className="text-xs text-muted-foreground text-center mt-2 leading-relaxed font-[Hobo_BT]">
                   <span className="text-primary">🛠️ Hand made</span> by Cem Koyluoglu
                 </p>
               </form>
@@ -451,7 +451,7 @@ function ChatWidget() {
           {!isOpen && (
             <div className="hidden sm:block absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap">
               <div className="px-3 py-2 rounded-xl bg-background/95 backdrop-blur-xl border border-primary/30 shadow-xl">
-                <p className="text-xs text-white">🤖 AI Assistant - Ask me anything!</p>
+                <p className="text-xs text-white font-[Hobo_BT]">🤖 AI Assistant - Ask me anything!</p>
               </div>
             </div>
           )}

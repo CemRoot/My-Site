@@ -146,7 +146,7 @@ export function Navbar() {
                   `}</style>
                 </div>
                 <span 
-                  className="hidden sm:block font-[Space_Grotesk] text-[16px] tracking-wider font-bold"
+                  className="hidden sm:block font-[Hobo_BT] text-[16px] tracking-wider font-bold"
                   style={{
                     background: 'linear-gradient(135deg, #5BE7FF 0%, #A78BFA 50%, #FFB86C 100%)',
                     WebkitBackgroundClip: 'text',
@@ -171,7 +171,8 @@ export function Navbar() {
                   <a
                     key={item.href}
                     href={item.href}
-                    className="px-4 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all duration-200"
+                    className="px-4 py-2 rounded-xl text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-all duration-200"
+                    style={{ fontWeight: 600, letterSpacing: '0.02em' }}
                   >
                     {item.label}
                   </a>
@@ -182,9 +183,10 @@ export function Navbar() {
                   to="/tech-news"
                   className={`px-4 py-2 rounded-xl text-sm flex items-center gap-2 transition-all duration-200 ${
                     location.pathname.startsWith('/tech-news')
-                      ? 'text-primary bg-primary/10 font-medium'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
+                      ? 'text-primary bg-primary/10 font-semibold'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-primary/10 font-semibold'
                   }`}
+                  style={{ fontWeight: 600, letterSpacing: '0.02em' }}
                 >
                   <Newspaper className="w-4 h-4" />
                   Tech News
@@ -194,7 +196,8 @@ export function Navbar() {
                 {!isHomePage && (
                   <Link
                     to="/"
-                    className="px-4 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all duration-200"
+                    className="px-4 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-all duration-200 font-semibold"
+                    style={{ fontWeight: 600, letterSpacing: '0.02em' }}
                   >
                     Home
                   </Link>
@@ -224,8 +227,9 @@ export function Navbar() {
                   <a
                     key={item.href}
                     href={item.href}
-                    className="block px-4 py-3 rounded-xl text-sm text-foreground hover:text-primary hover:bg-primary/10 transition-all duration-200 liquid-shimmer border border-transparent hover:border-primary/30"
+                    className="block px-4 py-3 rounded-xl text-sm text-foreground hover:text-primary hover:bg-primary/10 transition-all duration-200 liquid-shimmer border border-transparent hover:border-primary/30 font-semibold"
                     onClick={() => setIsMobileMenuOpen(false)}
+                    style={{ fontWeight: 600, letterSpacing: '0.02em' }}
                   >
                     {item.label}
                   </a>
@@ -234,12 +238,13 @@ export function Navbar() {
                 {/* Tech News Link */}
                 <Link
                   to="/tech-news"
-                  className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm transition-all duration-200 liquid-shimmer ${
+                  className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm transition-all duration-200 liquid-shimmer font-semibold ${
                     location.pathname.startsWith('/tech-news')
-                      ? 'text-primary bg-primary/10 font-medium border border-primary/30'
+                      ? 'text-primary bg-primary/10 border border-primary/30'
                       : 'text-foreground hover:text-primary hover:bg-primary/10 border border-transparent hover:border-primary/30'
                   }`}
                   onClick={() => setIsMobileMenuOpen(false)}
+                  style={{ fontWeight: 600, letterSpacing: '0.02em' }}
                 >
                   <Newspaper className="w-4 h-4" />
                   Tech News
@@ -249,8 +254,9 @@ export function Navbar() {
                 {!isHomePage && (
                   <Link
                     to="/"
-                    className="block px-4 py-3 rounded-xl text-sm text-foreground hover:text-primary hover:bg-primary/10 transition-all duration-200 liquid-shimmer border border-transparent hover:border-primary/30"
+                    className="block px-4 py-3 rounded-xl text-sm text-foreground hover:text-primary hover:bg-primary/10 transition-all duration-200 liquid-shimmer border border-transparent hover:border-primary/30 font-semibold"
                     onClick={() => setIsMobileMenuOpen(false)}
+                    style={{ fontWeight: 600, letterSpacing: '0.02em' }}
                   >
                     Home
                   </Link>

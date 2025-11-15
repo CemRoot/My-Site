@@ -1,3 +1,4 @@
+import React from 'react';
 import { Brain, Cloud, Cpu, Database, Bot, BarChart3 } from 'lucide-react';
 import { SERVICES } from '../lib/constants/services';
 import { getColorClasses } from '../lib/utils/classNames';
@@ -60,12 +61,12 @@ function ServiceCard({ icon: Icon, title, description, skills, color, featured }
  */
 export function Services() {
   const servicesWithIcons = [
-    { ...SERVICES[0], icon: Brain },
-    { ...SERVICES[1], icon: Cloud },
-    { ...SERVICES[2], icon: Cpu },
-    { ...SERVICES[3], icon: Bot },
-    { ...SERVICES[4], icon: Database },
-    { ...SERVICES[5], icon: BarChart3 },
+    { ...SERVICES[0], icon: Brain, skills: [...SERVICES[0].skills] },
+    { ...SERVICES[1], icon: Cloud, skills: [...SERVICES[1].skills] },
+    { ...SERVICES[2], icon: Cpu, skills: [...SERVICES[2].skills] },
+    { ...SERVICES[3], icon: Bot, skills: [...SERVICES[3].skills] },
+    { ...SERVICES[4], icon: Database, skills: [...SERVICES[4].skills] },
+    { ...SERVICES[5], icon: BarChart3, skills: [...SERVICES[5].skills] },
   ];
 
   return (
@@ -102,35 +103,6 @@ export function Services() {
           {servicesWithIcons.map((service) => (
             <ServiceCard key={service.id} {...service} />
           ))}
-        </div>
-
-        {/* Call to Action */}
-        <div className="relative group max-w-4xl mx-auto">
-          <div className="absolute -inset-2 bg-gradient-to-r from-primary via-secondary to-accent rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
-          <div className="relative p-8 rounded-3xl liquid-glass-strong border border-primary/30 text-center">
-            <h3 className="text-2xl mb-3 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-              Ready to Build Something Amazing?
-            </h3>
-            <p className="text-muted-foreground mb-6">
-              Whether you need a custom AI solution, cloud migration, or system automation - I'm here to help turn your vision into reality.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <a
-                href="#contact"
-                className="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-black transition-all duration-300 hover:scale-105 inline-flex items-center gap-2"
-              >
-                Start a Project
-              </a>
-              <a
-                href="https://wa.me/353873445918"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-6 py-3 rounded-xl liquid-glass-strong border border-accent/30 text-accent hover:border-accent/50 transition-all duration-300 hover:scale-105 inline-flex items-center gap-2"
-              >
-                Quick Consultation
-              </a>
-            </div>
-          </div>
         </div>
       </div>
     </section>

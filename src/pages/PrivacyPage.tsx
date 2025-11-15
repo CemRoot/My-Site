@@ -51,7 +51,7 @@ function PrivacyPage() {
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 border border-primary/30 flex items-center justify-center">
                 <Shield className="w-6 h-6 text-primary" />
               </div>
-              <h1 className="text-3xl sm:text-4xl">Privacy Policy</h1>
+              <h1 className="text-3xl sm:text-4xl font-[Hobo_BT]">Privacy Policy</h1>
             </div>
             <p className="text-muted-foreground">Last updated: October 12, 2025</p>
             <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
@@ -65,7 +65,7 @@ function PrivacyPage() {
         <div className="space-y-8">
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">1. Introduction</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">1. Introduction</h2>
             <p className="text-muted-foreground leading-relaxed">
               This Privacy Policy explains how Cem Koyluoglu ("we," "us," or "our") collects, uses, and protects your 
               personal information when you visit our website or use our services. We are committed to protecting your 
@@ -79,7 +79,7 @@ function PrivacyPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">2. Information We Collect</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">2. Information We Collect</h2>
             <p className="text-muted-foreground leading-relaxed">
               We may collect the following types of personal information:
             </p>
@@ -109,7 +109,7 @@ function PrivacyPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">3. How We Use Your Information</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">3. How We Use Your Information</h2>
             <p className="text-muted-foreground leading-relaxed">
               We use your personal information for the following purposes:
             </p>
@@ -124,7 +124,7 @@ function PrivacyPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">4. Legal Basis for Processing (GDPR)</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">4. Legal Basis for Processing (GDPR)</h2>
             <p className="text-muted-foreground leading-relaxed">
               Under GDPR, we process your personal data based on:
             </p>
@@ -138,7 +138,7 @@ function PrivacyPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">5. Data Storage and Security</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">5. Data Storage and Security</h2>
             <p className="text-muted-foreground leading-relaxed">
               We implement appropriate technical and organizational measures to protect your personal data:
             </p>
@@ -155,7 +155,7 @@ function PrivacyPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">6. Data Retention</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">6. Data Retention</h2>
             <p className="text-muted-foreground leading-relaxed">
               We retain your personal data only for as long as necessary:
             </p>
@@ -171,7 +171,7 @@ function PrivacyPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">7. Your GDPR Rights</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">7. Your GDPR Rights</h2>
             <p className="text-muted-foreground leading-relaxed">
               As a data subject under GDPR, you have the following rights:
             </p>
@@ -191,7 +191,7 @@ function PrivacyPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">8. Third-Party Services</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">8. Third-Party Services</h2>
             <p className="text-muted-foreground leading-relaxed">
               We may use the following third-party services that may collect data:
             </p>
@@ -207,7 +207,7 @@ function PrivacyPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">9. Cookies</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">9. Cookies</h2>
             <p className="text-muted-foreground leading-relaxed">
               This website uses minimal cookies for essential functionality:
             </p>
@@ -222,7 +222,7 @@ function PrivacyPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">10. International Data Transfers</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">10. International Data Transfers</h2>
             <p className="text-muted-foreground leading-relaxed">
               Your data is primarily stored and processed within the European Economic Area (EEA). If data is transferred 
               outside the EEA, we ensure adequate safeguards are in place, such as Standard Contractual Clauses approved 
@@ -232,7 +232,7 @@ function PrivacyPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">11. Children's Privacy</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">11. Children's Privacy</h2>
             <p className="text-muted-foreground leading-relaxed">
               This website is not intended for children under 16 years of age. We do not knowingly collect personal 
               information from children. If you believe we have collected data from a child, please contact us immediately.
@@ -241,7 +241,7 @@ function PrivacyPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">12. Changes to Privacy Policy</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">12. Changes to Privacy Policy</h2>
             <p className="text-muted-foreground leading-relaxed">
               We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated 
               "Last Updated" date. We encourage you to review this policy periodically.
@@ -250,7 +250,7 @@ function PrivacyPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">13. Contact & Data Protection Officer</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">13. Contact & Data Protection Officer</h2>
             <p className="text-muted-foreground leading-relaxed">
               For any privacy-related questions, concerns, or to exercise your GDPR rights, please contact:
             </p>

@@ -212,26 +212,26 @@ function TechNews() {
   return (
     <main
       className="min-h-screen bg-gradient-to-b from-background to-muted/20 pb-24"
-      style={{ paddingTop: 'calc(var(--nav-height, 120px) + 56px)' }}
+      style={{ paddingTop: 'calc(var(--nav-height, 120px) + 56px)', fontFamily: "'Satoshi', sans-serif" }}
     >
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
             <TrendingUp className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Latest Tech News</span>
+            <span className="text-sm font-medium text-primary" style={{ fontFamily: "'Satoshi', sans-serif" }}>Latest Tech News</span>
           </div>
           
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-blue-500 to-purple-500 bg-clip-text text-transparent">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-blue-500 to-purple-500 bg-clip-text text-transparent antialiased leading-tight" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700, lineHeight: '1.3', paddingTop: '0.15em', paddingBottom: '0.2em', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', overflow: 'visible' }}>
             Tech Insights
           </h1>
           
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto" style={{ fontFamily: "'Satoshi', sans-serif" }}>
             Stay updated with the latest technology news, trends, and innovations from around the world
           </p>
           
           {newsData && newsData.lastUpdated && (
-            <div className="mt-6 flex items-center justify-center gap-4 text-sm text-muted-foreground">
+            <div className="mt-6 flex items-center justify-center gap-4 text-sm text-muted-foreground" style={{ fontFamily: "'Satoshi', sans-serif" }}>
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 <span>
@@ -269,17 +269,18 @@ function TechNews() {
 
         {/* Error State */}
         {error && !loading && (
-          <div className="text-center py-20">
+          <div className="text-center py-20" style={{ fontFamily: "'Satoshi', sans-serif" }}>
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-destructive/10 mb-4">
               <Newspaper className="w-8 h-8 text-destructive" />
             </div>
-            <h3 className="text-2xl font-bold mb-2">Failed to Load Articles</h3>
-            <p className="text-muted-foreground mb-6">
+            <h3 className="text-2xl font-bold mb-2" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700 }}>Failed to Load Articles</h3>
+            <p className="text-muted-foreground mb-6" style={{ fontFamily: "'Satoshi', sans-serif" }}>
               {error}
             </p>
             <button
               onClick={() => fetchNews(currentPage)}
               className="px-6 py-3 bg-primary hover:bg-primary/90 text-black rounded-lg font-medium transition-colors"
+              style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 500 }}
             >
               Try Again
             </button>
@@ -288,12 +289,12 @@ function TechNews() {
 
         {/* Empty State */}
         {!loading && !error && newsData && newsData.articles.length === 0 && (
-          <div className="text-center py-20">
+          <div className="text-center py-20" style={{ fontFamily: "'Satoshi', sans-serif" }}>
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
               <Newspaper className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-2xl font-bold mb-2">No Articles Yet</h3>
-            <p className="text-muted-foreground">
+            <h3 className="text-2xl font-bold mb-2" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700 }}>No Articles Yet</h3>
+            <p className="text-muted-foreground" style={{ fontFamily: "'Satoshi', sans-serif" }}>
               Tech news articles will appear here once scraped
             </p>
           </div>
@@ -322,7 +323,10 @@ function TechNews() {
                     }
                   }}
                   className={`h-9 px-4 ${selectedCategory === c.value ? '' : 'bg-background'}`}
-                  style={selectedCategory === c.value && c.value !== 'all' ? { backgroundColor: getCategoryColor(c.value), color: '#000' } : {}}
+                  style={{
+                    ...(selectedCategory === c.value && c.value !== 'all' ? { backgroundColor: getCategoryColor(c.value), color: '#000' } : {}),
+                    fontFamily: "'Satoshi', sans-serif"
+                  }}
                 >
                   {c.label}
                 </Button>
@@ -331,7 +335,7 @@ function TechNews() {
 
             {/* Articles Count & Page Info */}
             <div className="mb-6 text-center">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground" style={{ fontFamily: "'Satoshi', sans-serif" }}>
                 Showing {startIndex + 1}-{Math.min(endIndex, totalArticles)} of {totalArticles} articles
                 {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
                 {selectedCategory !== 'all' && ` • Category: ${selectedCategory}`}
@@ -380,19 +384,19 @@ function TechNews() {
                       </div>
                     </div>
                     
-                    <CardTitle className="text-xl line-clamp-2 group-hover:text-primary transition-colors">
+                    <CardTitle className="text-xl line-clamp-2 group-hover:text-primary transition-colors font-[Hobo_BT]" style={{ fontWeight: 600 }}>
                       {article.title}
                     </CardTitle>
                   </CardHeader>
 
                   <CardContent>
-                    <CardDescription className="line-clamp-3 text-sm">
+                    <CardDescription className="line-clamp-3 text-sm" style={{ fontFamily: "'Satoshi', sans-serif" }}>
                       {truncateText(article.description, 150)}
                     </CardDescription>
                   </CardContent>
 
                   <CardFooter className="pt-4">
-                    <div className="flex items-center gap-2 text-sm font-medium text-primary group-hover:gap-3 transition-all">
+                    <div className="flex items-center gap-2 text-sm font-medium text-primary group-hover:gap-3 transition-all" style={{ fontFamily: "'Satoshi', sans-serif" }}>
                       Read article
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </div>
@@ -404,7 +408,7 @@ function TechNews() {
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="mt-12 flex justify-center items-center gap-2">
+            <div className="mt-12 flex justify-center items-center gap-2" style={{ fontFamily: "'Satoshi', sans-serif" }}>
               {/* Previous Button */}
               <Button
                 variant="outline"
@@ -412,6 +416,7 @@ function TechNews() {
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
                 className="h-10 w-10"
+                style={{ fontFamily: "'Satoshi', sans-serif" }}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -421,7 +426,7 @@ function TechNews() {
                 {getPageNumbers().map((page, index) => (
                   <React.Fragment key={index}>
                     {page === '...' ? (
-                      <span className="px-4 py-2 text-muted-foreground">...</span>
+                      <span className="px-4 py-2 text-muted-foreground" style={{ fontFamily: "'Satoshi', sans-serif" }}>...</span>
                     ) : (
                       <Button
                         variant={currentPage === page ? 'default' : 'outline'}
@@ -432,6 +437,7 @@ function TechNews() {
                             ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
                             : ''
                         }`}
+                        style={{ fontFamily: "'Satoshi', sans-serif" }}
                       >
                         {page}
                       </Button>
@@ -447,6 +453,7 @@ function TechNews() {
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
                 className="h-10 w-10"
+                style={{ fontFamily: "'Satoshi', sans-serif" }}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>

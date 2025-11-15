@@ -51,7 +51,7 @@ function TermsPage() {
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 border border-primary/30 flex items-center justify-center">
                 <Scale className="w-6 h-6 text-primary" />
               </div>
-              <h1 className="text-3xl sm:text-4xl">Terms & Conditions</h1>
+              <h1 className="text-3xl sm:text-4xl font-[Hobo_BT]">Terms & Conditions</h1>
             </div>
             <p className="text-muted-foreground">Last updated: October 12, 2025</p>
           </div>
@@ -61,7 +61,7 @@ function TermsPage() {
         <div className="space-y-8">
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">1. Introduction</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">1. Introduction</h2>
             <p className="text-muted-foreground leading-relaxed">
               Welcome to the personal portfolio and professional website of Cem Koyluoglu ("we," "us," or "our"). 
               By accessing or using our website located at this domain, you agree to be bound by these Terms and Conditions. 
@@ -72,7 +72,7 @@ function TermsPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">2. Services Provided</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">2. Services Provided</h2>
             <p className="text-muted-foreground leading-relaxed">
               This website provides information about professional services including AI Engineering, System Operations, 
               and software development consultancy. We may also offer:
@@ -87,7 +87,7 @@ function TermsPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">3. Newsletter Subscription</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">3. Newsletter Subscription</h2>
             <p className="text-muted-foreground leading-relaxed">
               By subscribing to our newsletter, you consent to:
             </p>
@@ -104,7 +104,7 @@ function TermsPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">4. Contact Forms and Communications</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">4. Contact Forms and Communications</h2>
             <p className="text-muted-foreground leading-relaxed">
               When you use our contact forms or chat features, you agree that:
             </p>
@@ -118,7 +118,7 @@ function TermsPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">5. Intellectual Property</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">5. Intellectual Property</h2>
             <p className="text-muted-foreground leading-relaxed">
               All content on this website, including but not limited to text, graphics, logos, code, and design elements, 
               is the property of Cem Koyluoglu and protected by international copyright laws. You may not reproduce, 
@@ -128,7 +128,7 @@ function TermsPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">6. Limitation of Liability</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">6. Limitation of Liability</h2>
             <p className="text-muted-foreground leading-relaxed">
               This website and its content are provided "as is" without warranties of any kind. We are not liable for 
               any damages arising from the use or inability to use this website, including but not limited to direct, 
@@ -138,7 +138,7 @@ function TermsPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">7. External Links</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">7. External Links</h2>
             <p className="text-muted-foreground leading-relaxed">
               Our website may contain links to third-party websites or services (e.g., GitHub, LinkedIn, WhatsApp). 
               We are not responsible for the content, privacy practices, or terms of service of these external sites. 
@@ -148,7 +148,7 @@ function TermsPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">8. Governing Law</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">8. Governing Law</h2>
             <p className="text-muted-foreground leading-relaxed">
               These Terms and Conditions are governed by and construed in accordance with the laws of Ireland. 
               Any disputes shall be subject to the exclusive jurisdiction of the courts of Ireland.
@@ -157,7 +157,7 @@ function TermsPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">9. Changes to Terms</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">9. Changes to Terms</h2>
             <p className="text-muted-foreground leading-relaxed">
               We reserve the right to modify these Terms and Conditions at any time. Changes will be effective immediately 
               upon posting to this page. Your continued use of the website after changes constitutes acceptance of the 
@@ -167,7 +167,7 @@ function TermsPage() {
 
           {/* Section */}
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
-            <h2 className="text-xl sm:text-2xl text-primary">10. Contact Information</h2>
+            <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">10. Contact Information</h2>
             <p className="text-muted-foreground leading-relaxed">
               If you have any questions about these Terms and Conditions, please contact us:
             </p>

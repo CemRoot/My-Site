@@ -1,4 +1,5 @@
-import { Code, Database, Cloud, Brain, Workflow, BarChart, Shield, Settings } from 'lucide-react';
+import React from 'react';
+import { Code, Database, Cloud, Brain, Workflow, BarChart, Shield, Settings, Award } from 'lucide-react';
 
 export function Skills() {
   const skillCategories = [
@@ -6,6 +7,7 @@ export function Skills() {
       title: 'Programming Languages',
       icon: Code,
       color: 'primary',
+      priority: 1,
       skills: [
         { name: 'Python', level: 95, years: '3+' },
         { name: 'JavaScript', level: 80, years: '2+' },
@@ -17,9 +19,25 @@ export function Skills() {
       ],
     },
     {
+      title: 'AI & Machine Learning',
+      icon: Brain,
+      color: 'accent',
+      priority: 2,
+      skills: [
+        { name: 'TensorFlow', level: 90, years: '2+' },
+        { name: 'Scikit-learn', level: 85, years: '2+' },
+        { name: 'CNN/Deep Learning', level: 95, years: '1+' },
+        { name: 'GANs', level: 80, years: '1+' },
+        { name: 'Diffusion Models', level: 75, years: '1+' },
+        { name: 'LangGraph/Crew AI', level: 80, years: '<1' },
+        { name: 'OpenAI/Hugging Face', level: 85, years: '1+' },
+      ],
+    },
+    {
       title: 'Backend & APIs',
       icon: Workflow,
       color: 'secondary',
+      priority: 3,
       skills: [
         { name: 'Django', level: 90, years: '2+' },
         { name: 'Flask', level: 95, years: '3+' },
@@ -33,6 +51,7 @@ export function Skills() {
       title: 'Cloud & DevOps',
       icon: Cloud,
       color: 'accent',
+      priority: 4,
       skills: [
         { name: 'Microsoft Azure', level: 90, years: '3+' },
         { name: 'Entra ID (Azure AD)', level: 95, years: '3+' },
@@ -44,22 +63,10 @@ export function Skills() {
       ],
     },
     {
-      title: 'Microsoft Ecosystem',
-      icon: Settings,
-      color: 'primary',
-      skills: [
-        { name: 'Intune (Endpoint Manager)', level: 95, years: '3+' },
-        { name: 'Windows 365 Cloud PC', level: 90, years: '2+' },
-        { name: 'PowerShell Automation', level: 90, years: '3+' },
-        { name: 'Conditional Access & MFA', level: 95, years: '3+' },
-        { name: 'Azure Autopilot', level: 85, years: '2+' },
-        { name: 'Google Workspace', level: 80, years: '2+' },
-      ],
-    },
-    {
       title: 'Databases',
       icon: Database,
       color: 'secondary',
+      priority: 5,
       skills: [
         { name: 'PostgreSQL', level: 90, years: '2+' },
         { name: 'Oracle DB', level: 85, years: '1+' },
@@ -68,23 +75,10 @@ export function Skills() {
       ],
     },
     {
-      title: 'AI & Machine Learning',
-      icon: Brain,
-      color: 'accent',
-      skills: [
-        { name: 'TensorFlow', level: 90, years: '2+' },
-        { name: 'Scikit-learn', level: 85, years: '2+' },
-        { name: 'CNN/Deep Learning', level: 95, years: '1+' },
-        { name: 'GANs', level: 80, years: '1+' },
-        { name: 'Diffusion Models', level: 75, years: '1+' },
-        { name: 'LangGraph/Crew AI', level: 80, years: '<1' },
-        { name: 'OpenAI/Hugging Face', level: 85, years: '1+' },
-      ],
-    },
-    {
       title: 'Data Analysis & Tools',
       icon: BarChart,
       color: 'primary',
+      priority: 6,
       skills: [
         { name: 'Pandas', level: 95, years: '3+' },
         { name: 'NumPy', level: 90, years: '3+' },
@@ -96,9 +90,24 @@ export function Skills() {
       ],
     },
     {
+      title: 'Microsoft Ecosystem',
+      icon: Settings,
+      color: 'primary',
+      priority: 7,
+      skills: [
+        { name: 'Intune (Endpoint Manager)', level: 95, years: '3+' },
+        { name: 'Windows 365 Cloud PC', level: 90, years: '2+' },
+        { name: 'PowerShell Automation', level: 90, years: '3+' },
+        { name: 'Conditional Access & MFA', level: 95, years: '3+' },
+        { name: 'Azure Autopilot', level: 85, years: '2+' },
+        { name: 'Google Workspace', level: 80, years: '2+' },
+      ],
+    },
+    {
       title: 'Security & Operations',
       icon: Shield,
       color: 'secondary',
+      priority: 8,
       skills: [
         { name: 'Security Baselines', level: 90, years: '3+' },
         { name: 'VDI Operations', level: 85, years: '2+' },
@@ -123,19 +132,139 @@ export function Skills() {
   ];
 
   const certifications = [
-    { name: 'Generative AI: Working with Large Language Models (NASBA, 2025)', color: 'primary' },
-    { name: 'The Complete Agentic AI Engineering Course (Udemy, 2025)', color: 'secondary' },
-    { name: 'Machine Learning A-Z: AI, Python (Udemy, 2025)', color: 'accent' },
-    { name: 'Hands-On Generative AI with Diffusion Models (LinkedIn, 2025)', color: 'primary' },
-    { name: 'Introduction to Generative Adversarial Networks (LinkedIn, 2025)', color: 'secondary' },
-    { name: 'What Is Generative AI? (LinkedIn, 2025)', color: 'accent' },
-    { name: 'AI For Everyone (Coursera, 2023)', color: 'primary' },
-    { name: 'Linear Regression with NumPy and Python (Coursera, 2023)', color: 'secondary' },
-    { name: 'Python Pro Bootcamp (Udemy, 2022)', color: 'accent' },
-    { name: 'Using Git and GitHub with Sourcetree (Udemy, 2021)', color: 'primary' },
-    { name: 'IHA-1 Drone Pilot License (SHGM, 2021)', color: 'secondary' },
-    { name: 'Static Security Guard (The Security Institute, 2023-2026)', color: 'accent' },
-  ];
+    {
+      title: 'Generative AI: Working with Large Language Models',
+      issuer: 'NASBA',
+      platform: 'NASBA',
+      year: '2025',
+      focus: 'LLMs & Prompt Engineering',
+      type: 'Certification',
+      color: 'primary' as const,
+    },
+    {
+      title: 'The Complete Agentic AI Engineering Course',
+      issuer: 'Udemy',
+      platform: 'Udemy',
+      year: '2025',
+      focus: 'Agentic AI Systems',
+      type: 'Certification',
+      color: 'secondary' as const,
+    },
+    {
+      title: 'Machine Learning A-Z: AI, Python',
+      issuer: 'Udemy',
+      platform: 'Udemy',
+      year: '2025',
+      focus: 'Machine Learning Foundations',
+      type: 'Certification',
+      color: 'accent' as const,
+    },
+    {
+      title: 'Hands-On Generative AI with Diffusion Models',
+      issuer: 'LinkedIn Learning',
+      platform: 'LinkedIn Learning',
+      year: '2025',
+      focus: 'Diffusion & Visual Generation',
+      type: 'Certification',
+      color: 'primary' as const,
+    },
+    {
+      title: 'Introduction to Generative Adversarial Networks',
+      issuer: 'LinkedIn Learning',
+      platform: 'LinkedIn Learning',
+      year: '2025',
+      focus: 'GAN Architectures',
+      type: 'Certification',
+      color: 'secondary' as const,
+    },
+    {
+      title: 'What Is Generative AI?',
+      issuer: 'LinkedIn Learning',
+      platform: 'LinkedIn Learning',
+      year: '2025',
+      focus: 'AI Strategy & Adoption',
+      type: 'Certification',
+      color: 'accent' as const,
+    },
+    {
+      title: 'AI For Everyone',
+      issuer: 'deeplearning.ai',
+      platform: 'Coursera',
+      year: '2023',
+      focus: 'Executive AI Strategy',
+      type: 'Certification',
+      color: 'primary' as const,
+    },
+    {
+      title: 'Linear Regression with NumPy and Python',
+      issuer: 'Coursera',
+      platform: 'Coursera',
+      year: '2023',
+      focus: 'Statistical Modeling',
+      type: 'Certification',
+      color: 'secondary' as const,
+    },
+    {
+      title: 'Python Pro Bootcamp',
+      issuer: 'Udemy',
+      platform: 'Udemy',
+      year: '2022',
+      focus: 'Applied Python Engineering',
+      type: 'Certification',
+      color: 'accent' as const,
+    },
+    {
+      title: 'Using Git and GitHub with Sourcetree',
+      issuer: 'Udemy',
+      platform: 'Udemy',
+      year: '2021',
+      focus: 'Version Control Workflows',
+      type: 'Certification',
+      color: 'primary' as const,
+    },
+    {
+      title: 'IHA-1 Drone Pilot License',
+      issuer: 'SHGM (Turkish DGCA)',
+      platform: 'SHGM',
+      year: '2021',
+      focus: 'Aviation Safety & Operations',
+      type: 'License',
+      color: 'secondary' as const,
+    },
+    {
+      title: 'Static Security Guard',
+      issuer: 'The Security Institute',
+      platform: 'The Security Institute',
+      year: '2023-2026',
+      focus: 'Physical Security & Compliance',
+      type: 'License',
+      color: 'accent' as const,
+    },
+  ] as const;
+
+  const certificationThemes = {
+    primary: {
+      border: 'border-primary/20',
+      badge: 'border border-primary/30 text-primary bg-primary/10',
+      text: 'text-primary',
+      iconBg: 'from-primary/25 to-primary/5',
+      platformBg: 'bg-primary/5 border-primary/20',
+    },
+    secondary: {
+      border: 'border-secondary/20',
+      badge: 'border border-secondary/30 text-secondary bg-secondary/10',
+      text: 'text-secondary',
+      iconBg: 'from-secondary/25 to-secondary/5',
+      platformBg: 'bg-secondary/5 border-secondary/20',
+    },
+    accent: {
+      border: 'border-accent/20',
+      badge: 'border border-accent/30 text-accent bg-accent/10',
+      text: 'text-accent',
+      iconBg: 'from-accent/25 to-accent/5',
+      platformBg: 'bg-accent/5 border-accent/20',
+    },
+  } as const;
 
   return (
     <section id="skills" className="relative py-12 sm:py-20 overflow-hidden px-4 sm:px-6 lg:px-8">
@@ -147,53 +276,95 @@ export function Skills() {
 
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-3">
-            <div className="px-4 py-1.5 rounded-full frosted-glass border border-primary/20">
-              <span className="text-xs font-mono text-primary tracking-wider">TECHNICAL SKILLS</span>
+        <div className="text-center mb-16 space-y-6">
+          <div className="inline-flex items-center justify-center">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary via-secondary to-primary rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500" />
+              <div className="relative px-6 py-2 rounded-full liquid-glass-strong border border-primary/30 liquid-shimmer">
+                <span className="text-sm font-mono text-primary tracking-wider">TECHNICAL SKILLS</span>
+              </div>
             </div>
           </div>
-          <h2 className="text-3xl sm:text-4xl mb-4 text-foreground font-semibold">
-            Expertise & Tools
+          
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl">
+            <span className="block bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-2">
+              Expertise & Tools
+            </span>
           </h2>
-          <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
-            Cloud Operations, Python Development, AI/ML, and Microsoft 365 Ecosystem
+          
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+            Specializing in <span className="text-primary font-medium">Cloud Operations</span>, 
+            <span className="text-secondary font-medium"> Python Development</span>, 
+            <span className="text-accent font-medium"> AI/ML</span>, and 
+            <span className="text-primary font-medium"> Microsoft 365 Ecosystem</span>
           </p>
         </div>
 
         {/* Skills Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {skillCategories.map((category, index) => {
-            const Icon = category.icon;
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8 items-stretch">
+          {[...skillCategories]
+            .sort((a, b) => a.priority - b.priority)
+            .map((category, index) => {
+              // Assign colors based on column position (0=left=primary, 1=middle=secondary, 2=right=accent)
+              const columnIndex = index % 3;
+              const columnColor = columnIndex === 0 ? 'primary' : columnIndex === 1 ? 'secondary' : 'accent';
+              
+              // Use column color instead of original category color
+              const displayColor = columnColor;
+              
+              const Icon = category.icon;
             const colorClasses = {
-              primary: 'border-primary/20 text-primary bg-primary/5',
-              secondary: 'border-secondary/20 text-secondary bg-secondary/5',
-              accent: 'border-accent/20 text-accent bg-accent/5',
+              primary: {
+                border: 'border-primary/20',
+                text: 'text-primary',
+                iconBg: 'from-primary/20 to-primary/5',
+              },
+              secondary: {
+                border: 'border-secondary/20',
+                text: 'text-secondary',
+                iconBg: 'from-secondary/20 to-secondary/5',
+              },
+              accent: {
+                border: 'border-accent/20',
+                text: 'text-accent',
+                iconBg: 'from-accent/20 to-accent/5',
+              },
             };
 
+            const colors = colorClasses[displayColor as keyof typeof colorClasses];
+
             return (
-              <div key={index} className="group">
-                <div className={`relative p-4 rounded-2xl frosted-glass border ${colorClasses[category.color as keyof typeof colorClasses].split(' ')[0]} transition-all duration-300`}>
+              <div key={index} className="relative h-full">
+                <div className={`relative h-full flex flex-col rounded-2xl frosted-glass border ${colors.border} bg-background/60 backdrop-blur-sm overflow-hidden min-h-[280px]`}>
                   {/* Header */}
-                  <div className="flex items-center gap-2 mb-3 pb-3 border-b border-current/10">
-                    <div className={`w-8 h-8 rounded-lg ${colorClasses[category.color as keyof typeof colorClasses].split(' ')[2]} flex items-center justify-center`}>
-                      <Icon className={`w-4 h-4 ${colorClasses[category.color as keyof typeof colorClasses].split(' ')[1]}`} />
+                  <div className={`px-4 py-3 bg-gradient-to-r ${colors.iconBg} border-b ${colors.border} flex-shrink-0`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl bg-background/40 flex items-center justify-center flex-shrink-0`}>
+                        <Icon className={`w-5 h-5 ${colors.text}`} />
+                      </div>
+                      <h3 className="text-sm font-semibold text-foreground">
+                        {category.title}
+                      </h3>
                     </div>
-                    <h3 className="text-sm font-medium text-foreground">
-                      {category.title}
-                    </h3>
                   </div>
 
-                  {/* Skills */}
-                  <div className="space-y-2">
-                    {category.skills.map((skill, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">{skill.name}</span>
-                        <span className={`text-xs font-mono ${colorClasses[category.color as keyof typeof colorClasses].split(' ')[1]} opacity-70`}>
-                          {skill.years}
-                        </span>
-                      </div>
-                    ))}
+                  {/* Skills List */}
+                  <div className="p-4 flex-1 flex flex-col">
+                    <div className="grid grid-cols-2 gap-1.5 flex-1 content-start">
+                      {category.skills.map((skill, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between text-xs py-1.5 px-2 rounded-lg bg-background/40 min-h-[28px]"
+                        >
+                          <span className="text-muted-foreground font-medium truncate text-[11px]">
+                            {skill.name}
+                          </span>
+                          <span className={`text-[10px] font-mono ${colors.text} opacity-80 ml-2 flex-shrink-0`}>
+                            {skill.years}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -202,50 +373,119 @@ export function Skills() {
         </div>
 
         {/* Methodologies */}
-        <div className="mb-8">
-          <h3 className="text-base text-center mb-3 text-muted-foreground font-medium">
-            Methodologies & Practices
-          </h3>
-          <div className="flex flex-wrap justify-center gap-1.5 max-w-4xl mx-auto">
+        <div className="mb-12">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center mb-3">
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-secondary via-primary to-secondary rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500" />
+                <div className="relative px-6 py-2 rounded-full liquid-glass-strong border border-secondary/30 liquid-shimmer">
+                  <span className="text-sm font-mono text-secondary tracking-wider">METHODOLOGIES & PRACTICES</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-w-5xl mx-auto">
             {methodologies.map((methodology, index) => {
               const colorClasses = {
-                primary: 'border-primary/15 text-primary/80',
-                secondary: 'border-secondary/15 text-secondary/80',
-                accent: 'border-accent/15 text-accent/80',
+                primary: {
+                  border: 'border-primary/30',
+                  text: 'text-primary',
+                  bg: 'bg-gradient-to-br from-primary/10 to-primary/5',
+                  badge: 'border-primary/20 text-primary/90 bg-primary/5',
+                },
+                secondary: {
+                  border: 'border-secondary/30',
+                  text: 'text-secondary',
+                  bg: 'bg-gradient-to-br from-secondary/10 to-secondary/5',
+                  badge: 'border-secondary/20 text-secondary/90 bg-secondary/5',
+                },
+                accent: {
+                  border: 'border-accent/30',
+                  text: 'text-accent',
+                  bg: 'bg-gradient-to-br from-accent/10 to-accent/5',
+                  badge: 'border-accent/20 text-accent/90 bg-accent/5',
+                },
               };
 
+              const colors = colorClasses[methodology.color as keyof typeof colorClasses];
+
               return (
-                <span
+                <div
                   key={index}
-                  className={`px-2 py-1 rounded-md frosted-glass border ${colorClasses[methodology.color as keyof typeof colorClasses]} text-[10px] leading-tight`}
+                  className={`relative px-5 py-4 rounded-2xl frosted-glass border ${colors.border} ${colors.bg} text-center backdrop-blur-sm`}
                 >
-                  {methodology.name}
-                </span>
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-current/20 to-transparent opacity-50" />
+                  <span className={`text-xs font-semibold ${colors.text} leading-relaxed block relative z-10`}>
+                    {methodology.name}
+                  </span>
+                </div>
               );
             })}
           </div>
         </div>
 
         {/* Certifications */}
-        <div>
-          <h3 className="text-base text-center mb-4 text-muted-foreground font-medium">
-            Certifications & Licenses
-          </h3>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 max-w-5xl mx-auto">
-            {certifications.map((cert, index) => {
-              const colorClasses = {
-                primary: 'border-primary/10',
-                secondary: 'border-secondary/10',
-                accent: 'border-accent/10',
-              };
+        <div className="mt-16">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center justify-center mb-4">
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-accent via-primary to-accent rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500" />
+                <div className="relative px-6 py-2 rounded-full liquid-glass-strong border border-accent/30 liquid-shimmer">
+                  <span className="text-sm font-mono text-accent tracking-wider">CERTIFICATIONS & LICENSES</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
+            {certifications.map((cert) => {
+              const theme = certificationThemes[cert.color];
 
               return (
                 <div
-                  key={index}
-                  className={`flex items-start gap-1.5 p-2 rounded-lg frosted-glass border ${colorClasses[cert.color as keyof typeof colorClasses]} transition-opacity duration-300 hover:opacity-80`}
+                  key={`${cert.title}-${cert.year}`}
+                  className="relative"
                 >
-                  <div className={`w-1 h-1 rounded-full ${cert.color === 'primary' ? 'bg-primary' : cert.color === 'secondary' ? 'bg-secondary' : 'bg-accent'} mt-1 flex-shrink-0`} />
-                  <span className="text-[10px] text-muted-foreground leading-snug">{cert.name}</span>
+                  {/* Card */}
+                  <div className={`relative flex h-full min-h-[240px] flex-col rounded-3xl frosted-glass border ${theme.border} bg-background/60 p-6`}>
+                    {/* Header with Icon and Badge */}
+                    <div className="flex items-start justify-between gap-4 mb-4">
+                      <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${theme.iconBg} flex items-center justify-center shadow-lg flex-shrink-0`}>
+                        <Award className={`w-7 h-7 ${theme.text}`} />
+                      </div>
+                      <span className={`px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wide ${theme.badge} flex-shrink-0 uppercase`}>
+                        {cert.type}
+                      </span>
+                    </div>
+
+                    {/* Title */}
+                    <h4 className="text-base font-semibold text-foreground leading-tight mb-3 line-clamp-2 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+                      {cert.title}
+                    </h4>
+
+                    {/* Issuer */}
+                    <p className={`text-sm ${theme.text} font-medium mb-3`}>
+                      {cert.issuer}
+                    </p>
+
+                    {/* Focus Area */}
+                    <p className="text-sm text-muted-foreground leading-relaxed flex-1 mb-4">
+                      {cert.focus}
+                    </p>
+
+                    {/* Footer with Year and Platform */}
+                    <div className="flex items-center justify-between gap-3 pt-4 border-t border-current/10">
+                      <div className={`px-3 py-1.5 rounded-lg ${theme.platformBg} border`}>
+                        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {cert.platform}
+                        </span>
+                      </div>
+                      <div className={`px-3 py-1.5 rounded-lg ${theme.platformBg} border`}>
+                        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {cert.year}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               );
             })}

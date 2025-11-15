@@ -1,27 +1,21 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Github, Linkedin, Download, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Github, Linkedin, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 import portraitImage from '../assets/b2434507c36da971cecf1c8e91f157fb86abbf62.png';
 
 export function Hero() {
   const roles = [
-    "Software Engineer",
     "AI Engineer",
-    "Backend Developer",
+    "GenAI Specialist",
+    "DeepFake Detection Expert",
     "Python Developer",
-    "System Operations Engineer",
-    "Cloud Automation Specialist"
+    "Azure Cloud Architect",
+    "AI Automation Engineer"
   ];
 
   const [currentRoleIndex, setCurrentRoleIndex] = useState(0);
   const [scrambledText, setScrambledText] = useState(roles[0]);
   const [isScrambling, setIsScrambling] = useState(false);
-  
-  // Mouse tracking for 3D portrait effect - optimized with RAF
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [isHovering, setIsHovering] = useState(false);
-  const rafRef = useRef<number>();
-  const lastUpdateRef = useRef<number>(0);
 
   // Auto-rotate roles every 3 seconds
   useEffect(() => {
@@ -74,45 +68,66 @@ export function Hero() {
     animationFrame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrame);
   }, [currentRoleIndex]);
-  
-  // Throttled mouse handler with RAF
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const now = performance.now();
-    // Throttle to max 60fps (16ms)
-    if (now - lastUpdateRef.current < 16) return;
-    
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-    }
-    
-    rafRef.current = requestAnimationFrame(() => {
-      // Null check to prevent getBoundingClientRect error
-      if (!e.currentTarget) return;
-      
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = (e.clientX - rect.left - rect.width / 2) / rect.width;
-      const y = (e.clientY - rect.top - rect.height / 2) / rect.height;
-      setMousePos({ x, y });
-      lastUpdateRef.current = now;
-    });
-  }, []);
-  
-  // Cleanup RAF on unmount
-  useEffect(() => {
-    return () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-      }
-    };
-  }, []);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8 pt-20">
-      {/* Animated background gradients */}
+      {/* Enhanced animated background gradients */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
-        <div className="absolute bottom-1/4 -right-1/4 w-96 h-96 bg-secondary/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '8s', animationDelay: '2s' }} />
+        {/* Primary gradient - top left */}
+        <div 
+          className="absolute top-1/4 -left-1/4 w-[600px] h-[600px] bg-primary/30 rounded-full blur-3xl animate-pulse" 
+          style={{ 
+            animationDuration: '6s',
+            background: 'radial-gradient(circle, rgba(91, 231, 255, 0.4) 0%, rgba(91, 231, 255, 0.1) 50%, transparent 100%)'
+          }} 
+        />
+        
+        {/* Secondary gradient - bottom right */}
+        <div 
+          className="absolute bottom-1/4 -right-1/4 w-[600px] h-[600px] bg-secondary/30 rounded-full blur-3xl animate-pulse" 
+          style={{ 
+            animationDuration: '8s', 
+            animationDelay: '1s',
+            background: 'radial-gradient(circle, rgba(167, 139, 250, 0.4) 0%, rgba(167, 139, 250, 0.1) 50%, transparent 100%)'
+          }} 
+        />
+        
+        {/* Accent gradient - center */}
+        <div 
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-accent/25 rounded-full blur-3xl animate-pulse" 
+          style={{ 
+            animationDuration: '10s', 
+            animationDelay: '2s',
+            background: 'radial-gradient(circle, rgba(255, 184, 108, 0.35) 0%, rgba(255, 184, 108, 0.1) 50%, transparent 100%)'
+          }} 
+        />
+        
+        {/* Additional glow layers for depth */}
+        <div 
+          className="absolute top-0 left-1/3 w-[400px] h-[400px] bg-primary/20 rounded-full blur-3xl animate-pulse" 
+          style={{ 
+            animationDuration: '7s',
+            animationDelay: '0.5s',
+            background: 'radial-gradient(circle, rgba(91, 231, 255, 0.3) 0%, transparent 70%)'
+          }} 
+        />
+        
+        <div 
+          className="absolute bottom-0 right-1/3 w-[400px] h-[400px] bg-secondary/20 rounded-full blur-3xl animate-pulse" 
+          style={{ 
+            animationDuration: '9s',
+            animationDelay: '1.5s',
+            background: 'radial-gradient(circle, rgba(167, 139, 250, 0.3) 0%, transparent 70%)'
+          }} 
+        />
+        
+        {/* Subtle overlay gradient for overall ambiance */}
+        <div 
+          className="absolute inset-0 opacity-30"
+          style={{
+            background: 'radial-gradient(ellipse at top left, rgba(91, 231, 255, 0.15) 0%, transparent 50%), radial-gradient(ellipse at bottom right, rgba(167, 139, 250, 0.15) 0%, transparent 50%), radial-gradient(ellipse at center, rgba(255, 184, 108, 0.1) 0%, transparent 70%)'
+          }}
+        />
       </div>
 
       {/* Content */}
@@ -122,8 +137,18 @@ export function Hero() {
           <div className="space-y-8 text-center lg:text-left order-2 lg:order-1">
             {/* Badge */}
             <div className="inline-flex items-center justify-center lg:justify-start">
-              <div className="group relative overflow-hidden rounded-full px-5 py-2 liquid-glass neon-border-primary liquid-shimmer">
-                <span className={`relative font-mono text-sm text-primary transition-all duration-200 ${isScrambling ? 'opacity-80' : 'opacity-100'}`}>
+              <div className="group relative rounded-full px-5 liquid-glass neon-border-primary" style={{ overflow: 'visible', paddingTop: '0.75rem', paddingBottom: '0.75rem', position: 'relative' }}>
+                {/* Continuous shimmer effect */}
+                <div 
+                  className="absolute inset-0 rounded-full pointer-events-none"
+                  style={{
+                    background: 'linear-gradient(90deg, transparent 0%, rgba(91, 231, 255, 0.3) 50%, transparent 100%)',
+                    backgroundSize: '200% 100%',
+                    animation: 'shimmerMove 3s linear infinite',
+                    opacity: 0.6,
+                  }}
+                />
+                <span className={`relative font-[Hobo_BT] text-sm text-primary transition-all duration-200 z-10 ${isScrambling ? 'opacity-80' : 'opacity-100'}`} style={{ display: 'inline-block', lineHeight: '1.8', verticalAlign: 'baseline', paddingTop: '0.1em', paddingBottom: '0.2em' }}>
                   {scrambledText}
                 </span>
               </div>
@@ -132,15 +157,24 @@ export function Hero() {
             {/* Name & Title */}
             <div className="space-y-4">
               <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl">
-                <span className="block bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-transparent" style={{ paddingTop: '0.1em', paddingBottom: '0.1em' }}>
+                <span className="block bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-transparent font-[Hobo_BT]" style={{ paddingTop: '0.1em', paddingBottom: '0.1em' }}>
                   Cem
                 </span>
-                <span className="block bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent tracking-wide antialiased" style={{ fontFamily: "'Space Grotesk', 'Inter', sans-serif", fontWeight: 600, letterSpacing: '0.05em', paddingTop: '0.1em', paddingBottom: '0.15em', lineHeight: '1.2' }}>
+                <span 
+                  className="block bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent tracking-wide antialiased font-[Hobo_BT] relative"
+                  style={{ 
+                    fontWeight: 600, 
+                    letterSpacing: '0.05em', 
+                    paddingTop: '0.1em', 
+                    paddingBottom: '0.15em', 
+                    lineHeight: '1.2',
+                  }}
+                >
                   Koyluoglu
                 </span>
               </h1>
               <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto lg:mx-0" style={{ paddingTop: '0.25em', paddingBottom: '0.25em', lineHeight: '1.6' }}>
-                Software Engineer with MSc in AI (First Class Honours) specializing in Python, backend development, REST APIs, and Azure cloud automation
+                AI Engineer crafting intelligent automation systems with Python, GenAI, and Azure Cloud. Expert in DeepFake detection and AI-powered solutions.
               </p>
             </div>
 
@@ -159,13 +193,6 @@ export function Hero() {
 
             {/* CTA Buttons */}
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4">
-              <Button
-                size="lg"
-                className="group relative overflow-hidden bg-primary hover:bg-primary/90 text-black rounded-2xl px-8 shadow-lg shadow-primary/20 transition-all duration-300 hover:shadow-primary/40 hover:scale-105"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Download CV
-              </Button>
               <Button
                 size="lg"
                 variant="outline"
@@ -221,57 +248,27 @@ export function Hero() {
 
           {/* Right: Portrait Image with Liquid Glass Frame */}
           <div className="order-1 lg:order-2 p-8 lg:p-12">
-            <div 
-              className="relative group max-w-md mx-auto" 
-              style={{ perspective: '1500px' }}
-              onMouseMove={handleMouseMove}
-              onMouseEnter={() => setIsHovering(true)}
-              onMouseLeave={() => {
-                setIsHovering(false);
-                setMousePos({ x: 0, y: 0 });
-                if (rafRef.current) {
-                  cancelAnimationFrame(rafRef.current);
-                }
-              }}
-            >
+            <div className="relative group max-w-md mx-auto">
               {/* Subtle glow effect */}
               <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-secondary/20 to-accent/20 rounded-3xl blur-xl opacity-10 group-hover:opacity-25 transition-opacity duration-500" />
               
-              {/* Liquid Glass Frame - REMOVED overflow-hidden */}
+              {/* Liquid Glass Frame */}
               <div className="relative rounded-3xl liquid-border">
-                {/* Image - POP OUT EFFECT with MOUSE TRACKING */}
+                {/* Image */}
                 <img
                   src={portraitImage}
                   alt="Cem Koyluoglu - AI Engineer"
-                  className="w-full h-auto relative rounded-3xl"
+                  className="w-full h-auto relative rounded-3xl transition-all duration-300 group-hover:scale-105"
                   loading="eager"
                   fetchPriority="high"
                   style={{
-                    transform: isHovering 
-                      ? `perspective(1200px) translateZ(60px) translateY(-20px) translateX(12px) rotateY(${-8 + mousePos.x * 10}deg) rotateX(${4 - mousePos.y * 10}deg) scale(1.12)`
-                      : 'perspective(1200px) translateZ(40px) translateY(-12px) translateX(8px) rotateY(-5deg) rotateX(3deg) scale(1.08)',
-                    transformStyle: 'preserve-3d',
-                    transition: isHovering ? 'transform 0.15s ease-out, box-shadow 0.3s ease' : 'transform 0.7s ease-out, box-shadow 0.7s ease',
-                    zIndex: 50,
-                    boxShadow: isHovering 
-                      ? `
-                        0 50px 100px -20px rgba(0, 0, 0, 0.9),
-                        -40px 30px 80px -10px rgba(91, 231, 255, 0.7),
-                        40px 30px 80px -10px rgba(167, 139, 250, 0.7),
-                        -50px 0 100px rgba(91, 231, 255, 0.4),
-                        50px 0 100px rgba(167, 139, 250, 0.4),
-                        ${-30 + mousePos.x * 25}px ${20 + mousePos.y * 20}px 90px rgba(91, 231, 255, 0.35),
-                        ${30 - mousePos.x * 25}px ${20 + mousePos.y * 20}px 90px rgba(167, 139, 250, 0.35)
-                      `
-                      : `
-                        0 40px 80px -15px rgba(0, 0, 0, 0.85),
-                        -35px 25px 70px -10px rgba(91, 231, 255, 0.5),
-                        35px 25px 70px -10px rgba(167, 139, 250, 0.5),
-                        -45px 0 80px rgba(91, 231, 255, 0.3),
-                        45px 0 80px rgba(167, 139, 250, 0.3),
-                        -25px 20px 70px rgba(91, 231, 255, 0.25),
-                        25px 20px 70px rgba(167, 139, 250, 0.25)
-                      `,
+                    boxShadow: `
+                      0 40px 80px -15px rgba(0, 0, 0, 0.85),
+                      -35px 25px 70px -10px rgba(91, 231, 255, 0.5),
+                      35px 25px 70px -10px rgba(167, 139, 250, 0.5),
+                      -45px 0 80px rgba(91, 231, 255, 0.3),
+                      45px 0 80px rgba(167, 139, 250, 0.3)
+                    `,
                     filter: 'brightness(1.08) contrast(1.12) saturate(1.05)',
                   }}
                 />
@@ -295,6 +292,35 @@ export function Hero() {
           <ChevronDown className="w-5 h-5 text-primary" />
         </div>
       </div>
+
+      {/* Color Wave Animation */}
+      <style>{`
+        @keyframes colorWave {
+          0% {
+            background-position: 200% 0%;
+          }
+          100% {
+            background-position: -200% 0%;
+          }
+        }
+        @keyframes shimmerMove {
+          0% {
+            background-position: -200% 0%;
+          }
+          100% {
+            background-position: 200% 0%;
+          }
+        }
+        .color-wave {
+          display: inline-block;
+          animation: colorWave 5s linear infinite;
+          background: linear-gradient(90deg, #E30A17 0%, #E30A17 25%, #FFFFFF 25%, #FFFFFF 50%, #E30A17 50%, #E30A17 75%, #FFFFFF 75%, #FFFFFF 100%);
+          background-size: 200% 100%;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+      `}</style>
     </section>
   );
 }

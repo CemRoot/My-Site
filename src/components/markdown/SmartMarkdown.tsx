@@ -136,19 +136,20 @@ export default function SmartMarkdown({ content }: SmartMarkdownProps) {
 
 function renderMarkdown(content: string) {
   return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      skipHtml={true}
-      components={{
-        p({ node, children, ...props }) {
-          // Check for standalone URL (fallback for legacy content)
-          const url = maybeEmbedFromParagraph(node as any);
-          if (url) {
-            return <EmbedFromURL url={url} />;
-          }
-          
-          return <p className="text-lg leading-relaxed mb-4" {...props}>{children}</p>;
-        },
+    <div style={{ fontFamily: "'Satoshi', sans-serif" }}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        skipHtml={true}
+        components={{
+          p({ node, children, ...props }) {
+            // Check for standalone URL (fallback for legacy content)
+            const url = maybeEmbedFromParagraph(node as any);
+            if (url) {
+              return <EmbedFromURL url={url} />;
+            }
+            
+            return <p className="text-lg leading-relaxed mb-4" style={{ fontFamily: "'Satoshi', sans-serif" }} {...props}>{children}</p>;
+          },
         // Open links in new tab
         a({ href, children, ...props }) {
           return (
@@ -165,25 +166,25 @@ function renderMarkdown(content: string) {
         },
         // Style headings
         h1({ children, ...props }) {
-          return <h1 className="text-3xl font-bold mt-8 mb-4" {...props}>{children}</h1>;
+          return <h1 className="text-3xl font-bold mt-8 mb-4" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700 }} {...props}>{children}</h1>;
         },
         h2({ children, ...props }) {
-          return <h2 className="text-2xl font-bold mt-6 mb-3" {...props}>{children}</h2>;
+          return <h2 className="text-2xl font-bold mt-6 mb-3" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700 }} {...props}>{children}</h2>;
         },
         h3({ children, ...props }) {
-          return <h3 className="text-xl font-bold mt-4 mb-2" {...props}>{children}</h3>;
+          return <h3 className="text-xl font-bold mt-4 mb-2" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700 }} {...props}>{children}</h3>;
         },
         // Style lists
         ul({ children, ...props }) {
-          return <ul className="list-disc list-inside mb-4 space-y-2" {...props}>{children}</ul>;
+          return <ul className="list-disc list-inside mb-4 space-y-2" style={{ fontFamily: "'Satoshi', sans-serif" }} {...props}>{children}</ul>;
         },
         ol({ children, ...props }) {
-          return <ol className="list-decimal list-inside mb-4 space-y-2" {...props}>{children}</ol>;
+          return <ol className="list-decimal list-inside mb-4 space-y-2" style={{ fontFamily: "'Satoshi', sans-serif" }} {...props}>{children}</ol>;
         },
         // Style blockquotes
         blockquote({ children, ...props }) {
           return (
-            <blockquote className="border-l-4 border-primary/30 pl-4 italic my-4 text-muted-foreground" {...props}>
+            <blockquote className="border-l-4 border-primary/30 pl-4 italic my-4 text-muted-foreground" style={{ fontFamily: "'Satoshi', sans-serif" }} {...props}>
               {children}
             </blockquote>
           );
@@ -197,15 +198,20 @@ function renderMarkdown(content: string) {
         },
         // Style strong/em
         strong({ children, ...props }) {
-          return <strong className="font-bold" {...props}>{children}</strong>;
+          return <strong className="font-bold text-foreground" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700 }} {...props}>{children}</strong>;
         },
         em({ children, ...props }) {
-          return <em className="italic" {...props}>{children}</em>;
+          return <em className="italic" style={{ fontFamily: "'Satoshi', sans-serif" }} {...props}>{children}</em>;
+        },
+        // Style list items
+        li({ children, ...props }) {
+          return <li style={{ fontFamily: "'Satoshi', sans-serif" }} {...props}>{children}</li>;
         },
       }}
     >
       {content}
     </ReactMarkdown>
+    </div>
   );
 }
 

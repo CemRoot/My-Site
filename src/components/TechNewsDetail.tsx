@@ -276,7 +276,7 @@ function TechNewsDetail() {
     return (
       <main
         className="min-h-screen bg-gradient-to-b from-background to-muted/20 pb-24"
-        style={{ paddingTop: 'calc(var(--nav-height, 120px) + 56px)' }}
+        style={{ paddingTop: 'calc(var(--nav-height, 120px) + 56px)', fontFamily: "'Satoshi', sans-serif" }}
       >
         <div className="container mx-auto px-4 max-w-4xl">
           <Skeleton className="h-8 w-32 mb-8" />
@@ -297,14 +297,14 @@ function TechNewsDetail() {
     return (
       <main
         className="min-h-screen bg-gradient-to-b from-background to-muted/20 pb-24"
-        style={{ paddingTop: 'calc(var(--nav-height, 120px) + 56px)' }}
+        style={{ paddingTop: 'calc(var(--nav-height, 120px) + 56px)', fontFamily: "'Satoshi', sans-serif" }}
       >
         <div className="container mx-auto px-4 max-w-4xl text-center">
-          <h1 className="text-4xl font-bold mb-4">Article Not Found</h1>
-          <p className="text-muted-foreground mb-8">
+          <h1 className="text-4xl font-bold mb-4" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700 }}>Article Not Found</h1>
+          <p className="text-muted-foreground mb-8" style={{ fontFamily: "'Satoshi', sans-serif" }}>
             {error || 'The article you are looking for does not exist.'}
           </p>
-          <Button onClick={() => navigate('/tech-news')} variant="default">
+          <Button onClick={() => navigate('/tech-news')} variant="default" style={{ fontFamily: "'Satoshi', sans-serif" }}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Tech News
           </Button>
@@ -329,7 +329,7 @@ function TechNewsDetail() {
       
       <main
         className="min-h-screen bg-gradient-to-b from-background to-muted/20 pb-24"
-        style={{ paddingTop: 'calc(var(--nav-height, 120px) + 56px)' }}
+        style={{ paddingTop: 'calc(var(--nav-height, 120px) + 56px)', fontFamily: "'Satoshi', sans-serif" }}
       >
         <div className="container mx-auto px-4 max-w-4xl">
         {/* Back Button */}
@@ -337,6 +337,7 @@ function TechNewsDetail() {
           variant="ghost"
           asChild
           className="mb-8 hover:bg-primary/10"
+          style={{ fontFamily: "'Satoshi', sans-serif" }}
         >
           <Link to="/tech-news">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -358,11 +359,11 @@ function TechNewsDetail() {
               {article.category || 'Tech News'}
             </Badge>
 
-            <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+            <h1 className="text-4xl md:text-5xl font-bold leading-tight font-[Hobo_BT]" style={{ fontWeight: 700 }}>
               {article.title}
             </h1>
 
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground" style={{ fontFamily: "'Satoshi', sans-serif" }}>
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 {formatDate(article.date)}
@@ -376,6 +377,7 @@ function TechNewsDetail() {
                 size="sm"
                 onClick={handleShare}
                 className="ml-auto"
+                style={{ fontFamily: "'Satoshi', sans-serif" }}
               >
                 <Share2 className="w-4 h-4 mr-2" />
                 Share
@@ -383,7 +385,7 @@ function TechNewsDetail() {
             </div>
 
             {article.description && (
-              <p className="text-xl text-muted-foreground leading-relaxed">
+              <p className="text-xl text-muted-foreground leading-relaxed" style={{ fontFamily: "'Satoshi', sans-serif" }}>
                 {article.description}
               </p>
             )}
@@ -407,7 +409,7 @@ function TechNewsDetail() {
           <Separator />
 
           {/* Article Content - Using SmartMarkdown for safe rendering with auto-embeds */}
-          <div className="prose prose-lg dark:prose-invert max-w-none">
+          <div className="prose prose-lg dark:prose-invert max-w-none" style={{ fontFamily: "'Satoshi', sans-serif" }}>
             <SmartMarkdown content={sanitizedContent} />
           </div>
 
@@ -415,14 +417,15 @@ function TechNewsDetail() {
           {article.originalSource && (
             <>
               <Separator />
-              <div className="bg-primary/5 p-6 rounded-lg border border-primary/10">
-                <p className="text-sm font-medium text-muted-foreground mb-3">
+              <div className="bg-primary/5 p-6 rounded-lg border border-primary/10" style={{ fontFamily: "'Satoshi', sans-serif" }}>
+                <p className="text-sm font-medium text-muted-foreground mb-3" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 500 }}>
                   📰 Original Article Source
                 </p>
                 <Button 
                   variant="outline" 
                   asChild 
                   className="w-full sm:w-auto"
+                  style={{ fontFamily: "'Satoshi', sans-serif" }}
                 >
                   <a
                     href={article.originalSource}
@@ -442,7 +445,7 @@ function TechNewsDetail() {
         {/* Related Articles */}
         {relatedArticles.length > 0 && (
           <section className="mt-16">
-            <h2 className="text-3xl font-bold mb-8">Related Articles</h2>
+            <h2 className="text-3xl font-bold mb-8" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700 }}>Related Articles</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {relatedArticles.map((related) => (
                 <Link
@@ -465,10 +468,10 @@ function TechNewsDetail() {
                       </div>
                     )}
                     <div className="p-4">
-                      <h3 className="font-semibold line-clamp-2 group-hover:text-primary transition-colors">
+                      <h3 className="font-semibold line-clamp-2 group-hover:text-primary transition-colors font-[Hobo_BT]" style={{ fontWeight: 600 }}>
                         {related.title}
                       </h3>
-                      <p className="text-sm text-muted-foreground mt-2">
+                      <p className="text-sm text-muted-foreground mt-2" style={{ fontFamily: "'Satoshi', sans-serif" }}>
                         {formatDate(related.date)}
                       </p>
                     </div>
