@@ -66,10 +66,14 @@ const CONFIG = {
   GROQ_API_KEY: process.env.GROQ_API_KEY || '',
   SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
   SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
+  TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID || '',
   MAX_ARTICLES_PER_CATEGORY: 20,
   TRANSLATION_DELAY: 1000, // ms between translation requests (increased to avoid rate limits)
-  RATE_LIMIT_DELAY: 7000, // 7 seconds between requests (Firecrawl free: 10 req/min)
+  RATE_LIMIT_DELAY: 10000, // 10 seconds between requests (Firecrawl free: 10 req/min = 6s min, +buffer)
   MAX_ARTICLES_PER_RUN: 50, // Safety limit per scraping run
+  MAX_RETRIES: 2, // Maximum retry attempts for failed requests (conserve API credits)
+  MAX_CONSECUTIVE_FAILURES: 3, // Circuit breaker: stop if too many failures in a row
 };
 
 // Initialize Groq client
@@ -90,6 +94,89 @@ const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
  */
 function generateArticleId(url) {
   return crypto.createHash('md5').update(url).digest('hex');
+}
+
+/**
+ * Send Telegram notification
+ */
+async function sendTelegramNotification(message) {
+  if (!CONFIG.TELEGRAM_BOT_TOKEN || !CONFIG.TELEGRAM_CHAT_ID) {
+    console.log('⚠️  Telegram credentials not configured, skipping notification');
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: CONFIG.TELEGRAM_CHAT_ID,
+          text: message,
+          parse_mode: 'HTML'
+        })
+      }
+    );
+    
+    if (!response.ok) {
+      console.error('❌ Telegram notification failed:', await response.text());
+    }
+  } catch (error) {
+    console.error('❌ Telegram notification error:', error);
+  }
+}
+
+/**
+ * Smart retry wrapper for Firecrawl API calls
+ * Only retries on specific errors to conserve API credits
+ */
+async function fetchWithRetry(url, options, context = '') {
+  const maxRetries = CONFIG.MAX_RETRIES;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 1) {
+        console.log(`  🔄 Retry ${attempt - 1}/${maxRetries - 1} for ${context}...`);
+      }
+      
+      const response = await fetch(url, options);
+      
+      // Success - return immediately
+      if (response.ok) {
+        return { success: true, response };
+      }
+      
+      const status = response.status;
+      
+      // Only retry on specific transient errors to save API credits
+      // 408: Request Timeout (temporary)
+      // 502: Bad Gateway (server issue)
+      // 503: Service Unavailable (temporary overload)
+      const isRetryable = [408, 502, 503].includes(status);
+      
+      if (!isRetryable || attempt === maxRetries) {
+        // Don't retry - return error
+        return { success: false, status, response };
+      }
+      
+      // Short exponential backoff: 3s, 6s
+      const delay = 3000 * attempt;
+      console.log(`  ⚠️  ${status} error on ${context}, retry in ${delay/1000}s...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      
+    } catch (error) {
+      if (attempt === maxRetries) {
+        return { success: false, error: error.message };
+      }
+      
+      const delay = 3000 * attempt;
+      console.log(`  ⚠️  Network error on ${context}, retry in ${delay/1000}s...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  return { success: false, error: 'Max retries exceeded' };
 }
 
 /**
@@ -272,23 +359,29 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
   console.log(`🔍 Scraping ${categoryTag} from: ${categoryUrl}`);
   
   try {
-    // Use Firecrawl REST API
-    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${CONFIG.FIRECRAWL_API_KEY}`
+    // Use Firecrawl REST API with retry logic
+    const result = await fetchWithRetry(
+      'https://api.firecrawl.dev/v1/scrape',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CONFIG.FIRECRAWL_API_KEY}`
+        },
+        body: JSON.stringify({
+          url: categoryUrl,
+          formats: ['markdown'],
+          onlyMainContent: true
+        })
       },
-      body: JSON.stringify({
-        url: categoryUrl,
-        formats: ['markdown'],
-        onlyMainContent: true
-      })
-    });
+      `category ${categoryTag}`
+    );
 
-    if (!response.ok) {
-      throw new Error(`Firecrawl API error: ${response.status} ${response.statusText}`);
+    if (!result.success) {
+      throw new Error(`Firecrawl API error: ${result.status || result.error}`);
     }
+    
+    const response = result.response;
 
     const scrapeResult = await response.json();
 
@@ -418,23 +511,29 @@ async function scrapeArticleDetails(url) {
   console.log(`📰 Scraping article: ${url}`);
   
   try {
-    // Use Firecrawl REST API
-    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${CONFIG.FIRECRAWL_API_KEY}`
+    // Use Firecrawl REST API with retry logic
+    const result = await fetchWithRetry(
+      'https://api.firecrawl.dev/v1/scrape',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CONFIG.FIRECRAWL_API_KEY}`
+        },
+        body: JSON.stringify({
+          url: url,
+          formats: ['markdown', 'html'], // Get both for embed extraction
+          onlyMainContent: true
+        })
       },
-      body: JSON.stringify({
-        url: url,
-        formats: ['markdown', 'html'], // Get both for embed extraction
-        onlyMainContent: true
-      })
-    });
+      `article ${url.split('/').pop()}`
+    );
 
-    if (!response.ok) {
-      throw new Error(`Firecrawl API error: ${response.status} ${response.statusText}`);
+    if (!result.success) {
+      throw new Error(`Firecrawl API error: ${result.status || result.error}`);
     }
+    
+    const response = result.response;
 
     const scrapeResult = await response.json();
     
@@ -1119,8 +1218,34 @@ async function scrapeNews() {
   
   let newArticlesCount = 0;
   let failedCount = 0;
+  let consecutiveFailures = 0; // Circuit breaker
+  let circuitBreakerTriggered = false;
   
   for (const { url, category } of newArticles) {
+    // Circuit breaker: Stop if too many consecutive failures
+    if (consecutiveFailures >= CONFIG.MAX_CONSECUTIVE_FAILURES) {
+      console.log(`\n🚨 Circuit breaker activated: ${consecutiveFailures} consecutive failures`);
+      console.log(`⏸️  Stopping to avoid wasting API credits`);
+      console.log(`💡 Remaining articles will be processed in next run\n`);
+      
+      circuitBreakerTriggered = true;
+      const remainingArticles = newArticles.length - (newArticlesCount + failedCount);
+      
+      // Send Telegram notification for circuit breaker
+      await sendTelegramNotification(
+        `🚨 <b>Haber Scraper: Circuit Breaker Aktif</b>\n\n` +
+        `⚠️  <b>${consecutiveFailures} ardışık hata</b> tespit edildi\n` +
+        `⏸️  API credit'lerini korumak için durduruldu\n\n` +
+        `📊 <b>Durum:</b>\n` +
+        `✅ Başarılı: ${newArticlesCount}\n` +
+        `❌ Başarısız: ${failedCount}\n` +
+        `⏭️  Kalan: ${remainingArticles}\n\n` +
+        `💡 Kalan haberler sonraki çalışmada işlenecek`
+      );
+      
+      break;
+    }
+    
     console.log(`📰 [${category}] Processing: ${url}`);
     
     // Scrape article details
@@ -1128,8 +1253,13 @@ async function scrapeNews() {
     
     if (!article) {
       failedCount++;
+      consecutiveFailures++;
+      console.log(`❌ Failed (${consecutiveFailures} consecutive failures)\n`);
       continue;
     }
+    
+    // Reset consecutive failures on success
+    consecutiveFailures = 0;
     
     try {
       // Translate article
@@ -1166,8 +1296,8 @@ async function scrapeNews() {
       continue; // Skip this article, don't save to DB
     }
     
-    // Rate limiting between articles (Firecrawl free: 10 req/min)
-    await new Promise(resolve => setTimeout(resolve, 7000)); // 7 seconds = ~8 req/min
+    // Rate limiting between articles (Firecrawl free: 10 req/min, we use 10s for safety)
+    await new Promise(resolve => setTimeout(resolve, CONFIG.RATE_LIMIT_DELAY));
   }
   
   // Get final count
@@ -1182,10 +1312,49 @@ async function scrapeNews() {
   console.log(`⏰ Last updated: ${new Date().toISOString()}`);
   console.log(`💾 Storage: Supabase PostgreSQL`);
   console.log('='.repeat(60));
+  
+  // Send Telegram summary notification (only if NOT circuit breaker)
+  if (!circuitBreakerTriggered) {
+    const totalProcessed = newArticlesCount + failedCount;
+    const successRate = totalProcessed > 0 ? Math.round((newArticlesCount / totalProcessed) * 100) : 0;
+    
+    // Determine status emoji and message
+    let statusEmoji = '✅';
+    let statusText = 'Tamamlandı';
+    
+    if (failedCount > 0 && newArticlesCount === 0) {
+      statusEmoji = '❌';
+      statusText = 'Başarısız';
+    } else if (failedCount > newArticlesCount) {
+      statusEmoji = '⚠️';
+      statusText = 'Kısmi Başarı';
+    }
+    
+    await sendTelegramNotification(
+      `${statusEmoji} <b>Haber Scraper: ${statusText}</b>\n\n` +
+      `📊 <b>İşlem Özeti:</b>\n` +
+      `✅ Yeni haber: ${newArticlesCount}\n` +
+      `⏭️  Atlanan: ${duplicateCount}\n` +
+      `❌ Başarısız: ${failedCount}\n` +
+      `📈 Başarı oranı: ${successRate}%\n\n` +
+      `💾 <b>Veritabanı:</b> ${finalCount} toplam haber\n` +
+      `⏰ ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`
+    );
+  }
 }
 
 // Run scraper
-scrapeNews().catch(error => {
+scrapeNews().catch(async error => {
   console.error('💥 Fatal error:', error);
+  
+  // Send fatal error notification to Telegram
+  await sendTelegramNotification(
+    `💥 <b>Haber Scraper: Fatal Hata</b>\n\n` +
+    `❌ <b>Kritik hata oluştu ve scraper durdu</b>\n\n` +
+    `🔍 <b>Hata detayı:</b>\n` +
+    `<code>${error.message || 'Bilinmeyen hata'}</code>\n\n` +
+    `⚠️  Lütfen log'ları kontrol edin ve sistemi gözden geçirin`
+  );
+  
   process.exit(1);
 });
