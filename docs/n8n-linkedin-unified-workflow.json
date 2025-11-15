@@ -216,43 +216,6 @@
     },
     {
       "parameters": {
-        "modelId": {
-          "__rl": true,
-          "value": "gpt-4.1-mini",
-          "mode": "list",
-          "cachedResultName": "GPT-4.1-MINI"
-        },
-        "messages": {
-          "values": [
-            {
-              "content": "=You are a LinkedIn Growth Editor crafting high-engagement tech news posts in ENGLISH.\n\nOBJECTIVE\nMaximize reach (dwell time, comments, saves, shares).\nUse UNICODE BOLD (Mathematical Bold) for the main headline and up to TWO short key phrases per item. Do NOT use markdown **bold**.\n\nCONFIG\n- MAX_ITEMS: 5–8\n- MAX_CHARS_TOTAL: 2800\n- LINK_BASE: https://cemkoyluoglu.codes/tech-news/\n\nSELECTION RULES\n- Articles are pre-sorted by importance/interest score - prioritize the first articles in the list as they are the most significant.\n- Choose the MOST INTERESTING 5–8 items (novelty, real-world impact, trend momentum, surprise).\n- Ensure topical diversity (AI, data, cybersecurity, cloud, hardware, policy, etc.).\n- Avoid duplicates and trivial incremental updates.\n\nWRITING RULES\n- Tone: smart, concise, conversational (no hype, no corp-jargon).\n- First line = HOOK (10–18 words) in UNICODE BOLD.\n- Each item: different emoji + 1–2 sentence summary + one-line \"why it matters\".\n- In each item, convert ≤2 short key phrases to UNICODE BOLD (e.g., model/product/law).\n- Vary sentence openings; no repeated emojis.\n- Keep total length under MAX_CHARS_TOTAL.\n\nHASHTAGS (no branded tags)\n- Generate 3–6 from this curated set (no duplicates): \n- Prefer 1–2 broad + 2–3 niche based on selected items.\n\nOUTPUT FORMAT (single post; links stay inside the post)\n𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭𝐬: [HOOK line in Unicode bold]\n(if you want to make it bold not use ** , use unicode bold)\n\n[EMOJI] [1–2 sentence summary + why it matters; include up to 2 Unicode-bold phrases]\n🔗 LINK_BASE[slug]\n\n(Repeat for all selected)\n\n[No Hashtags]\n\nARTICLES JSON:\n{{ JSON.stringify($json.articles, null, 2) }}"
-            }
-          ]
-        },
-        "options": {
-          "maxTokens": 2000,
-          "temperature": 0.7
-        }
-      },
-      "id": "41417d29-e775-4205-be52-c7be566b294b",
-      "name": "OpenAI - Generate Digest",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 1.3,
-      "position": [
-        896,
-        480
-      ],
-      "notesInFlow": true,
-      "credentials": {
-        "openAiApi": {
-          "id": "1CpaBvrRHx6QTSFr",
-          "name": "n8n free OpenAI API credits"
-        }
-      },
-      "notes": "Uses $100 free OpenAI credit"
-    },
-    {
-      "parameters": {
         "tableId": "linkedin_digest_posts",
         "fieldsUi": {
           "fieldValues": [
@@ -975,6 +938,55 @@
       ],
       "id": "01a4c25f-b0e8-49f6-9908-75dc5320169a",
       "name": "Set Conversation State"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an expert LinkedIn Growth Editor specializing in tech news digest posts.\n\nYour mission: Create high-engagement LinkedIn posts that maximize reach (dwell time, comments, saves, shares).\n\nCORE FORMATTING RULES (CRITICAL):\n1. ALWAYS use Unicode Mathematical Bold for emphasis:\n   - Headline: ENTIRE hook line must be in Unicode bold\n   - Content: 2-3 key phrases per article (company names, product names, key terms)\n   - Example: Blue Origin → 𝐁𝐥𝐮𝐞 𝐎𝐫𝐢𝐠𝐢𝐧\n   - Example: New Glenn rocket → 𝐍𝐞𝐰 𝐆𝐥𝐞𝐧𝐧 𝐫𝐨𝐜𝐤𝐞𝐭\n2. NEVER use markdown **bold** or *italic* - LinkedIn doesn't support it\n3. Each emoji must be unique (no repeats)\n\nUNICODE BOLD ALPHABET (copy these exactly):\n𝐀𝐁𝐂𝐃𝐄𝐅𝐆𝐇𝐈𝐉𝐊𝐋𝐌𝐍𝐎𝐏𝐐𝐑𝐒𝐓𝐔𝐕𝐖𝐗𝐘𝐙\n𝐚𝐛𝐜𝐝𝐞𝐟𝐠𝐡𝐢𝐣𝐤𝐥𝐦𝐧𝐨𝐩𝐪𝐫𝐬𝐭𝐮𝐯𝐰𝐱𝐲𝐳\n𝟎𝟏𝟐𝟑𝟒𝟓𝟔𝟕𝟖𝟗\n\nCONTENT STRATEGY:\n- Select 5-6 MOST impactful stories (novelty, real-world impact, surprise factor)\n- Prioritize articles ranked higher in the input list (pre-scored by importance)\n- Ensure topic diversity: AI, cybersecurity, cloud, hardware, policy, data science\n- Avoid incremental updates or duplicate topics\n- Maximum 2800 characters total\n\nWRITING STYLE:\n- Tone: Smart, concise, conversational (no hype, no buzzwords)\n- Hook line (10-18 words) - ENTIRE LINE in Unicode bold\n- Each item: 1-2 sentences explaining what happened + why it matters\n- NO bold in content - keep it clean and readable\n- Vary sentence structure (don't start with same words)\n- Be factually accurate - no embellishment or speculation\n\nLINK FORMAT:\n- Base URL: https://cemkoyluoglu.codes/tech-news/\n- Always append article slug: https://cemkoyluoglu.codes/tech-news/[slug]\n\nHASHTAGS:\n- Add 4-6 relevant hashtags at the end\n- Mix: 2 broad (#AI, #Tech) + 3-4 niche (#SpaceTech, #Robotics, #Biotech)\n- NO branded hashtags (no #OpenAI, #Google, etc.)",
+              "role": "system"
+            },
+            {
+              "content": "=Create today's LinkedIn tech news digest from these articles.\n\nArticles (pre-ranked by importance):\n{{ JSON.stringify($json.articles, null, 2) }}\n\nCRITICAL REQUIREMENTS:\n- Hook line: ENTIRE LINE in Unicode bold (𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭𝐬: [your hook])\n- Content: NO bold in article descriptions - keep it clean\n- Emojis: Unique for each article\n- Links: Include for every article\n- Hashtags: 4-6 at the end\n- Length: Under 2800 characters\n- Accuracy: Only facts from articles, no speculation"
+            },
+            {
+              "content": "=I'll create an engaging LinkedIn digest following the exact format. Here's the structure I'll use:\n\n𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭𝐬: 𝐇𝐨𝐰 𝐜𝐮𝐫𝐫𝐞𝐧𝐭 𝐭𝐫𝐞𝐧𝐝𝐬 𝐚𝐫𝐞 𝐫𝐞𝐬𝐡𝐚𝐩𝐢𝐧𝐠 𝐭𝐞𝐜𝐡 𝐚𝐧𝐝 𝐬𝐜𝐢𝐞𝐧𝐜𝐞 𝐧𝐨𝐰\n\n🚀 Blue Origin just achieved a milestone by successfully landing the New Glenn rocket after a historic Mars mission. This shows how reusable rockets are becoming more reliable, cutting space exploration costs.\n🔗 https://cemkoyluoglu.codes/tech-news/blue-origin-lands-new-glenn\n\n🧠 Anthropic is on track to become profitable much faster than OpenAI, signaling a shift in the AI startup landscape where sustainable business models matter more than ever.\n🔗 https://cemkoyluoglu.codes/tech-news/anthropic-profitability-vs-openai\n\n🦾 Russia's much-hyped humanoid robot collapsed on stage during its first public presentation, highlighting how complex robotics still faces major real-world challenges.\n🔗 https://cemkoyluoglu.codes/tech-news/russia-robot-collapse\n\n🧬 Scientists have produced 3D muscle tissue in low gravity, marking a major step towards lab-grown organs and future space medicine breakthroughs.\n🔗 https://cemkoyluoglu.codes/tech-news/3d-muscle-tissue-low-gravity\n\n⚠️ Meta revealed that 10% of its 2024 revenue came from scam and banned product ads, raising urgent questions about platform responsibility and ad ecosystem integrity.\n🔗 https://cemkoyluoglu.codes/tech-news/meta-scam-ad-revenue\n\n#AI #SpaceTech #Robotics #Biotech #Cybersecurity\n\nNow let me create your actual digest from the provided articles...",
+              "role": "assistant"
+            }
+          ]
+        },
+        "options": {
+          "frequency_penalty": 0,
+          "maxTokens": 2000,
+          "n": 1,
+          "presence_penalty": 0.3,
+          "temperature": 0.3,
+          "topP": 1
+        }
+      },
+      "id": "4c392f28-03e1-4f45-bb16-980956a7c399",
+      "name": "OpenAI - Generate Digest",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.3,
+      "position": [
+        896,
+        480
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "1CpaBvrRHx6QTSFr",
+          "name": "n8n free OpenAI API credits"
+        }
+      },
+      "notes": "Uses $100 free OpenAI credit"
     }
   ],
   "connections": {
@@ -1074,17 +1086,6 @@
         [
           {
             "node": "OpenAI - Generate Digest",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "OpenAI - Generate Digest": {
-      "main": [
-        [
-          {
-            "node": "Save Digest to Database",
             "type": "main",
             "index": 0
           }
@@ -1311,6 +1312,17 @@
         [
           {
             "node": "Send Edit Instructions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Generate Digest": {
+      "main": [
+        [
+          {
+            "node": "Save Digest to Database",
             "type": "main",
             "index": 0
           }
