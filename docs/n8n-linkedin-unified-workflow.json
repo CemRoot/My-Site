@@ -345,6 +345,7 @@
           ]
         },
         "additionalFields": {
+          "appendAttribution": false,
           "parse_mode": "Markdown"
         }
       },
@@ -386,6 +387,7 @@
         "chatId": "={{ $('Parse Trigger Type').item.json.telegramChatId }}",
         "text": "=⚠️ *Daily digest already exists for today!\nStatus: *{{ $json.status }}*\nCreated: {{ $json.created_at }}\nNo action needed.",
         "additionalFields": {
+          "appendAttribution": false,
           "parse_mode": "HTML"
         }
       },
@@ -647,9 +649,9 @@
     {
       "parameters": {
         "chatId": "={{ $('Parse Trigger Type').item.json.callbackData.chat_id }}",
-        "text": "=✅ *Digest posted to LinkedIn!*\\n\\n📅 Date: {{ $('Fetch Digest by ID').item.json.digest_date }}\\n🔗 Post ID: {{ $json.linkedin_post_id }}\\n\\nThis message was sent automatically with n8n",
+        "text": "=✅ Digest posted to LinkedIn!\n📅 Date: {{ $('Fetch Digest by ID').item.json.digest_date }}\n🔗 Post ID: {{ $json.linkedin_post_id }}",
         "additionalFields": {
-          "parse_mode": "Markdown"
+          "appendAttribution": false
         }
       },
       "id": "f380a59c-1f90-4953-8af3-b7f674bdeb09",
@@ -723,8 +725,9 @@
     {
       "parameters": {
         "chatId": "={{ $('Parse Trigger Type').item.json.callbackData.chat_id }}",
-        "text": "=❌ *Digest rejected.*\\n\\nThe digest has been marked as rejected.\\n\\nThis message was sent automatically with n8n",
+        "text": "=❌ Digest rejected \nThe digest has been marked as rejected.",
         "additionalFields": {
+          "appendAttribution": false,
           "parse_mode": "Markdown"
         }
       },
@@ -810,6 +813,7 @@
         "chatId": "={{ $('Parse Trigger Type').first().json.telegramChatId }}",
         "text": "⚠️ *Bugün haber bulunamadı!*\n\nVeritabanında bugüne ait hiçbir haber bulunamadı.\n\n📌 *Yapılacaklar:*\n1. Manuel olarak haber çekme workflow'unu çalıştırın\n2. Tekrar deneyin\n3. Sorun devam ederse n8n loglarını kontrol edin\n\nBu mesaj otomatik olarak n8n tarafından gönderildi.",
         "additionalFields": {
+          "appendAttribution": false,
           "parse_mode": "Markdown"
         }
       },
@@ -894,6 +898,7 @@
         "chatId": "={{ $('Parse Trigger Type').item.json.callbackData.chat_id }}",
         "text": "=✏️ <b>LinkedIn Digest İçeriği Düzenleme</b>\n\nAşağıdaki içeriği istediğiniz gibi düzenleyip bana geri gönderin.\n\n📝 <b>Mevcut İçerik:</b>\n\n{{ $('Fetch Digest by ID').item.json.suggested_content }}\n\n━━━━━━━━━━━━━━━━━━━━\n\n<b>📋 Nasıl Düzenlerim?</b>\n1️⃣ Yukarıdaki içeriği kopyalayın\n2️⃣ İstediğiniz değişiklikleri yapın\n3️⃣ Düzenlenmiş içeriği bu sohbete GÖNDERİN (metin olarak)\n\n<b>⚠️ Önemli Notlar:</b>\n• Maksimum 3000 karakter\n• Emoji ve formatlamalar korunur\n• Hashtag'leri korumayı unutmayın\n• İptal etmek için /menu yazın\n\n<b>⏱️ 10 dakika içinde göndermezseniz işlem iptal olur.</b>",
         "additionalFields": {
+          "appendAttribution": false,
           "parse_mode": "HTML"
         }
       },
