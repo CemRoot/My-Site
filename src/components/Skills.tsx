@@ -138,7 +138,7 @@ export function Skills() {
   ];
 
   return (
-    <section id="skills" className="relative py-20 sm:py-32 overflow-hidden px-4 sm:px-6 lg:px-8">
+    <section id="skills" className="relative py-12 sm:py-20 overflow-hidden px-4 sm:px-6 lg:px-8">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl liquid-morph" />
@@ -147,65 +147,51 @@ export function Skills() {
 
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Header */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center mb-4">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary via-accent to-primary rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500" />
-              <div className="relative px-6 py-2 rounded-full liquid-glass-strong neon-border-primary liquid-shimmer">
-                <span className="text-sm font-mono text-primary tracking-wider">TECHNICAL SKILLS</span>
-              </div>
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center mb-3">
+            <div className="px-4 py-1.5 rounded-full frosted-glass border border-primary/20">
+              <span className="text-xs font-mono text-primary tracking-wider">TECHNICAL SKILLS</span>
             </div>
           </div>
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl mb-6">
-            <span className="bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
-              Expertise & Tools
-            </span>
+          <h2 className="text-3xl sm:text-4xl mb-4 text-foreground font-semibold">
+            Expertise & Tools
           </h2>
-          <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            Comprehensive skill set spanning Cloud Operations, Python Development, AI/ML, and Microsoft 365 Ecosystem
+          <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
+            Cloud Operations, Python Development, AI/ML, and Microsoft 365 Ecosystem
           </p>
         </div>
 
         {/* Skills Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-6 mb-16">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           {skillCategories.map((category, index) => {
             const Icon = category.icon;
             const colorClasses = {
-              primary: 'from-primary/20 to-primary/5 border-primary/20 text-primary bg-primary/10',
-              secondary: 'from-secondary/20 to-secondary/5 border-secondary/20 text-secondary bg-secondary/10',
-              accent: 'from-accent/20 to-accent/5 border-accent/20 text-accent bg-accent/10',
+              primary: 'border-primary/20 text-primary bg-primary/5',
+              secondary: 'border-secondary/20 text-secondary bg-secondary/5',
+              accent: 'border-accent/20 text-accent bg-accent/5',
             };
 
             return (
-              <div key={index} className="group relative liquid-glow">
-                <div className={`absolute -inset-2 bg-gradient-to-br ${colorClasses[category.color as keyof typeof colorClasses].split(' ')[0]} rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-                <div className={`relative p-6 rounded-3xl frosted-glass border ${colorClasses[category.color as keyof typeof colorClasses].split(' ')[2]} liquid-shimmer transition-all duration-300 hover:scale-[1.02] h-full`}>
+              <div key={index} className="group">
+                <div className={`relative p-4 rounded-2xl frosted-glass border ${colorClasses[category.color as keyof typeof colorClasses].split(' ')[0]} transition-all duration-300`}>
                   {/* Header */}
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className={`w-12 h-12 rounded-2xl ${colorClasses[category.color as keyof typeof colorClasses].split(' ')[4]} flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-500`}>
-                      <Icon className={`w-6 h-6 ${colorClasses[category.color as keyof typeof colorClasses].split(' ')[3]}`} />
+                  <div className="flex items-center gap-2 mb-3 pb-3 border-b border-current/10">
+                    <div className={`w-8 h-8 rounded-lg ${colorClasses[category.color as keyof typeof colorClasses].split(' ')[2]} flex items-center justify-center`}>
+                      <Icon className={`w-4 h-4 ${colorClasses[category.color as keyof typeof colorClasses].split(' ')[1]}`} />
                     </div>
-                    <h3 className="text-lg bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+                    <h3 className="text-sm font-medium text-foreground">
                       {category.title}
                     </h3>
                   </div>
 
                   {/* Skills */}
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {category.skills.map((skill, idx) => (
-                      <div key={idx}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-foreground">{skill.name}</span>
-                          <span className={`text-xs font-mono ${colorClasses[category.color as keyof typeof colorClasses].split(' ')[3]}`}>
-                            {skill.years}
-                          </span>
-                        </div>
-                        <div className="h-2 bg-muted/20 rounded-full overflow-hidden backdrop-blur-sm">
-                          <div
-                            className={`h-full bg-gradient-to-r ${colorClasses[category.color as keyof typeof colorClasses].split(' ')[0]} rounded-full transition-all duration-1000 group-hover:animate-pulse`}
-                            style={{ width: `${skill.level}%` }}
-                          />
-                        </div>
+                      <div key={idx} className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">{skill.name}</span>
+                        <span className={`text-xs font-mono ${colorClasses[category.color as keyof typeof colorClasses].split(' ')[1]} opacity-70`}>
+                          {skill.years}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -216,56 +202,53 @@ export function Skills() {
         </div>
 
         {/* Methodologies */}
-        <div className="mb-16">
-          <h3 className="text-2xl sm:text-3xl text-center mb-8 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+        <div className="mb-8">
+          <h3 className="text-base text-center mb-3 text-muted-foreground font-medium">
             Methodologies & Practices
           </h3>
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="flex flex-wrap justify-center gap-1.5 max-w-4xl mx-auto">
             {methodologies.map((methodology, index) => {
               const colorClasses = {
-                primary: 'border-primary/30 text-primary hover:bg-primary/10',
-                secondary: 'border-secondary/30 text-secondary hover:bg-secondary/10',
-                accent: 'border-accent/30 text-accent hover:bg-accent/10',
+                primary: 'border-primary/15 text-primary/80',
+                secondary: 'border-secondary/15 text-secondary/80',
+                accent: 'border-accent/15 text-accent/80',
               };
 
               return (
-                <div
+                <span
                   key={index}
-                  className={`px-5 py-3 rounded-2xl frosted-glass border ${colorClasses[methodology.color as keyof typeof colorClasses]} transition-all duration-300 hover:scale-105 liquid-shimmer cursor-default`}
+                  className={`px-2 py-1 rounded-md frosted-glass border ${colorClasses[methodology.color as keyof typeof colorClasses]} text-[10px] leading-tight`}
                 >
-                  <span className="text-sm">{methodology.name}</span>
-                </div>
+                  {methodology.name}
+                </span>
               );
             })}
           </div>
         </div>
 
         {/* Certifications */}
-        <div className="relative group">
-          <div className="absolute -inset-4 bg-gradient-to-r from-secondary/20 via-accent/20 to-primary/20 rounded-[2rem] blur-2xl opacity-50 group-hover:opacity-75 transition-opacity duration-700" />
-          <div className="relative p-8 sm:p-10 rounded-[2rem] liquid-glass-strong border border-primary/20 liquid-shimmer">
-            <h3 className="text-2xl sm:text-3xl text-center mb-8 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
-              Certifications & Licenses
-            </h3>
-            <div className="grid sm:grid-cols-2 gap-4">
-              {certifications.map((cert, index) => {
-                const colorClasses = {
-                  primary: 'border-primary/10 hover:border-primary/30',
-                  secondary: 'border-secondary/10 hover:border-secondary/30',
-                  accent: 'border-accent/10 hover:border-accent/30',
-                };
+        <div>
+          <h3 className="text-base text-center mb-4 text-muted-foreground font-medium">
+            Certifications & Licenses
+          </h3>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 max-w-5xl mx-auto">
+            {certifications.map((cert, index) => {
+              const colorClasses = {
+                primary: 'border-primary/10',
+                secondary: 'border-secondary/10',
+                accent: 'border-accent/10',
+              };
 
-                return (
-                  <div
-                    key={index}
-                    className={`flex items-start gap-3 p-4 rounded-2xl liquid-glass border ${colorClasses[cert.color as keyof typeof colorClasses]} transition-all duration-300 hover:scale-[1.02]`}
-                  >
-                    <div className={`w-2 h-2 rounded-full ${cert.color === 'primary' ? 'bg-primary' : cert.color === 'secondary' ? 'bg-secondary' : 'bg-accent'} mt-2 flex-shrink-0`} />
-                    <span className="text-sm text-muted-foreground leading-relaxed">{cert.name}</span>
-                  </div>
-                );
-              })}
-            </div>
+              return (
+                <div
+                  key={index}
+                  className={`flex items-start gap-1.5 p-2 rounded-lg frosted-glass border ${colorClasses[cert.color as keyof typeof colorClasses]} transition-opacity duration-300 hover:opacity-80`}
+                >
+                  <div className={`w-1 h-1 rounded-full ${cert.color === 'primary' ? 'bg-primary' : cert.color === 'secondary' ? 'bg-secondary' : 'bg-accent'} mt-1 flex-shrink-0`} />
+                  <span className="text-[10px] text-muted-foreground leading-snug">{cert.name}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

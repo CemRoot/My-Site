@@ -85,7 +85,7 @@ export function Contact() {
   };
 
   return (
-    <section id="contact" className="relative py-20 sm:py-32 overflow-hidden px-4 sm:px-6 lg:px-8">
+    <section id="contact" className="relative py-16 sm:py-24 overflow-hidden px-4 sm:px-6 lg:px-8">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl liquid-morph" />
@@ -94,26 +94,21 @@ export function Contact() {
 
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Header */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center mb-4">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-accent via-primary to-accent rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500" />
-              <div className="relative px-6 py-2 rounded-full liquid-glass-strong border border-accent/30 liquid-shimmer">
-                <span className="text-sm font-mono text-accent tracking-wider">LET'S CONNECT</span>
-              </div>
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center mb-3">
+            <div className="px-4 py-1.5 rounded-full frosted-glass border border-accent/20">
+              <span className="text-xs font-mono text-accent tracking-wider">LET'S CONNECT</span>
             </div>
           </div>
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl mb-6">
-            <span className="bg-gradient-to-r from-foreground via-accent to-foreground bg-clip-text text-transparent">
-              Start a Conversation
-            </span>
+          <h2 className="text-3xl sm:text-4xl mb-4 text-foreground font-semibold">
+            Start a Conversation
           </h2>
-          <p className="text-lg text-muted-foreground max-w-3xl mx-auto mb-4">
+          <p className="text-sm text-muted-foreground max-w-2xl mx-auto mb-3">
             Whether you have a freelance project, full-time opportunity, or just want to chat about tech - 
             I'm here and ready to connect
           </p>
-          <div className="flex items-center justify-center gap-2 text-sm">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          <div className="flex items-center justify-center gap-2 text-xs">
+            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
             <span className="text-green-500">
               Available for freelance projects & full-time opportunities
             </span>
@@ -121,7 +116,7 @@ export function Contact() {
         </div>
 
         {/* Contact Methods Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-16">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-10">
           {CONTACT_METHODS.map((method, index) => {
             const Icon = method.icon;
             const colors = getColorClasses(method.color);
@@ -135,24 +130,24 @@ export function Contact() {
                 className={`group relative ${method.featured ? 'sm:col-span-2 lg:col-span-1' : ''}`}
               >
                 {method.featured && (
-                  <div className="absolute -inset-1 bg-gradient-to-r from-accent via-primary to-secondary rounded-2xl blur-xl opacity-30 group-hover:opacity-60 transition-opacity duration-500" />
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-accent via-primary to-secondary rounded-xl blur-lg opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
                 )}
-                <div className={`relative p-6 rounded-2xl frosted-glass border ${colors.border} transition-all duration-300 hover:scale-105 liquid-shimmer h-full`}>
-                  <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colors.bg} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300`}>
-                      <Icon className={`w-6 h-6 ${colors.text}`} />
+                <div className={`relative p-4 rounded-xl frosted-glass border ${colors.border} transition-all duration-300 hover:scale-[1.02] h-full`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${colors.bg} flex items-center justify-center flex-shrink-0`}>
+                      <Icon className={`w-5 h-5 ${colors.text}`} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-sm text-muted-foreground">{method.label}</h3>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <h3 className="text-xs text-muted-foreground">{method.label}</h3>
                         {method.featured && (
-                          <span className="px-2 py-0.5 rounded-full bg-accent/20 text-accent text-xs">Fast Reply</span>
+                          <span className="px-1.5 py-0.5 rounded-full bg-accent/20 text-accent text-[10px]">Fast</span>
                         )}
                       </div>
-                      <p className={`font-medium truncate ${colors.text}`}>
+                      <p className={`font-medium truncate text-sm ${colors.text}`}>
                         {method.value}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">{method.description}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{method.description}</p>
                     </div>
                   </div>
                 </div>
@@ -161,17 +156,17 @@ export function Contact() {
           })}
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-6">
           {/* Contact Form */}
-          <div className="relative group">
-            <div className="absolute -inset-2 bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20 rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
-            <form onSubmit={handleSubmit} className="relative p-8 rounded-3xl liquid-glass-strong liquid-border">
-              <h3 className="text-2xl mb-6 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+          <div className="relative group h-full">
+            <div className="absolute -inset-1 bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
+            <form onSubmit={handleSubmit} className="relative p-6 rounded-2xl liquid-glass-strong liquid-border h-full flex flex-col">
+              <h3 className="text-xl mb-4 text-foreground font-medium">
                 Send Direct Message
               </h3>
-              <div className="space-y-4">
+              <div className="space-y-3 flex-1">
                 <div>
-                  <label htmlFor="name" className="block text-sm mb-2 text-muted-foreground">
+                  <label htmlFor="name" className="block text-xs mb-1.5 text-muted-foreground">
                     Your Name
                   </label>
                   <Input
@@ -181,11 +176,11 @@ export function Contact() {
                     placeholder="John Doe"
                     value={formData.name}
                     onChange={handleInputChange('name')}
-                    className="bg-input-background border-primary/20 focus:border-primary/40 rounded-xl"
+                    className="bg-input-background border-primary/20 focus:border-primary/40 rounded-lg h-10 text-sm"
                   />
                 </div>
                 <div>
-                  <label htmlFor="email" className="block text-sm mb-2 text-muted-foreground">
+                  <label htmlFor="email" className="block text-xs mb-1.5 text-muted-foreground">
                     Your Email
                   </label>
                   <Input
@@ -195,27 +190,27 @@ export function Contact() {
                     placeholder="john@example.com"
                     value={formData.email}
                     onChange={handleInputChange('email')}
-                    className="bg-input-background border-primary/20 focus:border-primary/40 rounded-xl"
+                    className="bg-input-background border-primary/20 focus:border-primary/40 rounded-lg h-10 text-sm"
                   />
                 </div>
-                <div>
-                  <label htmlFor="message" className="block text-sm mb-2 text-muted-foreground">
+                <div className="flex-1 flex flex-col">
+                  <label htmlFor="message" className="block text-xs mb-1.5 text-muted-foreground">
                     Your Message
                   </label>
                   <Textarea
                     id="message"
                     required
                     placeholder="Tell me about your project or opportunity..."
-                    rows={6}
+                    rows={5}
                     value={formData.message}
                     onChange={handleInputChange('message')}
-                    className="bg-input-background border-primary/20 focus:border-primary/40 rounded-xl resize-none"
+                    className="bg-input-background border-primary/20 focus:border-primary/40 rounded-lg resize-none text-sm flex-1"
                   />
                 </div>
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-primary hover:bg-primary/90 text-black rounded-xl h-12 group relative overflow-hidden"
+                  className="w-full bg-primary hover:bg-primary/90 text-black rounded-lg h-10 text-sm group relative overflow-hidden"
                 >
                   <span className="relative z-10 flex items-center justify-center gap-2">
                     {isSubmitting ? (
@@ -234,28 +229,28 @@ export function Contact() {
           </div>
 
           {/* Quick Connect Card */}
-          <div className="space-y-6">
+          <div className="space-y-3 h-full flex flex-col">
             {/* WhatsApp CTA */}
-            <div className="relative group">
-              <div className="absolute -inset-2 bg-gradient-to-br from-accent/30 via-primary/30 to-secondary/30 rounded-3xl blur-2xl opacity-50 group-hover:opacity-75 transition-opacity duration-500 liquid-pulse" />
-              <div className="relative p-8 rounded-3xl liquid-glass-strong border border-accent/30 liquid-shimmer">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center">
-                    <MessageCircle className="w-6 h-6 text-accent" />
+            <div className="relative group flex-1">
+              <div className="absolute -inset-1 bg-gradient-to-br from-accent/30 via-primary/30 to-secondary/30 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
+              <div className="relative p-6 rounded-2xl liquid-glass-strong border border-accent/30 liquid-shimmer h-full flex flex-col">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center flex-shrink-0">
+                    <MessageCircle className="w-5 h-5 text-accent" />
                   </div>
                   <div>
-                    <h3 className="text-xl">Quick Response</h3>
-                    <p className="text-sm text-muted-foreground">Usually reply within 1 hour</p>
+                    <h3 className="text-base font-medium">Quick Response</h3>
+                    <p className="text-xs text-muted-foreground">Reply within 1 hour</p>
                   </div>
                 </div>
-                <p className="text-muted-foreground mb-6">
+                <p className="text-sm text-muted-foreground mb-4 flex-1">
                   Need an immediate response? Chat with me directly on WhatsApp. Perfect for quick questions 
-                  or urgent freelance inquiries.
+                  or urgent inquiries.
                 </p>
                 <Button
                   asChild
                   size="lg"
-                  className="w-full bg-accent hover:bg-accent/90 text-black rounded-xl h-12"
+                  className="w-full bg-accent hover:bg-accent/90 text-black rounded-lg h-10 text-sm"
                 >
                   <a href={SOCIAL_LINKS.whatsapp.url} target="_blank" rel="noopener noreferrer">
                     <MessageCircle className="w-4 h-4 mr-2" />
@@ -266,25 +261,25 @@ export function Contact() {
             </div>
 
             {/* Availability Card */}
-            <div className="relative group">
-              <div className="absolute -inset-2 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
-              <div className="relative p-8 rounded-3xl liquid-glass-strong border border-primary/20">
-                <h3 className="text-xl mb-4">Current Availability</h3>
-                <div className="space-y-3">
+            <div className="relative group flex-1">
+              <div className="absolute -inset-1 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
+              <div className="relative p-6 rounded-2xl liquid-glass-strong border border-primary/20 h-full flex flex-col">
+                <h3 className="text-base font-medium mb-3">Current Availability</h3>
+                <div className="space-y-2 flex-1">
                   {AVAILABILITY_STATUS.map((status, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${
+                    <div key={index} className="flex items-center gap-2">
+                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
                         index === 0 ? 'bg-green-500 animate-pulse' :
                         index === 1 ? 'bg-primary' :
                         index === 2 ? 'bg-secondary' :
                         'bg-accent'
                       }`} />
-                      <span className="text-sm">{status.label}</span>
+                      <span className="text-xs">{status.label}</span>
                     </div>
                   ))}
                 </div>
-                <div className="mt-6 pt-6 border-t border-white/10">
-                  <p className="text-xs text-muted-foreground">
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">
                     📍 Based in {PERSONAL_INFO.location} (EU timezone)<br />
                     ⏰ Response time: Usually within {PERSONAL_INFO.availability.responseTime}
                   </p>

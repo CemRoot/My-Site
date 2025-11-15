@@ -4,7 +4,6 @@ import { Stats } from '../components/Stats';
 import { About } from '../components/About';
 import { Services } from '../components/Services';
 import { Skills } from '../components/Skills';
-import { CV } from '../components/CV';
 import { Contact } from '../components/Contact';
 import { usePageContext } from '../lib/context/PageContext';
 
@@ -93,7 +92,6 @@ function HomePage() {
         <Experience />
       </Suspense>
       <Skills />
-      <CV />
       <Contact />
     </>
   );
