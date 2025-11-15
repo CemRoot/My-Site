@@ -116,7 +116,7 @@ export function Contact() {
         </div>
 
         {/* Contact Methods Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-[minmax(0,_1fr)] items-stretch mb-12">
           {CONTACT_METHODS.map((method, index) => {
             const Icon = method.icon;
             const colors = getColorClasses(method.color);
@@ -127,36 +127,44 @@ export function Contact() {
                 href={method.href}
                 target={method.href.startsWith('http') ? '_blank' : undefined}
                 rel={method.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                className={`group relative ${method.featured ? 'sm:col-span-2 lg:col-span-1' : ''}`}
+                className="group relative h-full"
               >
                 {method.featured && (
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-accent via-primary to-secondary rounded-xl blur-lg opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
+                  <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-accent via-primary to-secondary opacity-30 blur-[18px] transition-opacity duration-500 group-hover:opacity-60" />
                 )}
-                <div className={`relative p-4 rounded-xl frosted-glass border ${colors.border} transition-all duration-300 hover:scale-[1.02] h-full`}>
-                  <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${colors.bg} flex items-center justify-center flex-shrink-0`}>
-                      <Icon className={`w-5 h-5 ${colors.text}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <h3 className="text-xs text-muted-foreground">{method.label}</h3>
-                        {method.featured && (
-                          <span className="px-1.5 py-0.5 rounded-full bg-accent/20 text-accent text-[10px]">Fast</span>
-                        )}
+                <div
+                  className={`relative flex h-full flex-col justify-between rounded-2xl p-5 border ${colors.border} frosted-glass transition-all duration-300 hover:-translate-y-1`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colors.bg} flex items-center justify-center flex-shrink-0`}>
+                        <Icon className={`w-5 h-5 ${colors.text}`} />
                       </div>
-                      <p className={`font-medium truncate text-sm ${colors.text}`}>
-                        {method.value}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{method.description}</p>
+                      <div className="min-w-0">
+                        <h3 className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                          {method.label}
+                        </h3>
+                        <p className={`text-sm font-semibold leading-relaxed ${colors.text} break-words`}>
+                          {method.value}
+                        </p>
+                      </div>
                     </div>
+                    {method.featured && (
+                      <span className="px-2 py-1 rounded-full bg-accent/15 text-accent text-[10px] font-semibold tracking-wide">
+                        Fast
+                      </span>
+                    )}
                   </div>
+                  <p className="mt-4 text-[11px] text-muted-foreground leading-relaxed">
+                    {method.description}
+                  </p>
                 </div>
               </a>
             );
           })}
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.618fr_1fr] items-stretch">
           {/* Contact Form */}
           <div className="relative group h-full">
             <div className="absolute -inset-1 bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
@@ -228,12 +236,12 @@ export function Contact() {
             </form>
           </div>
 
-          {/* Quick Connect Card */}
-          <div className="space-y-3 h-full flex flex-col">
+          {/* Quick Connect Column */}
+          <div className="flex h-full flex-col gap-4">
             {/* WhatsApp CTA */}
-            <div className="relative group flex-1">
-              <div className="absolute -inset-1 bg-gradient-to-br from-accent/30 via-primary/30 to-secondary/30 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
-              <div className="relative p-6 rounded-2xl liquid-glass-strong border border-accent/30 liquid-shimmer h-full flex flex-col">
+            <div className="relative group flex-[1.618] min-h-[220px]">
+              <div className="absolute -inset-1 bg-gradient-to-br from-accent/30 via-primary/30 to-secondary/30 rounded-2xl blur-2xl opacity-30 group-hover:opacity-60 transition-opacity duration-500" />
+              <div className="relative flex h-full flex-col rounded-2xl liquid-glass-strong border border-accent/30 liquid-shimmer p-6">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center flex-shrink-0">
                     <MessageCircle className="w-5 h-5 text-accent" />
@@ -243,7 +251,7 @@ export function Contact() {
                     <p className="text-xs text-muted-foreground">Reply within 1 hour</p>
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground mb-4 flex-1">
+                <p className="text-sm text-muted-foreground mb-4 leading-relaxed flex-1">
                   Need an immediate response? Chat with me directly on WhatsApp. Perfect for quick questions 
                   or urgent inquiries.
                 </p>
@@ -261,9 +269,9 @@ export function Contact() {
             </div>
 
             {/* Availability Card */}
-            <div className="relative group flex-1">
-              <div className="absolute -inset-1 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
-              <div className="relative p-6 rounded-2xl liquid-glass-strong border border-primary/20 h-full flex flex-col">
+            <div className="relative group flex-1 min-h-[200px]">
+              <div className="absolute -inset-1 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl blur-2xl opacity-30 group-hover:opacity-60 transition-opacity duration-500" />
+              <div className="relative flex h-full flex-col rounded-2xl liquid-glass-strong border border-primary/20 p-6">
                 <h3 className="text-base font-medium mb-3">Current Availability</h3>
                 <div className="space-y-2 flex-1">
                   {AVAILABILITY_STATUS.map((status, index) => (
@@ -278,11 +286,9 @@ export function Contact() {
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 pt-4 border-t border-white/10">
-                  <p className="text-[10px] text-muted-foreground leading-relaxed">
-                    📍 Based in {PERSONAL_INFO.location} (EU timezone)<br />
-                    ⏰ Response time: Usually within {PERSONAL_INFO.availability.responseTime}
-                  </p>
+                <div className="mt-4 pt-4 border-t border-white/10 text-[11px] text-muted-foreground leading-relaxed space-y-1">
+                  <p>📍 Based in {PERSONAL_INFO.location} (EU timezone)</p>
+                  <p>⏰ Response time: Usually within {PERSONAL_INFO.availability.responseTime}</p>
                 </div>
               </div>
             </div>
