@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ArrowUp } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
@@ -10,16 +10,17 @@ import { Toaster } from './components/ui/sonner';
 import { useScrollTop } from './lib/hooks/useScrollTop';
 import { useSmoothScroll } from './lib/hooks/useSmoothScroll';
 import { PageContextProvider } from './lib/context/PageContext';
+import { lazyWithRetry, resetChunkErrorCounter } from './lib/chunk-error-handler';
 
-// Lazy load routes for code splitting
-const HomePage = lazy(() => import('./pages/HomePage'));
-const TechNews = lazy(() => import('./components/TechNews'));
-const TechNewsDetail = lazy(() => import('./components/TechNewsDetail'));
-const TermsPage = lazy(() => import('./pages/TermsPage'));
-const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+// Lazy load routes for code splitting with chunk error handling
+const HomePage = lazyWithRetry(() => import('./pages/HomePage'));
+const TechNews = lazyWithRetry(() => import('./components/TechNews'));
+const TechNewsDetail = lazyWithRetry(() => import('./components/TechNewsDetail'));
+const TermsPage = lazyWithRetry(() => import('./pages/TermsPage'));
+const PrivacyPage = lazyWithRetry(() => import('./pages/PrivacyPage'));
 
 // Lazy load ChatWidget - it's heavy and not immediately needed
-const ChatWidget = lazy(() => import('./components/ChatWidget'));
+const ChatWidget = lazyWithRetry(() => import('./components/ChatWidget'));
 
 // Loading fallback component
 function RouteLoadingFallback() {
@@ -50,6 +51,11 @@ function ScrollToTopOnRouteChange() {
 export default function App() {
   const { showScrollTop, scrollToTop } = useScrollTop(500);
   useSmoothScroll();
+
+  // Reset chunk error counter on successful app load
+  useEffect(() => {
+    resetChunkErrorCounter();
+  }, []);
 
   return (
     <Router>
