@@ -1,0 +1,25 @@
+/* Hobo BT Font - Self-hosted for better reliability */
+@font-face {
+  font-family: 'Hobo BT';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Hobo BT'), url('/fonts/hobo-bt.woff') format('woff');
+}
+
+/* Add font weight variations if needed */
+@font-face {
+  font-family: 'Hobo BT';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Hobo BT'), url('/fonts/hobo-bt.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'Hobo BT';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Hobo BT'), url('/fonts/hobo-bt.woff') format('woff');
+}

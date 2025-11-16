@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import App from "./App.tsx";
+import "./fonts.css";
 import "./index.css";
 import { initSentry } from "./lib/sentry";
 import { ErrorBoundary } from "./components/ErrorBoundary";
