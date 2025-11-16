@@ -71,10 +71,24 @@ export function initSentry() {
       // Filter out known errors or add custom logic
       if (event.exception) {
         const error = hint.originalException;
-        
+
         // Ignore network errors from ad blockers
         if (error instanceof Error && error.message.includes('ad')) {
           return null;
+        }
+
+        // Tag chunk loading errors for better tracking
+        if (error instanceof Error && (
+          error.message.includes('Failed to fetch dynamically imported module') ||
+          error.message.includes('Importing a module script failed') ||
+          error.message.includes('error loading dynamically imported module')
+        )) {
+          event.tags = {
+            ...event.tags,
+            chunkLoadError: true,
+            deploymentIssue: true,
+          };
+          event.fingerprint = ['chunk-load-error'];
         }
 
         // Add custom tags
@@ -95,7 +109,7 @@ export function initSentry() {
       'canvas.contentDocument',
       'MyApp_RemoveAllHighlights',
       'atomicFindClose',
-      // Network errors
+      // Network errors (but NOT chunk loading errors - we want to track those)
       'NetworkError',
       'Network request failed',
       // Random plugins/extensions
