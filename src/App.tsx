@@ -11,6 +11,7 @@ import { useScrollTop } from './lib/hooks/useScrollTop';
 import { useSmoothScroll } from './lib/hooks/useSmoothScroll';
 import { PageContextProvider } from './lib/context/PageContext';
 import { lazyWithRetry, resetChunkErrorCounter } from './lib/chunk-error-handler';
+import { initLazyBlur, debouncedResizeHandler } from './lib/lazy-blur';
 
 // Lazy load routes for code splitting with chunk error handling
 const HomePage = lazyWithRetry(() => import('./pages/HomePage'));
@@ -39,6 +40,14 @@ function ScrollToTopOnRouteChange() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
+
+    // Re-initialize lazy blur for new route elements
+    // Wait for DOM to update with new route content
+    const timer = setTimeout(() => {
+      initLazyBlur();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [pathname]);
 
   return null;
@@ -55,6 +64,21 @@ export default function App() {
   // Reset chunk error counter on successful app load
   useEffect(() => {
     resetChunkErrorCounter();
+  }, []);
+
+  // Initialize lazy blur optimization (mobile only)
+  useEffect(() => {
+    // Initial setup
+    const cleanupFn = initLazyBlur();
+
+    // Listen for resize events (desktop ↔ mobile transitions)
+    window.addEventListener('resize', debouncedResizeHandler);
+
+    return () => {
+      // Cleanup on unmount
+      if (cleanupFn) cleanupFn();
+      window.removeEventListener('resize', debouncedResizeHandler);
+    };
   }, []);
 
   return (
