@@ -454,31 +454,32 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
         {showNotification && !isOpen && (
           <div className="absolute bottom-full mb-4 right-0 animate-in slide-in-from-bottom-3 fade-in duration-500">
             <div className="relative group/notification">
-              {/* Glow effect */}
-              <div className="absolute -inset-2 bg-gradient-to-br from-primary/40 via-secondary/40 to-accent/40 rounded-2xl blur-xl animate-pulse" />
+              {/* Super bright glow effect */}
+              <div className="absolute -inset-4 bg-gradient-to-br from-primary via-secondary to-accent rounded-3xl blur-2xl opacity-75 animate-pulse" />
+              <div className="absolute -inset-3 bg-primary/60 rounded-3xl blur-xl animate-pulse" />
 
-              {/* Notification content */}
-              <div className="relative bg-gradient-to-br from-primary/95 via-secondary/95 to-accent/95 backdrop-blur-xl border-2 border-white/30 rounded-2xl shadow-2xl px-4 py-3 max-w-[280px] sm:max-w-xs">
+              {/* Notification content - Much brighter and more visible */}
+              <div className="relative bg-white backdrop-blur-xl border-4 border-primary rounded-2xl shadow-2xl px-5 py-4 max-w-[280px] sm:max-w-xs">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                    <Bot className="w-5 h-5 text-black" />
+                  <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-primary via-secondary to-accent rounded-full flex items-center justify-center shadow-lg">
+                    <Bot className="w-6 h-6 text-black" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-black leading-relaxed font-[Hobo_BT]">
+                    <p className="text-sm font-semibold text-gray-900 leading-relaxed font-[Hobo_BT]">
                       Want a quick summary? Ask me! 🤖
                     </p>
                   </div>
                   <button
                     onClick={() => setShowNotification(false)}
-                    className="flex-shrink-0 w-5 h-5 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
+                    className="flex-shrink-0 w-6 h-6 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
                     aria-label="Close notification"
                   >
-                    <X className="w-3.5 h-3.5 text-black/70" />
+                    <X className="w-4 h-4 text-gray-700" />
                   </button>
                 </div>
 
-                {/* Pointer arrow */}
-                <div className="absolute -bottom-2 right-6 w-4 h-4 bg-gradient-to-br from-primary via-secondary to-accent rotate-45 border-r-2 border-b-2 border-white/30" />
+                {/* Pointer arrow - brighter */}
+                <div className="absolute -bottom-2 right-6 w-4 h-4 bg-white rotate-45 border-r-4 border-b-4 border-primary shadow-lg" />
               </div>
             </div>
           </div>
