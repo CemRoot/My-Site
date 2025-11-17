@@ -45,13 +45,18 @@ const parseAssistantReply = (reply: string): { topic: TopicTag; content: string 
   return { topic, content };
 };
 
+interface ChatWidgetProps {
+  showNewsNotification?: boolean;
+}
+
 /**
  * AI-Powered Chat Widget Component
  * Provides intelligent responses about Cem Koyluoglu
  */
-function ChatWidget() {
+function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showWidget, setShowWidget] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -79,7 +84,34 @@ function ChatWidget() {
     const timer = setTimeout(() => setShowWidget(true), WIDGET_CONFIG.showDelay);
     return () => clearTimeout(timer);
   }, []);
-  
+
+  // News notification timing logic
+  useEffect(() => {
+    if (!showNewsNotification) return;
+
+    // Show notification after 4 seconds
+    const showTimer = setTimeout(() => {
+      setShowNotification(true);
+    }, 4000);
+
+    // Hide notification after 24 seconds (4s delay + 20s display)
+    const hideTimer = setTimeout(() => {
+      setShowNotification(false);
+    }, 24000);
+
+    return () => {
+      clearTimeout(showTimer);
+      clearTimeout(hideTimer);
+    };
+  }, [showNewsNotification]);
+
+  // Hide notification when chat opens
+  useEffect(() => {
+    if (isOpen) {
+      setShowNotification(false);
+    }
+  }, [isOpen]);
+
   // Auto-scroll to bottom when messages change (like Deep Chat)
   useEffect(() => {
     if (messagesContainerRef.current) {
@@ -418,6 +450,40 @@ function ChatWidget() {
 
       {/* Floating Button */}
       <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-24 z-50">
+        {/* News Summary Notification */}
+        {showNotification && !isOpen && (
+          <div className="absolute bottom-full mb-4 right-0 animate-in slide-in-from-bottom-3 fade-in duration-500">
+            <div className="relative group/notification">
+              {/* Glow effect */}
+              <div className="absolute -inset-2 bg-gradient-to-br from-primary/40 via-secondary/40 to-accent/40 rounded-2xl blur-xl animate-pulse" />
+
+              {/* Notification content */}
+              <div className="relative bg-gradient-to-br from-primary/95 via-secondary/95 to-accent/95 backdrop-blur-xl border-2 border-white/30 rounded-2xl shadow-2xl px-4 py-3 max-w-[280px] sm:max-w-xs">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                    <Bot className="w-5 h-5 text-black" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-black leading-relaxed font-[Hobo_BT]">
+                      Want a quick summary? Ask me! 🤖
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowNotification(false)}
+                    className="flex-shrink-0 w-5 h-5 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
+                    aria-label="Close notification"
+                  >
+                    <X className="w-3.5 h-3.5 text-black/70" />
+                  </button>
+                </div>
+
+                {/* Pointer arrow */}
+                <div className="absolute -bottom-2 right-6 w-4 h-4 bg-gradient-to-br from-primary via-secondary to-accent rotate-45 border-r-2 border-b-2 border-white/30" />
+              </div>
+            </div>
+          </div>
+        )}
+
         <Button
           onClick={handleToggleChat}
           size="icon"
@@ -432,7 +498,7 @@ function ChatWidget() {
         >
           {/* Pulse ring */}
           <div className="absolute inset-0 rounded-full bg-primary/20 sm:bg-primary/30 animate-ping" />
-          
+
           {/* Icon */}
           <div className="relative">
             {isOpen ? (
@@ -448,7 +514,7 @@ function ChatWidget() {
           )}
 
           {/* Tooltip */}
-          {!isOpen && (
+          {!isOpen && !showNotification && (
             <div className="hidden sm:block absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap">
               <div className="px-3 py-2 rounded-xl bg-background/95 backdrop-blur-xl border border-primary/30 shadow-xl">
                 <p className="text-xs text-white font-[Hobo_BT]">🤖 AI Assistant - Ask me anything!</p>

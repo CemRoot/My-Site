@@ -1,4 +1,4 @@
-import { useEffect, Suspense } from 'react';
+import { useEffect, Suspense, useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ArrowUp } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
@@ -51,6 +51,21 @@ function ScrollToTopOnRouteChange() {
   }, [pathname]);
 
   return null;
+}
+
+function ChatWidgetWrapper() {
+  const { pathname } = useLocation();
+
+  // Show news notification on tech news detail pages
+  const showNewsNotification = useMemo(() => {
+    return pathname.startsWith('/tech-news/') && pathname !== '/tech-news';
+  }, [pathname]);
+
+  return (
+    <Suspense fallback={null}>
+      <ChatWidget showNewsNotification={showNewsNotification} />
+    </Suspense>
+  );
 }
 
 /**
@@ -121,9 +136,7 @@ export default function App() {
           )}
 
           {/* Chat Widget - Lazy loaded */}
-          <Suspense fallback={null}>
-            <ChatWidget />
-          </Suspense>
+          <ChatWidgetWrapper />
 
           {/* Toast Notifications */}
           <Toaster />
