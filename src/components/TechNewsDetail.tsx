@@ -446,16 +446,16 @@ function TechNewsDetail() {
         {relatedArticles.length > 0 && (
           <section className="mt-16">
             <h2 className="text-3xl font-bold mb-8" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700 }}>Related Articles</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {relatedArticles.map((related) => (
                 <Link
                   key={related.id}
                   to={`/tech-news/${related.slug}`}
                   className="group"
                 >
-                  <div className="overflow-hidden rounded-lg border border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-lg">
+                  <div className="overflow-hidden rounded-lg border border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-lg h-full flex flex-col">
                     {related.image && (
-                      <div className="relative overflow-hidden h-40 bg-muted">
+                      <div className="relative overflow-hidden aspect-video bg-muted">
                         <img
                           src={related.image}
                           alt={related.title}
@@ -467,11 +467,11 @@ function TechNewsDetail() {
                         />
                       </div>
                     )}
-                    <div className="p-4">
-                      <h3 className="font-semibold line-clamp-2 group-hover:text-primary transition-colors font-[Hobo_BT]" style={{ fontWeight: 600 }}>
+                    <div className="p-4 flex-1 flex flex-col">
+                      <h3 className="font-semibold line-clamp-2 group-hover:text-primary transition-colors font-[Hobo_BT] text-sm md:text-base" style={{ fontWeight: 600 }}>
                         {related.title}
                       </h3>
-                      <p className="text-sm text-muted-foreground mt-2" style={{ fontFamily: "'Satoshi', sans-serif" }}>
+                      <p className="text-xs md:text-sm text-muted-foreground mt-2" style={{ fontFamily: "'Satoshi', sans-serif" }}>
                         {formatDate(related.date)}
                       </p>
                     </div>
