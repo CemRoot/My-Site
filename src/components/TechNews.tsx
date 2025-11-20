@@ -352,11 +352,11 @@ function TechNews() {
                 <Card className="overflow-hidden h-full transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 border-border/50 hover:border-primary/50">
                   {/* Article Image */}
                   {article.image && (
-                    <div className="relative overflow-hidden h-48 bg-muted">
+                    <div className="relative overflow-hidden bg-muted" style={{ aspectRatio: '16/9', minHeight: '200px', maxHeight: '200px' }}>
                       <img
                         src={article.image}
                         alt={article.title}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                         loading="lazy"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
