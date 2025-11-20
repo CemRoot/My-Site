@@ -188,7 +188,16 @@ export function Contact() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.618fr_1fr] items-stretch">
           {/* Contact Form */}
           <div className="relative h-full">
-            <form onSubmit={handleSubmit} className="relative flex h-full min-h-[500px] flex-col rounded-3xl frosted-glass border border-primary/20 bg-background/60 p-8 backdrop-blur-sm">
+            <form
+              onSubmit={handleSubmit}
+              className="relative flex h-full min-h-[500px] flex-col rounded-3xl frosted-glass border border-primary/20 bg-background/60 p-8 backdrop-blur-sm"
+              data-lpignore="true"
+              data-1p-ignore="true"
+              data-bwignore="true"
+              data-gramm="false"
+              data-gramm_editor="false"
+              data-enable-grammarly="false"
+            >
               {/* Header */}
               <div className="mb-6">
                 <div className="flex items-center gap-3 mb-2">
@@ -214,12 +223,15 @@ export function Contact() {
                   </label>
                   <Input
                     id="name"
+                    name="name"
                     type="text"
+                    autoComplete="name"
                     required
                     placeholder="John Doe"
                     value={formData.name}
                     onChange={handleInputChange('name')}
                     className="bg-input-background border-primary/20 focus:border-primary/40 rounded-xl h-12 text-sm transition-colors"
+                    aria-label="Your name"
                   />
                 </div>
                 <div>
@@ -228,12 +240,15 @@ export function Contact() {
                   </label>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
+                    autoComplete="email"
                     required
                     placeholder="john@example.com"
                     value={formData.email}
                     onChange={handleInputChange('email')}
                     className="bg-input-background border-primary/20 focus:border-primary/40 rounded-xl h-12 text-sm transition-colors"
+                    aria-label="Your email address"
                   />
                 </div>
                 <div className="flex-1 flex flex-col">
@@ -242,12 +257,15 @@ export function Contact() {
                   </label>
                   <Textarea
                     id="message"
+                    name="message"
+                    autoComplete="off"
                     required
                     placeholder="Tell me about your project or opportunity..."
                     rows={6}
                     value={formData.message}
                     onChange={handleInputChange('message')}
                     className="bg-input-background border-primary/20 focus:border-primary/40 rounded-xl resize-none text-sm flex-1 transition-colors"
+                    aria-label="Your message"
                   />
                 </div>
                 <Button
