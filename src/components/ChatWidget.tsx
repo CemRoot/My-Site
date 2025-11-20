@@ -459,22 +459,22 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
               <div className="absolute -inset-3 bg-primary/60 rounded-3xl blur-xl animate-pulse" />
 
               {/* Notification content - Much brighter and more visible */}
-              <div className="relative bg-white backdrop-blur-xl border-4 border-primary rounded-2xl shadow-2xl px-3 py-3 sm:px-5 sm:py-4 max-w-[calc(100vw-3rem)] sm:max-w-xs">
-                <div className="flex items-start gap-2 sm:gap-3">
+              <div className="relative bg-white backdrop-blur-xl border-4 border-primary rounded-2xl shadow-2xl px-3 py-3 sm:px-5 sm:py-4 w-auto max-w-[calc(100vw-4rem)] sm:w-max sm:max-w-md">
+                <div className="flex items-center gap-3 sm:gap-4">
                   <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-primary via-secondary to-accent rounded-full flex items-center justify-center shadow-lg">
                     <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-black" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-semibold text-gray-900 leading-relaxed font-[Hobo_BT] break-words">
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900 leading-relaxed font-[Hobo_BT] whitespace-normal sm:whitespace-nowrap">
                       Want a quick summary? Ask me! 🤖
                     </p>
                   </div>
                   <button
                     onClick={() => setShowNotification(false)}
-                    className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
+                    className="flex-shrink-0 w-6 h-6 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors ml-1"
                     aria-label="Close notification"
                   >
-                    <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-700" />
+                    <X className="w-4 h-4 text-gray-700" />
                   </button>
                 </div>
 

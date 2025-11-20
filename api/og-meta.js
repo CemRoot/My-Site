@@ -92,9 +92,9 @@ module.exports = async function handler(req, res) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
   <!-- Basic Meta -->
-  <title>${title} | Cem Koyluoğlu Tech News</title>
+  <title>${title} | Cem Koyluoglu Tech News</title>
   <meta name="description" content="${description}" />
-  <meta name="author" content="Cem Koyluoğlu" />
+  <meta name="author" content="Cem Koyluoglu" />
   
   <!-- Open Graph / Facebook / LinkedIn -->
   <meta property="og:type" content="article" />
@@ -107,10 +107,10 @@ module.exports = async function handler(req, res) {
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="${title}" />
-  <meta property="og:site_name" content="Cem Koyluoğlu Tech News" />
+  <meta property="og:site_name" content="Cem Koyluoglu Tech News" />
   <meta property="og:locale" content="en_US" />
   <meta property="article:published_time" content="${article.created_at}" />
-  <meta property="article:author" content="Cem Koyluoğlu" />
+  <meta property="article:author" content="Cem Koyluoglu" />
   <meta property="article:section" content="${category}" />
   <meta property="article:tag" content="${category}" />
   
