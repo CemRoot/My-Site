@@ -301,10 +301,10 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
     <>
       {/* Chat Window */}
       {isOpen && (
-        <div 
+        <div
           className="fixed bottom-20 sm:bottom-24 right-4 sm:right-8 z-50 animate-in slide-in-from-bottom-5 duration-300"
-          style={{ 
-            width: window.innerWidth >= 640 ? '400px' : 'calc(100vw - 2rem)',
+          style={{
+            width: window.innerWidth >= 640 ? '400px' : 'calc(100vw - 32px)',
             maxWidth: '400px'
           }}
         >
@@ -452,34 +452,34 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
       <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-24 z-50">
         {/* News Summary Notification */}
         {showNotification && !isOpen && (
-          <div className="absolute bottom-full mb-4 right-0 animate-in slide-in-from-bottom-3 fade-in duration-500">
+          <div className="absolute bottom-16 sm:bottom-20 -right-2 sm:right-0 animate-in slide-in-from-bottom-3 fade-in duration-500">
             <div className="relative group/notification">
               {/* Super bright glow effect */}
               <div className="absolute -inset-4 bg-gradient-to-br from-primary via-secondary to-accent rounded-3xl blur-2xl opacity-75 animate-pulse" />
               <div className="absolute -inset-3 bg-primary/60 rounded-3xl blur-xl animate-pulse" />
 
               {/* Notification content - Much brighter and more visible */}
-              <div className="relative bg-white backdrop-blur-xl border-4 border-primary rounded-2xl shadow-2xl px-3 py-3 sm:px-5 sm:py-4 w-auto max-w-[calc(100vw-4rem)] sm:w-max sm:max-w-md">
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-primary via-secondary to-accent rounded-full flex items-center justify-center shadow-lg">
-                    <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-black" />
+              <div className="relative bg-white backdrop-blur-xl border-4 border-primary rounded-2xl shadow-2xl">
+                <div className="flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:px-4 sm:py-3" style={{ minWidth: '200px', maxWidth: '280px' }}>
+                  <div className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-primary via-secondary to-accent rounded-full flex items-center justify-center shadow-lg">
+                    <Bot className="w-5 h-5 text-black" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-semibold text-gray-900 leading-relaxed font-[Hobo_BT] whitespace-normal sm:whitespace-nowrap">
+                  <div className="flex-1 pr-2">
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900 leading-tight font-[Hobo_BT]">
                       Want a quick summary? Ask me! 🤖
                     </p>
                   </div>
                   <button
                     onClick={() => setShowNotification(false)}
-                    className="flex-shrink-0 w-6 h-6 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors ml-1"
+                    className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
                     aria-label="Close notification"
                   >
-                    <X className="w-4 h-4 text-gray-700" />
+                    <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-700" />
                   </button>
                 </div>
 
-                {/* Pointer arrow - brighter */}
-                <div className="absolute -bottom-2 right-6 w-4 h-4 bg-white rotate-45 border-r-4 border-b-4 border-primary shadow-lg" />
+                {/* Pointer arrow - pointing to the button */}
+                <div className="absolute -bottom-2.5 right-8 sm:right-10 w-4 h-4 bg-white rotate-45 border-r-4 border-b-4 border-primary" />
               </div>
             </div>
           </div>
