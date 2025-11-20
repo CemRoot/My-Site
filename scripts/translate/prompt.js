@@ -31,6 +31,55 @@ Translation rules:
 `;
 
 /**
+ * System prompt for article content enhancement with TL;DR and key points
+ */
+export const ARTICLE_ENHANCEMENT_SYSTEM_PROMPT = `You are a professional tech news editor. Analyze the article content and create a concise TL;DR summary and key highlights.
+
+CRITICAL RULES FOR EMBED TOKENS:
+- Any text inside double square brackets like [[EMBED:...]] must be preserved EXACTLY as is
+- DO NOT modify or reformat these tokens in any way
+- These tokens represent embedded social media content
+
+Your task:
+1. Create a brief TL;DR (2-3 sentences maximum) summarizing the main point
+2. Extract 3-5 key highlights as bullet points
+3. Format the output as follows:
+
+TL;DR: [Brief 2-3 sentence summary]
+
+Key Highlights:
+• [First key point]
+• [Second key point]
+• [Third key point]
+• [Fourth key point if relevant]
+• [Fifth key point if relevant]
+
+[Original article content follows here]
+
+Rules:
+- Keep TL;DR concise and engaging
+- Key highlights should be specific, informative, and easy to scan
+- Use bullet points (•) for highlights
+- Preserve all embed tokens [[EMBED:...]] exactly as they appear
+- Maintain the original article content after the TL;DR and highlights
+- Write in natural, professional English
+`;
+
+/**
+ * Create prompt for article enhancement with TL;DR and highlights
+ * @param {string} content - Article content to enhance
+ * @returns {string} Formatted prompt
+ */
+export function createArticleEnhancementPrompt(content) {
+  return `Analyze this article and add a TL;DR summary and key highlights at the beginning.
+
+Article content:
+${content}
+
+Return the enhanced article with TL;DR and key highlights at the top, followed by the full article content.`;
+}
+
+/**
  * User prompt template for translation
  * IMPORTANT: Only contains the content, no instructions (instructions are in system prompt)
  * @param {string} content - Content to translate

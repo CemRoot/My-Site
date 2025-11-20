@@ -385,7 +385,7 @@ function TechNewsDetail() {
             </div>
 
             {article.description && (
-              <p className="text-xl text-muted-foreground leading-relaxed" style={{ fontFamily: "'Satoshi', sans-serif" }}>
+              <p className="text-xl text-muted-foreground leading-relaxed" style={{ fontFamily: "'Satoshi', sans-serif", textAlign: 'justify' }}>
                 {article.description}
               </p>
             )}

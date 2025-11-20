@@ -19,7 +19,7 @@ import { createClient } from '@supabase/supabase-js';
 import { htmlToTokens } from './embeds/extractEmbeds.js';
 import { replaceTikTokBlockquote, replaceTwitterBlockquote, cleanSocialEmbedRemnants } from './embeds/cleanMarkdownEmbeds.js';
 import { extractAllEmbedsFromMarkdown } from './embeds/extractMarkdownEmbeds.js';
-import { TRANSLATION_SYSTEM_PROMPT, createTranslationPrompt } from './translate/prompt.js';
+import { TRANSLATION_SYSTEM_PROMPT, createTranslationPrompt, ARTICLE_ENHANCEMENT_SYSTEM_PROMPT, createArticleEnhancementPrompt } from './translate/prompt.js';
 import { assertContentQuality, validateArticleContent } from './validation/contentQualityCheck.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1020,6 +1020,54 @@ async function translateWithModel(model, text) {
   return translatedText;
 }
 
+/**
+ * Enhance article content with TL;DR and key highlights using Groq AI
+ * Adds a concise summary and bullet points at the beginning of the article
+ */
+async function enhanceArticleWithTLDR(content) {
+  try {
+    console.log(`   📝 Enhancing article with TL;DR and key highlights...`);
+    
+    const completion = await groq.chat.completions.create({
+      model: GROQ_PRIMARY_MODEL,
+      messages: [
+        {
+          role: 'system',
+          content: ARTICLE_ENHANCEMENT_SYSTEM_PROMPT
+        },
+        {
+          role: 'user',
+          content: createArticleEnhancementPrompt(content)
+        }
+      ],
+      temperature: 0.5,
+      max_tokens: 4000,
+    });
+
+    let enhancedContent = completion.choices[0]?.message?.content || content;
+    
+    // POST-PROCESSING: Remove any leaked instructions from output
+    enhancedContent = enhancedContent
+      .replace(/^REMINDER:.*$/gim, '')
+      .replace(/^Note: I have.*$/gim, '')
+      .replace(/^Analyze this article.*$/gim, '')
+      .replace(/^Article content:.*$/gim, '')
+      .trim();
+    
+    // Validate that enhancement actually happened (should contain TL;DR)
+    if (!enhancedContent.includes('TL;DR') && !enhancedContent.includes('TLDR')) {
+      console.log(`   ⚠️  TL;DR not found in response, using original content`);
+      return content;
+    }
+    
+    console.log(`   ✅ Article enhanced with TL;DR and key highlights`);
+    return enhancedContent;
+  } catch (error) {
+    console.error(`   ⚠️  Failed to enhance article: ${error.message}`);
+    return content; // Return original content if enhancement fails
+  }
+}
+
 async function translateText(text) {
   if (!text || text.trim().length === 0) {
     return text;
@@ -1138,7 +1186,11 @@ async function translateArticle(article) {
     
     // Translate full content (no chunking needed!)
     console.log(`   📄 Translating full content...`);
-    const translatedContent = cleanTranslation(await translateText(article.content));
+    let translatedContent = cleanTranslation(await translateText(article.content));
+    
+    // Enhance translated content with TL;DR and key highlights
+    await new Promise(resolve => setTimeout(resolve, CONFIG.TRANSLATION_DELAY));
+    translatedContent = await enhanceArticleWithTLDR(translatedContent);
     
     // FINAL VALIDATION: Ensure no instruction leakage
     if (translatedTitle.includes('REMINDER:') || 
