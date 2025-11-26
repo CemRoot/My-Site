@@ -5,8 +5,8 @@
  * Prevents stuck states and allows retry
  */
 
-import 'dotenv/config';
-import { createClient } from '@supabase/supabase-js';
+require('dotenv').config();
+const { createClient } = require('@supabase/supabase-js');
 
 const CONFIG = {
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
@@ -20,7 +20,7 @@ const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
 /**
  * Clean up pending digests older than 24 hours
  */
-export async function cleanOldPendingDigests() {
+async function cleanOldPendingDigests() {
   try {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
@@ -71,7 +71,7 @@ export async function cleanOldPendingDigests() {
 /**
  * Delete specific pending digest by ID
  */
-export async function deletePendingDigest(digestId) {
+async function deletePendingDigest(digestId) {
   try {
     // First check if digest exists and is pending
     const { data: digest, error: fetchError } = await supabase
@@ -119,7 +119,7 @@ export async function deletePendingDigest(digestId) {
 /**
  * Delete all pending digests (nuclear option)
  */
-export async function deleteAllPendingDigests() {
+async function deleteAllPendingDigests() {
   try {
     // Get all pending digests first
     const { data: pendingDigests, error: fetchError } = await supabase
@@ -167,7 +167,7 @@ export async function deleteAllPendingDigests() {
 /**
  * Check for stuck digests (pending > 1 hour)
  */
-export async function checkStuckDigests() {
+async function checkStuckDigests() {
   try {
     const oneHourAgo = new Date();
     oneHourAgo.setHours(oneHourAgo.getHours() - 1);
@@ -199,7 +199,7 @@ export async function checkStuckDigests() {
 /**
  * Get pending digests summary
  */
-export async function getPendingDigestsSummary() {
+async function getPendingDigestsSummary() {
   try {
     const { data: pendingDigests, error } = await supabase
       .from('linkedin_digest_posts')
@@ -240,8 +240,8 @@ export async function getPendingDigestsSummary() {
   }
 }
 
-// Export all functions
-export {
+// Export all functions (CommonJS)
+module.exports = {
   cleanOldPendingDigests,
   deletePendingDigest,
   deleteAllPendingDigests,

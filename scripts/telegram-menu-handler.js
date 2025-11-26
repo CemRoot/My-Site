@@ -8,11 +8,6 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { spawn } from 'child_process';
-import {
-  cleanOldPendingDigests,
-  deleteAllPendingDigests,
-  getPendingDigestsSummary
-} from './linkedin-digest-cleanup.js';
 
 const CONFIG = {
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
@@ -1369,14 +1364,16 @@ export async function handleCleanPendingAction() {
   try {
     await sendTelegramMessage('🔍 <b>Pending Digest\'ler Kontrol Ediliyor...</b>');
 
-    // Get pending digests summary first
-    const summary = await getPendingDigestsSummary();
+    // Get pending digests summary (inline)
+    const { data: pendingDigests, error } = await supabase
+      .from('linkedin_digest_posts')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
 
-    if (!summary.success) {
-      throw new Error(summary.error || 'Digest listesi alınamadı');
-    }
+    if (error) throw error;
 
-    if (summary.count === 0) {
+    if (!pendingDigests || pendingDigests.length === 0) {
       await sendTelegramMessage(
         '✅ <b>Temizlenecek Pending Digest Yok!</b>\n\n' +
         'Sistem şu anda temiz durumda.'
@@ -1384,12 +1381,21 @@ export async function handleCleanPendingAction() {
       return;
     }
 
+    // Format digests for display
+    const digestsFormatted = pendingDigests.map(d => ({
+      id: d.id,
+      date: d.digest_date,
+      articles: d.article_count,
+      created: new Date(d.created_at).toLocaleString('tr-TR'),
+      age: Math.floor((Date.now() - new Date(d.created_at)) / (1000 * 60)) + ' minutes'
+    }));
+
     // Show confirmation dialog
     let confirmText = '🗑️ <b>Pending Digest Temizleme</b>\n\n';
-    confirmText += `<b>Silinecek digest sayısı:</b> ${summary.count}\n\n`;
+    confirmText += `<b>Silinecek digest sayısı:</b> ${pendingDigests.length}\n\n`;
     confirmText += '<b>Digest Listesi:</b>\n';
 
-    summary.digests.forEach(d => {
+    digestsFormatted.forEach(d => {
       confirmText += `• ${d.date} - ${d.articles} haber (${d.age})\n`;
     });
 
@@ -1421,20 +1427,29 @@ export async function handleConfirmCleanAction() {
   try {
     await sendTelegramMessage('🗑️ <b>Pending Digest\'ler Siliniyor...</b>');
 
-    // Delete all pending digests
-    const result = await deleteAllPendingDigests();
+    // Get all pending digests first (for reporting)
+    const { data: pendingDigests, error: fetchError } = await supabase
+      .from('linkedin_digest_posts')
+      .select('*')
+      .eq('status', 'pending');
 
-    if (!result.success) {
-      throw new Error(result.message || 'Silme işlemi başarısız');
-    }
+    if (fetchError) throw fetchError;
 
     let successText = '✅ <b>Temizleme Tamamlandı!</b>\n\n';
 
-    if (result.count > 0) {
-      successText += `<b>Silinen digest sayısı:</b> ${result.count}\n\n`;
+    if (pendingDigests && pendingDigests.length > 0) {
+      // Delete all pending digests
+      const { error: deleteError } = await supabase
+        .from('linkedin_digest_posts')
+        .delete()
+        .eq('status', 'pending');
+
+      if (deleteError) throw deleteError;
+
+      successText += `<b>Silinen digest sayısı:</b> ${pendingDigests.length}\n\n`;
       successText += '<b>Silinen Digest\'ler:</b>\n';
-      result.digests.forEach(d => {
-        successText += `• ${d.date} - ${d.articles} haber\n`;
+      pendingDigests.forEach(d => {
+        successText += `• ${d.digest_date} - ${d.article_count} haber\n`;
       });
     } else {
       successText += 'Silinecek digest bulunamadı.';
@@ -1454,15 +1469,6 @@ export async function handleConfirmCleanAction() {
         ]
       }
     });
-
-    // Also clean old pending digests (> 24 hours)
-    const oldCleanup = await cleanOldPendingDigests();
-    if (oldCleanup.count > 0) {
-      await sendTelegramMessage(
-        `ℹ️ <b>Ek Temizlik:</b>\n` +
-        `24 saatten eski ${oldCleanup.count} pending digest de temizlendi.`
-      );
-    }
 
   } catch (error) {
     console.error('Confirm clean action error:', error);
