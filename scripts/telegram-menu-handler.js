@@ -764,11 +764,11 @@ export async function handleLinkedInCommand() {
   try {
     await sendTelegramMessage('📱 <b>LinkedIn Digest\'ler Yükleniyor...</b>');
 
-    // Get pending and recent digests
+    // Get pending, posting, and recent digests (including stuck "posting" status)
     const { data: digests, error } = await supabase
       .from('linkedin_digest_posts')
       .select('*')
-      .in('status', ['pending', 'posted', 'rejected'])
+      .in('status', ['pending', 'posting', 'posted', 'rejected'])
       .order('created_at', { ascending: false })
       .limit(10);
 
@@ -794,10 +794,23 @@ export async function handleLinkedInCommand() {
 
     // Group by status
     const pending = digests.filter(d => d.status === 'pending');
+    const posting = digests.filter(d => d.status === 'posting'); // Stuck digests
     const posted = digests.filter(d => d.status === 'posted');
     const rejected = digests.filter(d => d.status === 'rejected');
 
+    // Combined stuck digests (pending + posting that got stuck)
+    const stuckDigests = [...pending, ...posting];
+
     let messageText = '📱 <b>LINKEDİN DIGEST YÖNETİMİ</b>\n\n';
+
+    // Stuck "posting" digests (failed during LinkedIn post)
+    if (posting.length > 0) {
+      messageText += '<b>⚠️ Takılı Kalmış (Posting):</b>\n';
+      posting.forEach(d => {
+        messageText += `🔴 ${d.digest_date} | 📊 ${d.article_count} haber (LinkedIn hatası)\n`;
+      });
+      messageText += '\n';
+    }
 
     // Pending digests
     if (pending.length > 0) {
@@ -853,10 +866,10 @@ export async function handleLinkedInCommand() {
       { text: '🚀 Manuel Digest Oluştur', callback_data: 'action_create_digest' }
     ]);
 
-    // Add cleanup button if there are pending digests
-    if (pending.length > 0) {
+    // Add cleanup button if there are stuck digests (pending OR posting)
+    if (stuckDigests.length > 0) {
       buttons.push([
-        { text: '🗑️ Pending Digest\'leri Temizle', callback_data: 'action_clean_pending' }
+        { text: '🗑️ Takılı Digest\'leri Temizle', callback_data: 'action_clean_pending' }
       ]);
     }
 
@@ -1362,41 +1375,43 @@ export async function handleDigestEditInput(editedContent, userId, digestId) {
  */
 export async function handleCleanPendingAction() {
   try {
-    await sendTelegramMessage('🔍 <b>Pending Digest\'ler Kontrol Ediliyor...</b>');
+    await sendTelegramMessage('🔍 <b>Takılı Digest\'ler Kontrol Ediliyor...</b>');
 
-    // Get pending digests summary (inline)
-    const { data: pendingDigests, error } = await supabase
+    // Get stuck digests (both pending AND posting status)
+    const { data: stuckDigests, error } = await supabase
       .from('linkedin_digest_posts')
       .select('*')
-      .eq('status', 'pending')
+      .in('status', ['pending', 'posting'])
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    if (!pendingDigests || pendingDigests.length === 0) {
+    if (!stuckDigests || stuckDigests.length === 0) {
       await sendTelegramMessage(
-        '✅ <b>Temizlenecek Pending Digest Yok!</b>\n\n' +
+        '✅ <b>Temizlenecek Takılı Digest Yok!</b>\n\n' +
         'Sistem şu anda temiz durumda.'
       );
       return;
     }
 
     // Format digests for display
-    const digestsFormatted = pendingDigests.map(d => ({
+    const digestsFormatted = stuckDigests.map(d => ({
       id: d.id,
       date: d.digest_date,
+      status: d.status,
       articles: d.article_count,
       created: new Date(d.created_at).toLocaleString('tr-TR'),
       age: Math.floor((Date.now() - new Date(d.created_at)) / (1000 * 60)) + ' minutes'
     }));
 
     // Show confirmation dialog
-    let confirmText = '🗑️ <b>Pending Digest Temizleme</b>\n\n';
-    confirmText += `<b>Silinecek digest sayısı:</b> ${pendingDigests.length}\n\n`;
+    let confirmText = '🗑️ <b>Takılı Digest Temizleme</b>\n\n';
+    confirmText += `<b>Silinecek digest sayısı:</b> ${stuckDigests.length}\n\n`;
     confirmText += '<b>Digest Listesi:</b>\n';
 
     digestsFormatted.forEach(d => {
-      confirmText += `• ${d.date} - ${d.articles} haber (${d.age})\n`;
+      const statusEmoji = d.status === 'posting' ? '🔴' : '⏳';
+      confirmText += `${statusEmoji} ${d.date} - ${d.articles} haber (${d.status}) - ${d.age}\n`;
     });
 
     confirmText += '\n⚠️ <b>DİKKAT:</b> Bu işlem geri alınamaz!\n';
@@ -1425,31 +1440,32 @@ export async function handleCleanPendingAction() {
  */
 export async function handleConfirmCleanAction() {
   try {
-    await sendTelegramMessage('🗑️ <b>Pending Digest\'ler Siliniyor...</b>');
+    await sendTelegramMessage('🗑️ <b>Takılı Digest\'ler Siliniyor...</b>');
 
-    // Get all pending digests first (for reporting)
-    const { data: pendingDigests, error: fetchError } = await supabase
+    // Get all stuck digests first (both pending AND posting)
+    const { data: stuckDigests, error: fetchError } = await supabase
       .from('linkedin_digest_posts')
       .select('*')
-      .eq('status', 'pending');
+      .in('status', ['pending', 'posting']);
 
     if (fetchError) throw fetchError;
 
     let successText = '✅ <b>Temizleme Tamamlandı!</b>\n\n';
 
-    if (pendingDigests && pendingDigests.length > 0) {
-      // Delete all pending digests
+    if (stuckDigests && stuckDigests.length > 0) {
+      // Delete all stuck digests (pending + posting)
       const { error: deleteError } = await supabase
         .from('linkedin_digest_posts')
         .delete()
-        .eq('status', 'pending');
+        .in('status', ['pending', 'posting']);
 
       if (deleteError) throw deleteError;
 
-      successText += `<b>Silinen digest sayısı:</b> ${pendingDigests.length}\n\n`;
+      successText += `<b>Silinen digest sayısı:</b> ${stuckDigests.length}\n\n`;
       successText += '<b>Silinen Digest\'ler:</b>\n';
-      pendingDigests.forEach(d => {
-        successText += `• ${d.digest_date} - ${d.article_count} haber\n`;
+      stuckDigests.forEach(d => {
+        const statusEmoji = d.status === 'posting' ? '🔴' : '⏳';
+        successText += `${statusEmoji} ${d.digest_date} - ${d.article_count} haber (${d.status})\n`;
       });
     } else {
       successText += 'Silinecek digest bulunamadı.';

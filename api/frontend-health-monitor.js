@@ -148,15 +148,17 @@ function formatErrorMessage(errorData) {
  * Main handler
  */
 module.exports = async function handler(req, res) {
-  // CORS headers
-  const ALLOWED_ORIGINS = [
-    'https://cemkoyluoglu.codes',
-    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-    'http://localhost:5173',
-  ].filter(Boolean);
+  // CORS headers - Allow Vercel preview deployments
+  const origin = req.headers.origin || '';
   
-  const origin = req.headers.origin;
-  if (ALLOWED_ORIGINS.includes(origin)) {
+  // Check if origin is allowed
+  const isAllowedOrigin = 
+    origin === 'https://cemkoyluoglu.codes' ||
+    origin === 'http://localhost:5173' ||
+    origin.includes('.vercel.app') || // All Vercel preview deployments
+    origin.includes('cemroots-projects.vercel.app'); // All project previews
+  
+  if (isAllowedOrigin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
