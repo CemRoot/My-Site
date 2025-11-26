@@ -243,6 +243,12 @@ module.exports = async function handler(req, res) {
             case 'create_digest':
               await menuHandler.handleCreateDigestAction();
               break;
+            case 'clean_pending':
+              await menuHandler.handleCleanPendingAction();
+              break;
+            case 'confirm_clean':
+              await menuHandler.handleConfirmCleanAction();
+              break;
             case 'health':
               await menuHandler.handleHealthAction();
               break;

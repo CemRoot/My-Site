@@ -8,6 +8,11 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { spawn } from 'child_process';
+import {
+  cleanOldPendingDigests,
+  deleteAllPendingDigests,
+  getPendingDigestsSummary
+} from './linkedin-digest-cleanup.js';
 
 const CONFIG = {
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
@@ -852,7 +857,14 @@ export async function handleLinkedInCommand() {
     buttons.push([
       { text: '🚀 Manuel Digest Oluştur', callback_data: 'action_create_digest' }
     ]);
-    
+
+    // Add cleanup button if there are pending digests
+    if (pending.length > 0) {
+      buttons.push([
+        { text: '🗑️ Pending Digest\'leri Temizle', callback_data: 'action_clean_pending' }
+      ]);
+    }
+
     buttons.push([
       { text: '🔙 Ana Menü', callback_data: 'action_refresh_menu' }
     ]);
@@ -1351,6 +1363,114 @@ export async function handleDigestEditInput(editedContent, userId, digestId) {
 }
 
 /**
+ * Handle clean pending digests action
+ */
+export async function handleCleanPendingAction() {
+  try {
+    await sendTelegramMessage('🔍 <b>Pending Digest\'ler Kontrol Ediliyor...</b>');
+
+    // Get pending digests summary first
+    const summary = await getPendingDigestsSummary();
+
+    if (!summary.success) {
+      throw new Error(summary.error || 'Digest listesi alınamadı');
+    }
+
+    if (summary.count === 0) {
+      await sendTelegramMessage(
+        '✅ <b>Temizlenecek Pending Digest Yok!</b>\n\n' +
+        'Sistem şu anda temiz durumda.'
+      );
+      return;
+    }
+
+    // Show confirmation dialog
+    let confirmText = '🗑️ <b>Pending Digest Temizleme</b>\n\n';
+    confirmText += `<b>Silinecek digest sayısı:</b> ${summary.count}\n\n`;
+    confirmText += '<b>Digest Listesi:</b>\n';
+
+    summary.digests.forEach(d => {
+      confirmText += `• ${d.date} - ${d.articles} haber (${d.age})\n`;
+    });
+
+    confirmText += '\n⚠️ <b>DİKKAT:</b> Bu işlem geri alınamaz!\n';
+    confirmText += 'Tüm pending digest\'ler silinecek.\n\n';
+    confirmText += 'Onaylıyor musunuz?';
+
+    await sendTelegramMessage(confirmText, {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '✅ Evet, Sil', callback_data: 'action_confirm_clean' },
+            { text: '❌ İptal', callback_data: 'action_linkedin' }
+          ]
+        ]
+      }
+    });
+
+  } catch (error) {
+    console.error('Clean pending action error:', error);
+    await sendTelegramMessage(`❌ <b>Hata!</b>\n\n${error.message}`);
+  }
+}
+
+/**
+ * Handle confirm clean action - actually delete pending digests
+ */
+export async function handleConfirmCleanAction() {
+  try {
+    await sendTelegramMessage('🗑️ <b>Pending Digest\'ler Siliniyor...</b>');
+
+    // Delete all pending digests
+    const result = await deleteAllPendingDigests();
+
+    if (!result.success) {
+      throw new Error(result.message || 'Silme işlemi başarısız');
+    }
+
+    let successText = '✅ <b>Temizleme Tamamlandı!</b>\n\n';
+
+    if (result.count > 0) {
+      successText += `<b>Silinen digest sayısı:</b> ${result.count}\n\n`;
+      successText += '<b>Silinen Digest\'ler:</b>\n';
+      result.digests.forEach(d => {
+        successText += `• ${d.date} - ${d.articles} haber\n`;
+      });
+    } else {
+      successText += 'Silinecek digest bulunamadı.';
+    }
+
+    successText += '\n\nArtık yeni digest oluşturabilirsiniz.';
+
+    await sendTelegramMessage(successText, {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '🚀 Yeni Digest Oluştur', callback_data: 'action_create_digest' }
+          ],
+          [
+            { text: '🔙 LinkedIn Menü', callback_data: 'action_linkedin' }
+          ]
+        ]
+      }
+    });
+
+    // Also clean old pending digests (> 24 hours)
+    const oldCleanup = await cleanOldPendingDigests();
+    if (oldCleanup.count > 0) {
+      await sendTelegramMessage(
+        `ℹ️ <b>Ek Temizlik:</b>\n` +
+        `24 saatten eski ${oldCleanup.count} pending digest de temizlendi.`
+      );
+    }
+
+  } catch (error) {
+    console.error('Confirm clean action error:', error);
+    await sendTelegramMessage(`❌ <b>Silme Hatası!</b>\n\n${error.message}`);
+  }
+}
+
+/**
  * Set bot commands (run once during setup)
  */
 export async function setBotCommands() {
@@ -1390,6 +1510,8 @@ export default {
   handleMenuCommand,
   handleLinkedInCommand,
   handleCreateDigestAction,
+  handleCleanPendingAction,
+  handleConfirmCleanAction,
   handleAddArticleAction,
   handleArticleUrlInput,
   handleSourceConfirmation,
