@@ -258,6 +258,8 @@ export function Hero() {
                 <img
                   src={portraitImage}
                   alt="Cem Koyluoglu - AI Engineer"
+                  width="1024"
+                  height="1024"
                   className="w-full h-auto relative rounded-3xl transition-all duration-300 group-hover:scale-105"
                   loading="eager"
                   fetchPriority="high"

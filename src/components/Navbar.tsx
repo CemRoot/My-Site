@@ -48,31 +48,28 @@ export function Navbar() {
   return (
     <nav
       ref={navRef}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
           ? 'py-3'
           : 'py-6'
-      }`}
+        }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Liquid Glass Container */}
         <div className="relative liquid-glow">
           {/* Animated glow effect */}
-          <div className={`absolute inset-0 bg-gradient-to-r from-primary/20 via-secondary/20 to-accent/20 rounded-2xl blur-2xl transition-opacity duration-300 ${
-            isScrolled ? 'opacity-100' : 'opacity-0'
-          }`} />
-          
+          <div className={`absolute inset-0 bg-gradient-to-r from-primary/20 via-secondary/20 to-accent/20 rounded-2xl blur-2xl transition-opacity duration-300 ${isScrolled ? 'opacity-100' : 'opacity-0'
+            }`} />
+
           {/* Glass Background */}
-          <div className={`relative rounded-2xl border transition-all duration-300 liquid-shimmer ${
-            isScrolled 
-              ? 'liquid-glass-strong neon-border-primary' 
+          <div className={`relative rounded-2xl border transition-all duration-300 liquid-shimmer ${isScrolled
+              ? 'liquid-glass-strong neon-border-primary'
               : 'bg-transparent border-transparent'
-          }`}>
+            }`}>
             <div className="flex items-center justify-between px-6 py-5">
               {/* Logo - CK Coin */}
               <Link to="/" className="group flex items-center space-x-3" style={{ overflow: 'visible' }}>
                 <div className="w-12 h-12 relative flex-shrink-0" style={{ perspective: '2000px' }}>
-                  <div 
+                  <div
                     className="w-full h-full relative transition-all duration-700 ease-out group-hover:scale-110"
                     style={{
                       transformStyle: 'preserve-3d',
@@ -83,6 +80,8 @@ export function Navbar() {
                     <img
                       src={coinLogo}
                       alt="CK Coin"
+                      width="1024"
+                      height="1024"
                       className="w-full h-full object-cover rounded-full"
                       loading="lazy"
                       style={{
@@ -90,9 +89,9 @@ export function Navbar() {
                         transition: 'all 0.3s ease',
                       }}
                     />
-                    
+
                     {/* Metallic glow overlay */}
-                    <div 
+                    <div
                       className="absolute inset-0 rounded-full pointer-events-none"
                       style={{
                         background: 'radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.4) 0%, transparent 50%)',
@@ -100,16 +99,16 @@ export function Navbar() {
                         animation: 'glowPulse 3s ease-in-out infinite',
                       }}
                     />
-                    
+
                     {/* Rotating accent ring */}
-                    <div 
+                    <div
                       className="absolute inset-0 rounded-full border-2 opacity-0 pointer-events-none"
                       style={{
                         display: 'none',
                       }}
                     />
                   </div>
-                  
+
                   <style>{`
                     @keyframes coinFlip {
                       0%, 100% {
@@ -145,7 +144,7 @@ export function Navbar() {
                     }
                   `}</style>
                 </div>
-                <span 
+                <span
                   className="hidden sm:block font-[Hobo_BT] text-[16px] tracking-wider font-bold"
                   style={{
                     background: 'linear-gradient(135deg, #5BE7FF 0%, #A78BFA 50%, #FFB86C 100%)',
@@ -177,15 +176,14 @@ export function Navbar() {
                     {item.label}
                   </a>
                 ))}
-                
+
                 {/* Tech News Link (Always visible) */}
                 <Link
                   to="/tech-news"
-                  className={`px-4 py-2 rounded-xl text-sm flex items-center gap-2 transition-all duration-200 ${
-                    location.pathname.startsWith('/tech-news')
+                  className={`px-4 py-2 rounded-xl text-sm flex items-center gap-2 transition-all duration-200 ${location.pathname.startsWith('/tech-news')
                       ? 'text-primary bg-primary/10 font-semibold'
                       : 'text-muted-foreground hover:text-foreground hover:bg-primary/10 font-semibold'
-                  }`}
+                    }`}
                   style={{ fontWeight: 600, letterSpacing: '0.02em' }}
                 >
                   <Newspaper className="w-4 h-4" />
@@ -234,15 +232,14 @@ export function Navbar() {
                     {item.label}
                   </a>
                 ))}
-                
+
                 {/* Tech News Link */}
                 <Link
                   to="/tech-news"
-                  className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm transition-all duration-200 liquid-shimmer font-semibold ${
-                    location.pathname.startsWith('/tech-news')
+                  className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm transition-all duration-200 liquid-shimmer font-semibold ${location.pathname.startsWith('/tech-news')
                       ? 'text-primary bg-primary/10 border border-primary/30'
                       : 'text-foreground hover:text-primary hover:bg-primary/10 border border-transparent hover:border-primary/30'
-                  }`}
+                    }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                   style={{ fontWeight: 600, letterSpacing: '0.02em' }}
                 >

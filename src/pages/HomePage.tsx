@@ -14,13 +14,17 @@ const Experience = lazy(() => import('../components/Experience'));
 // Simple loading skeleton for below-the-fold components
 function SectionSkeleton() {
   return (
-    <div className="container mx-auto px-6 py-20">
-      <div className="space-y-4 animate-pulse">
-        <div className="h-8 bg-muted/20 rounded w-1/4 mx-auto" />
-        <div className="h-4 bg-muted/20 rounded w-1/2 mx-auto" />
-        <div className="grid gap-6 mt-8">
-          <div className="h-48 bg-muted/20 rounded" />
-          <div className="h-48 bg-muted/20 rounded" />
+    <div className="container mx-auto px-6 py-20 min-h-[800px]">
+      <div className="space-y-8 animate-pulse">
+        <div className="space-y-4">
+          <div className="h-10 bg-muted/20 rounded w-1/3 mx-auto" />
+          <div className="h-4 bg-muted/20 rounded w-1/2 mx-auto" />
+        </div>
+        <div className="grid md:grid-cols-2 gap-8 mt-12">
+          <div className="h-[400px] bg-muted/20 rounded-3xl" />
+          <div className="h-[400px] bg-muted/20 rounded-3xl" />
+          <div className="h-[400px] bg-muted/20 rounded-3xl" />
+          <div className="h-[400px] bg-muted/20 rounded-3xl" />
         </div>
       </div>
     </div>
