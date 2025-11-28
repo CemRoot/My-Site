@@ -2,13 +2,20 @@ name: Scrape Tech News
 
 # Smart scheduling algorithm
 # WEEKDAYS ONLY: Nuvemmag doesn't publish on weekends
-# Runs 3 times per day: 09:30, 13:00, 16:00 Ireland time (UTC)
+# 
+# TIMEZONE NOTE: Nuvemmag is a Turkish news site (Europe/Istanbul timezone)
+# The script automatically handles timezone using JavaScript Intl API,
+# including any DST (Daylight Saving Time) changes - no manual updates needed!
+#
+# Schedule is in UTC (GitHub Actions standard):
+# - Morning, afternoon, and evening checks to catch articles throughout the day
+# - Final check is before n8n LinkedIn digest workflow (16:30 UTC)
 on:
   schedule:
-    # Monday-Friday only - Updated timing per user request
-    - cron: '30 9 * * 1-5'   # 09:30 UTC (Morning check - İrlanda 09:30)
-    - cron: '0 13 * * 1-5'   # 13:00 UTC (Afternoon check - İrlanda 13:00)
-    - cron: '0 16 * * 1-5'   # 16:00 UTC (Final check - İrlanda 16:00)
+    # Monday-Friday only - Three daily checks
+    - cron: '0 7 * * 1-5'    # 07:00 UTC - Morning check (catches overnight articles)
+    - cron: '0 12 * * 1-5'   # 12:00 UTC - Afternoon check (catches morning articles)
+    - cron: '0 16 * * 1-5'   # 16:00 UTC - Final check (before n8n digest at 16:30 UTC)
   
   # Manual trigger
   workflow_dispatch:
@@ -31,7 +38,7 @@ jobs:
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
       
       - name: 📦 Install dependencies
@@ -48,14 +55,22 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Set timezone for Node.js (used for date calculations)
+          TZ: UTC
         run: |
           echo "🚀 Starting multi-category tech news scraper..."
           echo "📂 Categories: 7 (AI, Tech, Science, etc.)"
           echo "📊 Articles per category: 15 (Get all daily news)"
-          echo "📅 Run time: $(date)"
-          echo "🌍 Timezone: UTC"
-          echo "📰 Filtering: Recent articles (last 7 days)"
+          echo ""
+          echo "📅 Time Info:"
+          echo "   UTC now: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          echo "   Turkey now: $(TZ='Europe/Istanbul' date +'%Y-%m-%d %H:%M:%S %Z')"
+          echo ""
+          echo "🌍 Timezone: Script uses Europe/Istanbul (auto DST handling)"
+          echo "📰 Filtering: Recent articles (last 3 days)"
           echo "💾 Storage: Supabase PostgreSQL"
+          echo "🔄 Firecrawl Cache: maxAge=2h (fresh data for scheduled runs)"
+          echo ""
           npm run scrape:news
       
       - name: ✅ Success summary

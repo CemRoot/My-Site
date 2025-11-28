@@ -194,16 +194,18 @@ function generateSlug(title) {
 
 /**
  * Check if article is from today (for filtering old articles)
+ * Uses Turkey timezone for comparison since Nuvemmag is Turkish
  */
 function isFromToday(dateString) {
   try {
     // Parse Turkish date format: "10/10/2025" or "9/10/2025"
     const [day, month, year] = dateString.split('/').map(n => parseInt(n, 10));
     const articleDate = new Date(year, month - 1, day);
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     articleDate.setHours(0, 0, 0, 0);
+    
+    // Use Turkey timezone for "today"
+    const today = getTurkeyDate();
+    today.setHours(0, 0, 0, 0);
     
     // Allow articles from today and yesterday (in case of timezone differences)
     const yesterday = new Date(today);
@@ -218,22 +220,24 @@ function isFromToday(dateString) {
 
 /**
  * Check if article is from last 3 days (focus on current news)
+ * Uses Turkey timezone for comparison since Nuvemmag is Turkish
  */
 function isRecent(dateString) {
   try {
     const [day, month, year] = dateString.split('/').map(n => parseInt(n, 10));
     const articleDate = new Date(year, month - 1, day);
+    articleDate.setHours(0, 0, 0, 0);
     
-    const threeDaysAgo = new Date();
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-    threeDaysAgo.setHours(0, 0, 0, 0);
-    
-    const today = new Date();
+    // Use Turkey timezone for date calculations
+    const today = getTurkeyDate();
     today.setHours(0, 0, 0, 0);
     
-    const isRecent = articleDate >= threeDaysAgo;
+    const threeDaysAgo = new Date(today);
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
     
-    return isRecent;
+    const isRecentArticle = articleDate >= threeDaysAgo;
+    
+    return isRecentArticle;
   } catch (error) {
     console.log(`    ⚠️ Date parse error for "${dateString}": ${error.message}`);
     return true; // If error, include the article
@@ -241,16 +245,43 @@ function isRecent(dateString) {
 }
 
 /**
+ * Get current date in Turkey timezone (Europe/Istanbul)
+ * Nuvemmag uses Turkey timezone for article dates
+ * 
+ * NOTE: Uses JavaScript Intl API which automatically handles:
+ * - DST (Daylight Saving Time) changes
+ * - Timezone offset changes
+ * - Historical timezone data
+ * 
+ * No hardcoded offsets - fully automatic!
+ */
+function getTurkeyDate() {
+  const now = new Date();
+  // Convert to Turkey timezone string and parse back
+  // Using 'en-CA' locale gives us YYYY-MM-DD format which is easy to parse
+  // timeZone: 'Europe/Istanbul' automatically handles DST/timezone changes
+  const turkeyDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
+  const [year, month, day] = turkeyDateStr.split('-').map(n => parseInt(n, 10));
+  return new Date(year, month - 1, day);
+}
+
+/**
  * Calculate date priority for sorting (higher = more recent)
  * Today = 100, Yesterday = 90, 2 days ago = 80, etc.
+ * 
+ * IMPORTANT: Uses Europe/Istanbul timezone for date comparison since
+ * Nuvemmag is a Turkish news site and publishes dates in Turkey timezone.
+ * DST (Daylight Saving Time) changes are handled automatically by Intl API.
  */
 function getDatePriority(dateString) {
   try {
     const [day, month, year] = dateString.split('/').map(n => parseInt(n, 10));
     const articleDate = new Date(year, month - 1, day);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     articleDate.setHours(0, 0, 0, 0);
+    
+    // Use Turkey timezone for "today" calculation
+    const today = getTurkeyDate();
+    today.setHours(0, 0, 0, 0);
     
     const diffTime = today.getTime() - articleDate.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
@@ -258,8 +289,14 @@ function getDatePriority(dateString) {
     // Priority scoring: Today=100, Yesterday=90, 2 days ago=80, etc.
     const priority = Math.max(0, 100 - (diffDays * 10));
     
+    // Debug log for timezone verification (only first few)
+    if (Math.random() < 0.1) { // Log ~10% of articles to avoid spam
+      console.log(`    📅 Date check: article=${dateString} (parsed: ${articleDate.toDateString()}), turkey_today=${today.toDateString()}, diffDays=${diffDays}, priority=${priority}`);
+    }
+    
     return priority;
   } catch (error) {
+    console.error(`    ⚠️ Date priority error for "${dateString}": ${error.message}`);
     return 0; // Lowest priority for unparseable dates
   }
 }
@@ -360,6 +397,8 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
   
   try {
     // Use Firecrawl REST API with retry logic
+    // IMPORTANT: Use low maxAge to get fresh data, not cached results
+    // This fixes the "today articles = 0" issue on scheduled runs
     const result = await fetchWithRetry(
       'https://api.firecrawl.dev/v1/scrape',
       {
@@ -371,7 +410,11 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
         body: JSON.stringify({
           url: categoryUrl,
           formats: ['markdown'],
-          onlyMainContent: true
+          onlyMainContent: true,
+          // Cache settings: max 2 hours old data (7,200,000 ms)
+          // This ensures we get fresh article lists on scheduled runs
+          maxAge: 7200000,
+          storeInCache: true  // Allow caching but with maxAge limit
         })
       },
       `category ${categoryTag}`
@@ -462,6 +505,21 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
  */
 async function scrapeAllCategories() {
   console.log('🔍 Scraping all categories...\n');
+  
+  // Log timezone info for debugging
+  // Note: Europe/Istanbul timezone automatically handles DST changes
+  const turkeyToday = getTurkeyDate();
+  const utcNow = new Date();
+  const turkeyOffset = new Intl.DateTimeFormat('en', {
+    timeZone: 'Europe/Istanbul',
+    timeZoneName: 'shortOffset'
+  }).formatToParts(utcNow).find(p => p.type === 'timeZoneName')?.value || 'UTC+?';
+  
+  console.log(`🌍 Timezone Debug (auto DST handling):`);
+  console.log(`   UTC now: ${utcNow.toISOString()}`);
+  console.log(`   Turkey now: ${utcNow.toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })} (${turkeyOffset})`);
+  console.log(`   Turkey today (for comparisons): ${turkeyToday.toDateString()}\n`);
+  
   const allArticles = [];
   
   for (const category of CONFIG.CATEGORIES) {
