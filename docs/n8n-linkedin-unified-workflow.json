@@ -44,7 +44,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse trigger source and prepare workflow data\nconst items = $input.all();\nconst firstItem = items[0];\n\nlet triggerType = 'schedule';\nlet webhookData = null;\nlet callbackData = null;\n\n// Check if this came from webhook (has body)\nif (firstItem && firstItem.json && firstItem.json.body) {\n  webhookData = firstItem.json.body;\n  \n  // Check if it's a callback (has action and digest_id)\n  if (webhookData.action && webhookData.digest_id) {\n    triggerType = 'callback';\n    callbackData = {\n      action: webhookData.action,\n      digest_id: webhookData.digest_id,\n      callback_query_id: webhookData.callback_query_id,\n      chat_id: webhookData.chat_id,\n      message_id: webhookData.message_id,\n      edited_content: webhookData.edited_content || null\n    };\n  } \n  // Otherwise it's a manual trigger\n  else if (webhookData.trigger === 'manual') {\n    triggerType = 'manual';\n  }\n}\n\n// Get today's date in consistent format (YYYY-MM-DD)\nconst today = new Date();\nconst todayDate = today.toISOString().split('T')[0];\n\n// Get Telegram Chat ID\n// Priority: webhook data > hardcoded\nconst telegramChatId = (webhookData && webhookData.chat_id) \n  ? webhookData.chat_id \n  : '1925139795'; // ← SENIN TELEGRAM CHAT ID'N\n\n// Prepare output\nreturn {\n  triggerType: triggerType,\n  todayDate: todayDate,\n  timestamp: new Date().toISOString(),\n  webhookData: webhookData,\n  callbackData: callbackData,\n  telegramChatId: telegramChatId\n};"
+        "jsCode": "// Parse trigger source and prepare workflow data\nconst items = $input.all();\nconst firstItem = items[0];\n\nlet triggerType = 'schedule';\nlet webhookData = null;\nlet callbackData = null;\n\n// Check if this came from webhook (has body)\nif (firstItem && firstItem.json && firstItem.json.body) {\n  webhookData = firstItem.json.body;\n  \n  // Check if it's a callback (has action and digest_id)\n  if (webhookData.action && webhookData.digest_id) {\n    triggerType = 'callback';\n    callbackData = {\n      action: webhookData.action,\n      digest_id: webhookData.digest_id,\n      callback_query_id: webhookData.callback_query_id,\n      chat_id: webhookData.chat_id,\n      message_id: webhookData.message_id,\n      edited_content: webhookData.edited_content || null\n    };\n  } \n  // Otherwise it's a manual trigger\n  else if (webhookData.trigger === 'manual') {\n    triggerType = 'manual';\n  }\n}\n\n// Get today's date in consistent format (YYYY-MM-DD)\nconst today = new Date();\nconst todayDate = today.toISOString().split('T')[0];\n\n// Get yesterday's date (for fetching articles from last 2 days)\nconst yesterday = new Date(today);\nyesterday.setDate(yesterday.getDate() - 1);\nconst yesterdayDate = yesterday.toISOString().split('T')[0];\n\n// Get Telegram Chat ID\n// Priority: webhook data > hardcoded\nconst telegramChatId = (webhookData && webhookData.chat_id) \n  ? webhookData.chat_id \n  : '1925139795'; // ← SENIN TELEGRAM CHAT ID'N\n\n// Prepare output\nreturn {\n  triggerType: triggerType,\n  todayDate: todayDate,\n  yesterdayDate: yesterdayDate,\n  timestamp: new Date().toISOString(),\n  webhookData: webhookData,\n  callbackData: callbackData,\n  telegramChatId: telegramChatId\n};"
       },
       "id": "4bb28aed-bf3a-4db3-9271-0477c164d16a",
       "name": "Parse Trigger Type",
@@ -169,14 +169,14 @@
         "filters": {
           "conditions": [
             {
-              "keyName": "created_at",
+              "keyName": "date",
               "condition": "gte",
-              "keyValue": "={{ $('Parse Trigger Type').item.json.todayDate }}"
+              "keyValue": "={{ $('Parse Trigger Type').item.json.yesterdayDate }}"
             },
             {
-              "keyName": "created_at",
-              "condition": "lt",
-              "keyValue": "=={{ new Date(new Date($('Parse Trigger Type').item.json.todayDate).getTime() + 24*60*60*1000).toISOString().split('T')[0] }}"
+              "keyName": "date",
+              "condition": "lte",
+              "keyValue": "={{ $('Parse Trigger Type').item.json.todayDate }}"
             }
           ]
         }
@@ -197,7 +197,7 @@
           "name": "Supabase account"
         }
       },
-      "notes": "Get all articles published today"
+      "notes": "Get articles from today and yesterday (based on article date, not created_at)"
     },
     {
       "parameters": {
