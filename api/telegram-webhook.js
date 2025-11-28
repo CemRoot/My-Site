@@ -3,8 +3,8 @@
  * Handles Telegram bot callbacks for LinkedIn automation approval workflow
  */
 
-// Import statements for Vercel serverless function
-const { createClient } = require('@supabase/supabase-js');
+// ES Module imports for Vercel serverless function
+import { createClient } from '@supabase/supabase-js';
 
 const CONFIG = {
   SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -80,7 +80,7 @@ async function sendTelegramMessage(text, options = {}) {
   }
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // CORS headers - Security: Only allow requests from trusted origins
   const ALLOWED_ORIGINS = [
     'https://cemkoyluoglu.codes',

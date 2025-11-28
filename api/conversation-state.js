@@ -11,7 +11,7 @@
  * - DELETE /api/conversation-state?user_id=123 - Delete conversation state
  */
 
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
 
 const CONFIG = {
   SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -157,7 +157,7 @@ function verifyAuth(req) {
 /**
  * Main handler
  */
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // CORS headers
   const ALLOWED_ORIGINS = [
     'https://cemkoyluoglu.codes',

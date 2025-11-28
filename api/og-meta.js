@@ -4,7 +4,7 @@
  * Handles social media crawler detection
  */
 
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -35,7 +35,7 @@ function isCrawler(userAgent) {
   );
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   const { slug } = req.query;
 
   if (!slug) {

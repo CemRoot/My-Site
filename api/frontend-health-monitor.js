@@ -8,7 +8,7 @@
  * Body: { type: 'error' | 'crash' | 'performance', data: {...} }
  */
 
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
 
 const CONFIG = {
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
@@ -147,7 +147,7 @@ function formatErrorMessage(errorData) {
 /**
  * Main handler
  */
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // CORS headers - Allow Vercel preview deployments
   const origin = req.headers.origin || '';
   

@@ -9,8 +9,8 @@
  * - /api/telegram-control?action=health-check
  */
 
-const { createClient } = require('@supabase/supabase-js');
-const { spawn } = require('child_process');
+import { createClient } from '@supabase/supabase-js';
+import { spawn } from 'child_process';
 
 const CONFIG = {
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
@@ -230,7 +230,7 @@ ${supabaseStatus === '✅ Bağlı' ? '✨ Sistemler çalışıyor' : '⚠️ Sor
 /**
  * Main handler
  */
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // CORS headers - Security: Only allow requests from trusted origins
   const ALLOWED_ORIGINS = [
     'https://cemkoyluoglu.codes',
