@@ -48,26 +48,35 @@ function TechNews() {
     fetchNews(currentPage);
   }, [currentPage, selectedCategory]);
 
-  const fetchNews = async (page: number = 1) => {
+  const fetchFreshData = async (page: number, cacheKey: string) => {
     try {
       setLoading(true);
-      const categoryQuery = selectedCategory && selectedCategory !== 'all' 
-        ? `&category=${encodeURIComponent(selectedCategory)}` 
+      const categoryQuery = selectedCategory && selectedCategory !== 'all'
+        ? `&category=${encodeURIComponent(selectedCategory)}`
         : '';
       const apiUrl = `/api/tech-news?page=${page}&limit=${ARTICLES_PER_PAGE}${categoryQuery}`;
       const response = await fetch(apiUrl);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch news (status ${response.status})`);
       }
-      
+
       const result = await response.json();
-      
+
       if (result.success && result.data) {
-        // Transform API response to match NewsDatabase interface
+        // Save to sessionStorage
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify({
+            data: result.data,
+            timestamp: Date.now()
+          }));
+        } catch {
+          // Ignore storage errors (quota exceeded, etc.)
+        }
+
         const newsData: NewsDatabase = {
           version: '2.0.0',
-          lastUpdated: new Date().toISOString(),
+          lastUpdated: result.data._cache?.generatedAt || new Date().toISOString(),
           totalArticles: result.data.pagination.totalArticles,
           articles: result.data.articles
         };
@@ -78,6 +87,45 @@ function TechNews() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchNews = async (page: number = 1) => {
+    const cacheKey = `tech-news-p${page}-c${selectedCategory}`;
+
+    try {
+      // Check sessionStorage cache first
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        const ageMs = Date.now() - timestamp;
+        const maxAgeMs = 5 * 60 * 1000; // 5 minutes
+
+        if (ageMs < maxAgeMs) {
+          // Use cached data immediately
+          const newsData: NewsDatabase = {
+            version: '2.0.0',
+            lastUpdated: data._cache?.generatedAt || new Date().toISOString(),
+            totalArticles: data.pagination.totalArticles,
+            articles: data.articles
+          };
+          setNewsData(newsData);
+          setLoading(false);
+
+          // Still fetch fresh data in background if cache is older than 2 minutes
+          if (ageMs > 2 * 60 * 1000) {
+            fetchFreshData(page, cacheKey);
+          }
+          return;
+        }
+      }
+
+      // No valid cache, fetch fresh
+      await fetchFreshData(page, cacheKey);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
       setLoading(false);
     }
   };

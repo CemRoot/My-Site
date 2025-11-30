@@ -56,9 +56,23 @@
     
     <!-- Geist Font - Loaded locally via npm package -->
     
-    <!-- Satoshi Font for Tech News -->
+    <!-- Satoshi Font for Tech News - Optimized Loading -->
     <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
-    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,600,700,800,900&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
+    <link
+      rel="preload"
+      href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap"
+      as="style"
+    />
+    <link
+      href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap" rel="stylesheet" />
+    </noscript>
 
     <!-- Preconnect to Sentry for faster error reporting -->
     <link rel="dns-prefetch" href="https://o4508211887607104.ingest.de.sentry.io" />
