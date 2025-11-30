@@ -27,6 +27,10 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+  // Cache headers for Vercel Edge and CDN
+  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+  res.setHeader('CDN-Cache-Control', 'public, max-age=300');
+
   // Handle preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -125,7 +129,7 @@ export default async function handler(req, res) {
     const totalArticles = count || 0;
     const totalPages = Math.ceil(totalArticles / limitNum);
 
-    return res.status(200).json({ 
+    return res.status(200).json({
       success: true,
       data: {
         articles: articles.map(formatArticle),
@@ -135,6 +139,10 @@ export default async function handler(req, res) {
           totalArticles,
           totalPages,
           hasMore: pageNum < totalPages
+        },
+        _cache: {
+          generatedAt: new Date().toISOString(),
+          maxAge: 300
         }
       }
     });
