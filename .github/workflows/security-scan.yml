@@ -82,7 +82,12 @@ jobs:
   secret-scan:
     name: Secret Scanning
     runs-on: ubuntu-latest
-    
+
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -93,7 +98,7 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          # If you later purchase a Gitleaks license, add it as a repo secret named GITLEAKS_LICENSE
 
   security-summary:
     name: Security Summary
