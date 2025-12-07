@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Newspaper } from 'lucide-react';
 import { Button } from './ui/button';
-import coinLogo from '../assets/5a044018a2d01618456d3b6a76d961bdd5099599.png';
+import coinLogo from '../assets/coin-logo.webp';
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);

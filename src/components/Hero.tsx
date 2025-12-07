@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Github, Linkedin, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
-import portraitImage from '../assets/b2434507c36da971cecf1c8e91f157fb86abbf62.png';
+import portraitImage from '../assets/portrait.webp';
 
 export function Hero() {
   const roles = [
@@ -71,61 +71,43 @@ export function Hero() {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-8 pt-20">
-      {/* Enhanced animated background gradients */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Primary gradient - top left */}
-        <div 
-          className="absolute top-1/4 -left-1/4 w-[600px] h-[600px] bg-primary/30 rounded-full blur-3xl animate-pulse" 
-          style={{ 
-            animationDuration: '6s',
-            background: 'radial-gradient(circle, rgba(91, 231, 255, 0.4) 0%, rgba(91, 231, 255, 0.1) 50%, transparent 100%)'
-          }} 
-        />
-        
-        {/* Secondary gradient - bottom right */}
-        <div 
-          className="absolute bottom-1/4 -right-1/4 w-[600px] h-[600px] bg-secondary/30 rounded-full blur-3xl animate-pulse" 
-          style={{ 
-            animationDuration: '8s', 
-            animationDelay: '1s',
-            background: 'radial-gradient(circle, rgba(167, 139, 250, 0.4) 0%, rgba(167, 139, 250, 0.1) 50%, transparent 100%)'
-          }} 
-        />
-        
-        {/* Accent gradient - center */}
-        <div 
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-accent/25 rounded-full blur-3xl animate-pulse" 
-          style={{ 
-            animationDuration: '10s', 
-            animationDelay: '2s',
-            background: 'radial-gradient(circle, rgba(255, 184, 108, 0.35) 0%, rgba(255, 184, 108, 0.1) 50%, transparent 100%)'
-          }} 
-        />
-        
-        {/* Additional glow layers for depth */}
-        <div 
-          className="absolute top-0 left-1/3 w-[400px] h-[400px] bg-primary/20 rounded-full blur-3xl animate-pulse" 
-          style={{ 
-            animationDuration: '7s',
-            animationDelay: '0.5s',
-            background: 'radial-gradient(circle, rgba(91, 231, 255, 0.3) 0%, transparent 70%)'
-          }} 
-        />
-        
-        <div 
-          className="absolute bottom-0 right-1/3 w-[400px] h-[400px] bg-secondary/20 rounded-full blur-3xl animate-pulse" 
-          style={{ 
-            animationDuration: '9s',
-            animationDelay: '1.5s',
-            background: 'radial-gradient(circle, rgba(167, 139, 250, 0.3) 0%, transparent 70%)'
-          }} 
-        />
-        
-        {/* Subtle overlay gradient for overall ambiance */}
-        <div 
-          className="absolute inset-0 opacity-30"
+      {/* Optimized animated background gradients - using CSS transforms for GPU acceleration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none will-change-transform">
+        {/* Primary gradient - top left - uses opacity animation instead of blur changes */}
+        <div
+          className="absolute top-1/4 -left-1/4 w-[600px] h-[600px] rounded-full"
           style={{
-            background: 'radial-gradient(ellipse at top left, rgba(91, 231, 255, 0.15) 0%, transparent 50%), radial-gradient(ellipse at bottom right, rgba(167, 139, 250, 0.15) 0%, transparent 50%), radial-gradient(ellipse at center, rgba(255, 184, 108, 0.1) 0%, transparent 70%)'
+            background: 'radial-gradient(circle, rgba(91, 231, 255, 0.35) 0%, rgba(91, 231, 255, 0.08) 50%, transparent 100%)',
+            filter: 'blur(60px)',
+            opacity: 0.8,
+          }}
+        />
+
+        {/* Secondary gradient - bottom right */}
+        <div
+          className="absolute bottom-1/4 -right-1/4 w-[600px] h-[600px] rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(167, 139, 250, 0.35) 0%, rgba(167, 139, 250, 0.08) 50%, transparent 100%)',
+            filter: 'blur(60px)',
+            opacity: 0.8,
+          }}
+        />
+
+        {/* Accent gradient - center */}
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(255, 184, 108, 0.3) 0%, rgba(255, 184, 108, 0.08) 50%, transparent 100%)',
+            filter: 'blur(60px)',
+            opacity: 0.7,
+          }}
+        />
+
+        {/* Subtle overlay gradient for overall ambiance */}
+        <div
+          className="absolute inset-0 opacity-25"
+          style={{
+            background: 'radial-gradient(ellipse at top left, rgba(91, 231, 255, 0.12) 0%, transparent 50%), radial-gradient(ellipse at bottom right, rgba(167, 139, 250, 0.12) 0%, transparent 50%)'
           }}
         />
       </div>
