@@ -11,13 +11,13 @@
           ]
         }
       },
-      "id": "0d350aa2-8c1f-4203-ae3d-17e11890e36d",
+      "id": "b0f9621c-274c-4658-aeb5-2181b5df806f",
       "name": "Daily Schedule (16:30 UTC)",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -1344,
-        480
+        -3232,
+        128
       ],
       "webhookId": "schedule-trigger-id",
       "notesInFlow": true,
@@ -30,13 +30,13 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "1d979aa4-395b-4627-8922-164a832dc631",
+      "id": "529a7ad1-7f96-44b1-b651-3ebd2ee3099e",
       "name": "Webhook Trigger (Manual + Callbacks)",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -1344,
-        672
+        -3232,
+        320
       ],
       "webhookId": "webhook-unified-id",
       "notesInFlow": true,
@@ -46,13 +46,13 @@
       "parameters": {
         "jsCode": "// Parse trigger source and prepare workflow data\nconst items = $input.all();\nconst firstItem = items[0];\n\nlet triggerType = 'schedule';\nlet webhookData = null;\nlet callbackData = null;\n\n// Check if this came from webhook (has body)\nif (firstItem && firstItem.json && firstItem.json.body) {\n  webhookData = firstItem.json.body;\n  \n  // Check if it's a callback (has action and digest_id)\n  if (webhookData.action && webhookData.digest_id) {\n    triggerType = 'callback';\n    callbackData = {\n      action: webhookData.action,\n      digest_id: webhookData.digest_id,\n      callback_query_id: webhookData.callback_query_id,\n      chat_id: webhookData.chat_id,\n      message_id: webhookData.message_id,\n      edited_content: webhookData.edited_content || null\n    };\n  } \n  // Otherwise it's a manual trigger\n  else if (webhookData.trigger === 'manual') {\n    triggerType = 'manual';\n  }\n}\n\n// Get today's date in consistent format (YYYY-MM-DD)\nconst today = new Date();\nconst todayDate = today.toISOString().split('T')[0];\n\n// Get yesterday's date (for fetching articles from last 2 days)\nconst yesterday = new Date(today);\nyesterday.setDate(yesterday.getDate() - 1);\nconst yesterdayDate = yesterday.toISOString().split('T')[0];\n\n// Get Telegram Chat ID\n// Priority: webhook data > hardcoded\nconst telegramChatId = (webhookData && webhookData.chat_id) \n  ? webhookData.chat_id \n  : '1925139795'; // ← SENIN TELEGRAM CHAT ID'N\n\n// Prepare output\nreturn {\n  triggerType: triggerType,\n  todayDate: todayDate,\n  yesterdayDate: yesterdayDate,\n  timestamp: new Date().toISOString(),\n  webhookData: webhookData,\n  callbackData: callbackData,\n  telegramChatId: telegramChatId\n};"
       },
-      "id": "4bb28aed-bf3a-4db3-9271-0477c164d16a",
+      "id": "4b7b6698-a249-41b7-ad4c-2459850321ba",
       "name": "Parse Trigger Type",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1120,
-        576
+        -3008,
+        224
       ],
       "notesInFlow": true,
       "notes": "Determines: schedule, manual, or callback"
@@ -81,13 +81,13 @@
         },
         "options": {}
       },
-      "id": "311fd31f-27cf-4166-86a7-cef90bd8b0a6",
+      "id": "816b8e5b-0974-492b-9ba6-d32128ff1400",
       "name": "Route by Trigger Type",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -672,
-        480
+        -2560,
+        128
       ],
       "notesInFlow": true,
       "notes": "TRUE = Callback | FALSE = Schedule/Manual"
@@ -106,19 +106,19 @@
           ]
         }
       },
-      "id": "17e8d3b2-4e71-4f3f-935c-1bac653350be",
+      "id": "a713d11d-dd40-4fa3-8e9c-708bb3d57c82",
       "name": "Check If Digest Exists",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -448,
-        672
+        -2336,
+        320
       ],
       "notesInFlow": true,
       "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
-          "id": "O1QnMDohcPwvcssb",
+          "id": "9ZQTX4y8ewrWFtc0",
           "name": "Supabase account"
         }
       },
@@ -149,13 +149,13 @@
         },
         "options": {}
       },
-      "id": "74d63ed9-cec6-4a1c-bfcb-59172aca03e6",
+      "id": "e8015641-24e0-4b5b-864e-febf412cb692",
       "name": "Digest Exists?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -224,
-        672
+        -2112,
+        320
       ],
       "notesInFlow": true,
       "notes": "TRUE = Already exists | FALSE = Create new"
@@ -176,19 +176,19 @@
           ]
         }
       },
-      "id": "d6def2cd-5143-4515-a094-29c042d1c012",
+      "id": "3fc4a5b5-28ca-4dd2-934b-207f2350d625",
       "name": "Fetch Today's Articles",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        224,
-        768
+        -1664,
+        416
       ],
       "notesInFlow": true,
       "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
-          "id": "O1QnMDohcPwvcssb",
+          "id": "9ZQTX4y8ewrWFtc0",
           "name": "Supabase account"
         }
       },
@@ -198,13 +198,13 @@
       "parameters": {
         "jsCode": "// Group articles into a single array with scoring and sorting\n// IMPORTANT: Generate correct website URLs (cemkoyluoglu.codes) NOT source URLs (nuvemmag.com)\nconst items = $input.all();\nconst SITE_BASE_URL = 'https://cemkoyluoglu.codes/tech-news';\n\n// Define category weights for diversity (higher = more interesting)\nconst categoryWeights = {\n  'AI': 1.2,\n  'Cybersecurity': 1.15,\n  'Cloud': 1.1,\n  'Hardware': 1.1,\n  'Data Science': 1.05,\n  'Software': 1.0,\n  'General': 0.9\n};\n\n// Define trusted sources (add more as needed)\nconst trustedSources = [\n  'techcrunch.com',\n  'theverge.com',\n  'arstechnica.com',\n  'wired.com',\n  'mit.edu',\n  'stanford.edu'\n];\n\n// Calculate score for each article\nconst articlesWithScores = items.map(item => {\n  // Generate the correct article URL for our website\n  const articleUrl = `${SITE_BASE_URL}/${item.json.slug}`;\n  \n  const article = {\n    id: item.json.id,\n    title: item.json.title,\n    title_en: item.json.title_en,\n    summary_en: item.json.summary_en,\n    slug: item.json.slug,\n    category: item.json.category,\n    // CRITICAL: Use our website URL, NOT the source URL (nuvemmag.com)\n    article_url: articleUrl,\n    created_at: item.json.created_at\n  };\n\n  let score = 0;\n\n  // 1. Novelty Score (0-30 points) - newer articles score higher\n  const articleDate = new Date(article.created_at);\n  const now = new Date();\n  const hoursSincePublished = (now - articleDate) / (1000 * 60 * 60);\n  const noveltyScore = Math.max(0, 30 - (hoursSincePublished * 1.5));\n  score += noveltyScore;\n\n  // 2. Category Diversity Score (0-20 points)\n  const categoryWeight = categoryWeights[article.category] || 1.0;\n  score += categoryWeight * 20;\n\n  // 3. Source Credibility Score (0-25 points)\n  // Note: We use the original source_url from the item for scoring, not article_url\n  const originalSourceUrl = item.json.source_url || item.json.original_source || '';\n  const isTrustedSource = trustedSources.some(trusted => originalSourceUrl.includes(trusted));\n  score += isTrustedSource ? 25 : 10;\n\n  // 4. Content Depth Score (0-25 points)\n  const contentLength = (article.content_en || '').length;\n  const summaryLength = (article.summary_en || '').length;\n  const titleLength = (article.title_en || '').length;\n  \n  // Longer, more detailed content scores higher\n  const depthScore = Math.min(25, (contentLength / 200) + (summaryLength / 50) + (titleLength / 10));\n  score += depthScore;\n\n  return {\n    ...article,\n    _score: Math.round(score * 100) / 100 // Round to 2 decimals\n  };\n});\n\n// Sort by score in descending order (highest score first)\nconst sortedArticles = articlesWithScores.sort((a, b) => b._score - a._score);\n\n// Remove the _score field before returning (optional, keep for debugging)\nconst articles = sortedArticles.map(({ _score, ...article }) => article);\n\nreturn {\n  articles: articles,\n  articleCount: articles.length,\n  todayDate: $('Parse Trigger Type').item.json.todayDate,\n  // Include scoring info for debugging\n  scoringInfo: {\n    highestScore: sortedArticles[0]?._score || 0,\n    lowestScore: sortedArticles[sortedArticles.length - 1]?._score || 0,\n    averageScore: sortedArticles.reduce((sum, a) => sum + a._score, 0) / sortedArticles.length\n  }\n};"
       },
-      "id": "bb31d7f0-e643-4ad1-8230-01c513e47aeb",
+      "id": "829209a3-e315-4156-bfce-ea4b7be8eeee",
       "name": "Prepare Articles for AI",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        672,
-        480
+        -1216,
+        128
       ],
       "notesInFlow": true,
       "notes": "Format articles for OpenAI prompt"
@@ -237,18 +237,18 @@
           ]
         }
       },
-      "id": "a6f8bb36-e7aa-4171-bf0b-5d6993055a7e",
+      "id": "9166616b-026a-446d-9a0a-769240fb624a",
       "name": "Save Digest to Database",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        1344,
-        480
+        -544,
+        128
       ],
       "notesInFlow": true,
       "credentials": {
         "supabaseApi": {
-          "id": "O1QnMDohcPwvcssb",
+          "id": "9ZQTX4y8ewrWFtc0",
           "name": "Supabase account"
         }
       },
@@ -258,13 +258,13 @@
       "parameters": {
         "jsCode": "// Prepare Telegram message with inline buttons\nconst digest = $input.first().json;\nconst content = digest.suggested_content || 'No content generated';\n\n// Telegram has 4096 char limit - show as much as possible\nconst maxLength = 3500; // Leave room for header and buttons\nconst displayContent = content.length > maxLength \n  ? content.substring(0, maxLength) + '\\n\\n⚠️ [Content truncated due to Telegram limit - full version will be posted to LinkedIn]'\n  : content;\n\nconst message = `📰 *Daily LinkedIn Digest Ready!*\\n\\n📅 Date: ${digest.digest_date}\\n📊 Articles: ${digest.article_count}\\n\\n${displayContent}\\n\\n✅ Choose an action:`;\n\n// Inline keyboard - removed \"View Full\" button\nconst replyMarkup = {\n  inline_keyboard: [\n    [\n      { text: '✅ Approve & Post', callback_data: `approve_${digest.id}` },\n      { text: '❌ Reject', callback_data: `reject_${digest.id}` }\n    ],\n    [\n      { text: '✏️ Edit & Approve', callback_data: `edit_${digest.id}` }\n    ]\n  ]\n};\n\nreturn {\n  chatId: $('Parse Trigger Type').first().json.telegramChatId,\n  text: message,\n  replyMarkup: replyMarkup,\n  digestId: digest.id,\n  digestDate: digest.digest_date\n};"
       },
-      "id": "6c4025b1-e5c0-4eb1-89aa-59c9f787985e",
+      "id": "6ec08022-e537-45bb-93bd-289655bade72",
       "name": "Prepare Telegram Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1568,
-        480
+        -320,
+        128
       ],
       "notesInFlow": true,
       "notes": "Format message with Approve/Reject/Edit/View buttons"
@@ -307,19 +307,19 @@
           "parse_mode": "Markdown"
         }
       },
-      "id": "4a846ddd-9106-4f13-afaf-48823a98b1f7",
+      "id": "3ea5913d-d7d9-4212-8731-d00ab613bf8f",
       "name": "Send to Telegram",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1792,
-        480
+        -96,
+        128
       ],
       "notesInFlow": true,
       "webhookId": "307492ad-c357-4cef-b89e-f67aa10fab50",
       "credentials": {
         "telegramApi": {
-          "id": "vPO2hXyhkFyuloXL",
+          "id": "RRyxVCO8dulJ64bD",
           "name": "Telegram account"
         }
       },
@@ -331,13 +331,13 @@
         "responseBody": "={{ { success: true, message: 'Digest creation started', date: $('Parse Trigger Type').first().json.todayDate } }}",
         "options": {}
       },
-      "id": "00b07022-e563-4ad5-a04c-5dbf94ef4010",
+      "id": "99c62abd-0d62-4658-ad67-0a2250857f3a",
       "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        0,
-        768
+        -1888,
+        416
       ]
     },
     {
@@ -349,19 +349,19 @@
           "parse_mode": "HTML"
         }
       },
-      "id": "f192feb5-9abd-4743-ba01-b1c35d40727d",
+      "id": "beced4e4-dcdd-49e9-9a3d-5de671cca989",
       "name": "Notify Duplicate",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        224,
-        576
+        -1664,
+        224
       ],
       "notesInFlow": true,
       "webhookId": "cf63a846-811b-4604-aab5-88c76aed3b73",
       "credentials": {
         "telegramApi": {
-          "id": "vPO2hXyhkFyuloXL",
+          "id": "RRyxVCO8dulJ64bD",
           "name": "Telegram account"
         }
       },
@@ -373,13 +373,13 @@
         "responseBody": "={{ { success: false, message: 'Digest already exists for today', date: $('Parse Trigger Type').first().json.todayDate } }}",
         "options": {}
       },
-      "id": "c26c52e7-c6d1-45f5-8a4e-49fec7ff7936",
+      "id": "3e5bad87-ac82-47ef-b95a-028f459b715b",
       "name": "Respond Duplicate",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        0,
-        576
+        -1888,
+        224
       ]
     },
     {
@@ -395,18 +395,18 @@
           ]
         }
       },
-      "id": "4fb02977-cc15-4d27-8040-87aa8656cb61",
+      "id": "8717becb-6d1b-4fe1-a638-74e344c21972",
       "name": "Fetch Digest by ID",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -448,
-        192
+        -2336,
+        -160
       ],
       "notesInFlow": true,
       "credentials": {
         "supabaseApi": {
-          "id": "O1QnMDohcPwvcssb",
+          "id": "9ZQTX4y8ewrWFtc0",
           "name": "Supabase account"
         }
       },
@@ -488,13 +488,13 @@
           "allMatchingOutputs": false
         }
       },
-      "id": "b27a6d2d-1f48-4fa2-8a5f-8b82507ab99e",
+      "id": "86e4c48a-edbb-483c-8645-3cf84f4be1b4",
       "name": "Route Callback Action",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        -224,
-        176
+        -2112,
+        -176
       ],
       "notesInFlow": true,
       "notes": "Route to: approve / reject / edit"
@@ -521,17 +521,17 @@
           ]
         }
       },
-      "id": "790643e6-18b6-486c-8cff-a22d403f97d2",
+      "id": "9be24090-a5c1-4ea7-9251-02e37ce89722",
       "name": "Update Status: Posting",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        224,
-        0
+        -1664,
+        -352
       ],
       "credentials": {
         "supabaseApi": {
-          "id": "O1QnMDohcPwvcssb",
+          "id": "9ZQTX4y8ewrWFtc0",
           "name": "Supabase account"
         }
       }
@@ -542,18 +542,18 @@
         "text": "={{ $('Clean Content for LinkedIn').item.json.clean_content }}",
         "additionalFields": {}
       },
-      "id": "5ab4d51d-a502-4772-a349-2aa609cd03c1",
+      "id": "00d2df2b-afda-4187-a685-28b02ca31f8e",
       "name": "Post to LinkedIn",
       "type": "n8n-nodes-base.linkedIn",
       "typeVersion": 1,
       "position": [
-        672,
-        0
+        -1216,
+        -352
       ],
       "notesInFlow": true,
       "credentials": {
         "linkedInOAuth2Api": {
-          "id": "fGacYqJoDwtAt43G",
+          "id": "IlYDxh9P8HKkL5bY",
           "name": "LinkedIn account"
         }
       },
@@ -589,17 +589,17 @@
           ]
         }
       },
-      "id": "7645bdc3-a442-46df-bb9a-91e406b0afbc",
+      "id": "a842b476-8c42-4bee-9363-08a93a3e5905",
       "name": "Update Status: Posted",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        960,
-        0
+        -928,
+        -352
       ],
       "credentials": {
         "supabaseApi": {
-          "id": "O1QnMDohcPwvcssb",
+          "id": "9ZQTX4y8ewrWFtc0",
           "name": "Supabase account"
         }
       }
@@ -612,18 +612,18 @@
           "appendAttribution": false
         }
       },
-      "id": "f380a59c-1f90-4953-8af3-b7f674bdeb09",
+      "id": "6f10e670-65fa-4cfc-b9b5-e9b000388a4e",
       "name": "Telegram: Approve Success",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1248,
-        0
+        -640,
+        -352
       ],
       "webhookId": "e057ab3d-6ab3-47fc-99e2-541287812570",
       "credentials": {
         "telegramApi": {
-          "id": "vPO2hXyhkFyuloXL",
+          "id": "RRyxVCO8dulJ64bD",
           "name": "Telegram account"
         }
       }
@@ -634,13 +634,13 @@
         "responseBody": "={{ { success: true, message: 'Digest approved and posted to LinkedIn' } }}",
         "options": {}
       },
-      "id": "aca43677-0b2a-4152-8879-4afb0ea5b805",
+      "id": "052a0a0d-3437-41c6-8f9b-4e937b63e94d",
       "name": "Respond: Approve",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        0,
-        0
+        -1888,
+        -352
       ]
     },
     {
@@ -665,17 +665,17 @@
           ]
         }
       },
-      "id": "d49d01c9-8145-49c8-b34f-5d720b1b6710",
+      "id": "97de3119-afb8-41e5-ad55-05f3a656c2b5",
       "name": "Update Status: Rejected",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        224,
-        192
+        -1664,
+        -160
       ],
       "credentials": {
         "supabaseApi": {
-          "id": "O1QnMDohcPwvcssb",
+          "id": "9ZQTX4y8ewrWFtc0",
           "name": "Supabase account"
         }
       }
@@ -689,18 +689,18 @@
           "parse_mode": "Markdown"
         }
       },
-      "id": "a177a6c1-5ead-42c3-9ca9-68ba19fab6ad",
+      "id": "bde392ba-428d-4e4a-8592-49a8568864c1",
       "name": "Telegram: Reject Success",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        448,
-        192
+        -1440,
+        -160
       ],
       "webhookId": "7a6cfb1c-c48d-44d0-8043-90ec3523de01",
       "credentials": {
         "telegramApi": {
-          "id": "vPO2hXyhkFyuloXL",
+          "id": "RRyxVCO8dulJ64bD",
           "name": "Telegram account"
         }
       }
@@ -711,13 +711,13 @@
         "responseBody": "={{ { success: true, message: 'Digest rejected' } }}",
         "options": {}
       },
-      "id": "56ad3f51-afb1-455e-8c0c-573da6052a8d",
+      "id": "aa8e01c2-6977-4c25-9a39-100a881e41fe",
       "name": "Respond: Reject",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        0,
-        192
+        -1888,
+        -160
       ]
     },
     {
@@ -726,13 +726,13 @@
         "responseBody": "={{ { success: true, message: 'Edit mode (coming soon)' } }}",
         "options": {}
       },
-      "id": "270a1c12-5981-45e2-8628-3801426d92fb",
+      "id": "bf8bbc4a-9476-44bf-8f91-dfbc77e583b2",
       "name": "Respond: Edit",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        0,
-        384
+        -1888,
+        32
       ]
     },
     {
@@ -757,13 +757,13 @@
         },
         "options": {}
       },
-      "id": "6fe2bf1b-2708-426e-bc9c-1323bbdb920d",
+      "id": "d33c9238-33bf-438d-833f-76d5fee3d367",
       "name": "Check If Articles Found",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        448,
-        768
+        -1440,
+        416
       ]
     },
     {
@@ -775,18 +775,18 @@
           "parse_mode": "Markdown"
         }
       },
-      "id": "4c422db5-219f-4bdd-b3e0-105126082a7e",
+      "id": "0fd0ee8f-39b5-4ff3-b04a-e08559159c08",
       "name": "Notify No Articles Found",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        672,
-        864
+        -1216,
+        512
       ],
       "webhookId": "c1b31ee2-a4ed-4fb3-9bbe-4befd1c76e0b",
       "credentials": {
         "telegramApi": {
-          "id": "vPO2hXyhkFyuloXL",
+          "id": "RRyxVCO8dulJ64bD",
           "name": "Telegram account"
         }
       }
@@ -797,13 +797,13 @@
         "responseBody": "={{ { success: false, message: 'No articles found for today', date: $('Parse Trigger Type').first().json.todayDate } }}",
         "options": {}
       },
-      "id": "63ce7438-9493-4ba7-b80e-46e763d1cdb1",
+      "id": "b0d38567-7163-482c-9258-359789da3b41",
       "name": "Respond No Articles",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        960,
-        864
+        -928,
+        512
       ]
     },
     {
@@ -829,26 +829,26 @@
         },
         "options": {}
       },
-      "id": "8209c776-5dfa-4acb-bb3e-1788b0566ec9",
+      "id": "59a9e3b3-863a-4fec-880b-545026b3b2b5",
       "name": "Validate Trigger Type",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -896,
-        576
+        -2784,
+        224
       ]
     },
     {
       "parameters": {
         "errorMessage": "=Invalid trigger type: {{ $('Parse Trigger Type').item.json.triggerType }}. Expected one of: schedule, manual, callback"
       },
-      "id": "c769a955-df72-4b57-867b-b2ded8fa2584",
+      "id": "85f3bdb4-4b23-4ee2-957d-a0c2f34d8b8b",
       "name": "Stop and Error",
       "type": "n8n-nodes-base.stopAndError",
       "typeVersion": 1,
       "position": [
-        -672,
-        672
+        -2560,
+        320
       ]
     },
     {
@@ -860,18 +860,18 @@
           "parse_mode": "HTML"
         }
       },
-      "id": "89912a30-ee4e-496e-a224-5adac7bdfb73",
+      "id": "db705cca-2cf8-48bb-8af0-fb9e58fa9fb4",
       "name": "Send Edit Instructions",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        448,
-        384
+        -1440,
+        32
       ],
       "webhookId": "40e39b5e-e3b4-4e54-b542-f0e16161cb01",
       "credentials": {
         "telegramApi": {
-          "id": "vPO2hXyhkFyuloXL",
+          "id": "RRyxVCO8dulJ64bD",
           "name": "Telegram account"
         }
       }
@@ -883,10 +883,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
-        0
+        -1440,
+        -352
       ],
-      "id": "8d76a27c-04ec-4eb9-b468-e8b02bdd0738",
+      "id": "42ad14da-0b92-470d-add0-460b7de5e49c",
       "name": "Clean Content for LinkedIn"
     },
     {
@@ -928,56 +928,55 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        224,
-        384
+        -1664,
+        32
       ],
-      "id": "01a4c25f-b0e8-49f6-9908-75dc5320169a",
+      "id": "6d45196d-9c2b-45e1-aeed-3ca0b46d9e72",
       "name": "Set Conversation State"
     },
     {
       "parameters": {
         "modelId": {
           "__rl": true,
-          "value": "gpt-4o-mini",
+          "value": "gpt-4.1-mini",
           "mode": "list",
-          "cachedResultName": "GPT-4O-MINI"
+          "cachedResultName": "GPT-4.1-MINI"
         },
         "messages": {
           "values": [
             {
-              "content": "=You are an expert LinkedIn Growth Editor specializing in tech news digest posts.\n\nCHARACTER LIMIT: Stay under 2700 characters (LinkedIn limit is 3000).\n\n⚠️ CRITICAL LINK RULE:\n- ALWAYS use the 'article_url' field from each article for links\n- Links MUST be: https://cemkoyluoglu.codes/tech-news/[slug]\n- NEVER use nuvemmag.com or any other domain\n- Each article has an 'article_url' field - USE IT EXACTLY\n\nUNICODE BOLD ALPHABET (USE THIS FOR BOLD TEXT):\n𝐀𝐁𝐂𝐃𝐄𝐅𝐆𝐇𝐈𝐉𝐊𝐋𝐌𝐍𝐎𝐏𝐐𝐑𝐒𝐓𝐔𝐕𝐖𝐗𝐘𝐙\n𝐚𝐛𝐜𝐝𝐞𝐟𝐠𝐡𝐢𝐣𝐤𝐥𝐦𝐧𝐨𝐩𝐪𝐫𝐬𝐭𝐮𝐯𝐰𝐱𝐲𝐳\n𝟎𝟏𝟐𝟑𝟒𝟓𝟔𝟕𝟖𝟗\n\nFORMATTING RULES:\n1. Title line: FULLY Unicode bold - Example: 𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭𝐬: [topic summary in bold]\n2. Each article description: Make KEY TERMS Unicode bold (technology names, company names, important numbers)\n3. NEVER use markdown **bold** - only Unicode bold characters\n4. Each emoji must be unique per article\n5. NEVER include character counts or meta info in output\n\nCONTENT STRUCTURE:\n- Title: 𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭𝐬: [summarize topics in bold]\n- Select 4-5 diverse articles\n- Each article: emoji + description with bold key terms + link (from article_url)\n- End with SMART hashtags (see below)\n\nARTICLE DESCRIPTION STYLE:\n- 2 sentences: What happened + Why it matters\n- Bold the KEY TERMS: technology names, company names, product names, important numbers\n- Example: 🧬 Dutch researchers develop an 𝐚𝐫𝐭𝐢𝐟𝐢𝐜𝐢𝐚𝐥 𝐰𝐨𝐦𝐛 to save premature babies. This could redefine 𝐧𝐞𝐨𝐧𝐚𝐭𝐚𝐥 𝐜𝐚𝐫𝐞 and boost early-life survival rates.\n\nLINK FORMAT (USE article_url FIELD):\n🔗 [article_url from JSON] - Example: https://cemkoyluoglu.codes/tech-news/article-slug\n\n🏷️ SMART HASHTAG SYSTEM (CRITICAL - READ CAREFULLY):\n\n⚠️ HASHTAG RULES - MUST FOLLOW:\n1. ONLY use REAL, EXISTING, POPULAR LinkedIn hashtags\n2. Extract hashtags DIRECTLY from article content (company names, tech terms, topics)\n3. DO NOT invent generic hashtags - every hashtag must relate to a specific article\n4. Maximum 5 hashtags total\n5. Format: #CamelCase (e.g., #ArtificialIntelligence not #artificialintelligence)\n\n📊 HASHTAG SELECTION PROCESS:\n1. Read each article and identify: Company names, Technology names, Industry terms\n2. Convert these to hashtags: OpenAI → #OpenAI, quantum computing → #QuantumComputing\n3. Add 1 broad tech hashtag: #TechNews OR #Innovation (pick ONE, not both)\n4. Verify each hashtag exists on LinkedIn (use common sense - #Nvidia exists, #NvidiaChipBan does not)\n\n✅ GOOD HASHTAG EXAMPLES:\n- Article about Amazon AWS → #Amazon #AWS #CloudComputing\n- Article about Tesla robotaxi → #Tesla #ElectricVehicles #Robotaxi\n- Article about OpenAI GPT → #OpenAI #GPT #GenerativeAI\n- Article about solar panels → #SolarEnergy #CleanTech #Sustainability\n\n❌ BAD HASHTAG EXAMPLES (NEVER USE):\n- Made-up combinations: #AICloudInfrastructure, #TechTurningPoints\n- Too generic together: #Tech #News #Innovation #Future #Trending\n- Non-existent: #ByteDanceNvidiaBan, #SwissRoofPV\n- Redundant: Using both #AI AND #ArtificialIntelligence\n\n🎯 FINAL CHECK: Before posting, verify:\n- Each hashtag relates to a SPECIFIC article\n- No invented/combined hashtags\n- Maximum 5 hashtags\n- At least 3 are company/technology specific\n\n⚠️ OUTPUT: Return ONLY the LinkedIn post. No explanations, no character counts.",
+              "content": "=You are an expert LinkedIn Growth Editor creating daily tech news digests.\n\nHARD LIMITS:\n- Maximum 2700 characters total\n- Output ONLY the post - no explanations, no meta info\n\n═══════════════════════════════════════\nUNICODE BOLD REFERENCE (COPY THESE):\n═══════════════════════════════════════\n𝐀𝐁𝐂𝐃𝐄𝐅𝐆𝐇𝐈𝐉𝐊𝐋𝐌𝐍𝐎𝐏𝐐𝐑𝐒𝐓𝐔𝐕𝐖𝐗𝐘𝐙\n𝐚𝐛𝐜𝐝𝐞𝐟𝐠𝐡𝐢𝐣𝐤𝐥𝐦𝐧𝐨𝐩𝐪𝐫𝐬𝐭𝐮𝐯𝐰𝐱𝐲𝐳\n𝟎𝟏𝟐𝟑𝟒𝟓𝟔𝟕𝟖𝟗\n\nUSE ONLY THESE CHARACTERS FOR BOLD. Never use:\n- Markdown bold (**text** or __text__)\n- Sans-serif bold (𝗔𝗕𝗖)\n- Any other font variant\n\n═══════════════════════════════════════\nPOST STRUCTURE:\n═══════════════════════════════════════\n1. TITLE LINE (fully bold):\n   𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭𝐬: [𝐬𝐮𝐦𝐦𝐚𝐫𝐢𝐳𝐞 𝐭𝐨𝐝𝐚𝐲'𝐬 𝐤𝐞𝐲 𝐭𝐡𝐞𝐦𝐞𝐬 𝐢𝐧 𝐛𝐨𝐥𝐝]\n\n2. ARTICLES (4-5 articles, each with):\n   - Unique emoji relevant to the topic\n   - 2 sentences that CREATE CURIOSITY but stay ACCURATE\n   - Bold KEY TERMS: company names, tech names, numbers\n   - Plain link on new line (from article_url field)\n\n3. HASHTAGS: Extract from TODAY'S articles (see rules below)\n\n═══════════════════════════════════════\nWRITING STYLE FOR ARTICLE SUMMARIES:\n═══════════════════════════════════════\n✅ DO: Create curiosity and intrigue\n✅ DO: Highlight the \"why it matters\" angle\n✅ DO: Use concrete numbers and facts from the article\n✅ DO: Make readers want to click the link\n\n❌ DON'T: Exaggerate or make false claims\n❌ DON'T: Use clickbait phrases like \"You won't believe...\"\n❌ DON'T: Add information not in the original article\n❌ DON'T: Be generic - each summary must be unique to that article\n\nGOOD EXAMPLE:\n\"𝐆𝐨𝐨𝐠𝐥𝐞's new 𝐖𝐢𝐥𝐥𝐨𝐰 chip solved a calculation in 𝟓 minutes that would take supercomputers 𝟏𝟎 septillion years. Quantum supremacy just got real.\"\n\nBAD EXAMPLE:\n\"Google made a new chip. It's very fast and impressive.\"\n\n═══════════════════════════════════════\nLINK RULES (CRITICAL):\n═══════════════════════════════════════\n- Use the 'article_url' field EXACTLY as provided\n- Links must start with: https://cemkoyluoglu.codes/tech-news/\n- Output links as PLAIN TEXT - no underscores, no brackets\n- Format: 🔗 https://cemkoyluoglu.codes/tech-news/slug-here\n\n═══════════════════════════════════════\nDYNAMIC HASHTAG RULES (CRITICAL):\n═══════════════════════════════════════\n⚠️ HASHTAGS MUST BE EXTRACTED FROM TODAY'S ARTICLES - NOT COPIED FROM EXAMPLES\n\nPROCESS:\n1. Read each article's title, summary, and content\n2. Identify: Company names, Technology names, Industry terms\n3. Convert to hashtags: Tesla → #Tesla, quantum computing → #QuantumComputing\n4. Add exactly 1 broad hashtag: #TechNews OR #Innovation (pick ONE)\n5. Total: Maximum 5 hashtags\n\nEXTRACTION EXAMPLES:\n- Article about Amazon AWS → #Amazon or #AWS\n- Article about Tesla robotaxi → #Tesla or #ElectricVehicles\n- Article about OpenAI GPT → #OpenAI or #GenerativeAI\n- Article about NVIDIA chips → #NVIDIA or #Semiconductors\n\n❌ NEVER USE:\n- Made-up combinations: #AICloudInfrastructure\n- Generic fillers: #Tech #Future #Trending\n- Hashtags not related to today's specific articles",
               "role": "system"
             },
             {
-              "content": "=Create today's LinkedIn tech news digest using these articles:\n\n{{ JSON.stringify($json.articles.slice(0, 8), null, 2) }}\n\n⚠️ IMPORTANT: Each article has an 'article_url' field - USE IT for links!\nDo NOT use nuvemmag.com - use the article_url which points to cemkoyluoglu.codes\n\nFORMAT EXAMPLE (follow this exact style):\n\n𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭𝐬: 𝐁𝐫𝐞𝐚𝐤𝐢𝐧𝐠 𝐛𝐚𝐫𝐫𝐢𝐞𝐫𝐬 𝐢𝐧 𝐪𝐮𝐚𝐧𝐭𝐮𝐦, 𝐬𝐨𝐥𝐚𝐫, 𝐚𝐧𝐝 𝐀𝐈\n\n🧬 Dutch researchers develop an 𝐚𝐫𝐭𝐢𝐟𝐢𝐜𝐢𝐚𝐥 𝐰𝐨𝐦𝐛 to save premature babies. This could redefine 𝐧𝐞𝐨𝐧𝐚𝐭𝐚𝐥 𝐜𝐚𝐫𝐞 and boost survival rates.\n🔗 https://cemkoyluoglu.codes/tech-news/example-slug\n\n💻 The world's most sensitive 𝐪𝐮𝐚𝐧𝐭𝐮𝐦 𝐜𝐨𝐦𝐩𝐮𝐭𝐞𝐫 now boasts 𝟗𝟖 fully connected qubits. This leap enhances 𝐪𝐮𝐚𝐧𝐭𝐮𝐦 𝐩𝐫𝐨𝐜𝐞𝐬𝐬𝐢𝐧𝐠 power significantly.\n🔗 https://cemkoyluoglu.codes/tech-news/example-slug-2\n\n#TechNews #AI #QuantumComputing #Innovation #FutureTech\n\nREQUIREMENTS:\n- Title line: FULLY bold using Unicode characters\n- Select 4-5 best articles for diversity\n- Each article: bold KEY TERMS (tech names, companies, numbers)\n- USE THE article_url FIELD FOR LINKS (cemkoyluoglu.codes domain)\n- NEVER use nuvemmag.com links\n- HASHTAGS: Select 5-6 relevant hashtags from the pool based on article topics\n- Format hashtags as #HashTag (NOT hashtag#HashTag)\n- Output ONLY the post, no meta info"
+              "content": "==Create today's LinkedIn tech digest from these articles:\n\n{{ JSON.stringify($json.articles.slice(0, 8), null, 2) }}\n\nCRITICAL INSTRUCTIONS:\n1. READ each article carefully - extract the most interesting fact\n2. Write summaries that CREATE CURIOSITY but remain ACCURATE\n3. EXTRACT hashtags from these specific articles (company names, tech terms)\n4. Use article_url field for links - PLAIN TEXT, no formatting\n\nOUTPUT FORMAT:\n\n𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭𝐬: [𝐛𝐨𝐥𝐝 𝐬𝐮𝐦𝐦𝐚𝐫𝐲 𝐨𝐟 𝐭𝐨𝐝𝐚𝐲'𝐬 𝐭𝐡𝐞𝐦𝐞𝐬]\n\n[emoji] [Curiosity-driven summary with 𝐛𝐨𝐥𝐝 key terms]. [Why it matters].\n🔗 [article_url]\n\n[emoji] [Curiosity-driven summary with 𝐛𝐨𝐥𝐝 key terms]. [Why it matters].\n🔗 [article_url]\n\n... (4-5 articles total)\n\n#[FromArticle1] #[FromArticle2] #[FromArticle3] #[FromArticle4] #TechNews"
             },
             {
-              "content": "=𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭𝐬: 𝐁𝐫𝐞𝐚𝐤𝐢𝐧𝐠 𝐛𝐚𝐫𝐫𝐢𝐞𝐫𝐬 𝐢𝐧 𝐬𝐩𝐚𝐜𝐞, 𝐀𝐈, 𝐚𝐧𝐝 𝐫𝐨𝐛𝐨𝐭𝐢𝐜𝐬\n\n🚀 𝐁𝐥𝐮𝐞 𝐎𝐫𝐢𝐠𝐢𝐧 successfully landed its 𝐍𝐞𝐰 𝐆𝐥𝐞𝐧𝐧 rocket on first attempt. Reusable rockets are now becoming standard, reducing 𝐬𝐩𝐚𝐜𝐞 𝐥𝐚𝐮𝐧𝐜𝐡 costs significantly.\n🔗 https://cemkoyluoglu.codes/tech-news/blue-origin-lands-new-glenn\n\n🧠 𝐀𝐧𝐭𝐡𝐫𝐨𝐩𝐢𝐜 expects profitability faster than 𝐎𝐩𝐞𝐧𝐀𝐈. Sustainable 𝐀𝐈 𝐛𝐮𝐬𝐢𝐧𝐞𝐬𝐬 𝐦𝐨𝐝𝐞𝐥𝐬 are proving viable in the competitive landscape.\n🔗 https://cemkoyluoglu.codes/tech-news/anthropic-profitability\n\n🦾 Russia's 𝐡𝐮𝐦𝐚𝐧𝐨𝐢𝐝 𝐫𝐨𝐛𝐨𝐭 collapsed on stage during demo. Real-world 𝐫𝐨𝐛𝐨𝐭𝐢𝐜𝐬 still faces major engineering challenges.\n🔗 https://cemkoyluoglu.codes/tech-news/russia-robot-collapse\n\n🧬 Scientists grew 𝟑𝐃 𝐦𝐮𝐬𝐜𝐥𝐞 𝐭𝐢𝐬𝐬𝐮𝐞 in low gravity environment. 𝐒𝐩𝐚𝐜𝐞 𝐦𝐞𝐝𝐢𝐜𝐢𝐧𝐞 is advancing rapidly toward new frontiers.\n🔗 https://cemkoyluoglu.codes/tech-news/3d-muscle-tissue\n\n#TechNews #AI #SpaceX #Robotics #Anthropic #SpaceTech",
+              "content": "=𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭𝐬: 𝐐𝐮𝐚𝐧𝐭𝐮𝐦 𝐥𝐞𝐚𝐩𝐬, 𝐀𝐈 𝐦𝐢𝐥𝐞𝐬𝐭𝐨𝐧𝐞𝐬 𝐚𝐧𝐝 𝐬𝐩𝐚𝐜𝐞 𝐛𝐫𝐞𝐚𝐤𝐭𝐡𝐫𝐨𝐮𝐠𝐡𝐬\n\n🔬 𝐆𝐨𝐨𝐠𝐥𝐞's 𝐖𝐢𝐥𝐥𝐨𝐰 chip just solved a problem in 𝟓 𝐦𝐢𝐧𝐮𝐭𝐞𝐬 that would take today's fastest supercomputers 𝟏𝟎 septillion years. The quantum computing race just entered a new era.\n🔗 https://cemkoyluoglu.codes/tech-news/google-willow-quantum-chip\n\n🚀 𝐁𝐥𝐮𝐞 𝐎𝐫𝐢𝐠𝐢𝐧 landed its 𝐍𝐞𝐰 𝐆𝐥𝐞𝐧𝐧 rocket on the very first attempt - a feat that took 𝐒𝐩𝐚𝐜𝐞𝐗 years to achieve. Jeff Bezos finally has a serious contender in the reusable rocket game.\n🔗 https://cemkoyluoglu.codes/tech-news/blue-origin-new-glenn-landing\n\n🧬 Scientists discovered a fungus in 𝐂𝐡𝐞𝐫𝐧𝐨𝐛𝐲𝐥 that literally eats 𝐧𝐮𝐜𝐥𝐞𝐚𝐫 𝐫𝐚𝐝𝐢𝐚𝐭𝐢𝐨𝐧 and converts it to energy. This could revolutionize how we power long-duration 𝐬𝐩𝐚𝐜𝐞 𝐦𝐢𝐬𝐬𝐢𝐨𝐧𝐬.\n🔗 https://cemkoyluoglu.codes/tech-news/chernobyl-fungus-radiation\n\n💾 𝐒𝐞𝐚𝐠𝐚𝐭𝐞 is pushing HDD capacity to 𝟏𝟎 𝐓𝐁 per platter with next-gen 𝐇𝐀𝐌𝐑 technology. Your future data center might store petabytes in a single rack.\n🔗 https://cemkoyluoglu.codes/tech-news/seagate-hamr-10tb\n\n#Google #QuantumComputing #BlueOrigin #Seagate #TechNews",
               "role": "assistant"
             }
           ]
         },
         "options": {
-          "frequency_penalty": 0,
+          "frequency_penalty": 0.1,
           "maxTokens": 1500,
           "n": 1,
-          "presence_penalty": 0.3,
-          "temperature": 0.3,
+          "temperature": 0.1,
           "topP": 1
         }
       },
-      "id": "4c392f28-03e1-4f45-bb16-980956a7c399",
+      "id": "e94863b5-1b2f-4a9c-99ae-a6abcd5e9443",
       "name": "OpenAI - Generate Digest",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.3,
       "position": [
-        896,
-        480
+        -1040,
+        16
       ],
       "notesInFlow": true,
       "credentials": {
         "openAiApi": {
-          "id": "1CpaBvrRHx6QTSFr",
+          "id": "yxgGYfRKokhnfUQ6",
           "name": "n8n free OpenAI API credits"
         }
       },
@@ -987,13 +986,13 @@
       "parameters": {
         "jsCode": "// CRITICAL: Validate and enforce LinkedIn character limit\nconst MAX_LINKEDIN_CHARS = 3000;\nconst SAFE_LIMIT = 2800;\nconst TARGET_LIMIT = 2700;\n\nconst aiOutput = $input.first().json;\nlet content = aiOutput.message?.content || '';\n\n// POST-PROCESSING: Remove any character count or meta info that AI might have added\n// Patterns like: (Characters: 1,005), [1234 characters], (1234 chars), etc.\ncontent = content\n  .replace(/\\(Characters?:\\s*[\\d,]+\\)/gi, '')\n  .replace(/\\[\\d+[\\s,]*characters?\\]/gi, '')\n  .replace(/\\(\\d+[\\s,]*chars?\\)/gi, '')\n  .replace(/Character count:\\s*\\d+/gi, '')\n  .replace(/Total:\\s*\\d+\\s*characters?/gi, '')\n  .replace(/---[\\s\\S]*$/gm, '') // Remove any trailing notes after ---\n  .replace(/\\n{3,}/g, '\\n\\n') // Clean up excessive newlines\n  .trim();\n\nconst originalCharCount = content.length;\n\nlet validationStatus = 'valid';\nlet validationMessage = '';\nlet finalContent = content;\n\n// If over hard limit, we need to truncate smartly\nif (originalCharCount > MAX_LINKEDIN_CHARS) {\n  validationStatus = 'exceeded_hard_limit';\n  \n  // Smart truncation: remove last article\n  let truncated = content;\n  \n  // Find and remove the last article (starts with emoji before last hashtags)\n  const hashtagIndex = truncated.lastIndexOf('#');\n  if (hashtagIndex > 0) {\n    // Find the start of hashtags section\n    let hashtagStart = truncated.lastIndexOf('\\n\\n#');\n    if (hashtagStart === -1) hashtagStart = truncated.lastIndexOf('\\n#');\n    \n    // Get content before hashtags and hashtags separately\n    const mainContent = hashtagStart > 0 ? truncated.substring(0, hashtagStart) : truncated;\n    const hashtags = hashtagStart > 0 ? truncated.substring(hashtagStart) : '';\n    \n    // Find last article link\n    const lastLinkIndex = mainContent.lastIndexOf('🔗 https://');\n    if (lastLinkIndex > 0) {\n      // Find the emoji that starts this article (go back to find newline + emoji)\n      let articleStart = mainContent.lastIndexOf('\\n\\n', lastLinkIndex - 5);\n      if (articleStart > 0) {\n        truncated = mainContent.substring(0, articleStart) + hashtags;\n      }\n    }\n  }\n  \n  // If still too long, hard cut\n  if (truncated.length > SAFE_LIMIT) {\n    const cutPoint = truncated.lastIndexOf('\\n\\n', SAFE_LIMIT);\n    if (cutPoint > SAFE_LIMIT - 500) {\n      truncated = truncated.substring(0, cutPoint);\n    } else {\n      truncated = truncated.substring(0, SAFE_LIMIT);\n    }\n    // Add hashtags back if missing\n    if (!truncated.includes('#')) {\n      truncated += '\\n\\n#AI #Tech #Innovation';\n    }\n  }\n  \n  finalContent = truncated;\n  validationMessage = `⚠️ Content exceeded ${MAX_LINKEDIN_CHARS} chars (${originalCharCount}). Auto-trimmed to ${finalContent.length} chars.`;\n  \n} else if (originalCharCount > SAFE_LIMIT) {\n  validationStatus = 'warning';\n  validationMessage = `⚠️ Content is ${originalCharCount} chars (close to ${MAX_LINKEDIN_CHARS} limit).`;\n  \n} else {\n  validationStatus = 'valid';\n  validationMessage = `✅ Content validated: ${originalCharCount} chars (under ${SAFE_LIMIT} safe limit).`;\n}\n\nconsole.log(`Character validation: ${validationStatus} - Original: ${originalCharCount}, Final: ${finalContent.length}`);\n\nreturn {\n  message: {\n    content: finalContent\n  },\n  validation: {\n    status: validationStatus,\n    originalCharCount: originalCharCount,\n    finalCharCount: finalContent.length,\n    message: validationMessage,\n    wasTruncated: originalCharCount !== finalContent.length,\n    linkedinLimit: MAX_LINKEDIN_CHARS,\n    safeLimit: SAFE_LIMIT\n  }\n};"
       },
-      "id": "validate-char-limit-001",
+      "id": "b30615c3-f939-4208-aa45-7f1b9dec9d0a",
       "name": "Validate Character Limit",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1120,
-        480
+        -768,
+        128
       ],
       "notesInFlow": true,
       "notes": "Enforces LinkedIn 3000 char limit with smart truncation"
@@ -1354,6 +1353,6 @@
   "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "7cc5764cec933aa7236522acbe90032cc04165789ad34e96d7daa27a3fe8c08f"
+    "instanceId": "663c5b6b56b9fd8dcf630a925381b920d22381bfcffa1c5beee195aa6597c005"
   }
 }
