@@ -13,8 +13,10 @@ import { PageContextProvider } from './lib/context/PageContext';
 import { lazyWithRetry, resetChunkErrorCounter } from './lib/chunk-error-handler';
 import { initLazyBlur, debouncedResizeHandler } from './lib/lazy-blur';
 
-// Lazy load routes for code splitting with chunk error handling
-const HomePage = lazyWithRetry(() => import('./pages/HomePage'));
+// HomePage is loaded synchronously for fast FCP (it's the main landing page)
+import HomePage from './pages/HomePage';
+
+// Lazy load secondary routes for code splitting
 const TechNews = lazyWithRetry(() => import('./components/TechNews'));
 const TechNewsDetail = lazyWithRetry(() => import('./components/TechNewsDetail'));
 const TermsPage = lazyWithRetry(() => import('./pages/TermsPage'));
