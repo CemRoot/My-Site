@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ExternalLink, Github, Eye, Database, Bot, Plane } from 'lucide-react';
+import { ExternalLink, Github, Eye, Database, Bot, Plane, Globe } from 'lucide-react';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Badge } from './ui/badge';
@@ -25,6 +25,24 @@ function Projects() {
         'GitHub: github.com/CemRoot/FlaskWebApp',
       ],
       github: 'https://github.com/CemRoot/FlaskWebApp',
+    },
+    {
+      title: 'Ireland Expat Assistant',
+      description: 'AI-powered assistant for expats in Ireland, providing step-by-step guidance on visa/IRP, tax (PAYE/PRSI/USC), healthcare (HSE/Medical Card), social welfare, and citizenship processes.',
+      icon: Globe,
+      tags: ['ChatGPT', 'GPT', 'NLP', 'RAG', 'Immigration', 'Irish Tax', 'Healthcare'],
+      color: 'secondary',
+      stats: ['IRP Renewal Guide', 'Tax & Budget Updates', 'Healthcare Guidance'],
+      details: 'Ireland Expat Assistant provides practical, official-source-based guidance for people who have moved to or are planning to move to Ireland. It summarizes IRP card renewals, stamp permits, work permits (General/Critical Skills), tax system (PAYE, PRSI, USC, tax credits), budget changes like rent tax credit, Medical Card/GP Visit Card applications, social supports, and citizenship application requirements in an understandable way. The assistant references official uploaded documents when possible, providing checklists, required documents, and critical points to watch out for. (For informational purposes only; not legal/financial advice.)',
+      highlights: [
+        'IRP Renewal: Clarifies which documents to upload by stamp type, helping reduce delays',
+        'Employment Permits: Provides checklist-based document/condition tracking for General and Critical Skills applications',
+        'Tax & Budget Changes: Summarizes updates like Rent Tax Credit extension and USC adjustments clearly',
+        'Medical Card/GP Visit Card: Explains application steps, required evidence/documents, and assessment framework',
+        'Citizenship Application: Guides on residence proof "points" logic and common mistakes leading to rejection',
+        'Family Reunification: Frames the policy framework and assessment approach clearly',
+      ],
+      link: 'https://chatgpt.com/g/g-693c3f003b308191a3aa51cf1e75e47e-ireland-expat-assistant',
     },
     {
       title: 'Automated Data Analysis System',
@@ -279,19 +297,34 @@ function Projects() {
                   </div>
                 </div>
 
-                {/* GitHub Link */}
-                {selectedProject.github && (
-                  <div className="pt-4">
-                    <Button
-                      size="lg"
-                      asChild
-                      className="w-full bg-primary hover:bg-primary/90 text-black"
-                    >
-                      <a href={selectedProject.github} target="_blank" rel="noopener noreferrer">
-                        <Github className="w-4 h-4 mr-2" />
-                        View on GitHub
-                      </a>
-                    </Button>
+                {/* Project Links */}
+                {(selectedProject.github || selectedProject.link) && (
+                  <div className="pt-4 space-y-3">
+                    {selectedProject.github && (
+                      <Button
+                        size="lg"
+                        asChild
+                        className="w-full bg-primary hover:bg-primary/90 text-black"
+                      >
+                        <a href={selectedProject.github} target="_blank" rel="noopener noreferrer">
+                          <Github className="w-4 h-4 mr-2" />
+                          View on GitHub
+                        </a>
+                      </Button>
+                    )}
+                    {selectedProject.link && (
+                      <Button
+                        size="lg"
+                        asChild
+                        variant={selectedProject.github ? "outline" : "default"}
+                        className={selectedProject.github ? "w-full border-secondary/40 hover:bg-secondary/10" : "w-full bg-primary hover:bg-primary/90 text-black"}
+                      >
+                        <a href={selectedProject.link} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Try It Live
+                        </a>
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
