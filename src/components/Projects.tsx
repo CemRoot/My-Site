@@ -97,7 +97,7 @@ function Projects() {
   ];
 
   return (
-    <section id="projects" className="relative py-20 sm:py-32 overflow-hidden px-4 sm:px-6 lg:px-8">
+    <section id="projects" className="relative py-16 sm:py-20 md:py-32 overflow-x-hidden px-4 sm:px-6 lg:px-8">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl liquid-morph" />
@@ -127,7 +127,7 @@ function Projects() {
         </div>
 
         {/* Projects Grid */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-12">
           {projects.map((project, index) => {
             const Icon = project.icon;
             const colorClasses = {
@@ -144,35 +144,35 @@ function Projects() {
               >
                 {/* Glow effect */}
                 <div className={`absolute -inset-2 bg-gradient-to-br ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[0]} rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-                
+
                 {/* Card */}
-                <div className={`relative p-8 rounded-3xl frosted-glass transition-all duration-500 h-full liquid-border liquid-shimmer hover:scale-[1.02] ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[1]} ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[2]}`}>
-                  <div className="flex items-start justify-between mb-6">
-                    <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[0]} flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-lg`}>
-                      <Icon className={`w-7 h-7 ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[3]}`} />
+                <div className={`relative p-5 sm:p-8 rounded-2xl sm:rounded-3xl frosted-glass transition-all duration-500 min-h-0 liquid-border liquid-shimmer hover:scale-[1.02] ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[1]} ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[2]}`}>
+                  <div className="flex items-start justify-between mb-4 sm:mb-6">
+                    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[0]} flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-lg flex-shrink-0`}>
+                      <Icon className={`w-6 h-6 sm:w-7 sm:h-7 ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[3]}`} />
                     </div>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="opacity-70 sm:opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                     >
                       <ExternalLink className="w-4 h-4" />
                     </Button>
                   </div>
 
-                  <h3 className="text-2xl mb-3 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+                  <h3 className="text-xl sm:text-2xl mb-2 sm:mb-3 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
                     {project.title}
                   </h3>
-                  <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+                  <p className="text-sm text-muted-foreground mb-4 sm:mb-6 leading-relaxed line-clamp-3 sm:line-clamp-none">
                     {project.description}
                   </p>
 
                   {/* Stats */}
-                  <div className="flex flex-wrap gap-2 mb-6">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-6">
                     {project.stats.map((stat, idx) => (
                       <span
                         key={idx}
-                        className={`text-xs px-3 py-1 rounded-full liquid-glass ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[3]}`}
+                        className={`text-xs px-2 sm:px-3 py-1 rounded-full liquid-glass ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[3]}`}
                       >
                         {stat}
                       </span>
@@ -180,8 +180,8 @@ function Projects() {
                   </div>
 
                   {/* Tags */}
-                  <div className="flex flex-wrap gap-2">
-                    {project.tags.map((tag, idx) => (
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                    {project.tags.slice(0, 5).map((tag, idx) => (
                       <Badge
                         key={idx}
                         variant="outline"
@@ -190,6 +190,14 @@ function Projects() {
                         {tag}
                       </Badge>
                     ))}
+                    {project.tags.length > 5 && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs border-muted-foreground/20"
+                      >
+                        +{project.tags.length - 5}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
@@ -215,7 +223,7 @@ function Projects() {
 
       {/* Project Detail Modal */}
       <Dialog open={!!selectedProject} onOpenChange={() => setSelectedProject(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-background/95 backdrop-blur-2xl border-primary/20 shadow-2xl">
+        <DialogContent className="max-w-3xl w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-h-[85vh] sm:max-h-[80vh] overflow-y-auto bg-background/95 backdrop-blur-2xl border-primary/20 shadow-2xl p-4 sm:p-6">
           {selectedProject && (
             <>
               <DialogHeader>
