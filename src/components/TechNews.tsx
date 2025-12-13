@@ -399,20 +399,28 @@ function TechNews() {
               >
                 <Card className="overflow-hidden h-full transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 border-border/50 hover:border-primary/50">
                   {/* Article Image */}
-                  {article.image && (
-                    <div className="relative overflow-hidden bg-muted" style={{ aspectRatio: '16/9', minHeight: '200px', maxHeight: '200px' }}>
+                  <div className="relative overflow-hidden h-48 bg-muted">
+                    {article.image ? (
                       <img
                         src={article.image}
                         alt={article.title}
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                         loading="lazy"
                         onError={(e) => {
-                          e.currentTarget.style.display = 'none';
+                          const parent = e.currentTarget.parentElement;
+                          if (parent) {
+                            e.currentTarget.style.display = 'none';
+                            parent.innerHTML = '<div class="w-full h-full flex items-center justify-center text-muted-foreground"><span class="text-4xl">📰</span></div>';
+                          }
                         }}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  )}
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                        <span className="text-4xl">📰</span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                  </div>
 
                   <CardHeader>
                     <div className="flex items-center justify-between mb-2">

@@ -454,19 +454,27 @@ function TechNewsDetail() {
                   className="group"
                 >
                   <div className="overflow-hidden rounded-lg border border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-lg h-full flex flex-col">
-                    {related.image && (
-                      <div className="relative overflow-hidden aspect-video bg-muted">
+                    <div className="relative overflow-hidden h-40 bg-muted">
+                      {related.image ? (
                         <img
                           src={related.image}
                           alt={related.title}
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                           loading="lazy"
                           onError={(e) => {
-                            e.currentTarget.style.display = 'none';
+                            const parent = e.currentTarget.parentElement;
+                            if (parent) {
+                              e.currentTarget.style.display = 'none';
+                              parent.innerHTML = '<div class="w-full h-full flex items-center justify-center text-muted-foreground"><span class="text-3xl">📰</span></div>';
+                            }
                           }}
                         />
-                      </div>
-                    )}
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          <span className="text-3xl">📰</span>
+                        </div>
+                      )}
+                    </div>
                     <div className="p-4 flex-1 flex flex-col">
                       <h3 className="font-semibold line-clamp-2 group-hover:text-primary transition-colors font-[Hobo_BT] text-sm md:text-base" style={{ fontWeight: 600 }}>
                         {related.title}
