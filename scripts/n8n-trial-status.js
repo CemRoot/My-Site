@@ -82,7 +82,7 @@ async function updateSetting(key, value, updatedBy = 'system') {
 async function calculateRemainingDays() {
   try {
     const startDate = await getSetting('n8n_trial_start_date');
-    const durationDays = parseInt(await getSetting('n8n_trial_duration_days') || '14');
+    const durationDays = parseInt(await getSetting('n8n_trial_duration_days') || '30');
 
     if (!startDate) {
       throw new Error('n8n_trial_start_date not found in database');
@@ -172,12 +172,12 @@ Süre: ${durationDays} gün
 3. Vercel'de webhook URL'ini güncelle
 4. Aşağıdaki butona basarak deneme süresini sıfırla
 
-<i>Not: Yeni hesap oluşturup sistemi güncelledikten sonra "14 Günü Yeniden Başlat" butonuna basın.</i>`;
+<i>Not: Yeni hesap oluşturup sistemi güncelledikten sonra "30 Günü Yeniden Başlat" butonuna basın.</i>`;
 
     keyboard = {
       inline_keyboard: [
         [
-          { text: '🔄 14 Günü Yeniden Başlat', callback_data: 'action_n8n_trial_reset' }
+          { text: '🔄 30 Günü Yeniden Başlat', callback_data: 'action_n8n_trial_reset' }
         ],
         [
           { text: '📊 Detaylı Durum', callback_data: 'action_n8n_status' }
@@ -261,7 +261,7 @@ Toplam süre: ${durationDays} gün
 }
 
 /**
- * Reset trial period (start new 14-day period from today)
+ * Reset trial period (start new 30-day period from today)
  */
 async function resetTrialPeriod(updatedBy = 'telegram-bot') {
   try {
@@ -272,7 +272,7 @@ async function resetTrialPeriod(updatedBy = 'telegram-bot') {
     log('🔄 TRIAL PERIOD RESET', 'green');
     log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'green');
     log(`New start date: ${today}`, 'cyan');
-    log('Duration: 14 days', 'cyan');
+    log('Duration: 30 days', 'cyan');
     
     // Calculate new end date
     const newStatus = await calculateRemainingDays();
@@ -316,7 +316,7 @@ async function main() {
         `📅 Yeni başlangıç: ${newStatus.startDate}\n` +
         `📅 Bitiş tarihi: ${newStatus.endDate}\n` +
         `⏳ Toplam süre: ${newStatus.durationDays} gün\n\n` +
-        `💚 Yeni 14 günlük deneme süresi başladı!`
+        `💚 Yeni 30 günlük deneme süresi başladı!`
       );
       log('✅ Trial period reset successfully!', 'green');
     } else if (command === 'status') {

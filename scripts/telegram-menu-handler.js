@@ -544,7 +544,7 @@ ${progressBar} ${progress}%
 1. Yeni n8n hesabı oluştur
 2. Workflow'u yeni hesaba aktar  
 3. Vercel webhook URL'ini güncelle
-4. "14 Günü Yeniden Başlat" butonuna bas
+4. "30 Günü Yeniden Başlat" butonuna bas
 
 <i>Not: Yeni hesap kurduktan sonra trial'ı sıfırlayın.</i>`;
       
@@ -552,7 +552,7 @@ ${progressBar} ${progress}%
       const keyboard = {
         inline_keyboard: [
           [
-            { text: '🔄 14 Günü Yeniden Başlat', callback_data: 'action_n8n_trial_reset' }
+            { text: '🔄 30 Günü Yeniden Başlat', callback_data: 'action_n8n_trial_reset' }
           ],
           [
             { text: '🔙 Sistem Yönetimi', callback_data: 'action_system_management' }
@@ -677,13 +677,13 @@ export async function handleWebhookResetAction() {
 }
 
 /**
- * Handle action_n8n_trial_reset - Reset n8n trial period (start new 14 days)
+ * Handle action_n8n_trial_reset - Reset n8n trial period (start new 30 days)
  */
 export async function handleN8nTrialResetAction() {
   try {
     await sendTelegramMessage(
       '🔄 <b>n8n Trial Sıfırlanıyor...</b>\n\n' +
-      'Yeni 14 günlük süre başlatılıyor...'
+      'Yeni 30 günlük süre başlatılıyor...'
     );
 
     // Import reset function
@@ -700,7 +700,7 @@ export async function handleN8nTrialResetAction() {
       `Başlangıç: ${startDate}\n` +
       `Bitiş: ${endDate}\n` +
       `Toplam: ${durationDays} gün\n\n` +
-      `💚 Yeni 14 günlük deneme süresi başladı!\n\n` +
+      `💚 Yeni 30 günlük deneme süresi başladı!\n\n` +
       `⏰ Her gün otomatik kontrol edilecek.\n` +
       `🔔 ${durationDays - 3} gün sonra uyarı mesajları başlayacak.\n\n` +
       `<i>Not: Yeni n8n hesabı oluşturduktan sonra bu işlemi yapın.</i>`,
