@@ -452,7 +452,7 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
       <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-24 z-50">
         {/* News Summary Notification */}
         {showNotification && !isOpen && (
-          <div className="absolute bottom-full mb-6 left-1/2 -translate-x-1/2 animate-in slide-in-from-bottom-3 fade-in duration-500 z-10">
+          <div className="absolute bottom-full mb-6 left-1/2 -translate-x-1/2 animate-in slide-in-from-bottom-3 fade-in duration-500 z-10" style={{ left: '-12px', top: '-62px' }}>
             <div className="relative group/notification">
               {/* Optimized glow effect - single, cleaner glow */}
               <div className="absolute -inset-2 bg-gradient-to-br from-primary via-secondary to-accent rounded-2xl blur-lg opacity-50 animate-pulse" />
