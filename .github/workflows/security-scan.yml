@@ -42,19 +42,21 @@ jobs:
           path: npm-audit-report.json
           retention-days: 30
 
-  dependency-review:
-    name: Dependency Review
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: moderate
+  # Dependency Review disabled - requires GitHub Advanced Security (paid for private repos)
+  # npm-audit job above provides similar functionality for free
+  # dependency-review:
+  #   name: Dependency Review
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'pull_request'
+  #   
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Dependency Review
+  #       uses: actions/dependency-review-action@v4
+  #       with:
+  #         fail-on-severity: moderate
 
   # CodeQL analysis disabled - requires GitHub Advanced Security
   # Uncomment when Advanced Security is enabled
@@ -85,8 +87,6 @@ jobs:
 
     permissions:
       contents: read
-      pull-requests: write
-      checks: write
 
     steps:
       - name: Checkout code
@@ -94,11 +94,43 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # If you later purchase a Gitleaks license, add it as a repo secret named GITLEAKS_LICENSE
+      - name: Install Gitleaks
+        run: |
+          # Download latest gitleaks release (free & open source CLI)
+          GITLEAKS_VERSION=$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
+          wget -q "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          chmod +x gitleaks
+          sudo mv gitleaks /usr/local/bin/
+
+      - name: Run Gitleaks Scan
+        run: |
+          echo "🔍 Running Gitleaks secret scan..."
+          gitleaks detect --source . --verbose --redact --report-format json --report-path gitleaks-report.json || true
+          
+          # Check if secrets were found
+          if [ -f gitleaks-report.json ] && [ -s gitleaks-report.json ]; then
+            FINDINGS=$(cat gitleaks-report.json | jq length)
+            if [ "$FINDINGS" -gt 0 ]; then
+              echo "⚠️ Found $FINDINGS potential secret(s)!"
+              cat gitleaks-report.json | jq -r '.[] | "- \(.Description) in \(.File):\(.StartLine)"'
+              echo ""
+              echo "🔒 Please review and remove any exposed secrets!"
+            else
+              echo "✅ No secrets detected!"
+            fi
+          else
+            echo "✅ No secrets detected!"
+          fi
+
+      - name: Upload Gitleaks Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.json
+          retention-days: 30
+          if-no-files-found: ignore
 
   security-summary:
     name: Security Summary
