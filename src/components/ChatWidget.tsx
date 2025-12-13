@@ -452,13 +452,13 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
       <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-24 z-50">
         {/* News Summary Notification */}
         {showNotification && !isOpen && (
-          <div className="absolute bottom-full mb-3 right-1/2 translate-x-1/2 animate-in slide-in-from-bottom-3 fade-in duration-500 w-[200px] sm:w-auto">
+          <div className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 animate-in slide-in-from-bottom-3 fade-in duration-500 z-10">
             <div className="relative group/notification">
               {/* Optimized glow effect - single, cleaner glow */}
-              <div className="absolute -inset-3 bg-gradient-to-br from-primary via-secondary to-accent rounded-2xl blur-xl opacity-60 animate-pulse" />
+              <div className="absolute -inset-2 bg-gradient-to-br from-primary via-secondary to-accent rounded-2xl blur-lg opacity-50 animate-pulse" />
 
               {/* Notification content - Clean and professional */}
-              <div className="relative bg-white backdrop-blur-xl border-2 border-primary/80 rounded-xl shadow-2xl">
+              <div className="relative bg-white backdrop-blur-xl border-2 border-primary/80 rounded-xl shadow-2xl min-w-max">
                 <div className="flex items-center gap-2 px-3 py-2.5 sm:px-4 sm:py-3">
                   <div className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-primary via-secondary to-accent rounded-full flex items-center justify-center shadow-lg">
                     <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
