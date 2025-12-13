@@ -452,7 +452,7 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
       <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-24 z-50">
         {/* News Summary Notification */}
         {showNotification && !isOpen && (
-          <div className="absolute bottom-full mb-3 right-0 sm:right-1/2 sm:translate-x-1/2 animate-in slide-in-from-bottom-3 fade-in duration-500 w-[280px] sm:w-auto">
+          <div className="absolute bottom-full mb-3 right-1/2 translate-x-1/2 animate-in slide-in-from-bottom-3 fade-in duration-500 w-[200px] sm:w-auto">
             <div className="relative group/notification">
               {/* Optimized glow effect - single, cleaner glow */}
               <div className="absolute -inset-3 bg-gradient-to-br from-primary via-secondary to-accent rounded-2xl blur-xl opacity-60 animate-pulse" />
@@ -464,8 +464,8 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
                     <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-bold text-gray-900 font-[Hobo_BT] leading-tight">
-                      Want a quick summary?<br className="sm:hidden" /> Ask me! 🤖
+                    <p className="text-xs sm:text-sm font-bold text-gray-900 font-[Hobo_BT] leading-tight whitespace-nowrap">
+                      Want a quick summary? Ask me! 🤖
                     </p>
                   </div>
                   <button
@@ -478,7 +478,7 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
                 </div>
 
                 {/* Pointer arrow - pointing down to the button */}
-                <div className="absolute -bottom-2 left-auto right-6 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 w-4 h-4 bg-white rotate-45 border-r-2 border-b-2 border-primary/80" />
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rotate-45 border-r-2 border-b-2 border-primary/80" />
               </div>
             </div>
           </div>
