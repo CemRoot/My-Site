@@ -400,3 +400,75 @@ html {
     animation: pulse-glow 3s ease-in-out infinite;
   }
 }
+
+/* ===== MOBILE PERFORMANCE OPTIMIZATIONS ===== */
+@layer utilities {
+  /* Reduce animations for users who prefer reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Mobile-specific optimizations for better performance */
+  @media (max-width: 768px) {
+    /* Reduce backdrop-filter blur for better mobile performance */
+    .liquid-glass {
+      backdrop-filter: blur(12px) saturate(150%);
+      -webkit-backdrop-filter: blur(12px) saturate(150%);
+    }
+
+    .liquid-glass-strong {
+      backdrop-filter: blur(16px) saturate(160%);
+      -webkit-backdrop-filter: blur(16px) saturate(160%);
+    }
+
+    .frosted-glass {
+      backdrop-filter: blur(12px) saturate(150%);
+      -webkit-backdrop-filter: blur(12px) saturate(150%);
+    }
+
+    .liquid-border {
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Disable glow effects on mobile to reduce GPU load */
+    .liquid-glow::after {
+      display: none;
+    }
+
+    /* Simplify animations on mobile */
+    .liquid-morph {
+      animation: none;
+      border-radius: 50%;
+    }
+
+    .liquid-float {
+      animation: none;
+    }
+
+    /* Reduce box-shadow complexity on mobile */
+    .neon-border-primary,
+    .neon-border-secondary {
+      box-shadow: none;
+    }
+
+    .neon-border-primary:hover,
+    .neon-border-secondary:hover {
+      box-shadow: none;
+    }
+  }
+
+  /* Touch device optimizations */
+  @media (hover: none) and (pointer: coarse) {
+    /* Disable hover-dependent effects */
+    .liquid-shimmer::before {
+      display: none;
+    }
+  }
+}

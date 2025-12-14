@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Github, Linkedin, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
-import portraitImage from '../assets/portrait.webp';
+
+// Use public folder path for preloaded hero image (faster LCP)
+const portraitImage = '/portrait.webp';
 
 export function Hero() {
   const roles = [
