@@ -100,13 +100,15 @@ export function NewsletterSignup() {
               {/* Terms Checkbox */}
               <div className="flex items-start gap-3 p-3 sm:p-4 rounded-xl bg-background/40 border border-white/5">
                 <Checkbox
-                  id="terms"
+                  id="newsletter-terms"
                   checked={accepted}
                   onCheckedChange={(checked) => setAccepted(checked as boolean)}
                   className="mt-0.5 h-4 w-4 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                  aria-describedby="newsletter-terms-description"
                 />
                 <label
-                  htmlFor="terms"
+                  id="newsletter-terms-description"
+                  htmlFor="newsletter-terms"
                   className="text-xs sm:text-sm leading-relaxed text-muted-foreground cursor-pointer flex-1"
                 >
                   I agree to the{' '}

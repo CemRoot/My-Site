@@ -170,14 +170,14 @@ function renderMarkdown(content: string) {
   const { tldr, highlights, remainingContent } = extractTLDRAndHighlights(content);
   
   return (
-    <div style={{ fontFamily: "'Satoshi', sans-serif" }}>
+    <div>
       {/* TL;DR Section */}
       {tldr && (
         <div className="bg-primary/5 border-l-4 border-primary rounded-lg p-6 mb-6">
-          <h3 className="text-xl font-bold mb-3" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700 }}>
+          <h3 className="text-xl font-bold mb-3">
             TL;DR
           </h3>
-          <p className="text-lg leading-relaxed" style={{ fontFamily: "'Satoshi', sans-serif", textAlign: 'justify' }}>
+          <p className="text-lg leading-relaxed text-justify">
             {tldr}
           </p>
         </div>
@@ -186,14 +186,14 @@ function renderMarkdown(content: string) {
       {/* Key Highlights Section */}
       {highlights.length > 0 && (
         <div className="bg-accent/5 border-l-4 border-accent rounded-lg p-6 mb-6">
-          <h3 className="text-xl font-bold mb-3" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700 }}>
+          <h3 className="text-xl font-bold mb-3">
             Key Highlights
           </h3>
           <ul className="space-y-2">
             {highlights.map((highlight, index) => (
-              <li key={index} className="flex items-start gap-2" style={{ fontFamily: "'Satoshi', sans-serif" }}>
-                <span className="text-primary mt-1">•</span>
-                <span className="text-lg leading-relaxed flex-1" style={{ textAlign: 'justify' }}>{highlight}</span>
+              <li key={index} className="flex items-start gap-2">
+                <span className="text-primary mt-1" aria-hidden="true">•</span>
+                <span className="text-lg leading-relaxed flex-1 text-justify">{highlight}</span>
               </li>
             ))}
           </ul>
@@ -212,7 +212,7 @@ function renderMarkdown(content: string) {
               return <EmbedFromURL url={url} />;
             }
             
-            return <p className="text-lg leading-relaxed mb-4" style={{ fontFamily: "'Satoshi', sans-serif", textAlign: 'justify' }} {...props}>{children}</p>;
+            return <p className="text-lg leading-relaxed mb-4 text-justify" {...props}>{children}</p>;
           },
         // Open links in new tab
         a({ href, children, ...props }) {
@@ -230,25 +230,25 @@ function renderMarkdown(content: string) {
         },
         // Style headings
         h1({ children, ...props }) {
-          return <h1 className="text-3xl font-bold mt-8 mb-4" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700 }} {...props}>{children}</h1>;
+          return <h1 className="text-3xl font-bold mt-8 mb-4" {...props}>{children}</h1>;
         },
         h2({ children, ...props }) {
-          return <h2 className="text-2xl font-bold mt-6 mb-3" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700 }} {...props}>{children}</h2>;
+          return <h2 className="text-2xl font-bold mt-6 mb-3" {...props}>{children}</h2>;
         },
         h3({ children, ...props }) {
-          return <h3 className="text-xl font-bold mt-4 mb-2" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700 }} {...props}>{children}</h3>;
+          return <h3 className="text-xl font-bold mt-4 mb-2" {...props}>{children}</h3>;
         },
         // Style lists
         ul({ children, ...props }) {
-          return <ul className="list-disc list-inside mb-4 space-y-2" style={{ fontFamily: "'Satoshi', sans-serif", textAlign: 'justify' }} {...props}>{children}</ul>;
+          return <ul className="list-disc list-inside mb-4 space-y-2 text-justify" {...props}>{children}</ul>;
         },
         ol({ children, ...props }) {
-          return <ol className="list-decimal list-inside mb-4 space-y-2" style={{ fontFamily: "'Satoshi', sans-serif", textAlign: 'justify' }} {...props}>{children}</ol>;
+          return <ol className="list-decimal list-inside mb-4 space-y-2 text-justify" {...props}>{children}</ol>;
         },
         // Style blockquotes
         blockquote({ children, ...props }) {
           return (
-            <blockquote className="border-l-4 border-primary/30 pl-4 italic my-4 text-muted-foreground" style={{ fontFamily: "'Satoshi', sans-serif", textAlign: 'justify' }} {...props}>
+            <blockquote className="border-l-4 border-primary/30 pl-4 italic my-4 text-muted-foreground text-justify" {...props}>
               {children}
             </blockquote>
           );
@@ -262,14 +262,14 @@ function renderMarkdown(content: string) {
         },
         // Style strong/em
         strong({ children, ...props }) {
-          return <strong className="font-bold text-foreground" style={{ fontFamily: "'Satoshi', sans-serif", fontWeight: 700 }} {...props}>{children}</strong>;
+          return <strong className="font-bold text-foreground" {...props}>{children}</strong>;
         },
         em({ children, ...props }) {
-          return <em className="italic" style={{ fontFamily: "'Satoshi', sans-serif" }} {...props}>{children}</em>;
+          return <em className="italic" {...props}>{children}</em>;
         },
         // Style list items
         li({ children, ...props }) {
-          return <li style={{ fontFamily: "'Satoshi', sans-serif" }} {...props}>{children}</li>;
+          return <li {...props}>{children}</li>;
         },
       }}
     >
