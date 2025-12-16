@@ -49,6 +49,8 @@ jobs:
           # GitHub Secrets - These will be available at runtime
           # IDE warnings are normal - secrets are not accessible locally
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          # Separate API key for AI-powered article list parsing (avoids rate limits on translation key)
+          GROQ_PARSER_API_KEY: ${{ secrets.GROQ_PARSER_API_KEY }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}

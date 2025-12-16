@@ -53,14 +53,15 @@ function hasNuvemmagDomain(line) {
 const CONFIG = {
   // All categories to scrape (excluding "Çiçek ile Teknoloji")
   // Priority order: AI Applications first (most articles), then other categories
+  // NOTE: Site URL changed from www.nuvemmag.com/post-category/ to nuvemmag.com/post/category/
   CATEGORIES: [
-    { name: 'AI Applications', url: 'https://www.nuvemmag.com/post-category/yapay-zeka-uygulamalari', tag: 'AI Applications' },
-    { name: 'Latest News', url: 'https://www.nuvemmag.com/post-category/en-son-haberler', tag: 'Latest News' },
-    { name: 'Artificial Intelligence', url: 'https://www.nuvemmag.com/post-category/yapay-zeka', tag: 'AI' },
-    { name: 'Technology', url: 'https://www.nuvemmag.com/post-category/teknoloji', tag: 'Tech' },
-    { name: 'Sustainability', url: 'https://www.nuvemmag.com/post-category/surdurulebilirlik', tag: 'Sustainability' },
-    { name: 'Science & World', url: 'https://www.nuvemmag.com/post-category/bilim-dunya', tag: 'Science' },
-    { name: 'Agenda', url: 'https://www.nuvemmag.com/post-category/gundem', tag: 'News' },
+    { name: 'AI Applications', url: 'https://nuvemmag.com/post/category/yapay-zeka-uygulamalari', tag: 'AI Applications' },
+    { name: 'Latest News', url: 'https://nuvemmag.com/post/category/en-son-haberler', tag: 'Latest News' },
+    { name: 'Artificial Intelligence', url: 'https://nuvemmag.com/post/category/yapay-zeka', tag: 'AI' },
+    { name: 'Technology', url: 'https://nuvemmag.com/post/category/teknoloji', tag: 'Tech' },
+    { name: 'Sustainability', url: 'https://nuvemmag.com/post/category/surdurulebilirlik', tag: 'Sustainability' },
+    { name: 'Science & World', url: 'https://nuvemmag.com/post/category/bilim-ve-dunya', tag: 'Science' },
+    { name: 'Agenda', url: 'https://nuvemmag.com/post/category/gundem', tag: 'News' },
   ],
   FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY || '',
   GROQ_API_KEY: process.env.GROQ_API_KEY || '',
@@ -68,6 +69,8 @@ const CONFIG = {
   SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
   TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID || '',
+  // Separate API key for AI parsing (to avoid rate limits on translation key)
+  GROQ_PARSER_API_KEY: process.env.GROQ_PARSER_API_KEY || process.env.GROQ_API_KEY || '',
   MAX_ARTICLES_PER_CATEGORY: 20,
   TRANSLATION_DELAY: 1000, // ms between translation requests (increased to avoid rate limits)
   RATE_LIMIT_DELAY: 10000, // 10 seconds between requests (Firecrawl free: 10 req/min = 6s min, +buffer)
@@ -266,6 +269,156 @@ function getTurkeyDate() {
 }
 
 /**
+ * Turkish month names mapping
+ * Used to parse dates like "16 Aralık 2025"
+ */
+const TURKISH_MONTHS = {
+  'ocak': 1,
+  'şubat': 2,
+  'mart': 3,
+  'nisan': 4,
+  'mayıs': 5,
+  'haziran': 6,
+  'temmuz': 7,
+  'ağustos': 8,
+  'eylül': 9,
+  'ekim': 10,
+  'kasım': 11,
+  'aralık': 12
+};
+
+/**
+ * Parse Turkish date format to DD/MM/YYYY
+ * Handles formats like "16 Aralık 2025" or "5 Ocak 2025"
+ * Returns null if parsing fails
+ */
+function parseTurkishDate(dateStr) {
+  if (!dateStr) return null;
+  
+  // Already in DD/MM/YYYY format
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr.trim())) {
+    return dateStr.trim();
+  }
+  
+  // Parse "16 Aralık 2025" format
+  const match = dateStr.trim().match(/^(\d{1,2})\s+([a-zA-ZğüşıöçĞÜŞİÖÇ]+)\s+(\d{4})$/i);
+  if (!match) return null;
+  
+  const day = parseInt(match[1], 10);
+  const monthName = match[2].toLowerCase();
+  const year = parseInt(match[3], 10);
+  
+  const month = TURKISH_MONTHS[monthName];
+  if (!month) return null;
+  
+  return `${day}/${month}/${year}`;
+}
+
+/**
+ * Initialize separate Groq client for parsing (uses different API key to avoid rate limits)
+ */
+const groqParser = new Groq({
+  apiKey: CONFIG.GROQ_PARSER_API_KEY,
+});
+
+/**
+ * AI-powered article list parser using Groq
+ * Extracts article URLs and dates from markdown content
+ * More reliable than regex patterns when site structure changes
+ */
+async function parseArticlesWithAI(markdown, categoryTag) {
+  console.log(`  🤖 Using AI to parse article list for ${categoryTag}...`);
+  
+  try {
+    const completion = await groqParser.chat.completions.create({
+      model: 'llama-3.1-8b-instant', // Fast and cost-effective
+      messages: [
+        {
+          role: 'system',
+          content: `You are a web scraping assistant. Extract article information from markdown content.
+
+IMPORTANT RULES:
+1. Extract ONLY article URLs that match pattern: https://nuvemmag.com/post/[article-slug]/
+2. Extract the publication date for each article (format: "DD Month YYYY" like "16 Aralık 2025")
+3. Return ONLY valid JSON array, no explanations
+4. If no articles found, return empty array: []
+
+Output format (JSON array):
+[
+  {"url": "https://nuvemmag.com/post/article-slug/", "date": "16 Aralık 2025"},
+  ...
+]`
+        },
+        {
+          role: 'user',
+          content: `Extract all article URLs and their dates from this markdown content. Return ONLY a JSON array.
+
+${markdown.substring(0, 8000)}`
+        }
+      ],
+      temperature: 0.1,
+      max_tokens: 2000,
+    });
+
+    const response = completion.choices[0]?.message?.content || '[]';
+    
+    // Extract JSON from response (handle markdown code blocks)
+    let jsonStr = response;
+    const jsonMatch = response.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[0];
+    }
+    
+    const articles = JSON.parse(jsonStr);
+    
+    if (!Array.isArray(articles)) {
+      throw new Error('AI response is not an array');
+    }
+    
+    console.log(`  ✅ AI extracted ${articles.length} articles`);
+    
+    // Convert to our format and filter recent articles
+    const processedArticles = [];
+    
+    for (const article of articles) {
+      if (!article.url || !article.url.includes('nuvemmag.com/post/')) {
+        continue;
+      }
+      
+      // Parse Turkish date to DD/MM/YYYY format
+      const parsedDate = parseTurkishDate(article.date);
+      if (!parsedDate) {
+        console.log(`    ⚠️ Could not parse date: ${article.date}`);
+        continue;
+      }
+      
+      // Check if recent (last 3 days)
+      if (!isRecent(parsedDate)) {
+        continue;
+      }
+      
+      const priority = getDatePriority(parsedDate);
+      
+      processedArticles.push({
+        url: article.url,
+        category: categoryTag,
+        scrapedDate: parsedDate,
+        datePriority: priority
+      });
+    }
+    
+    // Sort by date priority (newest first)
+    processedArticles.sort((a, b) => b.datePriority - a.datePriority);
+    
+    return processedArticles;
+    
+  } catch (error) {
+    console.error(`  ❌ AI parsing failed: ${error.message}`);
+    return null; // Return null to trigger fallback
+  }
+}
+
+/**
  * Calculate date priority for sorting (higher = more recent)
  * Today = 100, Yesterday = 90, 2 days ago = 80, etc.
  * 
@@ -391,6 +544,7 @@ async function getArticleCount() {
 
 /**
  * Scrape article list from a category using Firecrawl REST API
+ * Uses AI-powered parsing with regex fallback
  */
 async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
   console.log(`🔍 Scraping ${categoryTag} from: ${categoryUrl}`);
@@ -434,23 +588,42 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
 
     // Parse markdown to extract article URLs and dates
     const markdown = scrapeResult.data.markdown;
+    
+    // ============================================
+    // PRIMARY METHOD: AI-powered parsing with Groq
+    // More reliable when site structure changes
+    // ============================================
+    const aiArticles = await parseArticlesWithAI(markdown, categoryTag);
+    
+    if (aiArticles && aiArticles.length > 0) {
+      console.log(`✅ Found ${aiArticles.length} recent articles in ${categoryTag} (AI parser)`);
+      return aiArticles;
+    }
+    
+    // ============================================
+    // FALLBACK: Regex-based parsing
+    // Used when AI parsing fails or returns no results
+    // ============================================
+    console.log(`  ⚠️ AI parser returned no results, trying regex fallback...`);
+    
     const articles = [];
     
-    // DEBUG: Log markdown sample for troubleshooting (commented out to reduce log noise)
-    // console.log(`  📝 Markdown sample (first 500 chars):\n${markdown.substring(0, 500)}\n`);
-    
-    // Extract article lines with date and URL
-    // Format from Firecrawl: [Category\\\n\\\nDate\\\n\\\n**Title**](URL)
-    // Example: [Yapay Zeka Uygulamaları\\\n\\\n10/10/2025\\\n\\\n**Title**](https://...)
-    
-    // Try multiple regex patterns to capture different markdown formats
+    // Updated regex patterns for new site structure:
+    // - URL pattern: https://nuvemmag.com/post/[slug]/ (no www, /post/ instead of /post-category/)
+    // - Date pattern: Turkish dates like "16 Aralık 2025" OR DD/MM/YYYY
     const patterns = [
-      // Original pattern
-      /(\d{1,2}\/\d{1,2}\/\d{4})[^\(]*\((https:\/\/www\.nuvemmag\.com\/post\/[^)]+)\)/g,
-      // Alternative: Date might be on same line without newlines
-      /\[.*?(\d{1,2}\/\d{1,2}\/\d{4}).*?\]\((https:\/\/www\.nuvemmag\.com\/post\/[^)]+)\)/g,
-      // Alternative: Just look for any nuvemmag post link with nearby date
-      /(\d{1,2}\/\d{1,2}\/\d{4})[\s\S]{0,200}?(https:\/\/www\.nuvemmag\.com\/post\/[^\s\)]+)/g,
+      // Pattern 1: Turkish date format with new URL structure
+      // Matches: "16 Aralık 2025" followed by URL
+      /(\d{1,2}\s+(?:Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{4})[\s\S]*?\((https:\/\/nuvemmag\.com\/post\/[^)]+)\)/gi,
+      
+      // Pattern 2: URL followed by Turkish date
+      /\]\((https:\/\/nuvemmag\.com\/post\/[^)]+)\)[\s\S]*?(\d{1,2}\s+(?:Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{4})/gi,
+      
+      // Pattern 3: Old DD/MM/YYYY format (backward compatibility)
+      /(\d{1,2}\/\d{1,2}\/\d{4})[^\(]*\((https:\/\/(?:www\.)?nuvemmag\.com\/post\/[^)]+)\)/g,
+      
+      // Pattern 4: Just extract URLs and look for nearby dates
+      /\((https:\/\/nuvemmag\.com\/post\/[^/]+\/)\)/g,
     ];
     
     let totalMatches = 0;
@@ -461,19 +634,59 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
       let match;
       const tempArticles = [];
       
+      // Reset regex lastIndex
+      pattern.lastIndex = 0;
+      
       while ((match = pattern.exec(markdown)) !== null) {
         totalMatches++;
-        const date = match[1];
-        const url = match[2].replace(/[,;.]$/, ''); // Remove trailing punctuation
+        
+        let date, url;
+        
+        if (i === 1) {
+          // Pattern 2: URL first, then date
+          url = match[1];
+          date = match[2];
+        } else if (i === 3) {
+          // Pattern 4: URL only, try to find date nearby
+          url = match[1];
+          // Look for date in surrounding context
+          const startIdx = Math.max(0, match.index - 100);
+          const endIdx = Math.min(markdown.length, match.index + url.length + 100);
+          const context = markdown.substring(startIdx, endIdx);
+          
+          const turkishDateMatch = context.match(/(\d{1,2}\s+(?:Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{4})/i);
+          const numericDateMatch = context.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+          
+          if (turkishDateMatch) {
+            date = turkishDateMatch[1];
+          } else if (numericDateMatch) {
+            date = numericDateMatch[1];
+          } else {
+            continue; // Skip if no date found
+          }
+        } else {
+          // Pattern 1 and 3: date first, then URL
+          date = match[1];
+          url = match[2];
+        }
+        
+        // Clean URL
+        url = url.replace(/[,;.]$/, '');
+        
+        // Parse date (handles both Turkish and DD/MM/YYYY formats)
+        const parsedDate = parseTurkishDate(date);
+        if (!parsedDate) {
+          continue;
+        }
         
         if (!tempArticles.some(a => a.url === url)) {
-          const isDateRecent = isRecent(date);
+          const isDateRecent = isRecent(parsedDate);
           if (isDateRecent) {
-            const priority = getDatePriority(date);
+            const priority = getDatePriority(parsedDate);
             tempArticles.push({ 
               url, 
               category: categoryTag, 
-              scrapedDate: date,
+              scrapedDate: parsedDate,
               datePriority: priority
             });
           }
@@ -484,7 +697,7 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
         // Sort by date priority (newest first: Today=100, Yesterday=90, etc.)
         tempArticles.sort((a, b) => b.datePriority - a.datePriority);
         
-        console.log(`  📊 Found ${tempArticles.length} articles, sorted by date priority`);
+        console.log(`  📊 Found ${tempArticles.length} articles via regex pattern ${i + 1}`);
         
         articles.push(...tempArticles);
         patternUsed = i;
@@ -492,7 +705,7 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
       }
     }
 
-    console.log(`✅ Found ${articles.length} recent articles in ${categoryTag} (total matches: ${totalMatches}, pattern: ${patternUsed + 1})`);
+    console.log(`✅ Found ${articles.length} recent articles in ${categoryTag} (regex fallback, matches: ${totalMatches}, pattern: ${patternUsed + 1})`);
     return articles;
   } catch (error) {
     console.error(`❌ Failed to scrape ${categoryTag}: ${error.message}`);
