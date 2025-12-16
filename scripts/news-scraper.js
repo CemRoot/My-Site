@@ -832,30 +832,78 @@ async function scrapeArticleDetails(url) {
     let content = markdown;
 
     // ============================================
-    // STEP 0: REMOVE HEADER/NAVIGATION BEFORE CONTENT
-    // Remove everything up to and including the date (dd/mm/yyyy)
-    // This removes: logo, navigation, category links, date
+    // STEP 0: ADVANCED HEADER/NAVIGATION REMOVAL
+    // Site structure changed - need smarter detection
     // ============================================
     
-    const datePattern = /\d{1,2}\/\d{1,2}\/\d{4}/;
     const initialLines = content.split('\n');
     let contentStartIndex = 0;
+    let contentEndIndex = initialLines.length;
     
-    // Find where actual content starts (after date line)
+    // Strategy 1: Find the article title (# heading) and start after social share links
     for (let i = 0; i < initialLines.length; i++) {
-      if (datePattern.test(initialLines[i])) {
-        contentStartIndex = i + 1; // Start AFTER the date line
-        if (contentStartIndex > 0) {
-          console.log(`    ✂️  Removed first ${contentStartIndex} lines (header/navigation/date)`);
+      const line = initialLines[i];
+      
+      // Skip until we find the main heading (# Title)
+      if (line.startsWith('# ') && !line.includes('NuvemMag')) {
+        // Found title, now skip past social share links and author info
+        for (let j = i + 1; j < Math.min(i + 30, initialLines.length); j++) {
+          const checkLine = initialLines[j];
+          // Look for actual content start - a paragraph that doesn't contain share/meta text
+          if (checkLine.length > 100 && 
+              !checkLine.includes('Paylaş') &&
+              !checkLine.includes('nuvemmag.com') &&
+              !checkLine.includes('tarafından') &&
+              !checkLine.includes('okundu') &&
+              !checkLine.includes('Okuma süresi') &&
+              !checkLine.includes('Google News')) {
+            contentStartIndex = j;
+            console.log(`    ✂️  Content starts at line ${contentStartIndex} (after title and meta)`);
+            break;
+          }
         }
         break;
       }
     }
     
-    // Keep only content from contentStartIndex onwards
-    if (contentStartIndex > 0) {
-      content = initialLines.slice(contentStartIndex).join('\n');
+    // Strategy 2: Find content end - before "Kaynak:", "İlginizi Çekebilir", or reaction buttons
+    for (let i = contentStartIndex; i < initialLines.length; i++) {
+      const line = initialLines[i];
+      if (line.includes('Kaynak:') || 
+          line.includes('İlginizi Çekebilir') ||
+          line.includes('Post Views:') ||
+          line.includes('Bu Yazıya Tepkiniz') ||
+          line.includes('Benzer Yazılar') ||
+          line.includes('Yorumları Göster')) {
+        contentEndIndex = i;
+        console.log(`    ✂️  Content ends at line ${contentEndIndex} (before footer/related)`);
+        break;
+      }
     }
+    
+    // Extract content between start and end
+    if (contentStartIndex > 0 || contentEndIndex < initialLines.length) {
+      content = initialLines.slice(contentStartIndex, contentEndIndex).join('\n');
+    }
+    
+    // ============================================
+    // STEP 0.5: AGGRESSIVE NUVEMMAG URL REMOVAL
+    // Remove ALL nuvemmag.com URLs early (before embed processing)
+    // These are social share links, not actual content
+    // ============================================
+    
+    // Remove markdown links with nuvemmag.com URLs
+    content = content.replace(/\[[^\]]*\]\([^)]*nuvemmag\.com[^)]*\)/gi, '');
+    
+    // Remove standalone nuvemmag.com URLs
+    content = content.replace(/https?:\/\/(?:www\.)?nuvemmag\.com[^\s\)>\]"']*/gi, '');
+    
+    // Remove social share button lines
+    content = content.replace(/^-\s*\[[^\]]*(?:Paylaş|Share)[^\]]*\].*$/gim, '');
+    
+    // Remove empty markdown link remnants
+    content = content.replace(/\[\]\(\)/g, '');
+    content = content.replace(/\[]\([^)]*\)/g, '');
 
     // ============================================
     // TOKEN-BASED EMBED PRESERVATION SYSTEM
@@ -1005,6 +1053,32 @@ async function scrapeArticleDetails(url) {
         line.match(/Introducing.*YouTube$/i) || // "Introducing X - YouTube"
         line.includes('youtube.com/watch?v=') && !line.includes('[[EMBED') ||
         line.includes('youtu.be/') && !line.includes('[[EMBED')
+      ) {
+        continue;
+      }
+      
+      // Skip social share and meta lines (new site structure)
+      if (
+        line.includes('Paylaş') ||
+        line.includes('tarafından') ||
+        line.includes('okundu') ||
+        line.includes('Okuma süresi') ||
+        line.includes('Google News') ||
+        line.includes('Post Views') ||
+        line.includes('Tepkiniz') ||
+        line.includes('Beğendim') ||
+        line.includes('Alkışlıyorum') ||
+        line.includes('Eğlendim') ||
+        line.includes('Düşünceliyim') ||
+        line.includes('İğrendim') ||
+        line.includes('Sevdim') ||
+        line.includes('Kızdım') ||
+        line.includes('Yazarın Profili') ||
+        line.includes('Benzer Yazılar') ||
+        line.includes('Yorumları Göster') ||
+        line.match(/^\+\-\s*\[\d+\]/) || // "+- [0]" comment count
+        line.match(/^\d+\s*$/) || // Just a number (view count, etc.)
+        line.match(/^!\[.*\]\(<Base64-Image-Removed>\)/) // Base64 images
       ) {
         continue;
       }
