@@ -67,31 +67,52 @@ function maybeEmbedFromParagraph(node: AnyNode): string | null {
 
 /**
  * Extract TL;DR and Key Highlights from content
+ * Supports multiple formats:
+ * - Old format: "TL;DR: text" and "Key Highlights:\n• point"
+ * - New format: "## TL;DR\ntext" and "### Key Highlights\n- point"
  * Returns { tldr: string | null, highlights: string[], remainingContent: string }
  */
 function extractTLDRAndHighlights(content: string) {
-  const tldrMatch = content.match(/^TL;DR:\s*(.+?)(?=\n\nKey Highlights:|$)/is);
-  const highlightsMatch = content.match(/Key Highlights:\s*\n((?:•\s*.+\n?)+)/i);
-  
   let tldr: string | null = null;
   let highlights: string[] = [];
   let remainingContent = content;
   
+  // Try new markdown format first: ## TL;DR or ## TL;DR (with semicolon typo)
+  let tldrMatch = content.match(/^##\s*TL[;:]?DR\s*\n+(.+?)(?=\n+###?\s*Key Highlights|\n+---|\n\n#|\n\n\n|$)/is);
+  
+  // Fallback to old format: TL;DR: text
+  if (!tldrMatch) {
+    tldrMatch = content.match(/^TL;DR:\s*(.+?)(?=\n\nKey Highlights:|$)/is);
+  }
+  
   if (tldrMatch) {
     tldr = tldrMatch[1].trim();
-    // Remove TL;DR section from content
+    // Remove entire TL;DR section including header
+    remainingContent = remainingContent.replace(/^##\s*TL[;:]?DR\s*\n+.+?(?=\n+###?\s*Key Highlights|\n+---|\n\n#|\n\n\n|$)/is, '').trim();
     remainingContent = remainingContent.replace(/^TL;DR:.*?(?=\n\nKey Highlights:|$)/is, '').trim();
+  }
+  
+  // Try new markdown format: ### Key Highlights with - bullets
+  let highlightsMatch = content.match(/###?\s*Key Highlights\s*\n+((?:[-•*]\s*.+\n?)+)/i);
+  
+  // Fallback to old format: Key Highlights: with • bullets
+  if (!highlightsMatch) {
+    highlightsMatch = content.match(/Key Highlights:\s*\n((?:•\s*.+\n?)+)/i);
   }
   
   if (highlightsMatch) {
     const highlightsText = highlightsMatch[1];
     highlights = highlightsText
       .split(/\n/)
-      .map(line => line.replace(/^•\s*/, '').trim())
+      .map(line => line.replace(/^[-•*]\s*/, '').trim())
       .filter(line => line.length > 0);
-    // Remove Key Highlights section from content
+    // Remove Key Highlights section including header
+    remainingContent = remainingContent.replace(/###?\s*Key Highlights\s*\n+((?:[-•*]\s*.+\n?)+)/i, '').trim();
     remainingContent = remainingContent.replace(/Key Highlights:\s*\n((?:•\s*.+\n?)+)/i, '').trim();
   }
+  
+  // Clean up any remaining --- separators at the start
+  remainingContent = remainingContent.replace(/^---\s*\n+/gm, '').trim();
   
   return { tldr, highlights, remainingContent };
 }

@@ -1,5 +1,4 @@
 {
-  "name": "Tech News Scraper - Multi-Agent (Fixed)",
   "nodes": [
     {
       "parameters": {
@@ -12,56 +11,58 @@
           ]
         }
       },
-      "id": "c0bf85d1-579a-4edf-bf3d-d6dd98432459",
+      "id": "c4db6657-8d31-4dde-b708-1a6bb07b293f",
       "name": "Schedule News Scraping",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
-      "position": [-960, 304]
+      "position": [
+        -480,
+        800
+      ]
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "id-1",
-              "name": "newsSourceUrl",
-              "value": "https://nuvemmag.com/post/category/yapay-zeka",
-              "type": "string"
-            },
-            {
-              "id": "id-2",
-              "name": "supabaseTableName",
-              "value": "tech_news_articles",
-              "type": "string"
-            },
-            {
-              "id": "id-3",
-              "name": "categoryName",
-              "value": "AI",
-              "type": "string"
-            }
-          ]
-        },
-        "includeOtherFields": true,
+        "jsCode": "// Define all categories to scrape (same as JavaScript scraper)\nconst categories = [\n  { name: 'AI Applications', url: 'https://nuvemmag.com/post/category/yapay-zeka-uygulamalari', tag: 'AI Applications' },\n  { name: 'Latest News', url: 'https://nuvemmag.com/post/category/en-son-haberler', tag: 'Latest News' },\n  { name: 'Artificial Intelligence', url: 'https://nuvemmag.com/post/category/yapay-zeka', tag: 'AI' },\n  { name: 'Technology', url: 'https://nuvemmag.com/post/category/teknoloji', tag: 'Tech' },\n  { name: 'Sustainability', url: 'https://nuvemmag.com/post/category/surdurulebilirlik', tag: 'Sustainability' },\n  { name: 'Science & World', url: 'https://nuvemmag.com/post/category/bilim-ve-dunya', tag: 'Science' },\n  { name: 'Agenda', url: 'https://nuvemmag.com/post/category/gundem', tag: 'News' },\n];\n\n// Return each category as a separate item\nreturn categories.map(cat => ({\n  json: {\n    categoryName: cat.tag,\n    categoryFullName: cat.name,\n    newsSourceUrl: cat.url,\n    supabaseTableName: 'tech_news_articles'\n  }\n}));"
+      },
+      "id": "640d5828-1d3a-4c64-9ef3-265cf7b9cd43",
+      "name": "Define All Categories",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
         "options": {}
       },
-      "id": "c22ed945-6d02-4541-9459-0349ff9ead24",
-      "name": "Workflow Configuration",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [-736, 304]
+      "id": "loop-over-categories",
+      "name": "Loop Over Categories",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -32,
+        800
+      ]
     },
     {
       "parameters": {
-        "url": "={{ $('Workflow Configuration').item.json.newsSourceUrl }}",
+        "operation": "scrape",
+        "url": "={{ $json.newsSourceUrl }}",
         "options": {
-          "onlyMainContent": true
-        }
+          "formats": ["markdown"]
+        },
+        "requestOptions": {}
       },
       "type": "@mendable/n8n-nodes-firecrawl.firecrawl",
       "typeVersion": 1,
-      "position": [-496, 304],
-      "id": "9ccc5e3c-43ee-4a91-b264-382d5a8490cf",
+      "position": [
+        192,
+        800
+      ],
+      "id": "d6a7238a-f374-4d4c-8c25-5549f164d64d",
       "name": "Scrape Category Page",
       "credentials": {
         "firecrawlApi": {
@@ -72,13 +73,16 @@
     },
     {
       "parameters": {
-        "jsCode": "// Normalize Firecrawl output - try different possible field names\nconst input = $input.item.json;\n\n// Try different possible field paths\nlet markdown = input.markdown || \n               input.data?.markdown || \n               input.content || \n               input.data?.content ||\n               input.text ||\n               '';\n\n// If still empty, log the structure for debugging\nif (!markdown) {\n  console.log('Firecrawl output structure:', JSON.stringify(input, null, 2));\n  // Try to get the first string value\n  for (const key in input) {\n    if (typeof input[key] === 'string' && input[key].length > 100) {\n      markdown = input[key];\n      break;\n    }\n  }\n}\n\nreturn {\n  json: {\n    markdown: markdown || '',\n    originalData: input // Keep original for debugging\n  }\n};"
+        "jsCode": "// Handle Firecrawl API response format\nconst input = $input.item.json;\n\n// Get category info from Loop Over Categories\nconst categoryInfo = $('Loop Over Categories').item.json;\n\n// Firecrawl returns: { success: true, data: { markdown: \"...\" } }\nlet markdown = '';\n\nif (input.data && input.data.markdown) {\n  markdown = input.data.markdown;\n} else if (input.markdown) {\n  markdown = input.markdown;\n} else if (input.data && input.data.content) {\n  markdown = input.data.content;\n} else if (input.content) {\n  markdown = input.content;\n}\n\nconsole.log('Category:', categoryInfo.categoryName);\nconsole.log('Markdown length:', markdown.length);\n\nreturn {\n  json: {\n    markdown: markdown || '',\n    categoryName: categoryInfo.categoryName,\n    categoryFullName: categoryInfo.categoryFullName,\n    newsSourceUrl: categoryInfo.newsSourceUrl,\n    supabaseTableName: categoryInfo.supabaseTableName\n  }\n};"
       },
-      "id": "normalize-firecrawl-output",
+      "id": "7984abac-ad2e-42d4-a23d-20dfa011ed67",
       "name": "Normalize Firecrawl Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-360, 304]
+      "position": [
+        416,
+        800
+      ]
     },
     {
       "parameters": {
@@ -89,11 +93,14 @@
           "systemMessage": "You are a news analyzer agent for a Turkish tech news website (nuvemmag.com).\n\nYour task is to:\n1. Analyze the provided markdown content from a news category page\n2. Extract individual news articles with their:\n   - title (Turkish title)\n   - url (full article URL like https://nuvemmag.com/post/article-slug/)\n   - date (Turkish format like \"16 Aralık 2025\")\n\nIMPORTANT RULES:\n- URLs must match pattern: https://nuvemmag.com/post/[slug]/\n- Dates are in Turkish format: DD MonthName YYYY\n- Turkish months: Ocak, Şubat, Mart, Nisan, Mayıs, Haziran, Temmuz, Ağustos, Eylül, Ekim, Kasım, Aralık\n- Return ONLY articles from the last 3 days\n- Do NOT include category URLs (/post/category/)\n\nReturn a JSON with this structure:\n{\n  \"articles\": [\n    {\n      \"title\": \"Turkish article title\",\n      \"url\": \"https://nuvemmag.com/post/article-slug/\",\n      \"date\": \"16 Aralık 2025\"\n    }\n  ]\n}"
         }
       },
-      "id": "f6ff4652-ac7a-4d57-bda6-95696b0b4976",
+      "id": "1c9eeb64-4d3e-4d18-affe-28570683767e",
       "name": "Analyzer Agent - Extract Articles",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3,
-      "position": [-224, 304]
+      "position": [
+        640,
+        800
+      ]
     },
     {
       "parameters": {
@@ -102,13 +109,17 @@
           "mode": "list",
           "value": "gpt-4.1-mini"
         },
+        "builtInTools": {},
         "options": {}
       },
-      "id": "ba4c9b1e-a437-4e19-999f-4aed3d3f22af",
+      "id": "3730b3c7-9be0-4c91-a7b7-a4fc08f6c8af",
       "name": "OpenAI Model - Analyzer",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
-      "position": [-288, 528],
+      "position": [
+        648,
+        1024
+      ],
       "credentials": {
         "openAiApi": {
           "id": "eSu164nfTuwc1TFy",
@@ -121,42 +132,27 @@
         "schemaType": "manual",
         "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"articles\": {\n      \"type\": \"array\",\n      \"description\": \"List of articles found on the page\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"title\": { \"type\": \"string\" },\n          \"url\": { \"type\": \"string\" },\n          \"date\": { \"type\": \"string\" }\n        }\n      }\n    }\n  }\n}"
       },
-      "id": "f0e06cd7-4d47-4b7e-adb7-3b3ad8ab936e",
+      "id": "e902b263-2ed0-4b3f-a01c-47cc365f3bdb",
       "name": "Structured Output - News List",
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
-      "position": [-32, 528]
+      "position": [
+        776,
+        1024
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Parse the AI output and return individual articles\nconst output = $input.item.json.output;\nlet articles = [];\n\ntry {\n  if (typeof output === 'string') {\n    const parsed = JSON.parse(output);\n    articles = parsed.articles || parsed || [];\n  } else if (output && output.articles) {\n    articles = output.articles;\n  } else if (Array.isArray(output)) {\n    articles = output;\n  }\n} catch (e) {\n  console.log('Parse error:', e.message);\n  return [];\n}\n\n// Return each article as a separate item for looping\nreturn articles.map(article => ({\n  json: {\n    title: article.title || '',\n    url: article.url || '',\n    date: article.date || '',\n    categoryName: $('Workflow Configuration').item.json.categoryName\n  }\n}));"
+        "jsCode": "// Parse the AI output and return individual articles\nconst output = $input.item.json.output;\nlet articles = [];\n\n// Get category info passed through\nconst prevData = $('Normalize Firecrawl Output').item.json;\nconst categoryName = prevData.categoryName;\nconst supabaseTableName = prevData.supabaseTableName;\n\ntry {\n  if (typeof output === 'string') {\n    const parsed = JSON.parse(output);\n    articles = parsed.articles || parsed || [];\n  } else if (output && output.articles) {\n    articles = output.articles;\n  } else if (Array.isArray(output)) {\n    articles = output;\n  }\n} catch (e) {\n  console.log('Parse error:', e.message);\n  return [];\n}\n\nconsole.log('Found', articles.length, 'articles in category:', categoryName);\n\n// Return each article as a separate item for looping\nreturn articles.map(article => ({\n  json: {\n    title: article.title || '',\n    url: article.url || '',\n    date: article.date || '',\n    categoryName: categoryName,\n    supabaseTableName: supabaseTableName\n  }\n}));"
       },
-      "id": "4e3ca7e2-0a15-4272-9bd0-e7ee8ca9540d",
+      "id": "16125a9b-d47f-49d1-8b09-9aed67412e85",
       "name": "Parse Articles to Items",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [96, 304]
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "tableId": "={{ $('Workflow Configuration').item.json.supabaseTableName }}",
-        "returnAll": false,
-        "limit": 10,
-        "filterType": "string",
-        "filterString": "source_url=eq.{{ $json.url }}"
-      },
-      "id": "d2fadfdc-6ba2-40a2-a97e-8b5d0099cbe5",
-      "name": "Check If Exists in DB",
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [320, 304],
-      "credentials": {
-        "supabaseApi": {
-          "id": "numSMv5vyngT6jAm",
-          "name": "Supabase account"
-        }
-      }
+      "position": [
+        992,
+        800
+      ]
     },
     {
       "parameters": {
@@ -168,11 +164,120 @@
           },
           "conditions": [
             {
-              "id": "id-1",
-              "leftValue": "={{ $json.length }}",
+              "id": "check-articles",
+              "leftValue": "={{ $input.all().length }}",
               "rightValue": 0,
               "operator": {
                 "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-articles-found",
+      "name": "Any Articles Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1216,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// No articles found in this category, continue to next category\nconst categoryName = $('Normalize Firecrawl Output').item.json.categoryName;\nconsole.log('No articles found in category:', categoryName);\nreturn [{ json: { message: 'No articles in ' + categoryName } }];"
+      },
+      "id": "no-articles-in-category",
+      "name": "No Articles - Next Category",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-over-articles",
+      "name": "Loop Over Articles",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1440,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// CRITICAL: Store article data BEFORE DB check\n// This ensures we have the data regardless of Supabase output\nconst article = $input.item.json;\n\n// Normalize URL - remove trailing slash for consistent matching\nlet url = article.url || '';\nurl = url.replace(/\\/$/, ''); // Remove trailing slash\n\nconsole.log('🔍 Preparing DB check for:', article.title?.substring(0, 50));\nconsole.log('🔗 URL to check:', url);\n\nreturn {\n  json: {\n    // Article data to preserve\n    articleTitle: article.title || '',\n    articleUrl: url,\n    articleDate: article.date || '',\n    categoryName: article.categoryName || '',\n    supabaseTableName: article.supabaseTableName || 'tech_news_articles',\n    // For Supabase filter - use the normalized URL\n    url: url\n  }\n};"
+      },
+      "id": "prepare-db-check",
+      "name": "Prepare DB Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1664,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "tech_news_articles",
+        "limit": 1,
+        "filterType": "string",
+        "filterString": "=source_url=eq.{{ $json.url }}"
+      },
+      "id": "b418da8d-a817-4a1c-bd24-fcb2ebcf22b3",
+      "name": "Check If Exists in DB",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1888,
+        800
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "numSMv5vyngT6jAm",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if article exists in database\n// CRITICAL: Get article data from PREPARE node, not from Loop\nconst dbResult = $input.item.json || {};\n\n// Get stored article data from Prepare DB Check node\nconst preparedData = $('Prepare DB Check').item.json;\n\nconst title = preparedData.articleTitle || '';\nconst url = preparedData.articleUrl || '';\nconst date = preparedData.articleDate || '';\nconst categoryName = preparedData.categoryName || '';\nconst supabaseTableName = preparedData.supabaseTableName || 'tech_news_articles';\n\n// Debug logging\nconsole.log('========================================');\nconsole.log('📰 Article:', title.substring(0, 50));\nconsole.log('🔗 URL:', url);\nconsole.log('📅 Date:', date);\nconsole.log('🏷️ Category:', categoryName);\n\n// Check if article exists in DB\n// Supabase with alwaysOutputData returns empty object or DB record\nconst hasDbId = dbResult && dbResult.id;\nconst articleExists = hasDbId ? true : false;\n\nconsole.log('🗄️ DB Result ID:', dbResult.id || 'NONE');\nconsole.log('✅ Article exists:', articleExists ? 'YES - SKIP' : 'NO - PROCESS');\nconsole.log('========================================');\n\nreturn [{\n  json: {\n    title: title,\n    url: url,\n    date: date,\n    categoryName: categoryName,\n    supabaseTableName: supabaseTableName,\n    isNew: !articleExists,\n    dbId: dbResult.id || null,\n    existsInDb: articleExists\n  }\n}];"
+      },
+      "id": "filter-new-articles-v2",
+      "name": "Check Article Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "is-new",
+              "leftValue": "={{ $json.isNew }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
                 "operation": "equals"
               }
             }
@@ -181,23 +286,31 @@
         },
         "options": {}
       },
-      "id": "6c84738a-0889-442c-85d6-66d45529e20d",
+      "id": "is-new-article-check",
       "name": "Is New Article?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [544, 304]
+      "position": [
+        2336,
+        800
+      ]
     },
     {
       "parameters": {
-        "url": "={{ $('Parse Articles to Items').item.json.url }}",
+        "operation": "scrape",
+        "url": "={{ $json.url }}",
         "options": {
-          "onlyMainContent": true
-        }
+          "formats": ["markdown"]
+        },
+        "requestOptions": {}
       },
       "type": "@mendable/n8n-nodes-firecrawl.firecrawl",
       "typeVersion": 1,
-      "position": [768, 304],
-      "id": "scrape-article-detail",
+      "position": [
+        2560,
+        700
+      ],
+      "id": "cd12c13d-3abc-4c69-a47c-37c9e06194ce",
       "name": "Scrape Article Detail",
       "credentials": {
         "firecrawlApi": {
@@ -208,13 +321,16 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract date and prepare article metadata\nconst articleUrl = $('Parse Articles to Items').item.json.url;\nconst turkishDate = $('Parse Articles to Items').item.json.date;\nconst originalTitle = $('Parse Articles to Items').item.json.title;\nconst categoryName = $('Parse Articles to Items').item.json.categoryName;\n\n// Normalize Firecrawl output - try different possible field names\nconst input = $input.item.json;\nlet markdown = input.markdown || \n               input.data?.markdown || \n               input.content || \n               input.data?.content ||\n               input.text ||\n               '';\n\n// If still empty, try to get the first string value\nif (!markdown) {\n  for (const key in input) {\n    if (typeof input[key] === 'string' && input[key].length > 100) {\n      markdown = input[key];\n      break;\n    }\n  }\n}\n\n// Turkish month mapping\nconst turkishMonths = {\n  'ocak': '01', 'şubat': '02', 'mart': '03', 'nisan': '04',\n  'mayıs': '05', 'haziran': '06', 'temmuz': '07', 'ağustos': '08',\n  'eylül': '09', 'ekim': '10', 'kasım': '11', 'aralık': '12'\n};\n\n// Parse Turkish date to ISO format (YYYY-MM-DD)\nlet isoDate = new Date().toISOString().split('T')[0];\ntry {\n  const match = turkishDate.match(/(\\d{1,2})\\s+([a-zA-ZğüşıöçĞÜŞİÖÇ]+)\\s+(\\d{4})/i);\n  if (match) {\n    const day = match[1].padStart(2, '0');\n    const monthName = match[2].toLowerCase();\n    const year = match[3];\n    const month = turkishMonths[monthName] || '01';\n    isoDate = `${year}-${month}-${day}`;\n  }\n} catch (e) {\n  console.log('Date parse error:', e.message);\n}\n\nreturn {\n  json: {\n    sourceUrl: articleUrl,\n    turkishDate: turkishDate,\n    isoDate: isoDate,\n    originalTitle: originalTitle,\n    categoryName: categoryName,\n    markdown: markdown || ''\n  }\n};"
+        "jsCode": "// Extract date and prepare article metadata\n// Get article data from Is New Article? node (passed through from Check Article Status)\nconst articleData = $('Is New Article?').item.json;\nconst articleUrl = articleData.url || '';\nconst turkishDate = articleData.date || '';\nconst originalTitle = articleData.title || '';\nconst categoryName = articleData.categoryName || '';\nconst supabaseTableName = articleData.supabaseTableName || 'tech_news_articles';\n\n// Normalize Firecrawl output - handle data.markdown structure\nconst input = $input.item.json;\nlet markdown = input.data?.markdown ||  // Firecrawl v1 format\n               input.markdown || \n               input.data?.content || \n               input.content ||\n               '';\n\n// Debug log\nconsole.log('📝 Markdown length:', markdown.length);\nconsole.log('🔗 Article URL:', articleUrl);\nconsole.log('📅 Turkish Date:', turkishDate);\n\n// Turkish month mapping\nconst turkishMonths = {\n  'ocak': '01', 'şubat': '02', 'mart': '03', 'nisan': '04',\n  'mayıs': '05', 'haziran': '06', 'temmuz': '07', 'ağustos': '08',\n  'eylül': '09', 'ekim': '10', 'kasım': '11', 'aralık': '12'\n};\n\n// Parse Turkish date to ISO format (YYYY-MM-DD)\nlet isoDate = new Date().toISOString().split('T')[0];\ntry {\n  const match = turkishDate.match(/(\\d{1,2})\\s+([a-zA-ZğüşıöçĞÜŞİÖÇ]+)\\s+(\\d{4})/i);\n  if (match) {\n    const day = match[1].padStart(2, '0');\n    const monthName = match[2].toLowerCase();\n    const year = match[3];\n    const month = turkishMonths[monthName] || '01';\n    isoDate = `${year}-${month}-${day}`;\n  }\n} catch (e) {\n  console.log('Date parse error:', e.message);\n}\n\nconsole.log('📆 ISO Date:', isoDate);\n\nreturn {\n  json: {\n    sourceUrl: articleUrl,\n    turkishDate: turkishDate,\n    isoDate: isoDate,\n    originalTitle: originalTitle,\n    categoryName: categoryName,\n    supabaseTableName: supabaseTableName,\n    markdown: markdown || ''\n  }\n};"
       },
-      "id": "extract-date",
+      "id": "42a9982f-c98d-4f50-a1c9-5fe7b9225bc0",
       "name": "Extract Date & Metadata",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [992, 304]
+      "position": [
+        2784,
+        700
+      ]
     },
     {
       "parameters": {
@@ -225,11 +341,14 @@
           "systemMessage": "You are a content parser agent for Turkish tech news articles.\n\nYour task is to:\n1. Extract the MAIN ARTICLE CONTENT from the markdown\n2. REMOVE these elements:\n   - Navigation and header (logo, menu, breadcrumbs)\n   - Social share buttons (Facebook, Twitter, Whatsapp links)\n   - Author info and read time\n   - \"İlginizi Çekebilir\" (You may also like) section\n   - Footer and category links\n   - Reaction buttons (Beğendim, Alkışlıyorum, etc.)\n   - Any nuvemmag.com URLs\n3. EXTRACT and format:\n   - YouTube video IDs → format as [[EMBED:YOUTUBE:VIDEO_ID]]\n   - Twitter/X post IDs → format as [[EMBED:TWEET:TWEET_ID]]\n   - Featured image URL (first main article image)\n4. Find the original source URL (look for \"Kaynak:\" followed by a URL)\n\nReturn structured data:\n- cleanContent: Cleaned Turkish markdown (NO nuvemmag URLs)\n- youtubeIds: Array of YouTube video IDs found\n- tweetIds: Array of Twitter post IDs found\n- featuredImage: URL of the main article image\n- originalSource: The source URL from \"Kaynak:\" line (external URL, not nuvemmag)\n- summary: Brief 2-3 sentence summary in Turkish"
         }
       },
-      "id": "a99ea386-b210-430a-989b-bc30145a3fb8",
+      "id": "5250b9fd-0dd9-45d7-abcf-91150fbe1298",
       "name": "Parser Agent - Extract Content",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3,
-      "position": [1216, 304]
+      "position": [
+        3008,
+        700
+      ]
     },
     {
       "parameters": {
@@ -238,13 +357,17 @@
           "mode": "list",
           "value": "gpt-4.1-mini"
         },
+        "builtInTools": {},
         "options": {}
       },
-      "id": "c1b0e83f-69dc-40d1-9c94-dd4e7dc77d5a",
+      "id": "6a582b09-e646-45ba-a358-9ed25c89df46",
       "name": "OpenAI Model - Parser",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
-      "position": [1232, 528],
+      "position": [
+        2792,
+        1024
+      ],
       "credentials": {
         "openAiApi": {
           "id": "eSu164nfTuwc1TFy",
@@ -255,13 +378,16 @@
     {
       "parameters": {
         "schemaType": "manual",
-        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"cleanContent\": { \"type\": \"string\", \"description\": \"Cleaned markdown content without nuvemmag URLs\" },\n    \"youtubeIds\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"tweetIds\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"featuredImage\": { \"type\": \"string\" },\n    \"originalSource\": { \"type\": \"string\", \"description\": \"External source URL from Kaynak line\" },\n    \"summary\": { \"type\": \"string\" }\n  }\n}"
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"cleanContent\": { \n      \"type\": \"string\", \n      \"description\": \"Cleaned markdown content without nuvemmag URLs\" \n    },\n    \"youtubeIds\": { \n      \"type\": \"array\", \n      \"items\": { \"type\": \"string\" },\n      \"default\": []\n    },\n    \"tweetIds\": { \n      \"type\": \"array\", \n      \"items\": { \"type\": \"string\" },\n      \"default\": []\n    },\n    \"featuredImage\": { \n      \"type\": \"string\",\n      \"default\": \"\"\n    },\n    \"originalSource\": { \n      \"type\": \"string\", \n      \"description\": \"External source URL from Kaynak line\",\n      \"default\": \"\"\n    },\n    \"summary\": { \n      \"type\": \"string\",\n      \"default\": \"\"\n    }\n  },\n  \"required\": [\"cleanContent\"]\n}"
       },
-      "id": "ddc7c099-94ed-429b-b045-82eab31c2003",
+      "id": "45340ced-705a-42a7-befa-06a56356a60a",
       "name": "Structured Output - Parsed Content",
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
-      "position": [1360, 528]
+      "position": [
+        2920,
+        1024
+      ]
     },
     {
       "parameters": {
@@ -272,11 +398,14 @@
           "systemMessage": "You are a professional Turkish to English translator specializing in tech news.\n\nYour task is to:\n1. Translate the Turkish news article to clear, professional English\n2. Maintain the original meaning, tone, and structure\n3. Keep proper nouns, brand names, and technical terms unchanged\n4. PRESERVE ALL embed tokens exactly: [[EMBED:YOUTUBE:id]] and [[EMBED:TWEET:id]]\n5. Add a TL;DR section at the beginning:\n\n## TL;DR\n[1-2 sentence summary]\n\n### Key Highlights\n- Point 1\n- Point 2\n- Point 3\n\n---\n\n[Rest of the translated article]\n\nIMPORTANT: Do NOT include any nuvemmag.com URLs in the output."
         }
       },
-      "id": "786855d2-e20f-4a0e-98d4-74d166b1fdf5",
+      "id": "730a082c-c6d0-4a68-a501-b666dc2fb7df",
       "name": "Translator Agent - Turkish to English",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3,
-      "position": [1568, 176]
+      "position": [
+        3232,
+        700
+      ]
     },
     {
       "parameters": {
@@ -285,13 +414,17 @@
           "mode": "list",
           "value": "gpt-4.1-mini"
         },
+        "builtInTools": {},
         "options": {}
       },
-      "id": "c5c0edf2-61f9-43b5-9a34-8d5272cf529f",
+      "id": "e6fbe4a7-70e6-4892-b053-3fbd0d5c301b",
       "name": "OpenAI Model - Translator",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
-      "position": [1648, 400],
+      "position": [
+        3144,
+        1024
+      ],
       "credentials": {
         "openAiApi": {
           "id": "eSu164nfTuwc1TFy",
@@ -304,11 +437,14 @@
         "schemaType": "manual",
         "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"title\": { \"type\": \"string\", \"description\": \"Translated English title\" },\n    \"description\": { \"type\": \"string\", \"description\": \"Translated summary for meta description\" },\n    \"content\": { \"type\": \"string\", \"description\": \"Full translated content with TL;DR\" }\n  }\n}"
       },
-      "id": "translator-output-parser",
+      "id": "ae40dec3-2d53-44b9-af7b-fb371316d3b6",
       "name": "Structured Output - Translation",
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
-      "position": [1776, 400]
+      "position": [
+        3272,
+        1024
+      ]
     },
     {
       "parameters": {
@@ -316,14 +452,17 @@
         "text": "=English Title: {{ $json.output.title }}\n\nEnglish Content:\n{{ $json.output.content }}\n\nYouTube IDs: {{ $('Parser Agent - Extract Content').item.json.output.youtubeIds }}\nTweet IDs: {{ $('Parser Agent - Extract Content').item.json.output.tweetIds }}",
         "hasOutputParser": true,
         "options": {
-          "systemMessage": "You are an editor and quality control agent. Review the translated news article.\n\nCHECK FOR:\n1. Translation quality - Is the English clear and professional?\n2. Embed tokens - Are [[EMBED:YOUTUBE:id]] and [[EMBED:TWEET:id]] present if there were any?\n3. TL;DR section - Does it have summary and key highlights?\n4. NO nuvemmag.com URLs or NuvemMag branding in content\n5. Content completeness - Is it complete, not truncated?\n\nIf issues found:\n- approved: false\n- List specific issues\n- Provide correction instructions\n\nIf everything OK:\n- approved: true\n- Brief quality summary"
+          "systemMessage": "You are an editor and quality control agent. Review the translated news article.\n\nCHECK FOR:\n1. Translation quality - Is the English clear and professional?\n2. Embed tokens - Are [[EMBED:YOUTUBE:id]] and [[EMBED:TWEET:id]] present if YouTubeIds/TweetIds were provided?\n3. TL;DR section - Does it have summary and key highlights?\n4. NO nuvemmag.com URLs or NuvemMag branding in TEXT content\n   EXCEPTION: nuvemmag.com URLs are ALLOWED in image markdown syntax like ![alt](https://nuvemmag.com/wp-content/...) since that's where images are hosted\n5. Content completeness - Is it complete, not truncated?\n\nIf issues found (excluding allowed image URLs):\n- approved: false\n- List specific issues\n- Provide correction instructions\n\nIf everything OK:\n- approved: true\n- Brief quality summary"
         }
       },
-      "id": "2f5b8ba2-fe2e-4cf3-923e-8dbe77954cf3",
+      "id": "ab578366-2a5c-4bb2-9e39-590a58afd8af",
       "name": "Editor Agent - Quality Control",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3,
-      "position": [1920, 176]
+      "position": [
+        3456,
+        700
+      ]
     },
     {
       "parameters": {
@@ -332,13 +471,17 @@
           "mode": "list",
           "value": "gpt-4.1-mini"
         },
+        "builtInTools": {},
         "options": {}
       },
-      "id": "661049f2-fd03-4661-bde6-f21a5e787f63",
+      "id": "a3ef05e6-7a0b-4976-bbf7-ebca5d8f6734",
       "name": "OpenAI Model - Editor",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
-      "position": [1936, 400],
+      "position": [
+        3496,
+        1024
+      ],
       "credentials": {
         "openAiApi": {
           "id": "eSu164nfTuwc1TFy",
@@ -351,11 +494,14 @@
         "schemaType": "manual",
         "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"approved\": { \"type\": \"boolean\" },\n    \"issues\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"corrections\": { \"type\": \"string\" },\n    \"qualitySummary\": { \"type\": \"string\" }\n  }\n}"
       },
-      "id": "121ad452-925e-4856-8044-8b5542ae2b4d",
+      "id": "a63eca26-9206-499e-9c40-036766f2e576",
       "name": "Structured Output - Quality Check",
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
-      "position": [2064, 400]
+      "position": [
+        3624,
+        1024
+      ]
     },
     {
       "parameters": {
@@ -380,26 +526,31 @@
         },
         "options": {}
       },
-      "id": "b9f04541-4a4f-4c8a-a11e-b6d380142261",
+      "id": "798a4f63-a178-4fc5-8426-3caae1ef03ed",
       "name": "Quality Check Passed?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [2272, 304]
+      "position": [
+        3680,
+        700
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Generate slug from English title\nconst englishTitle = $('Translator Agent - Turkish to English').item.json.output.title || '';\n\nconst slug = englishTitle\n  .toLowerCase()\n  .replace(/[^a-z0-9\\s-]/g, '')\n  .replace(/\\s+/g, '-')\n  .replace(/-+/g, '-')\n  .replace(/^-|-$/g, '')\n  .substring(0, 100);\n\nreturn {\n  json: {\n    slug: slug\n  }\n};"
+        "jsCode": "// Generate slug from English title\nconst englishTitle = $('Translator Agent - Turkish to English').item.json.output.title || '';\n\nconst slug = englishTitle\n  .toLowerCase()\n  .replace(/[^a-z0-9\\s-]/g, '')\n  .replace(/\\s+/g, '-')\n  .replace(/-+/g, '-')\n  .replace(/^-|-$/g, '')\n  .substring(0, 100);\n\nconsole.log('📝 Generated slug:', slug);\n\nreturn {\n  json: {\n    slug: slug\n  }\n};"
       },
-      "id": "495270e8-d653-40a7-aa3b-954579d7dee2",
+      "id": "50c86e25-4831-4249-ad66-80fe254a130b",
       "name": "Generate Final Slug",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2496, 304]
+      "position": [
+        3904,
+        600
+      ]
     },
     {
       "parameters": {
-        "operation": "create",
-        "tableId": "={{ $('Workflow Configuration').item.json.supabaseTableName }}",
+        "tableId": "={{ $('Extract Date & Metadata').item.json.supabaseTableName }}",
         "fieldsUi": {
           "fieldValues": [
             {
@@ -445,11 +596,15 @@
           ]
         }
       },
-      "id": "440261d3-1018-498c-8db5-d2bb12101242",
+      "id": "f651fc84-e95b-4f9b-a185-4d1027df1bbb",
       "name": "Publish to Supabase",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
-      "position": [2720, 304],
+      "position": [
+        4128,
+        600
+      ],
+      "continueOnFail": true,
       "credentials": {
         "supabaseApi": {
           "id": "numSMv5vyngT6jAm",
@@ -459,17 +614,141 @@
     },
     {
       "parameters": {
-        "chatId": "YOUR_CHAT_ID",
-        "text": "=✅ Yeni haber eklendi!\n\n📰 {{ $('Translator Agent - Turkish to English').item.json.output.title }}\n\n🔗 Kategori: {{ $('Extract Date & Metadata').item.json.categoryName }}",
+        "jsCode": "// Check if publish was successful or failed (duplicate)\nconst result = $input.item.json;\nconst error = $input.item.error;\n\nif (error) {\n  // Check if it's a duplicate error\n  const errorMsg = error.message || JSON.stringify(error);\n  if (errorMsg.includes('duplicate') || errorMsg.includes('unique constraint')) {\n    console.log('⚠️ Duplicate article skipped (already in DB)');\n    return [{ json: { success: false, reason: 'duplicate', skipped: true } }];\n  }\n  console.log('❌ Publish error:', errorMsg);\n  return [{ json: { success: false, reason: 'error', error: errorMsg } }];\n}\n\nconsole.log('✅ Article published successfully!');\nreturn [{ json: { success: true, published: true, id: result.id } }];"
+      },
+      "id": "check-publish-result",
+      "name": "Check Publish Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4352,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "was-published",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "was-published-check",
+      "name": "Was Published?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4576,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "1925139795",
+        "text": "=✅ <b>Yeni haber eklendi!</b>\n\n📰 {{ $('Translator Agent - Turkish to English').item.json.output.title }}\n\n🔗 Kategori: {{ $('Extract Date & Metadata').item.json.categoryName }}\n📅 Tarih: {{ $('Extract Date & Metadata').item.json.isoDate }}",
         "additionalFields": {
           "parse_mode": "HTML"
         }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [2944, 304],
-      "id": "abb19f1b-6563-449e-aabc-faeac3c3facd",
+      "position": [
+        4800,
+        500
+      ],
+      "id": "2772acd0-cd87-47b8-bbe8-74de1523e582",
       "name": "Send Telegram Notification",
+      "webhookId": "75bf35ac-f175-4c11-a71d-80266f474a8a",
+      "credentials": {
+        "telegramApi": {
+          "id": "gowr8FzoZ2pfcjya",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// After publishing, go back to process next article in the loop\nconsole.log('➡️ Moving to next article...');\nreturn $input.all();"
+      },
+      "id": "continue-article-loop",
+      "name": "Continue Article Loop",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5024,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Article already exists in DB, skip and continue to next\nconsole.log('⏭️ Skipping existing article:', $json.title?.substring(0, 50));\nreturn $input.all();"
+      },
+      "id": "skip-existing",
+      "name": "Skip Existing Article",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2560,
+        900
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Quality check failed, log and continue to next article\nconsole.log('❌ Quality check failed, skipping article');\nreturn $input.all();"
+      },
+      "id": "quality-failed",
+      "name": "Quality Failed - Skip",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3904,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// All articles in this category processed, continue to next category\nlet categoryName = '';\ntry {\n  categoryName = $('Loop Over Categories').item.json.categoryName || 'Unknown';\n} catch (e) {\n  categoryName = 'Unknown';\n}\nconsole.log('✅ Finished category:', categoryName);\nreturn [{ json: { message: 'Finished ' + categoryName } }];"
+      },
+      "id": "articles-done-next-category",
+      "name": "Articles Done - Next Category",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1888,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "1925139795",
+        "text": "=🎉 <b>Tüm kategoriler tarandı!</b>\n\n📊 7 kategori kontrol edildi\n⏰ {{ $now.format('dd.MM.yyyy HH:mm') }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "all-categories-done",
+      "name": "All Categories Done - Summary",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        192,
+        1000
+      ],
       "credentials": {
         "telegramApi": {
           "id": "gowr8FzoZ2pfcjya",
@@ -480,82 +759,453 @@
   ],
   "connections": {
     "Schedule News Scraping": {
-      "main": [[{ "node": "Workflow Configuration", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Define All Categories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
-    "Workflow Configuration": {
-      "main": [[{ "node": "Scrape Category Page", "type": "main", "index": 0 }]]
+    "Define All Categories": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Categories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Categories": {
+      "main": [
+        [
+          {
+            "node": "Scrape Category Page",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "All Categories Done - Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Scrape Category Page": {
-      "main": [[{ "node": "Normalize Firecrawl Output", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Normalize Firecrawl Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Normalize Firecrawl Output": {
-      "main": [[{ "node": "Analyzer Agent - Extract Articles", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Analyzer Agent - Extract Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Analyzer Agent - Extract Articles": {
-      "main": [[{ "node": "Parse Articles to Items", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Parse Articles to Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "OpenAI Model - Analyzer": {
-      "ai_languageModel": [[{ "node": "Analyzer Agent - Extract Articles", "type": "ai_languageModel", "index": 0 }]]
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analyzer Agent - Extract Articles",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Structured Output - News List": {
-      "ai_outputParser": [[{ "node": "Analyzer Agent - Extract Articles", "type": "ai_outputParser", "index": 0 }]]
+      "ai_outputParser": [
+        [
+          {
+            "node": "Analyzer Agent - Extract Articles",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parse Articles to Items": {
-      "main": [[{ "node": "Check If Exists in DB", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Any Articles Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any Articles Found?": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Articles",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Articles - Next Category",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Articles - Next Category": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Categories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Articles": {
+      "main": [
+        [
+          {
+            "node": "Prepare DB Check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Articles Done - Next Category",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare DB Check": {
+      "main": [
+        [
+          {
+            "node": "Check If Exists in DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Articles Done - Next Category": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Categories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Check If Exists in DB": {
-      "main": [[{ "node": "Is New Article?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Check Article Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Article Status": {
+      "main": [
+        [
+          {
+            "node": "Is New Article?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Is New Article?": {
       "main": [
-        [{ "node": "Scrape Article Detail", "type": "main", "index": 0 }],
-        []
+        [
+          {
+            "node": "Scrape Article Detail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Existing Article",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Existing Article": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Scrape Article Detail": {
-      "main": [[{ "node": "Extract Date & Metadata", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Extract Date & Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extract Date & Metadata": {
-      "main": [[{ "node": "Parser Agent - Extract Content", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Parser Agent - Extract Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parser Agent - Extract Content": {
-      "main": [[{ "node": "Translator Agent - Turkish to English", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Translator Agent - Turkish to English",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "OpenAI Model - Parser": {
-      "ai_languageModel": [[{ "node": "Parser Agent - Extract Content", "type": "ai_languageModel", "index": 0 }]]
+      "ai_languageModel": [
+        [
+          {
+            "node": "Parser Agent - Extract Content",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Structured Output - Parsed Content": {
-      "ai_outputParser": [[{ "node": "Parser Agent - Extract Content", "type": "ai_outputParser", "index": 0 }]]
+      "ai_outputParser": [
+        [
+          {
+            "node": "Parser Agent - Extract Content",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Translator Agent - Turkish to English": {
-      "main": [[{ "node": "Editor Agent - Quality Control", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Editor Agent - Quality Control",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "OpenAI Model - Translator": {
-      "ai_languageModel": [[{ "node": "Translator Agent - Turkish to English", "type": "ai_languageModel", "index": 0 }]]
+      "ai_languageModel": [
+        [
+          {
+            "node": "Translator Agent - Turkish to English",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Structured Output - Translation": {
-      "ai_outputParser": [[{ "node": "Translator Agent - Turkish to English", "type": "ai_outputParser", "index": 0 }]]
+      "ai_outputParser": [
+        [
+          {
+            "node": "Translator Agent - Turkish to English",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Editor Agent - Quality Control": {
-      "main": [[{ "node": "Quality Check Passed?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Quality Check Passed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "OpenAI Model - Editor": {
-      "ai_languageModel": [[{ "node": "Editor Agent - Quality Control", "type": "ai_languageModel", "index": 0 }]]
+      "ai_languageModel": [
+        [
+          {
+            "node": "Editor Agent - Quality Control",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Structured Output - Quality Check": {
-      "ai_outputParser": [[{ "node": "Editor Agent - Quality Control", "type": "ai_outputParser", "index": 0 }]]
+      "ai_outputParser": [
+        [
+          {
+            "node": "Editor Agent - Quality Control",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Quality Check Passed?": {
       "main": [
-        [{ "node": "Generate Final Slug", "type": "main", "index": 0 }],
-        [{ "node": "Parser Agent - Extract Content", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Generate Final Slug",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Quality Failed - Skip",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quality Failed - Skip": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Generate Final Slug": {
-      "main": [[{ "node": "Publish to Supabase", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Publish to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Publish to Supabase": {
-      "main": [[{ "node": "Send Telegram Notification", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Check Publish Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Publish Result": {
+      "main": [
+        [
+          {
+            "node": "Was Published?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was Published?": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Continue Article Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram Notification": {
+      "main": [
+        [
+          {
+            "node": "Continue Article Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Continue Article Loop": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "pinData": {},
