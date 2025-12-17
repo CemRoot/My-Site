@@ -28,8 +28,9 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   // Cache headers for Vercel Edge and CDN
-  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
-  res.setHeader('CDN-Cache-Control', 'public, max-age=300');
+  // Reduced cache time to 60 seconds for faster updates when articles are deleted
+  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+  res.setHeader('CDN-Cache-Control', 'public, max-age=60');
 
   // Handle preflight
   if (req.method === 'OPTIONS') {

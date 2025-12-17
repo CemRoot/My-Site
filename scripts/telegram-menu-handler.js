@@ -718,43 +718,243 @@ export async function handleN8nTrialResetAction() {
 }
 
 /**
+ * Get GitHub workflow status
+ */
+async function getGitHubWorkflowStatus() {
+  if (!CONFIG.GITHUB_TOKEN) {
+    return null;
+  }
+
+  try {
+    const [owner, repo] = CONFIG.GITHUB_REPO.split('/');
+    
+    // Get all workflows
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/actions/workflows`,
+      {
+        headers: {
+          'Authorization': `token ${CONFIG.GITHUB_TOKEN}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Map workflow names to display names
+    const displayMap = {
+      'scrape-tech-news.yml': '📰 Scrape Tech News',
+      'manual-article-scraper.yml': '➕ Manual Article Scraper',
+      'system-health-check.yml': '🏥 System Health Check',
+      'daily-linkedin.yml': '📱 Daily LinkedIn',
+      'vercel-status-monitor.yml': '🔍 Vercel Status Monitor',
+    };
+
+    const statuses = [];
+    
+    for (const workflow of data.workflows || []) {
+      const fileName = workflow.path.split('/').pop(); // Get filename from path
+      const displayName = displayMap[fileName];
+      
+      if (displayName) {
+        statuses.push({
+          name: displayName,
+          fileName: fileName,
+          workflowId: workflow.id,
+          enabled: workflow.state === 'active'
+        });
+      }
+    }
+
+    return statuses;
+  } catch (error) {
+    console.error('GitHub workflow status error:', error);
+    return null;
+  }
+}
+
+/**
+ * Enable/Disable GitHub workflow
+ */
+async function toggleGitHubWorkflow(workflowFileName, enable) {
+  if (!CONFIG.GITHUB_TOKEN) {
+    throw new Error('GITHUB_TOKEN not configured');
+  }
+
+  const [owner, repo] = CONFIG.GITHUB_REPO.split('/');
+  const action = enable ? 'enable' : 'disable';
+  
+  // First, get workflow ID by listing all workflows
+  const listResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/actions/workflows`,
+    {
+      headers: {
+        'Authorization': `token ${CONFIG.GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    }
+  );
+
+  if (!listResponse.ok) {
+    throw new Error(`Failed to list workflows: ${listResponse.status}`);
+  }
+
+  const workflowsData = await listResponse.json();
+  const workflow = workflowsData.workflows?.find(w => w.path.endsWith(workflowFileName));
+
+  if (!workflow) {
+    throw new Error(`Workflow not found: ${workflowFileName}`);
+  }
+
+  // Use workflow ID for enable/disable
+  const response = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflow.id}/${action}`,
+    {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${CONFIG.GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`GitHub API error (${response.status}): ${errorText}`);
+  }
+
+  return true;
+}
+
+/**
  * Handle action_github - GitHub Actions status
  */
 export async function handleGitHubAction() {
-  const githubText = `
-🔧 <b>GITHUB ACTIONS</b>
+  try {
+    await sendTelegramMessage('🔍 <b>GitHub Actions durumu kontrol ediliyor...</b>');
 
-<b>📋 Aktif Workflow'lar</b>
-• Scrape Tech News (3x gün, hafta içi)
-  ⏰ 09:30, 13:00, 16:00 UTC
+    const statuses = await getGitHubWorkflowStatus();
+    
+    let githubText = `🔧 <b>GITHUB ACTIONS YÖNETİMİ</b>\n\n`;
 
-• Manual Article Scraper (on-demand)
-  🎯 Manuel haber ekleme için
+    if (!statuses || statuses.length === 0) {
+      githubText += `⚠️ <b>Workflow durumları alınamadı</b>\n\n`;
+      githubText += `GITHUB_TOKEN environment variable'ı kontrol edin.`;
+    } else {
+      githubText += `<b>📋 Workflow Durumları:</b>\n\n`;
+      
+      statuses.forEach(status => {
+        const icon = status.enabled ? '✅' : '❌';
+        githubText += `${icon} ${status.name}\n`;
+      });
 
-• System Health Check (günlük)
-  ⏰ 08:00 UTC
-
-<b>📊 Durum</b>
-✅ Tüm workflow'lar aktif
-
-<b>ℹ️ Not</b>
-LinkedIn digest'ler artık n8n tarafından yönetiliyor (16:30 UTC)
-
-<b>🔗 Linkler</b>
-GitHub Actions sekmesinden takip edebilirsiniz.`;
-
-  await sendTelegramMessage(githubText, {
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: '🚀 Scraping Başlat', callback_data: 'action_scrape' },
-        ],
-        [
-          { text: '🔙 Ana Menü', callback_data: 'action_refresh_menu' },
-        ],
-      ]
+      githubText += `\n<b>ℹ️ Not</b>\n`;
+      githubText += `Workflow'ları devre dışı bırakmak için aşağıdaki butonları kullanın.`;
     }
-  });
+
+    // Create keyboard with workflow toggle buttons
+    const keyboard = [];
+    
+    if (statuses && statuses.length > 0) {
+      // Group workflows in pairs
+      for (let i = 0; i < statuses.length; i += 2) {
+        const row = [];
+        const workflow1 = statuses[i];
+        const workflow2 = statuses[i + 1];
+        
+        if (workflow1) {
+          const action = workflow1.enabled ? 'disable' : 'enable';
+          const icon = workflow1.enabled ? '⏸️' : '▶️';
+          const shortName = workflow1.name.split(' ').slice(1).join(' ');
+          row.push({
+            text: `${icon} ${shortName}`,
+            callback_data: `github_${action}_${workflow1.fileName}`
+          });
+        }
+        
+        if (workflow2) {
+          const action = workflow2.enabled ? 'disable' : 'enable';
+          const icon = workflow2.enabled ? '⏸️' : '▶️';
+          const shortName = workflow2.name.split(' ').slice(1).join(' ');
+          row.push({
+            text: `${icon} ${shortName}`,
+            callback_data: `github_${action}_${workflow2.fileName}`
+          });
+        }
+        
+        keyboard.push(row);
+      }
+    }
+
+    keyboard.push([
+      { text: '🔄 Durumu Yenile', callback_data: 'action_github' },
+    ]);
+    
+    keyboard.push([
+      { text: '🔙 Sistem Yönetimi', callback_data: 'action_system_management' },
+    ]);
+
+    await sendTelegramMessage(githubText, {
+      reply_markup: { inline_keyboard: keyboard }
+    });
+
+  } catch (error) {
+    console.error('GitHub action error:', error);
+    await sendTelegramMessage(
+      `❌ <b>Hata!</b>\n\n${error.message}\n\n` +
+      `GITHUB_TOKEN kontrol edin veya /help ile destek alın.`
+    );
+  }
+}
+
+/**
+ * Handle GitHub workflow toggle actions
+ */
+export async function handleGitHubWorkflowToggle(action, workflowFileName) {
+  try {
+    const enable = action === 'enable';
+    
+    // Get display name from filename
+    const displayMap = {
+      'scrape-tech-news.yml': 'Scrape Tech News',
+      'manual-article-scraper.yml': 'Manual Article Scraper',
+      'system-health-check.yml': 'System Health Check',
+      'daily-linkedin.yml': 'Daily LinkedIn',
+      'vercel-status-monitor.yml': 'Vercel Status Monitor',
+    };
+    
+    const displayName = displayMap[workflowFileName] || workflowFileName;
+    const actionText = enable ? 'aktifleştiriliyor' : 'devre dışı bırakılıyor';
+    
+    await sendTelegramMessage(`⏳ <b>${displayName} ${actionText}...</b>`);
+
+    await toggleGitHubWorkflow(workflowFileName, enable);
+
+    const statusIcon = enable ? '✅' : '⏸️';
+    const statusText = enable ? 'aktifleştirildi' : 'devre dışı bırakıldı';
+    
+    await sendTelegramMessage(
+      `${statusIcon} <b>${displayName} ${statusText}!</b>\n\n` +
+      `Workflow artık ${enable ? 'çalışacak' : 'çalışmayacak'}.\n\n` +
+      `Durumu kontrol etmek için "Durumu Yenile" butonuna basın.`
+    );
+
+    // Refresh GitHub menu after 1 second
+    setTimeout(() => {
+      handleGitHubAction();
+    }, 1000);
+
+  } catch (error) {
+    console.error('GitHub workflow toggle error:', error);
+    await sendTelegramMessage(
+      `❌ <b>Hata!</b>\n\n${error.message}\n\n` +
+      `GITHUB_TOKEN kontrol edin veya workflow dosya adını doğrulayın.`
+    );
+  }
 }
 
 /**
@@ -1545,6 +1745,7 @@ export default {
   handleStatsAction,
   handleDatabaseAction,
   handleGitHubAction,
+  handleGitHubWorkflowToggle,
   handleHelpAction,
   setBotCommands,
 };

@@ -300,6 +300,28 @@ export default async function handler(req, res) {
           return res.status(200).json({ success: true, message: 'Menu action processed' });
         }
 
+        // Handle GitHub workflow toggle callbacks (github_enable_workflowname or github_disable_workflowname)
+        if (data.startsWith('github_')) {
+          const parts = data.split('_');
+          if (parts.length === 3) {
+            const [_, action, workflowName] = parts;
+            
+            await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                callback_query_id: callback_query.id,
+                text: 'İşlem yapılıyor...'
+              })
+            });
+
+            const menuHandler = await import('../scripts/telegram-menu-handler.js');
+            await menuHandler.handleGitHubWorkflowToggle(action, workflowName);
+            
+            return res.status(200).json({ success: true, message: 'GitHub workflow toggle processed' });
+          }
+        }
+
         // Handle source confirmation callbacks
         if (data.startsWith('source_')) {
           const [_, confirmation] = data.split('_');

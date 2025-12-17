@@ -1,0 +1,566 @@
+{
+  "name": "Tech News Scraper - Multi-Agent (Fixed)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "c0bf85d1-579a-4edf-bf3d-d6dd98432459",
+      "name": "Schedule News Scraping",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [-960, 304]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "newsSourceUrl",
+              "value": "https://nuvemmag.com/post/category/yapay-zeka",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "supabaseTableName",
+              "value": "tech_news_articles",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "categoryName",
+              "value": "AI",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "c22ed945-6d02-4541-9459-0349ff9ead24",
+      "name": "Workflow Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-736, 304]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Workflow Configuration').item.json.newsSourceUrl }}",
+        "options": {
+          "onlyMainContent": true
+        }
+      },
+      "type": "@mendable/n8n-nodes-firecrawl.firecrawl",
+      "typeVersion": 1,
+      "position": [-496, 304],
+      "id": "9ccc5e3c-43ee-4a91-b264-382d5a8490cf",
+      "name": "Scrape Category Page",
+      "credentials": {
+        "firecrawlApi": {
+          "id": "JTgvyQC156XwCaJC",
+          "name": "Firecrawl account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize Firecrawl output - try different possible field names\nconst input = $input.item.json;\n\n// Try different possible field paths\nlet markdown = input.markdown || \n               input.data?.markdown || \n               input.content || \n               input.data?.content ||\n               input.text ||\n               '';\n\n// If still empty, log the structure for debugging\nif (!markdown) {\n  console.log('Firecrawl output structure:', JSON.stringify(input, null, 2));\n  // Try to get the first string value\n  for (const key in input) {\n    if (typeof input[key] === 'string' && input[key].length > 100) {\n      markdown = input[key];\n      break;\n    }\n  }\n}\n\nreturn {\n  json: {\n    markdown: markdown || '',\n    originalData: input // Keep original for debugging\n  }\n};"
+      },
+      "id": "normalize-firecrawl-output",
+      "name": "Normalize Firecrawl Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-360, 304]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.markdown }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a news analyzer agent for a Turkish tech news website (nuvemmag.com).\n\nYour task is to:\n1. Analyze the provided markdown content from a news category page\n2. Extract individual news articles with their:\n   - title (Turkish title)\n   - url (full article URL like https://nuvemmag.com/post/article-slug/)\n   - date (Turkish format like \"16 Aralık 2025\")\n\nIMPORTANT RULES:\n- URLs must match pattern: https://nuvemmag.com/post/[slug]/\n- Dates are in Turkish format: DD MonthName YYYY\n- Turkish months: Ocak, Şubat, Mart, Nisan, Mayıs, Haziran, Temmuz, Ağustos, Eylül, Ekim, Kasım, Aralık\n- Return ONLY articles from the last 3 days\n- Do NOT include category URLs (/post/category/)\n\nReturn a JSON with this structure:\n{\n  \"articles\": [\n    {\n      \"title\": \"Turkish article title\",\n      \"url\": \"https://nuvemmag.com/post/article-slug/\",\n      \"date\": \"16 Aralık 2025\"\n    }\n  ]\n}"
+        }
+      },
+      "id": "f6ff4652-ac7a-4d57-bda6-95696b0b4976",
+      "name": "Analyzer Agent - Extract Articles",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [-224, 304]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "id": "ba4c9b1e-a437-4e19-999f-4aed3d3f22af",
+      "name": "OpenAI Model - Analyzer",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [-288, 528],
+      "credentials": {
+        "openAiApi": {
+          "id": "eSu164nfTuwc1TFy",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"articles\": {\n      \"type\": \"array\",\n      \"description\": \"List of articles found on the page\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"title\": { \"type\": \"string\" },\n          \"url\": { \"type\": \"string\" },\n          \"date\": { \"type\": \"string\" }\n        }\n      }\n    }\n  }\n}"
+      },
+      "id": "f0e06cd7-4d47-4b7e-adb7-3b3ad8ab936e",
+      "name": "Structured Output - News List",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [-32, 528]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the AI output and return individual articles\nconst output = $input.item.json.output;\nlet articles = [];\n\ntry {\n  if (typeof output === 'string') {\n    const parsed = JSON.parse(output);\n    articles = parsed.articles || parsed || [];\n  } else if (output && output.articles) {\n    articles = output.articles;\n  } else if (Array.isArray(output)) {\n    articles = output;\n  }\n} catch (e) {\n  console.log('Parse error:', e.message);\n  return [];\n}\n\n// Return each article as a separate item for looping\nreturn articles.map(article => ({\n  json: {\n    title: article.title || '',\n    url: article.url || '',\n    date: article.date || '',\n    categoryName: $('Workflow Configuration').item.json.categoryName\n  }\n}));"
+      },
+      "id": "4e3ca7e2-0a15-4272-9bd0-e7ee8ca9540d",
+      "name": "Parse Articles to Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [96, 304]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "={{ $('Workflow Configuration').item.json.supabaseTableName }}",
+        "returnAll": false,
+        "limit": 10,
+        "filterType": "string",
+        "filterString": "source_url=eq.{{ $json.url }}"
+      },
+      "id": "d2fadfdc-6ba2-40a2-a97e-8b5d0099cbe5",
+      "name": "Check If Exists in DB",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [320, 304],
+      "credentials": {
+        "supabaseApi": {
+          "id": "numSMv5vyngT6jAm",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $json.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6c84738a-0889-442c-85d6-66d45529e20d",
+      "name": "Is New Article?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [544, 304]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Parse Articles to Items').item.json.url }}",
+        "options": {
+          "onlyMainContent": true
+        }
+      },
+      "type": "@mendable/n8n-nodes-firecrawl.firecrawl",
+      "typeVersion": 1,
+      "position": [768, 304],
+      "id": "scrape-article-detail",
+      "name": "Scrape Article Detail",
+      "credentials": {
+        "firecrawlApi": {
+          "id": "JTgvyQC156XwCaJC",
+          "name": "Firecrawl account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract date and prepare article metadata\nconst articleUrl = $('Parse Articles to Items').item.json.url;\nconst turkishDate = $('Parse Articles to Items').item.json.date;\nconst originalTitle = $('Parse Articles to Items').item.json.title;\nconst categoryName = $('Parse Articles to Items').item.json.categoryName;\n\n// Normalize Firecrawl output - try different possible field names\nconst input = $input.item.json;\nlet markdown = input.markdown || \n               input.data?.markdown || \n               input.content || \n               input.data?.content ||\n               input.text ||\n               '';\n\n// If still empty, try to get the first string value\nif (!markdown) {\n  for (const key in input) {\n    if (typeof input[key] === 'string' && input[key].length > 100) {\n      markdown = input[key];\n      break;\n    }\n  }\n}\n\n// Turkish month mapping\nconst turkishMonths = {\n  'ocak': '01', 'şubat': '02', 'mart': '03', 'nisan': '04',\n  'mayıs': '05', 'haziran': '06', 'temmuz': '07', 'ağustos': '08',\n  'eylül': '09', 'ekim': '10', 'kasım': '11', 'aralık': '12'\n};\n\n// Parse Turkish date to ISO format (YYYY-MM-DD)\nlet isoDate = new Date().toISOString().split('T')[0];\ntry {\n  const match = turkishDate.match(/(\\d{1,2})\\s+([a-zA-ZğüşıöçĞÜŞİÖÇ]+)\\s+(\\d{4})/i);\n  if (match) {\n    const day = match[1].padStart(2, '0');\n    const monthName = match[2].toLowerCase();\n    const year = match[3];\n    const month = turkishMonths[monthName] || '01';\n    isoDate = `${year}-${month}-${day}`;\n  }\n} catch (e) {\n  console.log('Date parse error:', e.message);\n}\n\nreturn {\n  json: {\n    sourceUrl: articleUrl,\n    turkishDate: turkishDate,\n    isoDate: isoDate,\n    originalTitle: originalTitle,\n    categoryName: categoryName,\n    markdown: markdown || ''\n  }\n};"
+      },
+      "id": "extract-date",
+      "name": "Extract Date & Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [992, 304]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Article markdown content:\n\n{{ $json.markdown }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a content parser agent for Turkish tech news articles.\n\nYour task is to:\n1. Extract the MAIN ARTICLE CONTENT from the markdown\n2. REMOVE these elements:\n   - Navigation and header (logo, menu, breadcrumbs)\n   - Social share buttons (Facebook, Twitter, Whatsapp links)\n   - Author info and read time\n   - \"İlginizi Çekebilir\" (You may also like) section\n   - Footer and category links\n   - Reaction buttons (Beğendim, Alkışlıyorum, etc.)\n   - Any nuvemmag.com URLs\n3. EXTRACT and format:\n   - YouTube video IDs → format as [[EMBED:YOUTUBE:VIDEO_ID]]\n   - Twitter/X post IDs → format as [[EMBED:TWEET:TWEET_ID]]\n   - Featured image URL (first main article image)\n4. Find the original source URL (look for \"Kaynak:\" followed by a URL)\n\nReturn structured data:\n- cleanContent: Cleaned Turkish markdown (NO nuvemmag URLs)\n- youtubeIds: Array of YouTube video IDs found\n- tweetIds: Array of Twitter post IDs found\n- featuredImage: URL of the main article image\n- originalSource: The source URL from \"Kaynak:\" line (external URL, not nuvemmag)\n- summary: Brief 2-3 sentence summary in Turkish"
+        }
+      },
+      "id": "a99ea386-b210-430a-989b-bc30145a3fb8",
+      "name": "Parser Agent - Extract Content",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [1216, 304]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "id": "c1b0e83f-69dc-40d1-9c94-dd4e7dc77d5a",
+      "name": "OpenAI Model - Parser",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [1232, 528],
+      "credentials": {
+        "openAiApi": {
+          "id": "eSu164nfTuwc1TFy",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"cleanContent\": { \"type\": \"string\", \"description\": \"Cleaned markdown content without nuvemmag URLs\" },\n    \"youtubeIds\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"tweetIds\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"featuredImage\": { \"type\": \"string\" },\n    \"originalSource\": { \"type\": \"string\", \"description\": \"External source URL from Kaynak line\" },\n    \"summary\": { \"type\": \"string\" }\n  }\n}"
+      },
+      "id": "ddc7c099-94ed-429b-b045-82eab31c2003",
+      "name": "Structured Output - Parsed Content",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [1360, 528]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Original Turkish Title: {{ $('Extract Date & Metadata').item.json.originalTitle }}\n\nTurkish Summary: {{ $json.output.summary }}\n\nTurkish Content:\n{{ $json.output.cleanContent }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a professional Turkish to English translator specializing in tech news.\n\nYour task is to:\n1. Translate the Turkish news article to clear, professional English\n2. Maintain the original meaning, tone, and structure\n3. Keep proper nouns, brand names, and technical terms unchanged\n4. PRESERVE ALL embed tokens exactly: [[EMBED:YOUTUBE:id]] and [[EMBED:TWEET:id]]\n5. Add a TL;DR section at the beginning:\n\n## TL;DR\n[1-2 sentence summary]\n\n### Key Highlights\n- Point 1\n- Point 2\n- Point 3\n\n---\n\n[Rest of the translated article]\n\nIMPORTANT: Do NOT include any nuvemmag.com URLs in the output."
+        }
+      },
+      "id": "786855d2-e20f-4a0e-98d4-74d166b1fdf5",
+      "name": "Translator Agent - Turkish to English",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [1568, 176]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "id": "c5c0edf2-61f9-43b5-9a34-8d5272cf529f",
+      "name": "OpenAI Model - Translator",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [1648, 400],
+      "credentials": {
+        "openAiApi": {
+          "id": "eSu164nfTuwc1TFy",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"title\": { \"type\": \"string\", \"description\": \"Translated English title\" },\n    \"description\": { \"type\": \"string\", \"description\": \"Translated summary for meta description\" },\n    \"content\": { \"type\": \"string\", \"description\": \"Full translated content with TL;DR\" }\n  }\n}"
+      },
+      "id": "translator-output-parser",
+      "name": "Structured Output - Translation",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [1776, 400]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=English Title: {{ $json.output.title }}\n\nEnglish Content:\n{{ $json.output.content }}\n\nYouTube IDs: {{ $('Parser Agent - Extract Content').item.json.output.youtubeIds }}\nTweet IDs: {{ $('Parser Agent - Extract Content').item.json.output.tweetIds }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an editor and quality control agent. Review the translated news article.\n\nCHECK FOR:\n1. Translation quality - Is the English clear and professional?\n2. Embed tokens - Are [[EMBED:YOUTUBE:id]] and [[EMBED:TWEET:id]] present if there were any?\n3. TL;DR section - Does it have summary and key highlights?\n4. NO nuvemmag.com URLs or NuvemMag branding in content\n5. Content completeness - Is it complete, not truncated?\n\nIf issues found:\n- approved: false\n- List specific issues\n- Provide correction instructions\n\nIf everything OK:\n- approved: true\n- Brief quality summary"
+        }
+      },
+      "id": "2f5b8ba2-fe2e-4cf3-923e-8dbe77954cf3",
+      "name": "Editor Agent - Quality Control",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [1920, 176]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "id": "661049f2-fd03-4661-bde6-f21a5e787f63",
+      "name": "OpenAI Model - Editor",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [1936, 400],
+      "credentials": {
+        "openAiApi": {
+          "id": "eSu164nfTuwc1TFy",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"approved\": { \"type\": \"boolean\" },\n    \"issues\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"corrections\": { \"type\": \"string\" },\n    \"qualitySummary\": { \"type\": \"string\" }\n  }\n}"
+      },
+      "id": "121ad452-925e-4856-8044-8b5542ae2b4d",
+      "name": "Structured Output - Quality Check",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [2064, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $json.output.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b9f04541-4a4f-4c8a-a11e-b6d380142261",
+      "name": "Quality Check Passed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [2272, 304]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate slug from English title\nconst englishTitle = $('Translator Agent - Turkish to English').item.json.output.title || '';\n\nconst slug = englishTitle\n  .toLowerCase()\n  .replace(/[^a-z0-9\\s-]/g, '')\n  .replace(/\\s+/g, '-')\n  .replace(/-+/g, '-')\n  .replace(/^-|-$/g, '')\n  .substring(0, 100);\n\nreturn {\n  json: {\n    slug: slug\n  }\n};"
+      },
+      "id": "495270e8-d653-40a7-aa3b-954579d7dee2",
+      "name": "Generate Final Slug",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2496, 304]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "={{ $('Workflow Configuration').item.json.supabaseTableName }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "title",
+              "fieldValue": "={{ $('Translator Agent - Turkish to English').item.json.output.title }}"
+            },
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $('Translator Agent - Turkish to English').item.json.output.content }}"
+            },
+            {
+              "fieldId": "description",
+              "fieldValue": "={{ $('Translator Agent - Turkish to English').item.json.output.description }}"
+            },
+            {
+              "fieldId": "original_title",
+              "fieldValue": "={{ $('Extract Date & Metadata').item.json.originalTitle }}"
+            },
+            {
+              "fieldId": "image_url",
+              "fieldValue": "={{ $('Parser Agent - Extract Content').item.json.output.featuredImage }}"
+            },
+            {
+              "fieldId": "date",
+              "fieldValue": "={{ $('Extract Date & Metadata').item.json.isoDate }}"
+            },
+            {
+              "fieldId": "category",
+              "fieldValue": "={{ $('Extract Date & Metadata').item.json.categoryName }}"
+            },
+            {
+              "fieldId": "source_url",
+              "fieldValue": "={{ $('Extract Date & Metadata').item.json.sourceUrl }}"
+            },
+            {
+              "fieldId": "original_source",
+              "fieldValue": "={{ $('Parser Agent - Extract Content').item.json.output.originalSource }}"
+            },
+            {
+              "fieldId": "slug",
+              "fieldValue": "={{ $('Generate Final Slug').item.json.slug }}"
+            }
+          ]
+        }
+      },
+      "id": "440261d3-1018-498c-8db5-d2bb12101242",
+      "name": "Publish to Supabase",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2720, 304],
+      "credentials": {
+        "supabaseApi": {
+          "id": "numSMv5vyngT6jAm",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=✅ Yeni haber eklendi!\n\n📰 {{ $('Translator Agent - Turkish to English').item.json.output.title }}\n\n🔗 Kategori: {{ $('Extract Date & Metadata').item.json.categoryName }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2944, 304],
+      "id": "abb19f1b-6563-449e-aabc-faeac3c3facd",
+      "name": "Send Telegram Notification",
+      "credentials": {
+        "telegramApi": {
+          "id": "gowr8FzoZ2pfcjya",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule News Scraping": {
+      "main": [[{ "node": "Workflow Configuration", "type": "main", "index": 0 }]]
+    },
+    "Workflow Configuration": {
+      "main": [[{ "node": "Scrape Category Page", "type": "main", "index": 0 }]]
+    },
+    "Scrape Category Page": {
+      "main": [[{ "node": "Normalize Firecrawl Output", "type": "main", "index": 0 }]]
+    },
+    "Normalize Firecrawl Output": {
+      "main": [[{ "node": "Analyzer Agent - Extract Articles", "type": "main", "index": 0 }]]
+    },
+    "Analyzer Agent - Extract Articles": {
+      "main": [[{ "node": "Parse Articles to Items", "type": "main", "index": 0 }]]
+    },
+    "OpenAI Model - Analyzer": {
+      "ai_languageModel": [[{ "node": "Analyzer Agent - Extract Articles", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Structured Output - News List": {
+      "ai_outputParser": [[{ "node": "Analyzer Agent - Extract Articles", "type": "ai_outputParser", "index": 0 }]]
+    },
+    "Parse Articles to Items": {
+      "main": [[{ "node": "Check If Exists in DB", "type": "main", "index": 0 }]]
+    },
+    "Check If Exists in DB": {
+      "main": [[{ "node": "Is New Article?", "type": "main", "index": 0 }]]
+    },
+    "Is New Article?": {
+      "main": [
+        [{ "node": "Scrape Article Detail", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Scrape Article Detail": {
+      "main": [[{ "node": "Extract Date & Metadata", "type": "main", "index": 0 }]]
+    },
+    "Extract Date & Metadata": {
+      "main": [[{ "node": "Parser Agent - Extract Content", "type": "main", "index": 0 }]]
+    },
+    "Parser Agent - Extract Content": {
+      "main": [[{ "node": "Translator Agent - Turkish to English", "type": "main", "index": 0 }]]
+    },
+    "OpenAI Model - Parser": {
+      "ai_languageModel": [[{ "node": "Parser Agent - Extract Content", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Structured Output - Parsed Content": {
+      "ai_outputParser": [[{ "node": "Parser Agent - Extract Content", "type": "ai_outputParser", "index": 0 }]]
+    },
+    "Translator Agent - Turkish to English": {
+      "main": [[{ "node": "Editor Agent - Quality Control", "type": "main", "index": 0 }]]
+    },
+    "OpenAI Model - Translator": {
+      "ai_languageModel": [[{ "node": "Translator Agent - Turkish to English", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Structured Output - Translation": {
+      "ai_outputParser": [[{ "node": "Translator Agent - Turkish to English", "type": "ai_outputParser", "index": 0 }]]
+    },
+    "Editor Agent - Quality Control": {
+      "main": [[{ "node": "Quality Check Passed?", "type": "main", "index": 0 }]]
+    },
+    "OpenAI Model - Editor": {
+      "ai_languageModel": [[{ "node": "Editor Agent - Quality Control", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Structured Output - Quality Check": {
+      "ai_outputParser": [[{ "node": "Editor Agent - Quality Control", "type": "ai_outputParser", "index": 0 }]]
+    },
+    "Quality Check Passed?": {
+      "main": [
+        [{ "node": "Generate Final Slug", "type": "main", "index": 0 }],
+        [{ "node": "Parser Agent - Extract Content", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generate Final Slug": {
+      "main": [[{ "node": "Publish to Supabase", "type": "main", "index": 0 }]]
+    },
+    "Publish to Supabase": {
+      "main": [[{ "node": "Send Telegram Notification", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "83b4d6c03571926783abaab14e53cd3236230b18be1732a2f9aca09c9c302d7f"
+  }
+}
