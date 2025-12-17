@@ -54,8 +54,7 @@
     <link rel="dns-prefetch" href="https://vercel.live" />
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
 
-    <!-- Preload hero image for faster LCP -->
-    <link rel="preload" href="/portrait.webp" as="image" type="image/webp" fetchpriority="high" />
+    <!-- Hero image loaded eagerly in Hero.tsx with fetchPriority="high" -->
 
     <!-- Preload critical fonts for faster FCP -->
     <link rel="preload" href="/fonts/geist-sans/Geist-Regular.woff2" as="font" type="font/woff2" crossorigin />
