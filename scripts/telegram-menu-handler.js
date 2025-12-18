@@ -898,7 +898,7 @@ export async function handleGitHubAction() {
       { text: '🔙 Sistem Yönetimi', callback_data: 'action_system_management' },
     ]);
 
-    await sendTelegramMessage(githubText, {
+  await sendTelegramMessage(githubText, {
       reply_markup: { inline_keyboard: keyboard }
     });
 
