@@ -10,8 +10,12 @@
  * - Smart rate limiting
  */
 
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import crypto from 'crypto';
+
+// Load both .env and .env.local files
+dotenv.config();
+dotenv.config({ path: '.env.local', override: true });
 import path from 'path';
 import { fileURLToPath } from 'url';
 import Groq from 'groq-sdk';
@@ -53,15 +57,15 @@ function hasNuvemmagDomain(line) {
 const CONFIG = {
   // All categories to scrape (excluding "Çiçek ile Teknoloji")
   // Priority order: AI Applications first (most articles), then other categories
-  // NOTE: Site URL changed from www.nuvemmag.com/post-category/ to nuvemmag.com/post/category/
+  // NOTE: Site URL changed from /post/category/ to /category/ (December 2025)
   CATEGORIES: [
-    { name: 'AI Applications', url: 'https://nuvemmag.com/post/category/yapay-zeka-uygulamalari', tag: 'AI Applications' },
-    { name: 'Latest News', url: 'https://nuvemmag.com/post/category/en-son-haberler', tag: 'Latest News' },
-    { name: 'Artificial Intelligence', url: 'https://nuvemmag.com/post/category/yapay-zeka', tag: 'AI' },
-    { name: 'Technology', url: 'https://nuvemmag.com/post/category/teknoloji', tag: 'Tech' },
-    { name: 'Sustainability', url: 'https://nuvemmag.com/post/category/surdurulebilirlik', tag: 'Sustainability' },
-    { name: 'Science & World', url: 'https://nuvemmag.com/post/category/bilim-ve-dunya', tag: 'Science' },
-    { name: 'Agenda', url: 'https://nuvemmag.com/post/category/gundem', tag: 'News' },
+    { name: 'AI Applications', url: 'https://nuvemmag.com/category/yapay-zeka-uygulamalari', tag: 'AI Applications' },
+    { name: 'Latest News', url: 'https://nuvemmag.com/category/en-son-haberler', tag: 'Latest News' },
+    { name: 'Artificial Intelligence', url: 'https://nuvemmag.com/category/yapay-zeka', tag: 'AI' },
+    { name: 'Technology', url: 'https://nuvemmag.com/category/teknoloji', tag: 'Tech' },
+    { name: 'Sustainability', url: 'https://nuvemmag.com/category/surdurulebilirlik', tag: 'Sustainability' },
+    { name: 'Science & World', url: 'https://nuvemmag.com/category/bilim-ve-dunya', tag: 'Science' },
+    { name: 'Agenda', url: 'https://nuvemmag.com/category/gundem', tag: 'News' },
   ],
   FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY || '',
   GROQ_API_KEY: process.env.GROQ_API_KEY || '',
@@ -295,23 +299,81 @@ const TURKISH_MONTHS = {
 function parseTurkishDate(dateStr) {
   if (!dateStr) return null;
   
+  const str = dateStr.trim().toLowerCase();
+  const now = new Date();
+  
   // Already in DD/MM/YYYY format
-  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr.trim())) {
-    return dateStr.trim();
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
+    return str;
   }
   
-  // Parse "16 Aralık 2025" format
-  const match = dateStr.trim().match(/^(\d{1,2})\s+([a-zA-ZğüşıöçĞÜŞİÖÇ]+)\s+(\d{4})$/i);
-  if (!match) return null;
+  // Handle relative dates
+  // "bugün" = today
+  if (str === 'bugün' || str.includes('bugün')) {
+    return `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+  }
   
-  const day = parseInt(match[1], 10);
-  const monthName = match[2].toLowerCase();
-  const year = parseInt(match[3], 10);
+  // "dün" = yesterday
+  if (str === 'dün' || str.includes('dün')) {
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    return `${yesterday.getDate()}/${yesterday.getMonth() + 1}/${yesterday.getFullYear()}`;
+  }
   
-  const month = TURKISH_MONTHS[monthName];
-  if (!month) return null;
+  // "X dakika önce" = X minutes ago
+  const minutesMatch = str.match(/(\d+)\s*dakika\s*önce/i);
+  if (minutesMatch) {
+    const date = new Date(now);
+    date.setMinutes(date.getMinutes() - parseInt(minutesMatch[1]));
+    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+  }
   
-  return `${day}/${month}/${year}`;
+  // "X saat önce" = X hours ago
+  const hoursMatch = str.match(/(\d+)\s*saat\s*önce/i);
+  if (hoursMatch) {
+    const date = new Date(now);
+    date.setHours(date.getHours() - parseInt(hoursMatch[1]));
+    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+  }
+  
+  // "X gün önce" = X days ago
+  const daysMatch = str.match(/(\d+)\s*gün\s*önce/i);
+  if (daysMatch) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - parseInt(daysMatch[1]));
+    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+  }
+  
+  // "X hafta önce" = X weeks ago
+  const weeksMatch = str.match(/(\d+)\s*hafta\s*önce/i);
+  if (weeksMatch) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - (parseInt(weeksMatch[1]) * 7));
+    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+  }
+  
+  // "X ay önce" = X months ago
+  const monthsMatch = str.match(/(\d+)\s*ay\s*önce/i);
+  if (monthsMatch) {
+    const date = new Date(now);
+    date.setMonth(date.getMonth() - parseInt(monthsMatch[1]));
+    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+  }
+  
+  // Parse absolute "16 Aralık 2025" format
+  const absoluteMatch = dateStr.trim().match(/(\d{1,2})\s+([a-zA-ZğüşıöçĞÜŞİÖÇ]+)\s+(\d{4})/i);
+  if (absoluteMatch) {
+    const day = parseInt(absoluteMatch[1], 10);
+    const monthName = absoluteMatch[2].toLowerCase();
+    const year = parseInt(absoluteMatch[3], 10);
+    
+    const month = TURKISH_MONTHS[monthName];
+    if (month) {
+      return `${day}/${month}/${year}`;
+    }
+  }
+  
+  return null;
 }
 
 /**
@@ -335,29 +397,35 @@ async function parseArticlesWithAI(markdown, categoryTag) {
       messages: [
         {
           role: 'system',
-          content: `You are a web scraping assistant. Extract article information from markdown content.
+          content: `You are a web scraping assistant. Extract article information from Turkish tech news markdown.
 
-IMPORTANT RULES:
-1. Extract ONLY article URLs that match pattern: https://nuvemmag.com/post/[article-slug]/
-2. Extract the publication date for each article (format: "DD Month YYYY" like "16 Aralık 2025")
-3. Return ONLY valid JSON array, no explanations
-4. If no articles found, return empty array: []
+CRITICAL URL PATTERNS (updated December 2025):
+- NEW format: https://nuvemmag.com/article-slug-here/
+- OLD format: https://nuvemmag.com/post/article-slug/ (still valid)
+- Do NOT include category URLs like /category/
 
-Output format (JSON array):
-[
-  {"url": "https://nuvemmag.com/post/article-slug/", "date": "16 Aralık 2025"},
-  ...
-]`
+DATE FORMATS to recognize:
+- Absolute: "16 Aralık 2025", "17 Aralık 2024"
+- Relative: "3 gün önce", "11 saat önce", "1 hafta önce", "2 ay önce", "bugün", "dün"
+
+RULES:
+1. Extract article URLs (NOT category URLs)
+2. Extract publication date (absolute or relative format)
+3. Return ONLY valid JSON array
+4. If no articles found, return: []
+
+Output JSON:
+[{"url": "https://nuvemmag.com/article-slug/", "date": "3 gün önce"}]`
         },
         {
           role: 'user',
-          content: `Extract all article URLs and their dates from this markdown content. Return ONLY a JSON array.
+          content: `Extract all article URLs and their dates from this Turkish tech news category page. Return ONLY a JSON array.
 
-${markdown.substring(0, 8000)}`
+${markdown.substring(0, 10000)}`
         }
       ],
       temperature: 0.1,
-      max_tokens: 2000,
+      max_tokens: 3000,
     });
 
     const response = completion.choices[0]?.message?.content || '[]';
@@ -381,14 +449,31 @@ ${markdown.substring(0, 8000)}`
     const processedArticles = [];
     
     for (const article of articles) {
-      if (!article.url || !article.url.includes('nuvemmag.com/post/')) {
+      // Validate URL - accept both new and old formats
+      // NEW: https://nuvemmag.com/article-slug/
+      // OLD: https://nuvemmag.com/post/article-slug/
+      if (!article.url || !article.url.includes('nuvemmag.com/')) {
         continue;
       }
       
-      // Parse Turkish date to DD/MM/YYYY format
+      // Skip category URLs
+      if (article.url.includes('/category/')) {
+        continue;
+      }
+      
+      // Parse Turkish date (absolute or relative)
       const parsedDate = parseTurkishDate(article.date);
       if (!parsedDate) {
         console.log(`    ⚠️ Could not parse date: ${article.date}`);
+        // Still include article with today's date as fallback
+        const today = new Date();
+        const todayStr = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
+        processedArticles.push({
+          url: article.url,
+          category: categoryTag,
+          scrapedDate: todayStr,
+          datePriority: 50 // Lower priority for unknown dates
+        });
         continue;
       }
       
@@ -455,21 +540,68 @@ function getDatePriority(dateString) {
 }
 
 /**
+ * Extract slug from URL (handles both old and new formats)
+ * OLD: https://nuvemmag.com/post/article-slug/
+ * NEW: https://nuvemmag.com/article-slug/
+ */
+function extractSlugFromUrl(url) {
+  if (!url) return null;
+  try {
+    const urlObj = new URL(url);
+    let path = urlObj.pathname;
+    // Remove trailing slash
+    path = path.replace(/\/$/, '');
+    // Remove /post/ prefix if present
+    path = path.replace(/^\/post/, '');
+    // Remove leading slash
+    path = path.replace(/^\//, '');
+    return path || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
  * Check which articles already exist in Supabase (bulk check)
+ * Uses slug-based matching to handle URL format changes
  */
 async function getExistingArticles(urls) {
   try {
+    // Extract slugs from input URLs
+    const slugs = urls.map(extractSlugFromUrl).filter(s => s);
+    
+    // Get ALL existing articles and check locally (more reliable than SQL LIKE)
     const { data, error } = await supabase
       .from('tech_news_articles')
-      .select('source_url')
-      .in('source_url', urls);
+      .select('source_url, slug');
     
     if (error) {
       console.error('Error checking existing articles:', error);
       return new Set();
     }
     
-    return new Set(data.map(article => article.source_url));
+    // Build a set of existing slugs from DB
+    const existingSlugs = new Set();
+    for (const article of data) {
+      // From source_url
+      const slugFromUrl = extractSlugFromUrl(article.source_url);
+      if (slugFromUrl) existingSlugs.add(slugFromUrl);
+      // From slug field
+      if (article.slug) existingSlugs.add(article.slug);
+    }
+    
+    // Find input URLs whose slugs already exist
+    const existingUrls = new Set();
+    for (const url of urls) {
+      const slug = extractSlugFromUrl(url);
+      if (slug && existingSlugs.has(slug)) {
+        existingUrls.add(url);
+      }
+    }
+    
+    console.log(`  📊 Slug-based duplicate check: ${existingUrls.size}/${urls.length} already exist`);
+    
+    return existingUrls;
   } catch (error) {
     console.error('Error in bulk check:', error);
     return new Set();
@@ -608,22 +740,25 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
     
     const articles = [];
     
-    // Updated regex patterns for new site structure:
-    // - URL pattern: https://nuvemmag.com/post/[slug]/ (no www, /post/ instead of /post-category/)
-    // - Date pattern: Turkish dates like "16 Aralık 2025" OR DD/MM/YYYY
+    // Updated regex patterns for new site structure (December 2025):
+    // - NEW URL pattern: https://nuvemmag.com/[slug]/ (no /post/)
+    // - OLD URL pattern: https://nuvemmag.com/post/[slug]/ (backward compat)
+    // - Date patterns: Turkish "16 Aralık 2025", relative "3 gün önce", DD/MM/YYYY
     const patterns = [
-      // Pattern 1: Turkish date format with new URL structure
-      // Matches: "16 Aralık 2025" followed by URL
-      /(\d{1,2}\s+(?:Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{4})[\s\S]*?\((https:\/\/nuvemmag\.com\/post\/[^)]+)\)/gi,
+      // Pattern 1: NEW URL format (no /post/) with Turkish absolute date
+      /(\d{1,2}\s+(?:Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{4})[\s\S]*?\((https:\/\/nuvemmag\.com\/(?!category\/)[^)]+)\)/gi,
       
-      // Pattern 2: URL followed by Turkish date
-      /\]\((https:\/\/nuvemmag\.com\/post\/[^)]+)\)[\s\S]*?(\d{1,2}\s+(?:Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{4})/gi,
+      // Pattern 2: NEW URL with relative date "X gün önce"
+      /(\d+\s*(?:dakika|saat|gün|hafta|ay)\s*önce|bugün|dün)[\s\S]*?\((https:\/\/nuvemmag\.com\/(?!category\/)[^)]+)\)/gi,
       
-      // Pattern 3: Old DD/MM/YYYY format (backward compatibility)
-      /(\d{1,2}\/\d{1,2}\/\d{4})[^\(]*\((https:\/\/(?:www\.)?nuvemmag\.com\/post\/[^)]+)\)/g,
+      // Pattern 3: URL followed by Turkish date
+      /\]\((https:\/\/nuvemmag\.com\/(?!category\/)[^)]+)\)[\s\S]*?(\d{1,2}\s+(?:Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{4})/gi,
       
-      // Pattern 4: Just extract URLs and look for nearby dates
-      /\((https:\/\/nuvemmag\.com\/post\/[^/]+\/)\)/g,
+      // Pattern 4: OLD /post/ format (backward compatibility)
+      /\((https:\/\/nuvemmag\.com\/post\/[^)]+)\)/g,
+      
+      // Pattern 5: Just extract article URLs (fallback)
+      /\((https:\/\/nuvemmag\.com\/(?!category\/|page\/|tag\/)[a-z0-9-]+\/)\)/gi,
     ];
     
     let totalMatches = 0;
@@ -642,38 +777,47 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
         
         let date, url;
         
-        if (i === 1) {
-          // Pattern 2: URL first, then date
+        if (i === 2) {
+          // Pattern 3: URL first, then date
           url = match[1];
           date = match[2];
-        } else if (i === 3) {
-          // Pattern 4: URL only, try to find date nearby
+        } else if (i === 3 || i === 4) {
+          // Pattern 4 & 5: URL only, try to find date nearby
           url = match[1];
-          // Look for date in surrounding context
-          const startIdx = Math.max(0, match.index - 100);
-          const endIdx = Math.min(markdown.length, match.index + url.length + 100);
+          // Look for date in surrounding context (before and after)
+          const startIdx = Math.max(0, match.index - 150);
+          const endIdx = Math.min(markdown.length, match.index + url.length + 150);
           const context = markdown.substring(startIdx, endIdx);
           
+          // Try relative dates first (more common in new format)
+          const relativeDateMatch = context.match(/(\d+\s*(?:dakika|saat|gün|hafta|ay)\s*önce|bugün|dün)/i);
           const turkishDateMatch = context.match(/(\d{1,2}\s+(?:Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+\d{4})/i);
           const numericDateMatch = context.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
           
-          if (turkishDateMatch) {
+          if (relativeDateMatch) {
+            date = relativeDateMatch[1];
+          } else if (turkishDateMatch) {
             date = turkishDateMatch[1];
           } else if (numericDateMatch) {
             date = numericDateMatch[1];
           } else {
-            continue; // Skip if no date found
+            // Use today's date as fallback for URL-only patterns
+            const now = new Date();
+            date = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
           }
         } else {
-          // Pattern 1 and 3: date first, then URL
+          // Pattern 1, 2: date first, then URL
           date = match[1];
           url = match[2];
         }
         
-        // Clean URL
+        // Clean URL and skip category URLs
         url = url.replace(/[,;.]$/, '');
+        if (url.includes('/category/')) {
+          continue;
+        }
         
-        // Parse date (handles both Turkish and DD/MM/YYYY formats)
+        // Parse date (handles Turkish absolute, relative, and DD/MM/YYYY formats)
         const parsedDate = parseTurkishDate(date);
         if (!parsedDate) {
           continue;

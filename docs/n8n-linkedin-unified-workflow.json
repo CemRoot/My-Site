@@ -11,13 +11,13 @@
           ]
         }
       },
-      "id": "b0f9621c-274c-4658-aeb5-2181b5df806f",
+      "id": "678a368a-e758-4ee3-8f63-c43888aaf157",
       "name": "Daily Schedule (16:30 UTC)",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -3232,
-        128
+        -1344,
+        480
       ],
       "webhookId": "schedule-trigger-id",
       "notesInFlow": true,
@@ -30,13 +30,13 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "529a7ad1-7f96-44b1-b651-3ebd2ee3099e",
+      "id": "7706d1b7-6614-4da4-bfeb-186aeebd88ce",
       "name": "Webhook Trigger (Manual + Callbacks)",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -3232,
-        320
+        -1344,
+        672
       ],
       "webhookId": "webhook-unified-id",
       "notesInFlow": true,
@@ -46,13 +46,13 @@
       "parameters": {
         "jsCode": "// Parse trigger source and prepare workflow data\nconst items = $input.all();\nconst firstItem = items[0];\n\nlet triggerType = 'schedule';\nlet webhookData = null;\nlet callbackData = null;\n\n// Check if this came from webhook (has body)\nif (firstItem && firstItem.json && firstItem.json.body) {\n  webhookData = firstItem.json.body;\n  \n  // Check if it's a callback (has action and digest_id)\n  if (webhookData.action && webhookData.digest_id) {\n    triggerType = 'callback';\n    callbackData = {\n      action: webhookData.action,\n      digest_id: webhookData.digest_id,\n      callback_query_id: webhookData.callback_query_id,\n      chat_id: webhookData.chat_id,\n      message_id: webhookData.message_id,\n      edited_content: webhookData.edited_content || null\n    };\n  } \n  // Otherwise it's a manual trigger\n  else if (webhookData.trigger === 'manual') {\n    triggerType = 'manual';\n  }\n}\n\n// Get today's date in consistent format (YYYY-MM-DD)\nconst today = new Date();\nconst todayDate = today.toISOString().split('T')[0];\n\n// Get yesterday's date (for fetching articles from last 2 days)\nconst yesterday = new Date(today);\nyesterday.setDate(yesterday.getDate() - 1);\nconst yesterdayDate = yesterday.toISOString().split('T')[0];\n\n// Get Telegram Chat ID\n// Priority: webhook data > hardcoded\nconst telegramChatId = (webhookData && webhookData.chat_id) \n  ? webhookData.chat_id \n  : '1925139795'; // ← SENIN TELEGRAM CHAT ID'N\n\n// Prepare output\nreturn {\n  triggerType: triggerType,\n  todayDate: todayDate,\n  yesterdayDate: yesterdayDate,\n  timestamp: new Date().toISOString(),\n  webhookData: webhookData,\n  callbackData: callbackData,\n  telegramChatId: telegramChatId\n};"
       },
-      "id": "4b7b6698-a249-41b7-ad4c-2459850321ba",
+      "id": "52f42af2-02e2-4f91-b071-3a8834f8bc35",
       "name": "Parse Trigger Type",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3008,
-        224
+        -1120,
+        576
       ],
       "notesInFlow": true,
       "notes": "Determines: schedule, manual, or callback"
@@ -81,13 +81,13 @@
         },
         "options": {}
       },
-      "id": "816b8e5b-0974-492b-9ba6-d32128ff1400",
+      "id": "c1bcf0aa-402c-4aaa-a7ab-c27ccce3c05f",
       "name": "Route by Trigger Type",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -2560,
-        128
+        -672,
+        480
       ],
       "notesInFlow": true,
       "notes": "TRUE = Callback | FALSE = Schedule/Manual"
@@ -106,19 +106,19 @@
           ]
         }
       },
-      "id": "a713d11d-dd40-4fa3-8e9c-708bb3d57c82",
+      "id": "251005b3-7853-4e99-9e80-597d331f90e0",
       "name": "Check If Digest Exists",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -2336,
-        320
+        -448,
+        672
       ],
       "notesInFlow": true,
       "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
-          "id": "9ZQTX4y8ewrWFtc0",
+          "id": "numSMv5vyngT6jAm",
           "name": "Supabase account"
         }
       },
@@ -149,13 +149,13 @@
         },
         "options": {}
       },
-      "id": "e8015641-24e0-4b5b-864e-febf412cb692",
+      "id": "89d5a7df-dd76-490a-892d-27527565fcfa",
       "name": "Digest Exists?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -2112,
-        320
+        -224,
+        672
       ],
       "notesInFlow": true,
       "notes": "TRUE = Already exists | FALSE = Create new"
@@ -176,19 +176,19 @@
           ]
         }
       },
-      "id": "3fc4a5b5-28ca-4dd2-934b-207f2350d625",
+      "id": "6411c0b8-09e1-48a2-96b0-4948b1fb07f9",
       "name": "Fetch Today's Articles",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -1664,
-        416
+        224,
+        768
       ],
       "notesInFlow": true,
       "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
-          "id": "9ZQTX4y8ewrWFtc0",
+          "id": "numSMv5vyngT6jAm",
           "name": "Supabase account"
         }
       },
@@ -198,13 +198,13 @@
       "parameters": {
         "jsCode": "// Group articles into a single array with scoring and sorting\n// IMPORTANT: Generate correct website URLs (cemkoyluoglu.codes) NOT source URLs (nuvemmag.com)\nconst items = $input.all();\nconst SITE_BASE_URL = 'https://cemkoyluoglu.codes/tech-news';\n\n// Define category weights for diversity (higher = more interesting)\nconst categoryWeights = {\n  'AI': 1.2,\n  'Cybersecurity': 1.15,\n  'Cloud': 1.1,\n  'Hardware': 1.1,\n  'Data Science': 1.05,\n  'Software': 1.0,\n  'General': 0.9\n};\n\n// Define trusted sources (add more as needed)\nconst trustedSources = [\n  'techcrunch.com',\n  'theverge.com',\n  'arstechnica.com',\n  'wired.com',\n  'mit.edu',\n  'stanford.edu'\n];\n\n// Calculate score for each article\nconst articlesWithScores = items.map(item => {\n  // Generate the correct article URL for our website\n  const articleUrl = `${SITE_BASE_URL}/${item.json.slug}`;\n  \n  const article = {\n    id: item.json.id,\n    title: item.json.title,\n    title_en: item.json.title_en,\n    summary_en: item.json.summary_en,\n    slug: item.json.slug,\n    category: item.json.category,\n    // CRITICAL: Use our website URL, NOT the source URL (nuvemmag.com)\n    article_url: articleUrl,\n    created_at: item.json.created_at\n  };\n\n  let score = 0;\n\n  // 1. Novelty Score (0-30 points) - newer articles score higher\n  const articleDate = new Date(article.created_at);\n  const now = new Date();\n  const hoursSincePublished = (now - articleDate) / (1000 * 60 * 60);\n  const noveltyScore = Math.max(0, 30 - (hoursSincePublished * 1.5));\n  score += noveltyScore;\n\n  // 2. Category Diversity Score (0-20 points)\n  const categoryWeight = categoryWeights[article.category] || 1.0;\n  score += categoryWeight * 20;\n\n  // 3. Source Credibility Score (0-25 points)\n  // Note: We use the original source_url from the item for scoring, not article_url\n  const originalSourceUrl = item.json.source_url || item.json.original_source || '';\n  const isTrustedSource = trustedSources.some(trusted => originalSourceUrl.includes(trusted));\n  score += isTrustedSource ? 25 : 10;\n\n  // 4. Content Depth Score (0-25 points)\n  const contentLength = (article.content_en || '').length;\n  const summaryLength = (article.summary_en || '').length;\n  const titleLength = (article.title_en || '').length;\n  \n  // Longer, more detailed content scores higher\n  const depthScore = Math.min(25, (contentLength / 200) + (summaryLength / 50) + (titleLength / 10));\n  score += depthScore;\n\n  return {\n    ...article,\n    _score: Math.round(score * 100) / 100 // Round to 2 decimals\n  };\n});\n\n// Sort by score in descending order (highest score first)\nconst sortedArticles = articlesWithScores.sort((a, b) => b._score - a._score);\n\n// Remove the _score field before returning (optional, keep for debugging)\nconst articles = sortedArticles.map(({ _score, ...article }) => article);\n\nreturn {\n  articles: articles,\n  articleCount: articles.length,\n  todayDate: $('Parse Trigger Type').item.json.todayDate,\n  // Include scoring info for debugging\n  scoringInfo: {\n    highestScore: sortedArticles[0]?._score || 0,\n    lowestScore: sortedArticles[sortedArticles.length - 1]?._score || 0,\n    averageScore: sortedArticles.reduce((sum, a) => sum + a._score, 0) / sortedArticles.length\n  }\n};"
       },
-      "id": "829209a3-e315-4156-bfce-ea4b7be8eeee",
+      "id": "513b1261-862e-4335-98e9-1bc763f79178",
       "name": "Prepare Articles for AI",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1216,
-        128
+        672,
+        480
       ],
       "notesInFlow": true,
       "notes": "Format articles for OpenAI prompt"
@@ -237,18 +237,18 @@
           ]
         }
       },
-      "id": "9166616b-026a-446d-9a0a-769240fb624a",
+      "id": "89afa960-fc24-47c3-bb87-48f39f02d16e",
       "name": "Save Digest to Database",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -544,
-        128
+        1344,
+        480
       ],
       "notesInFlow": true,
       "credentials": {
         "supabaseApi": {
-          "id": "9ZQTX4y8ewrWFtc0",
+          "id": "numSMv5vyngT6jAm",
           "name": "Supabase account"
         }
       },
@@ -258,13 +258,13 @@
       "parameters": {
         "jsCode": "// Prepare Telegram message with inline buttons\nconst digest = $input.first().json;\nconst content = digest.suggested_content || 'No content generated';\n\n// Telegram has 4096 char limit - show as much as possible\nconst maxLength = 3500; // Leave room for header and buttons\nconst displayContent = content.length > maxLength \n  ? content.substring(0, maxLength) + '\\n\\n⚠️ [Content truncated due to Telegram limit - full version will be posted to LinkedIn]'\n  : content;\n\nconst message = `📰 *Daily LinkedIn Digest Ready!*\\n\\n📅 Date: ${digest.digest_date}\\n📊 Articles: ${digest.article_count}\\n\\n${displayContent}\\n\\n✅ Choose an action:`;\n\n// Inline keyboard - removed \"View Full\" button\nconst replyMarkup = {\n  inline_keyboard: [\n    [\n      { text: '✅ Approve & Post', callback_data: `approve_${digest.id}` },\n      { text: '❌ Reject', callback_data: `reject_${digest.id}` }\n    ],\n    [\n      { text: '✏️ Edit & Approve', callback_data: `edit_${digest.id}` }\n    ]\n  ]\n};\n\nreturn {\n  chatId: $('Parse Trigger Type').first().json.telegramChatId,\n  text: message,\n  replyMarkup: replyMarkup,\n  digestId: digest.id,\n  digestDate: digest.digest_date\n};"
       },
-      "id": "6ec08022-e537-45bb-93bd-289655bade72",
+      "id": "80c8e86e-ece8-4040-9d1d-c4b93d8fc9eb",
       "name": "Prepare Telegram Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -320,
-        128
+        1568,
+        480
       ],
       "notesInFlow": true,
       "notes": "Format message with Approve/Reject/Edit/View buttons"
@@ -307,19 +307,19 @@
           "parse_mode": "Markdown"
         }
       },
-      "id": "3ea5913d-d7d9-4212-8731-d00ab613bf8f",
+      "id": "59e95ef9-787b-44d6-87a8-aa6eb1bed0e3",
       "name": "Send to Telegram",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -96,
-        128
+        1792,
+        480
       ],
       "notesInFlow": true,
       "webhookId": "307492ad-c357-4cef-b89e-f67aa10fab50",
       "credentials": {
         "telegramApi": {
-          "id": "RRyxVCO8dulJ64bD",
+          "id": "gowr8FzoZ2pfcjya",
           "name": "Telegram account"
         }
       },
@@ -331,13 +331,13 @@
         "responseBody": "={{ { success: true, message: 'Digest creation started', date: $('Parse Trigger Type').first().json.todayDate } }}",
         "options": {}
       },
-      "id": "99c62abd-0d62-4658-ad67-0a2250857f3a",
+      "id": "37e1d4c5-3434-4e29-a343-8f7122c174aa",
       "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        -1888,
-        416
+        0,
+        768
       ]
     },
     {
@@ -349,19 +349,19 @@
           "parse_mode": "HTML"
         }
       },
-      "id": "beced4e4-dcdd-49e9-9a3d-5de671cca989",
+      "id": "7ccd767e-8629-42eb-b75f-67e14b25cf65",
       "name": "Notify Duplicate",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -1664,
-        224
+        224,
+        576
       ],
       "notesInFlow": true,
       "webhookId": "cf63a846-811b-4604-aab5-88c76aed3b73",
       "credentials": {
         "telegramApi": {
-          "id": "RRyxVCO8dulJ64bD",
+          "id": "gowr8FzoZ2pfcjya",
           "name": "Telegram account"
         }
       },
@@ -373,13 +373,13 @@
         "responseBody": "={{ { success: false, message: 'Digest already exists for today', date: $('Parse Trigger Type').first().json.todayDate } }}",
         "options": {}
       },
-      "id": "3e5bad87-ac82-47ef-b95a-028f459b715b",
+      "id": "f2bc25c5-d051-4573-a93a-37ad9e0a6ec5",
       "name": "Respond Duplicate",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        -1888,
-        224
+        0,
+        576
       ]
     },
     {
@@ -395,18 +395,18 @@
           ]
         }
       },
-      "id": "8717becb-6d1b-4fe1-a638-74e344c21972",
+      "id": "8ca21725-94a6-4d7b-95d8-8b916f540824",
       "name": "Fetch Digest by ID",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -2336,
-        -160
+        -448,
+        192
       ],
       "notesInFlow": true,
       "credentials": {
         "supabaseApi": {
-          "id": "9ZQTX4y8ewrWFtc0",
+          "id": "numSMv5vyngT6jAm",
           "name": "Supabase account"
         }
       },
@@ -488,13 +488,13 @@
           "allMatchingOutputs": false
         }
       },
-      "id": "86e4c48a-edbb-483c-8645-3cf84f4be1b4",
+      "id": "16694582-6ff7-4f4c-860f-d29a608f4ae0",
       "name": "Route Callback Action",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        -2112,
-        -176
+        -224,
+        176
       ],
       "notesInFlow": true,
       "notes": "Route to: approve / reject / edit"
@@ -521,17 +521,17 @@
           ]
         }
       },
-      "id": "9be24090-a5c1-4ea7-9251-02e37ce89722",
+      "id": "82fbe371-b06f-4752-abf3-5c6b79c9e4c3",
       "name": "Update Status: Posting",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -1664,
-        -352
+        224,
+        0
       ],
       "credentials": {
         "supabaseApi": {
-          "id": "9ZQTX4y8ewrWFtc0",
+          "id": "numSMv5vyngT6jAm",
           "name": "Supabase account"
         }
       }
@@ -542,18 +542,18 @@
         "text": "={{ $('Clean Content for LinkedIn').item.json.clean_content }}",
         "additionalFields": {}
       },
-      "id": "00d2df2b-afda-4187-a685-28b02ca31f8e",
+      "id": "f283539c-18bb-4b5f-90f9-28b6fe89384a",
       "name": "Post to LinkedIn",
       "type": "n8n-nodes-base.linkedIn",
       "typeVersion": 1,
       "position": [
-        -1216,
-        -352
+        672,
+        0
       ],
       "notesInFlow": true,
       "credentials": {
         "linkedInOAuth2Api": {
-          "id": "IlYDxh9P8HKkL5bY",
+          "id": "6Ih66xopGV0JPRBM",
           "name": "LinkedIn account"
         }
       },
@@ -589,17 +589,17 @@
           ]
         }
       },
-      "id": "a842b476-8c42-4bee-9363-08a93a3e5905",
+      "id": "03f684d7-44c1-4c2b-9f6e-50adcd3f88fa",
       "name": "Update Status: Posted",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -928,
-        -352
+        960,
+        0
       ],
       "credentials": {
         "supabaseApi": {
-          "id": "9ZQTX4y8ewrWFtc0",
+          "id": "numSMv5vyngT6jAm",
           "name": "Supabase account"
         }
       }
@@ -612,18 +612,18 @@
           "appendAttribution": false
         }
       },
-      "id": "6f10e670-65fa-4cfc-b9b5-e9b000388a4e",
+      "id": "248bae13-63fa-4c33-981d-7be6f199d50c",
       "name": "Telegram: Approve Success",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -640,
-        -352
+        1248,
+        0
       ],
       "webhookId": "e057ab3d-6ab3-47fc-99e2-541287812570",
       "credentials": {
         "telegramApi": {
-          "id": "RRyxVCO8dulJ64bD",
+          "id": "gowr8FzoZ2pfcjya",
           "name": "Telegram account"
         }
       }
@@ -634,13 +634,13 @@
         "responseBody": "={{ { success: true, message: 'Digest approved and posted to LinkedIn' } }}",
         "options": {}
       },
-      "id": "052a0a0d-3437-41c6-8f9b-4e937b63e94d",
+      "id": "19a7cffa-0a87-4a8e-b090-db87d2061b0c",
       "name": "Respond: Approve",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        -1888,
-        -352
+        0,
+        0
       ]
     },
     {
@@ -665,17 +665,17 @@
           ]
         }
       },
-      "id": "97de3119-afb8-41e5-ad55-05f3a656c2b5",
+      "id": "bf52375c-1ac2-488d-92e8-0536457b2ae7",
       "name": "Update Status: Rejected",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -1664,
-        -160
+        224,
+        192
       ],
       "credentials": {
         "supabaseApi": {
-          "id": "9ZQTX4y8ewrWFtc0",
+          "id": "numSMv5vyngT6jAm",
           "name": "Supabase account"
         }
       }
@@ -689,18 +689,18 @@
           "parse_mode": "Markdown"
         }
       },
-      "id": "bde392ba-428d-4e4a-8592-49a8568864c1",
+      "id": "a53ae978-e8d2-4dc1-a086-88ba0be48131",
       "name": "Telegram: Reject Success",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -1440,
-        -160
+        448,
+        192
       ],
       "webhookId": "7a6cfb1c-c48d-44d0-8043-90ec3523de01",
       "credentials": {
         "telegramApi": {
-          "id": "RRyxVCO8dulJ64bD",
+          "id": "gowr8FzoZ2pfcjya",
           "name": "Telegram account"
         }
       }
@@ -711,13 +711,13 @@
         "responseBody": "={{ { success: true, message: 'Digest rejected' } }}",
         "options": {}
       },
-      "id": "aa8e01c2-6977-4c25-9a39-100a881e41fe",
+      "id": "3bc6c052-995f-4c15-9d3a-e3c1ac7eb38e",
       "name": "Respond: Reject",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        -1888,
-        -160
+        0,
+        192
       ]
     },
     {
@@ -726,13 +726,13 @@
         "responseBody": "={{ { success: true, message: 'Edit mode (coming soon)' } }}",
         "options": {}
       },
-      "id": "bf8bbc4a-9476-44bf-8f91-dfbc77e583b2",
+      "id": "cf4a7cce-ce50-4802-9c13-e0318bb17bc9",
       "name": "Respond: Edit",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        -1888,
-        32
+        0,
+        384
       ]
     },
     {
@@ -757,13 +757,13 @@
         },
         "options": {}
       },
-      "id": "d33c9238-33bf-438d-833f-76d5fee3d367",
+      "id": "63aff6a4-243e-4141-9876-89988a830dfc",
       "name": "Check If Articles Found",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -1440,
-        416
+        448,
+        768
       ]
     },
     {
@@ -775,18 +775,18 @@
           "parse_mode": "Markdown"
         }
       },
-      "id": "0fd0ee8f-39b5-4ff3-b04a-e08559159c08",
+      "id": "86f81c2e-154c-46bf-a6eb-8566ec118185",
       "name": "Notify No Articles Found",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -1216,
-        512
+        672,
+        864
       ],
       "webhookId": "c1b31ee2-a4ed-4fb3-9bbe-4befd1c76e0b",
       "credentials": {
         "telegramApi": {
-          "id": "RRyxVCO8dulJ64bD",
+          "id": "gowr8FzoZ2pfcjya",
           "name": "Telegram account"
         }
       }
@@ -797,13 +797,13 @@
         "responseBody": "={{ { success: false, message: 'No articles found for today', date: $('Parse Trigger Type').first().json.todayDate } }}",
         "options": {}
       },
-      "id": "b0d38567-7163-482c-9258-359789da3b41",
+      "id": "65099361-3048-4628-b248-f33b1c840095",
       "name": "Respond No Articles",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        -928,
-        512
+        960,
+        864
       ]
     },
     {
@@ -829,26 +829,26 @@
         },
         "options": {}
       },
-      "id": "59a9e3b3-863a-4fec-880b-545026b3b2b5",
+      "id": "86f73cf4-9f0a-4908-a523-16ef6243db3b",
       "name": "Validate Trigger Type",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -2784,
-        224
+        -896,
+        576
       ]
     },
     {
       "parameters": {
         "errorMessage": "=Invalid trigger type: {{ $('Parse Trigger Type').item.json.triggerType }}. Expected one of: schedule, manual, callback"
       },
-      "id": "85f3bdb4-4b23-4ee2-957d-a0c2f34d8b8b",
+      "id": "36aea26e-4bc8-4c13-9c11-ece309877dbb",
       "name": "Stop and Error",
       "type": "n8n-nodes-base.stopAndError",
       "typeVersion": 1,
       "position": [
-        -2560,
-        320
+        -672,
+        672
       ]
     },
     {
@@ -860,18 +860,18 @@
           "parse_mode": "HTML"
         }
       },
-      "id": "db705cca-2cf8-48bb-8af0-fb9e58fa9fb4",
+      "id": "37701c7c-88d5-4c7a-865b-1eebde511306",
       "name": "Send Edit Instructions",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -1440,
-        32
+        448,
+        384
       ],
       "webhookId": "40e39b5e-e3b4-4e54-b542-f0e16161cb01",
       "credentials": {
         "telegramApi": {
-          "id": "RRyxVCO8dulJ64bD",
+          "id": "gowr8FzoZ2pfcjya",
           "name": "Telegram account"
         }
       }
@@ -883,10 +883,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1440,
-        -352
+        448,
+        0
       ],
-      "id": "42ad14da-0b92-470d-add0-460b7de5e49c",
+      "id": "904e7639-5519-4c25-b6bb-e379b422db02",
       "name": "Clean Content for LinkedIn"
     },
     {
@@ -928,10 +928,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -1664,
-        32
+        224,
+        384
       ],
-      "id": "6d45196d-9c2b-45e1-aeed-3ca0b46d9e72",
+      "id": "eee24d1e-3bc3-406b-939b-d8bcc9809c2d",
       "name": "Set Conversation State"
     },
     {
@@ -965,18 +965,18 @@
           "topP": 1
         }
       },
-      "id": "e94863b5-1b2f-4a9c-99ae-a6abcd5e9443",
+      "id": "a07510af-e99a-4aa1-8dd8-975b9da3e156",
       "name": "OpenAI - Generate Digest",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.3,
       "position": [
-        -1040,
-        16
+        848,
+        368
       ],
       "notesInFlow": true,
       "credentials": {
         "openAiApi": {
-          "id": "yxgGYfRKokhnfUQ6",
+          "id": "eSu164nfTuwc1TFy",
           "name": "n8n free OpenAI API credits"
         }
       },
@@ -986,13 +986,13 @@
       "parameters": {
         "jsCode": "// CRITICAL: Validate and enforce LinkedIn character limit\nconst MAX_LINKEDIN_CHARS = 3000;\nconst SAFE_LIMIT = 2800;\nconst TARGET_LIMIT = 2700;\n\nconst aiOutput = $input.first().json;\nlet content = aiOutput.message?.content || '';\n\n// POST-PROCESSING: Remove any character count or meta info that AI might have added\n// Patterns like: (Characters: 1,005), [1234 characters], (1234 chars), etc.\ncontent = content\n  .replace(/\\(Characters?:\\s*[\\d,]+\\)/gi, '')\n  .replace(/\\[\\d+[\\s,]*characters?\\]/gi, '')\n  .replace(/\\(\\d+[\\s,]*chars?\\)/gi, '')\n  .replace(/Character count:\\s*\\d+/gi, '')\n  .replace(/Total:\\s*\\d+\\s*characters?/gi, '')\n  .replace(/---[\\s\\S]*$/gm, '') // Remove any trailing notes after ---\n  .replace(/\\n{3,}/g, '\\n\\n') // Clean up excessive newlines\n  .trim();\n\nconst originalCharCount = content.length;\n\nlet validationStatus = 'valid';\nlet validationMessage = '';\nlet finalContent = content;\n\n// If over hard limit, we need to truncate smartly\nif (originalCharCount > MAX_LINKEDIN_CHARS) {\n  validationStatus = 'exceeded_hard_limit';\n  \n  // Smart truncation: remove last article\n  let truncated = content;\n  \n  // Find and remove the last article (starts with emoji before last hashtags)\n  const hashtagIndex = truncated.lastIndexOf('#');\n  if (hashtagIndex > 0) {\n    // Find the start of hashtags section\n    let hashtagStart = truncated.lastIndexOf('\\n\\n#');\n    if (hashtagStart === -1) hashtagStart = truncated.lastIndexOf('\\n#');\n    \n    // Get content before hashtags and hashtags separately\n    const mainContent = hashtagStart > 0 ? truncated.substring(0, hashtagStart) : truncated;\n    const hashtags = hashtagStart > 0 ? truncated.substring(hashtagStart) : '';\n    \n    // Find last article link\n    const lastLinkIndex = mainContent.lastIndexOf('🔗 https://');\n    if (lastLinkIndex > 0) {\n      // Find the emoji that starts this article (go back to find newline + emoji)\n      let articleStart = mainContent.lastIndexOf('\\n\\n', lastLinkIndex - 5);\n      if (articleStart > 0) {\n        truncated = mainContent.substring(0, articleStart) + hashtags;\n      }\n    }\n  }\n  \n  // If still too long, hard cut\n  if (truncated.length > SAFE_LIMIT) {\n    const cutPoint = truncated.lastIndexOf('\\n\\n', SAFE_LIMIT);\n    if (cutPoint > SAFE_LIMIT - 500) {\n      truncated = truncated.substring(0, cutPoint);\n    } else {\n      truncated = truncated.substring(0, SAFE_LIMIT);\n    }\n    // Add hashtags back if missing\n    if (!truncated.includes('#')) {\n      truncated += '\\n\\n#AI #Tech #Innovation';\n    }\n  }\n  \n  finalContent = truncated;\n  validationMessage = `⚠️ Content exceeded ${MAX_LINKEDIN_CHARS} chars (${originalCharCount}). Auto-trimmed to ${finalContent.length} chars.`;\n  \n} else if (originalCharCount > SAFE_LIMIT) {\n  validationStatus = 'warning';\n  validationMessage = `⚠️ Content is ${originalCharCount} chars (close to ${MAX_LINKEDIN_CHARS} limit).`;\n  \n} else {\n  validationStatus = 'valid';\n  validationMessage = `✅ Content validated: ${originalCharCount} chars (under ${SAFE_LIMIT} safe limit).`;\n}\n\nconsole.log(`Character validation: ${validationStatus} - Original: ${originalCharCount}, Final: ${finalContent.length}`);\n\nreturn {\n  message: {\n    content: finalContent\n  },\n  validation: {\n    status: validationStatus,\n    originalCharCount: originalCharCount,\n    finalCharCount: finalContent.length,\n    message: validationMessage,\n    wasTruncated: originalCharCount !== finalContent.length,\n    linkedinLimit: MAX_LINKEDIN_CHARS,\n    safeLimit: SAFE_LIMIT\n  }\n};"
       },
-      "id": "b30615c3-f939-4208-aa45-7f1b9dec9d0a",
+      "id": "1b9c41f7-359b-4433-82dd-6b5e508d7205",
       "name": "Validate Character Limit",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -768,
-        128
+        1120,
+        480
       ],
       "notesInFlow": true,
       "notes": "Enforces LinkedIn 3000 char limit with smart truncation"
@@ -1353,6 +1353,6 @@
   "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "663c5b6b56b9fd8dcf630a925381b920d22381bfcffa1c5beee195aa6597c005"
+    "instanceId": "83b4d6c03571926783abaab14e53cd3236230b18be1732a2f9aca09c9c302d7f"
   }
 }
