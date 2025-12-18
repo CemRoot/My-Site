@@ -52,8 +52,6 @@
         'react-day-picker@8.10.1': 'react-day-picker',
         'next-themes@0.4.6': 'next-themes',
         'input-otp@1.4.2': 'input-otp',
-        'figma:asset/b2434507c36da971cecf1c8e91f157fb86abbf62.png': path.resolve(__dirname, './src/assets/b2434507c36da971cecf1c8e91f157fb86abbf62.png'),
-        'figma:asset/5a044018a2d01618456d3b6a76d961bdd5099599.png': path.resolve(__dirname, './src/assets/5a044018a2d01618456d3b6a76d961bdd5099599.png'),
         'embla-carousel-react@8.6.0': 'embla-carousel-react',
         'cmdk@1.1.1': 'cmdk',
         'class-variance-authority@0.7.1': 'class-variance-authority',
