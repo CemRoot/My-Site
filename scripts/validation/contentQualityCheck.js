@@ -73,8 +73,20 @@ export function validateArticleContent(article) {
   const instructionPatterns = [
     'REMINDER:',
     'Note: I have',
+    'Note: The translation',
+    'Note: This is',
     'Text to translate:',
-    'Keep all [[EMBED'
+    'Keep all [[EMBED',
+    'Turkish text provided',
+    'summary of the content',
+    'Here is the translation',
+    'Here\'s the translation',
+    'I have translated',
+    'Translation:',
+    'Translated text:',
+    'The above text',
+    'as requested',
+    'Please note that'
   ];
   
   for (const pattern of instructionPatterns) {

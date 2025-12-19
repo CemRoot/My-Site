@@ -1860,21 +1860,48 @@ async function translateText(text) {
       const turkishChars = /[ğüşıöçĞÜŞİÖÇ]/;
       const hasTurkishChars = turkishChars.test(result);
       
+      // Comprehensive instruction leakage detection
+      const instructionLeakagePatterns = [
+        '**Translation**',
+        '**Reasoning',
+        'REMINDER:',
+        'Translate the following',
+        'text to translate:',
+        'Note: The translation',
+        'Note: I have',
+        'Note: This is',
+        'Turkish text provided',
+        'summary of the content',
+        'Here is the translation',
+        'Here\'s the translation',
+        'I have translated',
+        'Translation:',
+        'Translated text:',
+        'The above text',
+        'as requested',
+        'Please note that'
+      ];
+      
+      const hasInstructionLeakage = instructionLeakagePatterns.some(pattern => 
+        result.toLowerCase().includes(pattern.toLowerCase())
+      );
+      
       const isValidTranslation = 
         result && 
         result.trim().length > 0 && 
-        !result.includes('**Translation**') && 
-        !result.includes('**Reasoning') &&
-        !result.includes('REMINDER:') &&
-        !result.includes('Translate the following') &&
-        !result.toLowerCase().includes('text to translate:') &&
+        !hasInstructionLeakage &&
         !hasTurkishChars; // CRITICAL: No Turkish characters in English translation
       
       if (isValidTranslation) {
         translatedContent = result;
         break; // Success, exit loop
       } else {
-        const reason = hasTurkishChars ? 'still contains Turkish characters' : 'got garbage output or instructions';
+        let reason = 'unknown issue';
+        if (hasTurkishChars) {
+          reason = 'still contains Turkish characters';
+        } else if (hasInstructionLeakage) {
+          reason = 'contains instruction leakage (LLM added notes/meta-text)';
+        }
         throw new Error(`Translation quality check failed - ${reason}`);
       }
     } catch (error) {
