@@ -2,6 +2,59 @@ import Groq from 'groq-sdk';
 import { checkRateLimit, getClientIdentifier, sendRateLimitResponse } from '../lib/rate-limit.js';
 import { withSentry } from '../lib/sentry-server.js';
 
+/**
+ * Sanitize AI response to remove unwanted characters and fix common issues
+ * @param {string} text - The raw AI response
+ * @returns {string} - Cleaned response
+ */
+function sanitizeResponse(text) {
+  if (!text || typeof text !== 'string') return text;
+
+  // Remove Chinese, Japanese, Korean characters (CJK Unified Ideographs)
+  // Keep only Latin characters, numbers, common punctuation, emojis, and Turkish characters
+  let cleaned = text
+    // Remove CJK characters (Chinese, Japanese Kanji, Korean Hanja)
+    .replace(/[\u4E00-\u9FFF]/g, '')
+    // Remove Japanese Hiragana and Katakana
+    .replace(/[\u3040-\u309F\u30A0-\u30FF]/g, '')
+    // Remove Korean Hangul
+    .replace(/[\uAC00-\uD7AF\u1100-\u11FF]/g, '')
+    // Remove other CJK symbols
+    .replace(/[\u3000-\u303F\u31F0-\u31FF\uFF00-\uFFEF]/g, '')
+    // Remove Arabic script
+    .replace(/[\u0600-\u06FF]/g, '')
+    // Remove Hebrew script
+    .replace(/[\u0590-\u05FF]/g, '')
+    // Remove Cyrillic (Russian, etc.) - unless specifically needed
+    .replace(/[\u0400-\u04FF]/g, '')
+    // Clean up multiple spaces
+    .replace(/\s{3,}/g, '  ')
+    // Clean up empty brackets or parentheses that might remain
+    .replace(/\(\s*\)/g, '')
+    .replace(/\[\s*\]/g, '')
+    // Trim whitespace
+    .trim();
+
+  // If the response became too short after cleaning, return a fallback
+  if (cleaned.length < 10 && text.length > 20) {
+    console.warn('Response was heavily cleaned, original length:', text.length, 'cleaned length:', cleaned.length);
+    return '[TOPIC:CEM] I apologize, but I encountered an issue with my response. Please try asking your question again!';
+  }
+
+  return cleaned;
+}
+
+/**
+ * Detect if text contains suspicious non-Latin characters
+ * @param {string} text - Text to check
+ * @returns {boolean} - True if suspicious characters found
+ */
+function hasSuspiciousCharacters(text) {
+  if (!text) return false;
+  // Check for CJK, Arabic, Hebrew characters
+  return /[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF\u0600-\u06FF\u0590-\u05FF]/.test(text);
+}
+
 function formatPageContext(context) {
   if (!context || typeof context !== 'object') {
     return null;
@@ -126,21 +179,31 @@ You CANNOT help with:
 ❌ Inappropriate, harmful, or offensive requests
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🌍 LANGUAGE RULE - ABSOLUTE PRIORITY
+🌍 LANGUAGE RULES - ABSOLUTE PRIORITY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+CRITICAL LANGUAGE CONSTRAINTS:
+1. ONLY use English OR Turkish in your responses - NOTHING ELSE
+2. ABSOLUTELY FORBIDDEN: Chinese, Japanese, Korean, Arabic, Hebrew, Russian characters
+3. Use ONLY Latin alphabet (A-Z, a-z) plus Turkish special characters (ç, ğ, ı, ö, ş, ü, Ç, Ğ, İ, Ö, Ş, Ü)
+4. Emojis are allowed and encouraged
+5. Numbers and standard punctuation are allowed
+
 ALWAYS respond in the SAME language as the user's question:
-- Turkish question → Turkish answer
-- English question → English answer  
-- Any other language → Same language answer
+- Turkish question → Turkish answer (using Turkish alphabet only)
+- English question → English answer (using English alphabet only)
+- Any other language → Default to ENGLISH
 
 Examples:
 "Sen hangi modelsin?" → Answer in TURKISH
 "What model are you?" → Answer in ENGLISH
 "Burayı özetler misin?" → Answer in TURKISH
 "Can you summarize this?" → Answer in ENGLISH
+"你好" or any non-Turkish/English → Answer in ENGLISH with: "I can help you in English or Turkish!"
 
+⚠️ NEVER use characters from these scripts: 中文, 日本語, 한국어, العربية, עברית, Русский
 NEVER mix languages. NEVER switch languages mid-conversation unless the user switches first.
+If you feel the urge to use non-Latin characters, STOP and rephrase using only English or Turkish.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧠 CONTEXT AWARENESS - CRITICAL!
@@ -287,19 +350,28 @@ Now answer the user's question following ALL these rules!`;
       },
     ];
 
-    // Call Groq API with optimized parameters for maximum intelligence
+    // Call Groq API with optimized parameters for stable, accurate responses
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile', // Most intelligent and multilingual model
       messages,
-      temperature: 0.8, // Higher for more natural, ChatGPT-like responses
-      max_tokens: 700, // More tokens for detailed, comprehensive answers
-      top_p: 0.95, // Better language detection and creativity
-      frequency_penalty: 0.4, // Reduce repetition more aggressively
-      presence_penalty: 0.3, // Encourage diverse responses
+      temperature: 0.4, // Lower for more consistent, predictable responses (prevents hallucination)
+      max_tokens: 700, // Enough tokens for detailed answers
+      top_p: 0.85, // More focused token selection (prevents random character insertion)
+      frequency_penalty: 0.5, // Reduce repetition more aggressively
+      presence_penalty: 0.2, // Slight diversity without going off-track
     });
 
-    const reply = completion.choices[0]?.message?.content || 
+    let reply = completion.choices[0]?.message?.content || 
       '[TOPIC:CEM] I apologize, but I encountered an issue generating a response. Please try asking your question again!';
+
+    // Log if suspicious characters were detected (for monitoring)
+    if (hasSuspiciousCharacters(reply)) {
+      console.warn('Suspicious characters detected in AI response, sanitizing...');
+      console.warn('Original response preview:', reply.substring(0, 200));
+    }
+
+    // Sanitize the response to remove any unwanted characters
+    reply = sanitizeResponse(reply);
 
     return res.status(200).json({ reply });
   } catch (error) {
