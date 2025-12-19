@@ -25,6 +25,7 @@ import { replaceTikTokBlockquote, replaceTwitterBlockquote, cleanSocialEmbedRemn
 import { extractAllEmbedsFromMarkdown } from './embeds/extractMarkdownEmbeds.js';
 import { TRANSLATION_SYSTEM_PROMPT, createTranslationPrompt, ARTICLE_ENHANCEMENT_SYSTEM_PROMPT, createArticleEnhancementPrompt } from './translate/prompt.js';
 import { assertContentQuality, validateArticleContent } from './validation/contentQualityCheck.js';
+import { validateArticle, autoFixArticle, validateDate, validateTitle, validateContent, validateDescription } from './validation/smartArticleProcessor.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -304,13 +305,20 @@ function parseTurkishDate(dateStr) {
   
   // Already in DD/MM/YYYY format
   if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
+    const [day, month, year] = str.split('/').map(Number);
+    // Validate year (must be between 2020 and 2030)
+    if (year < 2020 || year > 2030) {
+      console.warn(`⚠️ Invalid year detected: ${year} for date string "${dateStr}"`);
+      return null;
+    }
     return str;
   }
   
   // Handle relative dates
   // "bugün" = today
   if (str === 'bugün' || str.includes('bugün')) {
-    return `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+    const today = new Date(now);
+    return `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
   }
   
   // "dün" = yesterday
@@ -324,7 +332,7 @@ function parseTurkishDate(dateStr) {
   const minutesMatch = str.match(/(\d+)\s*dakika\s*önce/i);
   if (minutesMatch) {
     const date = new Date(now);
-    date.setMinutes(date.getMinutes() - parseInt(minutesMatch[1]));
+    date.setMinutes(date.getMinutes() - parseInt(minutesMatch[1], 10));
     return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
   }
   
@@ -332,7 +340,7 @@ function parseTurkishDate(dateStr) {
   const hoursMatch = str.match(/(\d+)\s*saat\s*önce/i);
   if (hoursMatch) {
     const date = new Date(now);
-    date.setHours(date.getHours() - parseInt(hoursMatch[1]));
+    date.setHours(date.getHours() - parseInt(hoursMatch[1], 10));
     return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
   }
   
@@ -340,7 +348,7 @@ function parseTurkishDate(dateStr) {
   const daysMatch = str.match(/(\d+)\s*gün\s*önce/i);
   if (daysMatch) {
     const date = new Date(now);
-    date.setDate(date.getDate() - parseInt(daysMatch[1]));
+    date.setDate(date.getDate() - parseInt(daysMatch[1], 10));
     return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
   }
   
@@ -348,7 +356,7 @@ function parseTurkishDate(dateStr) {
   const weeksMatch = str.match(/(\d+)\s*hafta\s*önce/i);
   if (weeksMatch) {
     const date = new Date(now);
-    date.setDate(date.getDate() - (parseInt(weeksMatch[1]) * 7));
+    date.setDate(date.getDate() - (parseInt(weeksMatch[1], 10) * 7));
     return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
   }
   
@@ -356,7 +364,7 @@ function parseTurkishDate(dateStr) {
   const monthsMatch = str.match(/(\d+)\s*ay\s*önce/i);
   if (monthsMatch) {
     const date = new Date(now);
-    date.setMonth(date.getMonth() - parseInt(monthsMatch[1]));
+    date.setMonth(date.getMonth() - parseInt(monthsMatch[1], 10));
     return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
   }
   
@@ -366,6 +374,12 @@ function parseTurkishDate(dateStr) {
     const day = parseInt(absoluteMatch[1], 10);
     const monthName = absoluteMatch[2].toLowerCase();
     const year = parseInt(absoluteMatch[3], 10);
+    
+    // Validate year (must be between 2020 and 2030)
+    if (year < 2020 || year > 2030) {
+      console.warn(`⚠️ Invalid year detected: ${year} for date string "${dateStr}"`);
+      return null;
+    }
     
     const month = TURKISH_MONTHS[monthName];
     if (month) {
@@ -609,24 +623,108 @@ async function getExistingArticles(urls) {
 }
 
 /**
- * Save article to Supabase
+ * Save article to Supabase with smart validation
  */
 async function saveArticle(article) {
   try {
-    // Parse date from Turkish format (DD/MM/YYYY) to ISO
+    // ============================================
+    // STEP 1: SMART VALIDATION PIPELINE
+    // ============================================
+    console.log(`   🔍 Running smart validation pipeline...`);
+    
+    const validation = validateArticle({
+      ...article,
+      originalContent: article.originalContent || article.content,
+    });
+
+    // Auto-fix common issues
+    if (!validation.isValid && validation.fixes.length > 0) {
+      console.log(`   🔧 Auto-fixing ${validation.fixes.length} issues...`);
+      const { fixed, fixedCount } = autoFixArticle(article, validation.results);
+      if (fixedCount > 0) {
+        Object.assign(article, fixed);
+        console.log(`   ✅ Fixed ${fixedCount} issues`);
+        
+        // Re-validate after fixes
+        const revalidation = validateArticle({
+          ...article,
+          originalContent: article.originalContent || article.content,
+        });
+        if (revalidation.isValid) {
+          console.log(`   ✅ Article passed validation after fixes`);
+        } else {
+          console.log(`   ⚠️  Article still has issues after fixes`);
+          validation.errors.forEach(err => console.log(`      ❌ ${err}`));
+        }
+      }
+    }
+
+    // CRITICAL: Reject if still invalid after fixes
+    if (!validation.isValid) {
+      const criticalErrors = validation.errors.filter(e => 
+        e.includes('Turkish') || 
+        e.includes('year') || 
+        e.includes('instruction leakage') ||
+        e.includes('translation error')
+      );
+      
+      if (criticalErrors.length > 0) {
+        console.error(`   ❌ CRITICAL ERRORS - Rejecting article:`);
+        criticalErrors.forEach(err => console.error(`      ❌ ${err}`));
+        return { 
+          success: false, 
+          error: new Error(`Validation failed: ${criticalErrors.join('; ')}`),
+          validation 
+        };
+      }
+    }
+
+    // Show warnings
+    if (validation.warnings.length > 0) {
+      console.log(`   ⚠️  Warnings:`);
+      validation.warnings.forEach(warn => console.log(`      ⚠️  ${warn}`));
+    }
+
+    console.log(`   ✅ Validation passed (Score: ${validation.score.toFixed(1)}/100)`);
+
+    // ============================================
+    // STEP 2: PARSE AND VALIDATE DATE
+    // ============================================
     let isoDate;
     try {
       const [day, month, year] = article.date.split('/');
-      isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      
+      // Double-check year validation
+      if (year < 2020 || year > 2030) {
+        console.warn(`   ⚠️  Invalid year ${year}, using today's date`);
+        const today = new Date();
+        isoDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      } else {
+        isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
     } catch (e) {
+      console.warn(`   ⚠️  Date parsing failed, using today's date`);
       isoDate = new Date().toISOString().split('T')[0];
     }
 
+    // ============================================
+    // STEP 3: FINAL TITLE CLEANUP
+    // ============================================
+    let cleanTitle = article.title;
+    // Remove "– NuvemMag" if still present
+    cleanTitle = cleanTitle.replace(/\s*[–—\-]\s*NuvemMag\s*$/i, '').trim();
+    if (cleanTitle !== article.title) {
+      console.log(`   🔧 Cleaned title: removed "– NuvemMag"`);
+    }
+
+    // ============================================
+    // STEP 4: SAVE TO DATABASE
+    // ============================================
     const { data, error } = await supabase
       .from('tech_news_articles')
       .insert([
         {
-          title: article.title,
+          title: cleanTitle,
           description: article.description,
           content: article.content,
           original_title: article.originalTitle,
@@ -642,13 +740,14 @@ async function saveArticle(article) {
       .single();
 
     if (error) {
-      console.error('Error saving article to Supabase:', error);
-      return { success: false, error };
+      console.error('   ❌ Error saving article to Supabase:', error);
+      return { success: false, error, validation };
     }
 
-    return { success: true, data };
+    console.log(`   ✅ Article saved successfully (ID: ${data.id})`);
+    return { success: true, data, validation };
   } catch (error) {
-    console.error('Error saving article:', error);
+    console.error('   ❌ Error saving article:', error);
     return { success: false, error };
   }
 }
@@ -959,13 +1058,59 @@ async function scrapeArticleDetails(url) {
     const { markdown, html, metadata } = scrapeResult.data;
     
     // Extract title from metadata or markdown
-    const title = metadata.title || metadata.ogTitle || '';
+    let title = metadata.title || metadata.ogTitle || '';
+    
+    // CRITICAL: Remove "– NuvemMag" or " - NuvemMag" from title
+    title = title.replace(/\s*[–—\-]\s*NuvemMag\s*$/i, '').trim();
+    title = title.replace(/\s*NuvemMag\s*$/i, '').trim();
+    
     const description = metadata.description || metadata.ogDescription || '';
     const image = metadata.ogImage || metadata['twitter:image'] || '';
     
-    // Extract date from markdown (format: "2/7/2025" or "8/10/2025")
-    const dateMatch = markdown.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
-    const date = dateMatch ? dateMatch[1] : new Date().toLocaleDateString('tr-TR');
+    // Extract date from markdown - look for proper date formats
+    // Try multiple patterns: "24 Dec 2025", "17 Dec 2025", "24/12/2025", etc.
+    let date = null;
+    
+    // Pattern 1: "24 Dec 2025" format (English)
+    const englishDateMatch = markdown.match(/(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})/i);
+    if (englishDateMatch) {
+      const monthMap = {
+        'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
+        'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
+        'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
+      };
+      const day = englishDateMatch[1].padStart(2, '0');
+      const month = monthMap[englishDateMatch[2].toLowerCase()];
+      const year = englishDateMatch[3];
+      date = `${day}/${month}/${year}`;
+    }
+    
+    // Pattern 2: DD/MM/YYYY format
+    if (!date) {
+      const dateMatch = markdown.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+      if (dateMatch) {
+        const [day, month, year] = dateMatch[1].split('/');
+        // Validate: year should be reasonable (2020-2030)
+        if (parseInt(year) >= 2020 && parseInt(year) <= 2030) {
+          date = dateMatch[1];
+        }
+      }
+    }
+    
+    // Pattern 3: Turkish date format "17 Aralık 2025"
+    if (!date) {
+      const turkishDateMatch = markdown.match(/(\d{1,2})\s+(Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+(\d{4})/i);
+      if (turkishDateMatch) {
+        date = parseTurkishDate(turkishDateMatch[0]);
+      }
+    }
+    
+    // Fallback: use today's date if no valid date found
+    if (!date) {
+      const now = new Date();
+      date = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+      console.log(`    ⚠️  No valid date found, using today: ${date}`);
+    }
     
     // Extract category from markdown (first line after nav usually contains category)
     const categoryMatch = markdown.match(/^([A-Za-zğüşıöçĞÜŞİÖÇ\s]+)\n\n\d{1,2}\/\d{1,2}\/\d{4}/m);
@@ -1475,6 +1620,26 @@ function restoreWidgets(translatedContent, widgets) {
 }
 
 /**
+ * Calculate similarity between two strings (0-1)
+ * Simple character-based similarity
+ */
+function calculateSimilarity(str1, str2) {
+  if (!str1 || !str2) return 0;
+  const longer = str1.length > str2.length ? str1 : str2;
+  const shorter = str1.length > str2.length ? str2 : str1;
+  if (longer.length === 0) return 1.0;
+  
+  // Count matching characters
+  let matches = 0;
+  const minLength = Math.min(str1.length, str2.length);
+  for (let i = 0; i < minLength; i++) {
+    if (str1[i] === str2[i]) matches++;
+  }
+  
+  return matches / longer.length;
+}
+
+/**
  * Translate text using Groq AI (Unlimited, High Quality)
  * Handles texts of any length - no chunking needed!
  */
@@ -1495,7 +1660,12 @@ async function translateWithModel(model, text) {
     max_tokens: 4000,
   });
 
-  let translatedText = completion.choices[0]?.message?.content || text;
+  let translatedText = completion.choices[0]?.message?.content || '';
+  
+  // CRITICAL: If no translation returned, throw error
+  if (!translatedText || translatedText.trim().length === 0) {
+    throw new Error('Translation returned empty result');
+  }
   
   // POST-PROCESSING: Remove any leaked instructions from output
   translatedText = translatedText
@@ -1505,6 +1675,20 @@ async function translateWithModel(model, text) {
     .replace(/^Translation:.*$/gim, '')
     .replace(/Text to translate:.*$/gim, '')
     .trim();
+  
+  // VALIDATION: Check if translation actually happened
+  // Turkish characters: ğ, ü, ş, ı, ö, ç, Ğ, Ü, Ş, İ, Ö, Ç
+  const turkishChars = /[ğüşıöçĞÜŞİÖÇ]/;
+  const hasTurkishChars = turkishChars.test(translatedText);
+  
+  // If output still contains Turkish characters and is similar to input, translation failed
+  if (hasTurkishChars && translatedText.length > 50) {
+    // Check if it's mostly the same as input (translation didn't happen)
+    const similarity = calculateSimilarity(text, translatedText);
+    if (similarity > 0.8) {
+      throw new Error(`Translation failed - output still contains Turkish: ${translatedText.substring(0, 100)}...`);
+    }
+  }
   
   return translatedText;
 }
@@ -1575,6 +1759,9 @@ async function translateText(text) {
       const result = await translateWithModel(model, cleanContent);
       
       // Quality check: Make sure translation is not garbage
+      const turkishChars = /[ğüşıöçĞÜŞİÖÇ]/;
+      const hasTurkishChars = turkishChars.test(result);
+      
       const isValidTranslation = 
         result && 
         result.trim().length > 0 && 
@@ -1582,13 +1769,15 @@ async function translateText(text) {
         !result.includes('**Reasoning') &&
         !result.includes('REMINDER:') &&
         !result.includes('Translate the following') &&
-        !result.toLowerCase().includes('text to translate:');
+        !result.toLowerCase().includes('text to translate:') &&
+        !hasTurkishChars; // CRITICAL: No Turkish characters in English translation
       
       if (isValidTranslation) {
         translatedContent = result;
         break; // Success, exit loop
       } else {
-        throw new Error(`Translation quality check failed - got garbage output or instructions in result`);
+        const reason = hasTurkishChars ? 'still contains Turkish characters' : 'got garbage output or instructions';
+        throw new Error(`Translation quality check failed - ${reason}`);
       }
     } catch (error) {
       const msg = String(error?.message || error);
@@ -1695,18 +1884,48 @@ async function translateArticle(article) {
       description: translatedDescription,
       content: translatedContent,
       originalTitle: article.title,
+      originalContent: article.content, // Keep original for validation
     };
     
-    // QUALITY CHECK: Validate content quality
-    console.log(`   🔍 Running content quality check...`);
+    // ============================================
+    // STEP 1: LEGACY QUALITY CHECK (for compatibility)
+    // ============================================
+    console.log(`   🔍 Running legacy content quality check...`);
     try {
       assertContentQuality(translatedArticle);
-      console.log(`   ✅ Content quality check PASSED`);
+      console.log(`   ✅ Legacy quality check PASSED`);
     } catch (error) {
-      console.error(`   ❌ Content quality check FAILED: ${error.message}`);
+      console.error(`   ❌ Legacy quality check FAILED: ${error.message}`);
       throw new Error(`Content quality validation failed: ${error.message}`);
     }
     
+    // ============================================
+    // STEP 2: SMART VALIDATION (NEW)
+    // ============================================
+    console.log(`   🔍 Running smart validation...`);
+    const validation = validateArticle(translatedArticle);
+    
+    if (!validation.isValid) {
+      const criticalErrors = validation.errors.filter(e => 
+        e.includes('Turkish') || 
+        e.includes('year') || 
+        e.includes('instruction leakage') ||
+        e.includes('translation error')
+      );
+      
+      if (criticalErrors.length > 0) {
+        console.error(`   ❌ Smart validation FAILED:`);
+        criticalErrors.forEach(err => console.error(`      ❌ ${err}`));
+        throw new Error(`Smart validation failed: ${criticalErrors.join('; ')}`);
+      }
+    }
+    
+    if (validation.warnings.length > 0) {
+      console.log(`   ⚠️  Validation warnings:`);
+      validation.warnings.slice(0, 3).forEach(warn => console.log(`      ⚠️  ${warn}`));
+    }
+    
+    console.log(`   ✅ Smart validation passed (Score: ${validation.score.toFixed(1)}/100)`);
     console.log(`   ✅ Translation complete and validated`);
     
     return translatedArticle;

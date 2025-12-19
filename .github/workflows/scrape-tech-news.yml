@@ -62,7 +62,8 @@ jobs:
         run: |
           echo "🚀 Starting multi-category tech news scraper..."
           echo "📂 Categories: 7 (AI, Tech, Science, etc.)"
-          echo "📊 Articles per category: 15 (Get all daily news)"
+          echo "📊 Articles per category: 20 (MAX_ARTICLES_PER_CATEGORY)"
+          echo "📊 Max articles per run: 50 (safety limit)"
           echo ""
           echo "📅 Time Info:"
           echo "   UTC now: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
@@ -73,16 +74,48 @@ jobs:
           echo "💾 Storage: Supabase PostgreSQL"
           echo "🔄 Firecrawl Cache: maxAge=2h (fresh data for scheduled runs)"
           echo ""
+          echo "🤖 AI Models:"
+          echo "   Primary: llama-3.3-70b-versatile (translation)"
+          echo "   Fallback: llama-3.1-8b-instant (translation)"
+          echo "   Parser: llama-3.1-8b-instant (article list extraction)"
+          echo ""
+          echo "⚡ Rate Limiting:"
+          echo "   Translation delay: 1000ms between requests"
+          echo "   Firecrawl delay: 10000ms (10s) between requests"
+          echo "   Max retries: 2 per request"
+          echo ""
+          echo "✅ Quality Controls:"
+          echo "   ✓ Year validation (2020-2030)"
+          echo "   ✓ Turkish character detection in translations"
+          echo "   ✓ Title cleaning (removes '– NuvemMag')"
+          echo "   ✓ Content quality checks"
+          echo "   ✓ Duplicate detection (slug-based)"
+          echo ""
           npm run scrape:news
       
       - name: ✅ Success summary
         if: success()
         run: |
-          echo "🎉 Tech news successfully scraped and saved to Supabase!"
-          echo "📊 Articles saved directly to PostgreSQL database"
-          echo "⏰ Completed at: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
-          echo "💾 Storage: Supabase (no git commit needed)"
-          echo "🔄 Website will fetch latest data from database automatically"
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+          echo "🎉 TECH NEWS SCRAPER - BAŞARILI"
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
+          echo "✅ İşlem başarıyla tamamlandı!"
+          echo "📊 Haberler Supabase PostgreSQL veritabanına kaydedildi"
+          echo "⏰ Tamamlanma zamanı: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+          echo "🔍 Yapılan Kontroller:"
+          echo "   ✓ Tarih validasyonu (2020-2030 arası)"
+          echo "   ✓ Türkçe karakter kontrolü"
+          echo "   ✓ Başlık temizleme ('– NuvemMag' kaldırıldı)"
+          echo "   ✓ İçerik kalite kontrolü"
+          echo "   ✓ Duplicate kontrolü (slug-based)"
+          echo ""
+          echo "💾 Depolama: Supabase PostgreSQL"
+          echo "🔄 Website otomatik olarak veritabanından güncel verileri çekecek"
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
       
       - name: 📱 Send success notification to Telegram
         if: success()
@@ -116,11 +149,32 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          echo "❌ Scraping failed!"
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+          echo "❌ TECH NEWS SCRAPER - HATA!"
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
+          echo "❌ Haber toplama işlemi başarısız oldu"
           CURRENT_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
           LOG_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           
-          MESSAGE="🚨 <b>TECH NEWS SCRAPER - HATA!</b>%0A%0A❌ Haber toplama işlemi başarısız oldu%0A⏰ Zaman: ${CURRENT_TIME}%0A🔧 Workflow: Scrape Tech News%0A📊 Durum: Başarısız%0A%0A🔍 <b>Olası Sorunlar:</b>%0A• API anahtarı hatası (Firecrawl/Groq)%0A• Veritabanı bağlantı sorunu (Supabase)%0A• Rate limit aşımı%0A• Kaynak site erişim sorunu%0A%0A🔗 <a href='${LOG_URL}'>Log kayıtlarını incele</a>%0A%0A<i>⚠️ Güvenlik uyarısı: Sistem otomatik olarak tekrar deneyecek</i>"
+          echo "⏰ Zaman: ${CURRENT_TIME}"
+          echo "🔧 Workflow: Scrape Tech News"
+          echo "📊 Durum: Başarısız"
+          echo ""
+          echo "🔍 Olası Sorunlar:"
+          echo "   • API anahtarı hatası (Firecrawl/Groq)"
+          echo "   • Veritabanı bağlantı sorunu (Supabase)"
+          echo "   • Rate limit aşımı (Groq/Firecrawl)"
+          echo "   • Kaynak site erişim sorunu (nuvemmag.com)"
+          echo "   • Tarih parsing hatası"
+          echo "   • Çeviri kalite kontrolü başarısız"
+          echo ""
+          echo "🔗 Log kayıtları: ${LOG_URL}"
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+          
+          MESSAGE="🚨 <b>TECH NEWS SCRAPER - HATA!</b>%0A%0A❌ Haber toplama işlemi başarısız oldu%0A⏰ Zaman: ${CURRENT_TIME}%0A🔧 Workflow: Scrape Tech News%0A📊 Durum: Başarısız%0A%0A🔍 <b>Olası Sorunlar:</b>%0A• API anahtarı hatası (Firecrawl/Groq)%0A• Veritabanı bağlantı sorunu (Supabase)%0A• Rate limit aşımı (Groq/Firecrawl)%0A• Kaynak site erişim sorunu%0A• Tarih parsing hatası%0A• Çeviri kalite kontrolü başarısız%0A%0A🔗 <a href='${LOG_URL}'>Log kayıtlarını incele</a>%0A%0A<i>⚠️ Sistem otomatik olarak tekrar deneyecek</i>"
           
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TELEGRAM_CHAT_ID}" \
@@ -129,5 +183,4 @@ jobs:
             -d "disable_web_page_preview=false" > /dev/null
           
           echo "📱 Hata bildirimi Telegram'a gönderildi"
-          echo "Check the logs: ${LOG_URL}"
 
