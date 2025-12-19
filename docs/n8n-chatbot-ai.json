@@ -1,0 +1,205 @@
+{
+    "nodes": [
+      {
+        "parameters": {
+          "public": true,
+          "options": {
+            "loadPreviousSession": "memory"
+          }
+        },
+        "id": "c9e2d5cc-020e-40c9-a45b-d356769e95a8",
+        "name": "Chat Trigger",
+        "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+        "typeVersion": 1.4,
+        "position": [
+          -64,
+          -48
+        ],
+        "webhookId": "2244a9ae-9908-4226-9695-3acd15fac249"
+      },
+      {
+        "parameters": {
+          "hasOutputParser": true,
+          "options": {
+            "systemMessage": "You are a multilingual portfolio assistant for a tech professional. Your primary responsibilities are:\n\n1. ANSWER QUESTIONS about the portfolio owner - their skills, experience, projects, and professional background\n2. SUMMARIZE TECH NEWS articles when users provide article URLs or ask about specific articles\n3. REJECT OFF-TOPIC requests - politely decline questions about cooking, recipes, general knowledge, or any topics unrelated to the portfolio or tech news\n\nIMPORTANT RULES:\n- Always respond in the same language the user writes in\n- For tech news summarization, use the Fetch Article Content Tool to get the article, then use Article Summarizer Tool\n- Stay focused on portfolio and tech news topics only\n- Be professional, helpful, and concise\n- If asked about unrelated topics (cooking, recipes, etc.), politely explain you can only help with portfolio questions and tech news"
+          }
+        },
+        "id": "86b79fcb-1d94-4fdc-8777-cb2d964c4055",
+        "name": "Portfolio Chatbot Agent",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3,
+        "position": [
+          416,
+          -48
+        ]
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "mode": "id",
+            "value": "gpt-4o-mini"
+          },
+          "builtInTools": {},
+          "options": {}
+        },
+        "id": "78f48734-eaf2-4ea1-9ebe-036aa5d94fa3",
+        "name": "OpenAI Chat Model",
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+        "typeVersion": 1.3,
+        "position": [
+          288,
+          176
+        ],
+        "credentials": {
+          "openAiApi": {
+            "id": "uuWLdfoySpQ4vKdz",
+            "name": "n8n free OpenAI API credits"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "sessionIdType": "customKey",
+          "sessionKey": "={{ $json.sessionId }}"
+        },
+        "id": "94124749-b5cb-4b39-a361-5e788734dc41",
+        "name": "Conversation Memory",
+        "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+        "typeVersion": 1.3,
+        "position": [
+          16,
+          176
+        ]
+      },
+      {
+        "parameters": {
+          "jsonSchemaExample": "{\n\t\"response\": \"Your answer here\",\n\t\"topic_valid\": true,\n\t\"language_detected\": \"en\"\n}"
+        },
+        "id": "a3586ad7-189b-465a-8a12-4c4b433292ac",
+        "name": "Response Format Parser",
+        "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+        "typeVersion": 1.3,
+        "position": [
+          768,
+          192
+        ]
+      },
+      {
+        "parameters": {
+          "description": "Summarizes tech news articles. Input: article_content (string). Returns a concise summary of the article.",
+          "workflowId": "<__PLACEHOLDER_VALUE__Summarizer Workflow ID__>",
+          "workflowInputs": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "article_content": "={{ $fromAI('article_content', 'The HTML content of the article to summarize', 'string') }}"
+            }
+          }
+        },
+        "id": "34a4ead9-a359-4002-878b-b8b6fee8977a",
+        "name": "Article Summarizer Tool",
+        "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+        "typeVersion": 2.2,
+        "position": [
+          416,
+          192
+        ]
+      },
+      {
+        "parameters": {
+          "toolDescription": "Fetches the HTML content of a tech news article from a given URL. Input: url (string). Returns the article HTML content.",
+          "url": "={{ $fromAI(\"url\", \"The URL of the tech news article to fetch\", \"string\") }}",
+          "options": {
+            "response": {
+              "response": {}
+            }
+          }
+        },
+        "id": "ac1b1352-950f-42a1-bc54-1b8fc64c0c5d",
+        "name": "Fetch Article Content Tool",
+        "type": "n8n-nodes-base.httpRequestTool",
+        "typeVersion": 4.3,
+        "position": [
+          592,
+          192
+        ]
+      }
+    ],
+    "connections": {
+      "Chat Trigger": {
+        "main": [
+          [
+            {
+              "node": "Portfolio Chatbot Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "OpenAI Chat Model": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "Portfolio Chatbot Agent",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Conversation Memory": {
+        "ai_memory": [
+          [
+            {
+              "node": "Portfolio Chatbot Agent",
+              "type": "ai_memory",
+              "index": 0
+            },
+            {
+              "node": "Chat Trigger",
+              "type": "ai_memory",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Response Format Parser": {
+        "ai_outputParser": [
+          [
+            {
+              "node": "Portfolio Chatbot Agent",
+              "type": "ai_outputParser",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Article Summarizer Tool": {
+        "ai_tool": [
+          [
+            {
+              "node": "Portfolio Chatbot Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Article Content Tool": {
+        "ai_tool": [
+          [
+            {
+              "node": "Portfolio Chatbot Agent",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "pinData": {},
+    "meta": {
+      "instanceId": "bc10032f28cb86352df20cf62bf27d36d6a7667a03cd13d9ce8dbe9857b7aaac"
+    }
+  }
