@@ -1208,8 +1208,8 @@ async function scrapeArticleDetails(url) {
     
     // Step 1: Extract Tweet IDs from rawHtml (for dynamic Twitter embeds that Firecrawl can't scrape)
     // Use rawHtml instead of html for better embed detection (contains original iframes/blockquotes)
+    // Note: htmlForEmbeds is already defined above (line 1064)
     let tweetIdsFromHtml = [];
-    const htmlForEmbeds = rawHtml || html || '';
     if (htmlForEmbeds) {
       const tweetMatches = htmlForEmbeds.matchAll(/(?:twitter|x)\.com\/[^\/]+\/status\/(\d+)/gi);
       for (const match of tweetMatches) {
