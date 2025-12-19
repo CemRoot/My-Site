@@ -49,16 +49,30 @@ async function forwardToN8n(message, pageContext) {
     body: JSON.stringify({
       message,
       pageContext,
+      sessionId: `session_${Date.now()}`,
       timestamp: new Date().toISOString()
     })
   });
 
+  // Get response as text first to handle empty responses
+  const responseText = await response.text();
+  
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`n8n webhook error (${response.status}): ${errorText}`);
+    throw new Error(`n8n webhook error (${response.status}): ${responseText}`);
   }
 
-  return await response.json();
+  // Handle empty response
+  if (!responseText || responseText.trim() === '') {
+    throw new Error('n8n returned empty response');
+  }
+
+  // Parse JSON safely
+  try {
+    return JSON.parse(responseText);
+  } catch (parseError) {
+    console.error('n8n response parse error:', responseText.substring(0, 200));
+    throw new Error(`n8n returned invalid JSON: ${parseError.message}`);
+  }
 }
 
 /**
@@ -406,6 +420,9 @@ You: "[TOPIC:OFF_TOPIC] Ben Cem Koyluoglu'nun portföy web sitesi ve profesyonel
 4. Be conversational, helpful, and intelligent like ChatGPT
 5. Keep responses concise but informative (2-4 sentences usually)
 6. ALWAYS start with [TOPIC:CEM] or [TOPIC:OFF_TOPIC]
+7. NEVER mention the source/origin of news articles (no "from X website", "published by Y", etc.)
+8. When summarizing news, present the information as your own summary - DO NOT cite sources
+9. Act as if YOU are providing the information, not quoting from somewhere else
 
 Now answer the user's question following ALL these rules!`;
 

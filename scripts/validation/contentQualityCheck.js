@@ -2,26 +2,58 @@
  * Content Quality Check
  * Validates scraped article content to ensure no unwanted elements remain
  * Returns validation errors if any issues are found
+ * Can also auto-fix certain issues
  */
+
+/**
+ * Clean Nuvemmag branding from content
+ * @param {string} content - Content to clean
+ * @returns {string} Cleaned content
+ */
+export function cleanNuvemmagBranding(content) {
+  if (!content) return content;
+  
+  let cleaned = content;
+  // Remove markdown links with Nuvemmag URLs
+  cleaned = cleaned.replace(/\[[^\]]*\]\([^)]*nuvemmag\.com[^)]*\)/gi, '');
+  // Remove standalone URLs
+  cleaned = cleaned.replace(/https?:\/\/(?:www\.)?nuvemmag\.com[^\s\)>\]"']*/gi, '');
+  // Remove brand name mentions (but preserve context)
+  cleaned = cleaned.replace(/\bNuvemMag\b/gi, '');
+  // Clean empty markdown links
+  cleaned = cleaned.replace(/\[\s*\]\([^)]*\)/g, '');
+  // Clean excessive whitespace
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
+  
+  return cleaned;
+}
 
 /**
  * Validates article content for quality issues
  * @param {Object} article - Article object with title, description, content
- * @returns {Object} { isValid: boolean, errors: string[], warnings: string[] }
+ * @param {boolean} autoFix - If true, returns fixed content instead of errors
+ * @returns {Object} { isValid: boolean, errors: string[], warnings: string[], fixedContent?: string }
  */
-export function validateArticleContent(article) {
+export function validateArticleContent(article, autoFix = false) {
   const errors = [];
   const warnings = [];
   
-  const { title, description, content } = article;
+  let { title, description, content } = article;
+  let wasFixed = false;
   
   // ============================================
   // CRITICAL ERRORS (Must not exist)
   // ============================================
   
-  // 1. Check for Nuvemmag branding
+  // 1. Check for Nuvemmag branding - auto-fix if enabled
   if (content.includes('nuvemmag.com') || content.includes('NuvemMag')) {
-    errors.push('❌ Contains Nuvemmag branding/URLs');
+    if (autoFix) {
+      content = cleanNuvemmagBranding(content);
+      wasFixed = true;
+      warnings.push('⚠️ Auto-fixed: Removed Nuvemmag branding/URLs');
+    } else {
+      errors.push('❌ Contains Nuvemmag branding/URLs');
+    }
   }
   
   // 2. Check for navigation/category links
@@ -175,7 +207,7 @@ export function validateArticleContent(article) {
   // RETURN VALIDATION RESULT
   // ============================================
   
-  return {
+  const result = {
     isValid: errors.length === 0,
     errors,
     warnings,
@@ -186,6 +218,13 @@ export function validateArticleContent(article) {
       descriptionLength: description.length
     }
   };
+  
+  // Add fixed content if auto-fix was enabled and changes were made
+  if (autoFix && wasFixed) {
+    result.fixedContent = content;
+  }
+  
+  return result;
 }
 
 /**

@@ -98,10 +98,15 @@ const groq = new Groq({
 // - 70b has only 100K tokens/day limit (use sparingly for enhancement)
 // - 8b-instant has much higher limits (use for bulk translation)
 // - mixtral is reliable backup with good multilingual support
-const GROQ_PRIMARY_MODEL = 'llama-3.1-8b-instant'; // High daily limit, good for bulk translation
-const GROQ_FALLBACK_MODEL = 'llama-3.3-70b-versatile'; // Best quality, but limited (100K/day)
-const GROQ_LAST_RESORT_MODEL = 'mixtral-8x7b-32768'; // Reliable backup (gemma2-9b-it was decommissioned)
-const GROQ_ENHANCEMENT_MODEL = 'llama-3.3-70b-versatile'; // For TL;DR and highlights only
+// ============================================
+// GROQ AI MODELS - ALL PRODUCTION (STABLE)
+// ============================================
+// Using only Production models for reliability
+// Preview models (llama-4-scout, qwen3) may be discontinued without notice
+const GROQ_PRIMARY_MODEL = 'llama-3.1-8b-instant';      // 560 T/s, 250K TPM - Fast & cheap for bulk
+const GROQ_FALLBACK_MODEL = 'openai/gpt-oss-20b';       // 1000 T/s, 250K TPM - Fastest fallback!
+const GROQ_LAST_RESORT_MODEL = 'llama-3.3-70b-versatile'; // 280 T/s, 300K TPM - Best quality
+const GROQ_ENHANCEMENT_MODEL = 'llama-3.1-8b-instant';   // Use fast model for TL;DR to save quota
 
 // Initialize Supabase client (using service role for admin access)
 const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
@@ -717,13 +722,32 @@ async function saveArticle(article) {
     }
 
     // ============================================
-    // STEP 3: FINAL TITLE CLEANUP
+    // STEP 3: FINAL CLEANUP (LAST DEFENSE)
     // ============================================
     let cleanTitle = article.title;
-    // Remove "– NuvemMag" if still present
+    let cleanDescription = article.description;
+    let cleanContent = article.content;
+    
+    // Remove "– NuvemMag" from title if still present
     cleanTitle = cleanTitle.replace(/\s*[–—\-]\s*NuvemMag\s*$/i, '').trim();
+    cleanTitle = cleanTitle.replace(/\bNuvemMag\b/gi, '').trim();
     if (cleanTitle !== article.title) {
-      console.log(`   🔧 Cleaned title: removed "– NuvemMag"`);
+      console.log(`   🔧 Cleaned title: removed NuvemMag branding`);
+    }
+    
+    // Final cleanup of description
+    cleanDescription = cleanDescription.replace(/\bNuvemMag\b/gi, '').trim();
+    cleanDescription = cleanDescription.replace(/https?:\/\/(?:www\.)?nuvemmag\.com[^\s]*/gi, '').trim();
+    
+    // Final cleanup of content
+    cleanContent = cleanContent.replace(/\bNuvemMag\b/gi, '');
+    cleanContent = cleanContent.replace(/https?:\/\/(?:www\.)?nuvemmag\.com[^\s\)>\]"']*/gi, '');
+    cleanContent = cleanContent.replace(/\[[^\]]*\]\([^)]*nuvemmag\.com[^)]*\)/gi, '');
+    cleanContent = cleanContent.replace(/\n{3,}/g, '\n\n').trim();
+    
+    // Verify no Nuvemmag branding remains
+    if (cleanContent.toLowerCase().includes('nuvemmag') || cleanTitle.toLowerCase().includes('nuvemmag')) {
+      console.warn(`   ⚠️  WARNING: NuvemMag branding still detected after cleanup!`);
     }
 
     // ============================================
@@ -734,8 +758,8 @@ async function saveArticle(article) {
       .insert([
         {
           title: cleanTitle,
-          description: article.description,
-          content: article.content,
+          description: cleanDescription,
+          content: cleanContent,
           original_title: article.originalTitle,
           image_url: article.image,
           date: isoDate,
@@ -1984,11 +2008,31 @@ function cleanTranslation(text) {
     /^Translate the following.*$/gim,
     /^Translation:.*$/gim,
     /^Text to translate:.*$/gim,
+    /^Here is the translation.*$/gim,
+    /^Here's the translation.*$/gim,
+    /^The translation is.*$/gim,
   ];
   
   instructionPatterns.forEach(pattern => {
     cleaned = cleaned.replace(pattern, '');
   });
+  
+  // ============================================
+  // AGGRESSIVE NUVEMMAG REMOVAL (FINAL PASS)
+  // This is the last line of defense before saving
+  // ============================================
+  
+  // Remove ALL Nuvemmag URLs (markdown links)
+  cleaned = cleaned.replace(/\[[^\]]*\]\([^)]*nuvemmag\.com[^)]*\)/gi, '');
+  
+  // Remove ALL standalone Nuvemmag URLs
+  cleaned = cleaned.replace(/https?:\/\/(?:www\.)?nuvemmag\.com[^\s\)>\]"']*/gi, '');
+  
+  // Remove Nuvemmag text mentions (but keep context)
+  cleaned = cleaned.replace(/\bNuvemMag\b/gi, '');
+  
+  // Remove lines that are ONLY empty markdown links
+  cleaned = cleaned.replace(/^\s*\[\s*\]\([^)]*\)\s*$/gm, '');
   
   // Clean up excessive whitespace
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
