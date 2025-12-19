@@ -1,6 +1,65 @@
 import Groq from 'groq-sdk';
 import { checkRateLimit, getClientIdentifier, sendRateLimitResponse } from '../lib/rate-limit.js';
 import { withSentry } from '../lib/sentry-server.js';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client for settings
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+);
+
+/**
+ * Get chat backend setting from Supabase
+ * @returns {Promise<string>} - 'vercel' or 'n8n'
+ */
+async function getChatBackend() {
+  try {
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('setting_value')
+      .eq('setting_key', 'chat_backend')
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching chat backend setting:', error);
+      return 'vercel'; // Default fallback
+    }
+
+    return data?.setting_value || 'vercel';
+  } catch (error) {
+    console.error('Chat backend check error:', error);
+    return 'vercel'; // Default fallback on error
+  }
+}
+
+/**
+ * Forward request to n8n webhook
+ */
+async function forwardToN8n(message, pageContext) {
+  const N8N_CHAT_WEBHOOK = process.env.N8N_CHAT_WEBHOOK;
+  
+  if (!N8N_CHAT_WEBHOOK) {
+    throw new Error('N8N_CHAT_WEBHOOK environment variable not configured');
+  }
+
+  const response = await fetch(N8N_CHAT_WEBHOOK, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message,
+      pageContext,
+      timestamp: new Date().toISOString()
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`n8n webhook error (${response.status}): ${errorText}`);
+  }
+
+  return await response.json();
+}
 
 /**
  * Sanitize AI response to remove unwanted characters and fix common issues
@@ -150,6 +209,25 @@ export default withSentry(async function handler(req, res) {
     if (!userMessage) {
       return res.status(400).json({ error: 'Message is required' });
     }
+
+    // Check which backend to use (Telegram controlled)
+    const chatBackend = await getChatBackend();
+    
+    // If n8n backend is selected, forward the request
+    if (chatBackend === 'n8n') {
+      console.log('🔀 Routing chat request to n8n workflow');
+      try {
+        const n8nResponse = await forwardToN8n(userMessage, pageContext);
+        return res.status(200).json(n8nResponse);
+      } catch (n8nError) {
+        console.error('n8n forward error:', n8nError);
+        // Fallback to Vercel if n8n fails
+        console.log('⚠️ n8n failed, falling back to Vercel API');
+      }
+    }
+
+    // Continue with Vercel/Groq backend
+    console.log('🟢 Using Vercel API (chat.js) backend');
 
     const pageContextSummary = pageContext ? formatPageContext(pageContext) : null;
 

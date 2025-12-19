@@ -89,7 +89,10 @@ function getSystemManagementKeyboard() {
         { text: '🔄 Webhook Reset', callback_data: 'action_webhook_reset' },
       ],
       [
+        { text: '🔀 Chat Backend', callback_data: 'action_chat_backend' },
         { text: '🏥 Sağlık Kontrolü', callback_data: 'action_health' },
+      ],
+      [
         { text: '🔧 GitHub Actions', callback_data: 'action_github' },
       ],
       [
@@ -712,6 +715,173 @@ export async function handleN8nTrialResetAction() {
       `❌ <b>Trial Sıfırlama Başarısız!</b>\n\n` +
       `<code>${error.message}</code>\n\n` +
       `Lütfen Supabase bağlantısını kontrol edin.`,
+      { reply_markup: getSystemManagementKeyboard() }
+    );
+  }
+}
+
+/**
+ * Get current chat backend setting from Supabase
+ */
+async function getChatBackendSetting() {
+  try {
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('setting_value')
+      .eq('setting_key', 'chat_backend')
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+
+    return data?.setting_value || 'vercel'; // Default to vercel
+  } catch (error) {
+    console.error('Error getting chat backend setting:', error);
+    return 'vercel'; // Default fallback
+  }
+}
+
+/**
+ * Set chat backend setting in Supabase
+ */
+async function setChatBackendSetting(backend, updatedBy = 'telegram') {
+  try {
+    // Try upsert (insert or update)
+    const { data, error } = await supabase
+      .from('system_settings')
+      .upsert({
+        setting_key: 'chat_backend',
+        setting_value: backend,
+        updated_at: new Date().toISOString(),
+        updated_by: updatedBy
+      }, {
+        onConflict: 'setting_key'
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error setting chat backend:', error);
+    throw error;
+  }
+}
+
+/**
+ * Handle action_chat_backend - Show Chat Backend menu
+ */
+export async function handleChatBackendMenu() {
+  try {
+    await sendTelegramMessage('🔍 <b>Chat Backend Durumu Kontrol Ediliyor...</b>');
+
+    const currentBackend = await getChatBackendSetting();
+    const isVercel = currentBackend === 'vercel';
+    const isN8n = currentBackend === 'n8n';
+
+    const statusText = `
+🔀 <b>CHAT BACKEND AYARLARI</b>
+
+<b>📊 Mevcut Backend:</b>
+${isVercel ? '✅' : '⚪'} Vercel API (chat.js)
+${isN8n ? '✅' : '⚪'} n8n Workflow
+
+<b>📝 Backend Özellikleri:</b>
+
+<b>🟢 Vercel API (chat.js)</b>
+• Model: Groq Llama 3.3 70B
+• Hız: ⚡ Çok hızlı
+• Maliyet: 💚 Ücretsiz
+• Memory: ❌ Yok
+• Durum: Production-ready
+
+<b>🔵 n8n Workflow</b>
+• Model: OpenAI GPT-4o-mini
+• Hız: 🔄 Normal
+• Maliyet: 💛 Ücretli (OpenAI)
+• Memory: ✅ Supabase DB
+• Durum: Test/Yedek
+
+<i>Değiştirmek için aşağıdan seçin:</i>`;
+
+    const keyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: isVercel ? '🟢 Vercel API (Aktif)' : '⚪ Vercel API',
+            callback_data: 'chat_backend_vercel'
+          },
+          {
+            text: isN8n ? '🟢 n8n Workflow (Aktif)' : '⚪ n8n Workflow',
+            callback_data: 'chat_backend_n8n'
+          }
+        ],
+        [
+          { text: '🔄 Durumu Yenile', callback_data: 'action_chat_backend' }
+        ],
+        [
+          { text: '🔙 Sistem Yönetimi', callback_data: 'action_system_management' }
+        ]
+      ]
+    };
+
+    await sendTelegramMessage(statusText, { reply_markup: keyboard });
+
+  } catch (error) {
+    console.error('Chat backend menu error:', error);
+    await sendTelegramMessage(
+      `❌ <b>Chat Backend Menüsü Yüklenemedi!</b>\n\n` +
+      `<code>${error.message}</code>\n\n` +
+      `Supabase system_settings tablosunu kontrol edin.`,
+      { reply_markup: getSystemManagementKeyboard() }
+    );
+  }
+}
+
+/**
+ * Handle chat backend toggle - Switch between Vercel and n8n
+ */
+export async function handleChatBackendToggle(newBackend) {
+  try {
+    const currentBackend = await getChatBackendSetting();
+
+    // If already on this backend, just show message
+    if (currentBackend === newBackend) {
+      await sendTelegramMessage(
+        `ℹ️ <b>Chat Backend zaten ${newBackend === 'vercel' ? 'Vercel API' : 'n8n Workflow'} olarak ayarlı!</b>\n\n` +
+        `Değişiklik yapılmadı.`,
+        { reply_markup: getSystemManagementKeyboard() }
+      );
+      return;
+    }
+
+    // Update setting
+    await setChatBackendSetting(newBackend, 'telegram-user');
+
+    const backendName = newBackend === 'vercel' ? 'Vercel API (chat.js)' : 'n8n Workflow';
+    const backendEmoji = newBackend === 'vercel' ? '🟢' : '🔵';
+    const features = newBackend === 'vercel' 
+      ? '• Groq Llama 3.3 70B\n• Ücretsiz\n• Çok hızlı'
+      : '• OpenAI GPT-4o-mini\n• Supabase Memory\n• Conversation history';
+
+    await sendTelegramMessage(
+      `${backendEmoji} <b>Chat Backend Değiştirildi!</b>\n\n` +
+      `<b>Yeni Backend:</b> ${backendName}\n\n` +
+      `<b>Özellikler:</b>\n${features}\n\n` +
+      `✅ Değişiklik hemen aktif oldu!\n\n` +
+      `<i>Test etmek için siteye gidin ve chatbot'u kullanın.</i>`,
+      { reply_markup: getSystemManagementKeyboard() }
+    );
+
+    console.log(`✅ Chat backend changed from ${currentBackend} to ${newBackend}`);
+
+  } catch (error) {
+    console.error('Chat backend toggle error:', error);
+    await sendTelegramMessage(
+      `❌ <b>Backend Değiştirilemedi!</b>\n\n` +
+      `<code>${error.message}</code>\n\n` +
+      `Supabase bağlantısını kontrol edin.`,
       { reply_markup: getSystemManagementKeyboard() }
     );
   }
@@ -1747,6 +1917,8 @@ export default {
   handleGitHubAction,
   handleGitHubWorkflowToggle,
   handleHelpAction,
+  handleChatBackendMenu,
+  handleChatBackendToggle,
   setBotCommands,
 };
 

@@ -285,6 +285,9 @@ export default async function handler(req, res) {
             case 'n8n_trial_reset':
               await menuHandler.handleN8nTrialResetAction();
               break;
+            case 'chat_backend':
+              await menuHandler.handleChatBackendMenu();
+              break;
             case 'fix_sources':
               await menuHandler.sendTelegramMessage(
                 '🔧 <b>Source Düzeltme</b>\n\n' +
@@ -298,6 +301,25 @@ export default async function handler(req, res) {
           }
 
           return res.status(200).json({ success: true, message: 'Menu action processed' });
+        }
+
+        // Handle chat backend toggle callbacks
+        if (data.startsWith('chat_backend_')) {
+          const backend = data.replace('chat_backend_', '');
+          
+          await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              callback_query_id: callback_query.id,
+              text: 'Backend değiştiriliyor...'
+            })
+          });
+
+          const menuHandler = await import('../scripts/telegram-menu-handler.js');
+          await menuHandler.handleChatBackendToggle(backend);
+          
+          return res.status(200).json({ success: true, message: 'Chat backend toggle processed' });
         }
 
         // Handle GitHub workflow toggle callbacks (github_enable_workflowname or github_disable_workflowname)
