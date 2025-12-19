@@ -1857,8 +1857,24 @@ async function translateText(text) {
       const result = await translateWithModel(model, cleanContent);
       
       // Quality check: Make sure translation is not garbage
+      // Check for Turkish characters
       const turkishChars = /[ğüşıöçĞÜŞİÖÇ]/;
       const hasTurkishChars = turkishChars.test(result);
+      
+      // Check for Chinese, Japanese, Korean (CJK) characters
+      // Chinese: \u4e00-\u9fff, Japanese Hiragana: \u3040-\u309f, Katakana: \u30a0-\u30ff, Korean: \uac00-\ud7af
+      const cjkChars = /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/;
+      const hasCJKChars = cjkChars.test(result);
+      
+      // Check for Arabic, Hebrew, Thai, and other non-Latin scripts
+      const otherNonLatinChars = /[\u0600-\u06ff\u0590-\u05ff\u0e00-\u0e7f\u0400-\u04ff]/;
+      const hasOtherNonLatin = otherNonLatinChars.test(result);
+      
+      // Check if content is mostly English (at least 80% ASCII/Latin)
+      const latinChars = result.replace(/[\s\d\p{P}]/gu, '').match(/[a-zA-ZÀ-ÿ]/g) || [];
+      const totalChars = result.replace(/[\s\d\p{P}]/gu, '').length;
+      const latinRatio = totalChars > 0 ? latinChars.length / totalChars : 1;
+      const isMostlyEnglish = latinRatio >= 0.8;
       
       // Comprehensive instruction leakage detection
       const instructionLeakagePatterns = [
@@ -1890,7 +1906,10 @@ async function translateText(text) {
         result && 
         result.trim().length > 0 && 
         !hasInstructionLeakage &&
-        !hasTurkishChars; // CRITICAL: No Turkish characters in English translation
+        !hasTurkishChars &&
+        !hasCJKChars && // No Chinese/Japanese/Korean
+        !hasOtherNonLatin && // No Arabic/Hebrew/Thai/Cyrillic
+        isMostlyEnglish; // At least 80% Latin characters
       
       if (isValidTranslation) {
         translatedContent = result;
@@ -1899,6 +1918,12 @@ async function translateText(text) {
         let reason = 'unknown issue';
         if (hasTurkishChars) {
           reason = 'still contains Turkish characters';
+        } else if (hasCJKChars) {
+          reason = 'contains Chinese/Japanese/Korean characters';
+        } else if (hasOtherNonLatin) {
+          reason = 'contains non-Latin characters (Arabic/Hebrew/Cyrillic)';
+        } else if (!isMostlyEnglish) {
+          reason = `not mostly English (only ${(latinRatio * 100).toFixed(1)}% Latin chars)`;
         } else if (hasInstructionLeakage) {
           reason = 'contains instruction leakage (LLM added notes/meta-text)';
         }

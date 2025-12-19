@@ -96,7 +96,32 @@ export function validateArticleContent(article) {
     }
   }
   
-  // 8. Check for footer text
+  // 8. Check for non-English characters (Chinese, Japanese, Korean, Arabic, etc.)
+  const cjkChars = /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/;
+  const arabicHebrewChars = /[\u0600-\u06ff\u0590-\u05ff]/;
+  const cyrillicChars = /[\u0400-\u04ff]/;
+  const turkishChars = /[ğüşıöçĞÜŞİÖÇ]/;
+  
+  const textToCheck = `${title} ${description} ${content}`;
+  
+  if (cjkChars.test(textToCheck)) {
+    errors.push('❌ CRITICAL: Contains Chinese/Japanese/Korean characters');
+  }
+  if (arabicHebrewChars.test(textToCheck)) {
+    errors.push('❌ CRITICAL: Contains Arabic/Hebrew characters');
+  }
+  if (cyrillicChars.test(textToCheck)) {
+    errors.push('❌ CRITICAL: Contains Cyrillic (Russian) characters');
+  }
+  if (turkishChars.test(title) || turkishChars.test(description)) {
+    // Turkish in title/description is critical error
+    errors.push('❌ CRITICAL: Title or description contains Turkish characters');
+  } else if (turkishChars.test(content)) {
+    // Turkish in content is a warning (might be a quote or name)
+    warnings.push('⚠️  Content contains Turkish characters (may be intentional)');
+  }
+  
+  // 9. Check for footer text
   if (content.includes('Pinetent Digital') || content.includes('Tüm Hakları Saklıdır')) {
     errors.push('❌ Contains footer text');
   }
