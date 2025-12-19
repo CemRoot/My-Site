@@ -2,54 +2,128 @@
     "nodes": [
       {
         "parameters": {
-          "public": true,
-          "options": {
-            "loadPreviousSession": "memory"
-          }
+          "httpMethod": "POST",
+          "path": "portfolio-chat",
+          "responseMode": "responseNode",
+          "options": {}
         },
-        "id": "c9e2d5cc-020e-40c9-a45b-d356769e95a8",
-        "name": "Chat Trigger",
-        "type": "@n8n/n8n-nodes-langchain.chatTrigger",
-        "typeVersion": 1.4,
+        "id": "09d56a2e-a2b4-458b-9e83-1fa10c64c0ac",
+        "name": "Webhook Trigger",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
         "position": [
-          -64,
-          -48
+          592,
+          2000
         ],
-        "webhookId": "2244a9ae-9908-4226-9695-3acd15fac249"
+        "webhookId": "546bbbaa-5eee-414a-9570-973165a86bd5"
       },
       {
         "parameters": {
-          "hasOutputParser": true,
-          "options": {
-            "systemMessage": "You are a multilingual portfolio assistant for a tech professional. Your primary responsibilities are:\n\n1. ANSWER QUESTIONS about the portfolio owner - their skills, experience, projects, and professional background\n2. SUMMARIZE TECH NEWS articles when users provide article URLs or ask about specific articles\n3. REJECT OFF-TOPIC requests - politely decline questions about cooking, recipes, general knowledge, or any topics unrelated to the portfolio or tech news\n\nIMPORTANT RULES:\n- Always respond in the same language the user writes in\n- For tech news summarization, use the Fetch Article Content Tool to get the article, then use Article Summarizer Tool\n- Stay focused on portfolio and tech news topics only\n- Be professional, helpful, and concise\n- If asked about unrelated topics (cooking, recipes, etc.), politely explain you can only help with portfolio questions and tech news"
+          "assignments": {
+            "assignments": [
+              {
+                "id": "id-1",
+                "name": "message",
+                "value": "={{ $json.body.message || $json.body.chatInput || \"\" }}",
+                "type": "string"
+              },
+              {
+                "id": "id-2",
+                "name": "sessionId",
+                "value": "={{ $json.body.sessionId || $json.body.chatId || \"session_\" + Date.now() }}",
+                "type": "string"
+              },
+              {
+                "id": "id-3",
+                "name": "pageContext",
+                "value": "={{ $json.body.pageContext }}",
+                "type": "string"
+              },
+              {
+                "id": "id-4",
+                "name": "chatInput",
+                "value": "={{ $json.body.message || $json.body.chatInput || \"\" }}",
+                "type": "string"
+              }
+            ]
+          },
+          "includeOtherFields": true,
+          "options": {}
+        },
+        "id": "bea2befc-fa6b-4ddf-847a-826f086941d1",
+        "name": "Parse Request Data",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          816,
+          2000
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "getAll",
+          "tableId": "chat_history",
+          "limit": 10,
+          "matchType": "allFilters",
+          "filters": {
+            "conditions": [
+              {
+                "keyName": "session_id",
+                "condition": "eq",
+                "keyValue": "={{ $json.sessionId }}"
+              }
+            ]
           }
         },
-        "id": "86b79fcb-1d94-4fdc-8777-cb2d964c4055",
-        "name": "Portfolio Chatbot Agent",
+        "id": "eb92fea7-4325-4495-8c5f-477c960f0b38",
+        "name": "Load Chat History",
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          1040,
+          2000
+        ],
+        "credentials": {
+          "supabaseApi": {
+            "id": "aU7PMxHyt0h679SX",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "={{ $json.message }}",
+          "options": {
+            "systemMessage": "You are Cem Koyluoglu's highly intelligent AI assistant. You are CONTEXT-AWARE and MULTILINGUAL. Your primary role is to help visitors understand this portfolio website and learn about Cem's professional background.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🎯 CORE PRINCIPLE: BE HELPFUL & SMART\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nYou CAN help with:\n✅ Questions about Cem Koyluoglu (background, skills, experience, availability)\n✅ Questions about THIS WEBSITE and its CONTENT (pages, sections, features)\n✅ Questions about THE CURRENT PAGE (what's here, summaries, explanations)\n✅ Questions about PROJECTS, SERVICES, TECHNOLOGIES shown on the site\n✅ Questions about TECH NEWS displayed on the site - SUMMARIZE and EXPLAIN articles\n✅ Navigation help (\"where can I find...\", \"how do I...\", etc.)\n\nYou CANNOT help with:\n❌ Completely unrelated topics (weather, cooking, politics, general trivia)\n❌ Questions that have nothing to do with Cem or this website\n❌ Inappropriate, harmful, or offensive requests\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🌍 LANGUAGE RULES - ABSOLUTE PRIORITY\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nCRITICAL LANGUAGE CONSTRAINTS:\n1. ONLY use English OR Turkish in your responses - NOTHING ELSE\n2. ABSOLUTELY FORBIDDEN: Chinese, Japanese, Korean, Arabic, Hebrew, Russian characters\n3. Use ONLY Latin alphabet (A-Z, a-z) plus Turkish special characters (ç, ğ, ı, ö, ş, ü, Ç, Ğ, İ, Ö, Ş, Ü)\n4. Emojis are allowed and encouraged\n5. Numbers and standard punctuation are allowed\n\nALWAYS respond in the SAME language as the user's question:\n- Turkish question → Turkish answer\n- English question → English answer\n- Any other language → Default to ENGLISH\n\n⚠️ NEVER use non-Latin characters. If you feel the urge, STOP and rephrase in English or Turkish only.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📰 TECH NEWS HANDLING - IMPORTANT!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nWhen PAGE CONTEXT contains tech news articles:\n- You can SUMMARIZE the articles shown on the page\n- You can EXPLAIN technical concepts mentioned in articles\n- You can COMPARE different articles or technologies\n- You can answer questions like \"bu haber ne hakkında?\", \"summarize this article\", \"explain this news\"\n\nIf CURRENT ARTICLE is provided:\n- Give detailed answers about that specific article\n- Summarize key points when asked\n- Explain technical terms in simple language\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n👤 ABOUT CEM KOYLUOGLU\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nBasic Info:\n- Name: Cem Koyluoglu (CK)\n- Title: AI Engineer & System Operations Specialist\n- Location: Dublin, Ireland\n- Education: MSc in Artificial Intelligence (First Class Honours, 71.4%) from National College of Ireland (2022-2023)\n- Email: cemkoyluoglu@icloud.com\n- Phone: +353 87 344 5918\n- WhatsApp: +353 87 344 5918\n\nProfessional Background:\n- 3+ years of Python experience\n- Specializes in: LLMs, NLP, Computer Vision, Cloud Solutions\n- Expert in: Microsoft Azure, Microsoft 365, System Operations\n- Technologies: TensorFlow, PyTorch, LangChain, RAG, Deep Learning\n- Available for: Freelance projects and full-time opportunities\n- Work mode: Remote and on-site available\n\nLinks:\n- GitHub: https://github.com/CemRoot\n- LinkedIn: https://www.linkedin.com/in/cem-koyluoglu/\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📝 RESPONSE GUIDELINES\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n1. ALWAYS match the user's language exactly\n2. ALWAYS use page context when available\n3. For tech news questions, provide informative summaries\n4. Keep responses concise but informative (2-4 sentences usually)\n5. For off-topic questions, politely redirect to portfolio topics"
+          }
+        },
+        "id": "12a8a917-97d8-428d-8aed-e7c75e8ccc0f",
+        "name": "Portfolio AI Agent",
         "type": "@n8n/n8n-nodes-langchain.agent",
         "typeVersion": 3,
         "position": [
-          416,
-          -48
+          1264,
+          2000
         ]
       },
       {
         "parameters": {
           "model": {
             "__rl": true,
-            "mode": "id",
+            "mode": "list",
             "value": "gpt-4o-mini"
           },
           "builtInTools": {},
           "options": {}
         },
-        "id": "78f48734-eaf2-4ea1-9ebe-036aa5d94fa3",
+        "id": "6ce2b60d-57ba-4841-9b57-688d18554370",
         "name": "OpenAI Chat Model",
         "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
         "typeVersion": 1.3,
         "position": [
-          288,
-          176
+          1272,
+          2224
         ],
         "credentials": {
           "openAiApi": {
@@ -59,78 +133,175 @@
         }
       },
       {
-        "parameters": {
-          "sessionIdType": "customKey",
-          "sessionKey": "={{ $json.sessionId }}"
-        },
-        "id": "94124749-b5cb-4b39-a361-5e788734dc41",
+        "parameters": {},
+        "id": "0520b3ae-a13e-4e6e-bb36-ad4cc75552f7",
         "name": "Conversation Memory",
         "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
         "typeVersion": 1.3,
         "position": [
-          16,
-          176
+          1400,
+          2224
         ]
       },
       {
         "parameters": {
-          "jsonSchemaExample": "{\n\t\"response\": \"Your answer here\",\n\t\"topic_valid\": true,\n\t\"language_detected\": \"en\"\n}"
+          "jsCode": "// Extract data from Portfolio AI Agent response\nconst agentOutput = $input.first().json;\n\n// Return sanitized response\nreturn [\n  {\n    json: {\n      sessionId: $('Parse Request Data').first().json.sessionId,\n      userMessage: $('Parse Request Data').first().json.message,\n      aiResponse: agentOutput.output || agentOutput.text || '',\n      timestamp: new Date().toISOString()\n    }\n  }\n];"
         },
-        "id": "a3586ad7-189b-465a-8a12-4c4b433292ac",
-        "name": "Response Format Parser",
-        "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
-        "typeVersion": 1.3,
+        "id": "571322ca-11ad-4d22-9596-fdd05724be50",
+        "name": "Sanitize Response",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
         "position": [
-          768,
-          192
+          1616,
+          2000
         ]
       },
       {
         "parameters": {
-          "description": "Summarizes tech news articles. Input: article_content (string). Returns a concise summary of the article.",
-          "workflowId": "<__PLACEHOLDER_VALUE__Summarizer Workflow ID__>",
-          "workflowInputs": {
-            "mappingMode": "defineBelow",
-            "value": {
-              "article_content": "={{ $fromAI('article_content', 'The HTML content of the article to summarize', 'string') }}"
-            }
+          "tableId": "chat_history",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldId": "session_id",
+                "fieldValue": "={{ $json.sessionId }}"
+              },
+              {
+                "fieldId": "role",
+                "fieldValue": "user"
+              },
+              {
+                "fieldId": "content",
+                "fieldValue": "={{ $json.userMessage }}"
+              },
+              {
+                "fieldId": "created_at",
+                "fieldValue": "={{ $json.timestamp }}"
+              }
+            ]
           }
         },
-        "id": "34a4ead9-a359-4002-878b-b8b6fee8977a",
-        "name": "Article Summarizer Tool",
-        "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
-        "typeVersion": 2.2,
+        "id": "fff9ae6f-67c9-4e69-a585-72924f94c600",
+        "name": "Save User Message",
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
         "position": [
-          416,
-          192
-        ]
+          1840,
+          1808
+        ],
+        "credentials": {
+          "supabaseApi": {
+            "id": "aU7PMxHyt0h679SX",
+            "name": "Supabase account"
+          }
+        }
       },
       {
         "parameters": {
-          "toolDescription": "Fetches the HTML content of a tech news article from a given URL. Input: url (string). Returns the article HTML content.",
-          "url": "={{ $fromAI(\"url\", \"The URL of the tech news article to fetch\", \"string\") }}",
+          "tableId": "chat_history",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldId": "session_id",
+                "fieldValue": "={{ $json.sessionId }}"
+              },
+              {
+                "fieldId": "role",
+                "fieldValue": "assistant"
+              },
+              {
+                "fieldId": "content",
+                "fieldValue": "={{ $json.response }}"
+              },
+              {
+                "fieldId": "created_at",
+                "fieldValue": "={{ $json.timestamp }}"
+              }
+            ]
+          }
+        },
+        "id": "91ec7974-6f95-456c-9bb6-c64159606a35",
+        "name": "Save AI Response",
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          1840,
+          2192
+        ],
+        "credentials": {
+          "supabaseApi": {
+            "id": "aU7PMxHyt0h679SX",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"reply\": \"={{ $json.response }}\",\n  \"sessionId\": \"={{ $json.sessionId }}\",\n  \"timestamp\": \"={{ $json.timestamp }}\"\n}",
           "options": {
-            "response": {
-              "response": {}
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "name": "Access-Control-Allow-Origin",
+                  "value": "*"
+                }
+              ]
             }
           }
         },
-        "id": "ac1b1352-950f-42a1-bc54-1b8fc64c0c5d",
-        "name": "Fetch Article Content Tool",
-        "type": "n8n-nodes-base.httpRequestTool",
-        "typeVersion": 4.3,
+        "id": "22e8df12-ccbf-4438-b054-8813d2aa892a",
+        "name": "Send Response",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.5,
         "position": [
-          592,
-          192
+          1840,
+          2000
         ]
       }
     ],
     "connections": {
-      "Chat Trigger": {
+      "Webhook Trigger": {
         "main": [
           [
             {
-              "node": "Portfolio Chatbot Agent",
+              "node": "Parse Request Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Request Data": {
+        "main": [
+          [
+            {
+              "node": "Load Chat History",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Load Chat History": {
+        "main": [
+          [
+            {
+              "node": "Portfolio AI Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Portfolio AI Agent": {
+        "main": [
+          [
+            {
+              "node": "Sanitize Response",
               "type": "main",
               "index": 0
             }
@@ -141,7 +312,7 @@
         "ai_languageModel": [
           [
             {
-              "node": "Portfolio Chatbot Agent",
+              "node": "Portfolio AI Agent",
               "type": "ai_languageModel",
               "index": 0
             }
@@ -152,46 +323,29 @@
         "ai_memory": [
           [
             {
-              "node": "Portfolio Chatbot Agent",
+              "node": "Portfolio AI Agent",
               "type": "ai_memory",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sanitize Response": {
+        "main": [
+          [
+            {
+              "node": "Save User Message",
+              "type": "main",
               "index": 0
             },
             {
-              "node": "Chat Trigger",
-              "type": "ai_memory",
+              "node": "Send Response",
+              "type": "main",
               "index": 0
-            }
-          ]
-        ]
-      },
-      "Response Format Parser": {
-        "ai_outputParser": [
-          [
+            },
             {
-              "node": "Portfolio Chatbot Agent",
-              "type": "ai_outputParser",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Article Summarizer Tool": {
-        "ai_tool": [
-          [
-            {
-              "node": "Portfolio Chatbot Agent",
-              "type": "ai_tool",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Fetch Article Content Tool": {
-        "ai_tool": [
-          [
-            {
-              "node": "Portfolio Chatbot Agent",
-              "type": "ai_tool",
+              "node": "Save AI Response",
+              "type": "main",
               "index": 0
             }
           ]

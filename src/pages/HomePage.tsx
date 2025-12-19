@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, Suspense } from 'react';
 import { Hero } from '../components/Hero';
 import { Stats } from '../components/Stats';
 import { About } from '../components/About';
@@ -6,10 +6,12 @@ import { Services } from '../components/Services';
 import { Skills } from '../components/Skills';
 import { Contact } from '../components/Contact';
 import { usePageContext } from '../lib/context/PageContext';
+import { lazyWithRetry } from '../lib/chunk-error-handler';
 
 // Lazy load heavy components that are below the fold
-const Projects = lazy(() => import('../components/Projects'));
-const Experience = lazy(() => import('../components/Experience'));
+// Using lazyWithRetry to handle chunk loading errors after deployments
+const Projects = lazyWithRetry(() => import('../components/Projects'));
+const Experience = lazyWithRetry(() => import('../components/Experience'));
 
 // Simple loading skeleton for below-the-fold components
 function SectionSkeleton() {
