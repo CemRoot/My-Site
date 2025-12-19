@@ -18,7 +18,7 @@ CRITICAL RULES FOR EMBED TOKENS:
 Examples of tokens to preserve:
 [[EMBED:TIKTOK:https://www.tiktok.com/@user/video/123456]]
 [[EMBED:TWEET:1876543212345678901]]
-[[EMBED:YOUTUBE:dQw4w9WgXcQ]]
+[[EMBED:YOUTUBE:VIDEO_ID_HERE]]
 
 Translation rules:
 - Translate ONLY the Turkish text provided by the user

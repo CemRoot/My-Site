@@ -64,9 +64,9 @@ export function validateArticleContent(article) {
     }
   }
   
-  // 6. Check for Rick Roll video ID
-  if (content.includes('dQw4w9WgXcQ')) {
-    errors.push('❌ CRITICAL: Contains Rick Roll video (dQw4w9WgXcQ)!');
+  // 6. Check for example placeholder leakage (from system prompts)
+  if (content.includes('VIDEO_ID_HERE') || content.includes('123456789012345678')) {
+    errors.push('❌ CRITICAL: Contains example placeholder from system prompt!');
   }
   
   // 7. Check for translation instruction leakage

@@ -12,7 +12,7 @@ import * as cheerio from 'cheerio';
  * Token format: [[EMBED:TYPE:DATA]]
  * - TIKTOK: [[EMBED:TIKTOK:https://www.tiktok.com/@user/video/123456]]
  * - TWEET: [[EMBED:TWEET:1876543212345678901]]
- * - YOUTUBE: [[EMBED:YOUTUBE:dQw4w9WgXcQ]]
+ * - YOUTUBE: [[EMBED:YOUTUBE:VIDEO_ID_HERE]]
  * 
  * These tokens are preserved during LLM translation and converted to React components on frontend
  * 

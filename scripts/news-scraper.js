@@ -90,9 +90,18 @@ const groq = new Groq({
 });
 
 // Groq translation models (updated to active models)
-const GROQ_PRIMARY_MODEL = 'llama-3.3-70b-versatile'; // Most capable, updated model
-const GROQ_FALLBACK_MODEL = 'llama-3.1-8b-instant'; // Fast and reliable fallback
-const GROQ_LAST_RESORT_MODEL = 'gemma2-9b-it'; // Last resort if others fail
+// Model Strategy (Optimized for Groq Free Tier - Dec 2025):
+// - 70b has only 100K tokens/day limit (expensive, use sparingly)
+// - 8b-instant has much higher limits (use for bulk translation)
+// - Use 70b only for enhancement (TL;DR, highlights) where quality matters most
+// Model Strategy (Optimized for Groq Free Tier - Dec 2025):
+// - 70b has only 100K tokens/day limit (use sparingly for enhancement)
+// - 8b-instant has much higher limits (use for bulk translation)
+// - mixtral is reliable backup with good multilingual support
+const GROQ_PRIMARY_MODEL = 'llama-3.1-8b-instant'; // High daily limit, good for bulk translation
+const GROQ_FALLBACK_MODEL = 'llama-3.3-70b-versatile'; // Best quality, but limited (100K/day)
+const GROQ_LAST_RESORT_MODEL = 'mixtral-8x7b-32768'; // Reliable backup (gemma2-9b-it was decommissioned)
+const GROQ_ENHANCEMENT_MODEL = 'llama-3.3-70b-versatile'; // For TL;DR and highlights only
 
 // Initialize Supabase client (using service role for admin access)
 const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
@@ -1350,7 +1359,86 @@ async function scrapeArticleDetails(url) {
         line.match(/^\s*(Photo image of|Video thumbnail|Uploaded by)\s/i) ||
         line.match(/Introducing.*YouTube$/i) || // "Introducing X - YouTube"
         line.includes('youtube.com/watch?v=') && !line.includes('[[EMBED') ||
-        line.includes('youtu.be/') && !line.includes('[[EMBED')
+        line.includes('youtu.be/') && !line.includes('[[EMBED') ||
+        // Turkish YouTube UI text (noscript fallback)
+        line.includes('İzlemek için:') ||
+        line.includes('Daha sonr') ||
+        // YouTube noscript/fallback garbage text
+        line.includes('More videos') ||
+        line.includes('Videos you watch may be added') ||
+        line.includes('TV recommendations') ||
+        line.includes('retrieving sharing information') ||
+        line.includes('Please try again later') ||
+        line.match(/^\s*\d+:\d+\s*$/) || // "0:00" standalone
+        line.match(/^\s*\d+:\d+\s*\/\s*\d+:\d+\s*$/) // "0:00 / 1:00"
+      ) {
+        continue;
+      }
+      
+      // Skip Twitter/X noscript fallback and UI text
+      if (
+        line.includes('Twitter Widget Iframe') ||
+        line.includes('Twitter Embed') ||
+        line.includes('Log in') && line.length < 20 ||
+        line.includes('Sign up') && line.length < 20 ||
+        line.match(/^\s*(@\w+)\s*$/) || // Standalone @username
+        line.includes('Replying to') ||
+        line.includes('Quote Tweet') ||
+        line.includes('Show replies') ||
+        line.includes('Show this thread') ||
+        line.includes('Embedded video') ||
+        line.includes('From Twitter') ||
+        line.includes('View on Twitter') ||
+        line.includes('View on X') ||
+        line.includes('twitter.com/intent') ||
+        line.includes('x.com/intent') ||
+        line.match(/^\s*\d+\s*(Retweets?|Likes?|replies|reposts?)\s*$/i) || // "123 Retweets"
+        line.match(/^\s*(Retweet|Like|Reply|Share|Copy link)\s*$/i) ||
+        line.includes('This Tweet is from') ||
+        line.includes('Read the full conversation') ||
+        line.includes('Explore what') ||
+        line.includes('who to follow')
+      ) {
+        continue;
+      }
+      
+      // Skip TikTok noscript fallback and UI text
+      if (
+        line.includes('TikTok') && line.length < 30 && !line.includes('[[EMBED') ||
+        line.includes('tiktok.com/@') && !line.includes('[[EMBED') ||
+        line.match(/^\s*(@\w+)\s+·\s+original sound/i) || // "@user · original sound"
+        line.includes('original sound -') ||
+        line.includes('♬') || // TikTok music note
+        line.match(/^\s*\d+\.?\d*[KMB]?\s+(likes?|views?|comments?|shares?)\s*$/i) ||
+        line.includes('Discover videos') ||
+        line.includes('For You') && line.length < 20 ||
+        line.includes('Following') && line.length < 20 ||
+        line.includes('Get app') ||
+        line.includes('Log in to TikTok') ||
+        line.includes('Watch more')
+      ) {
+        continue;
+      }
+      
+      // Skip Instagram noscript fallback and UI text
+      if (
+        line.includes('View this post on Instagram') ||
+        line.includes('View this photo on Instagram') ||
+        line.includes('A post shared by') ||
+        line.includes('instagram.com/p/') && !line.includes('[[EMBED') ||
+        line.includes('View profile') && line.length < 30 ||
+        line.includes('View more on Instagram') ||
+        line.match(/^\s*\d+\s+(likes?|comments?)\s*$/i)
+      ) {
+        continue;
+      }
+      
+      // Skip Facebook embed fallback
+      if (
+        line.includes('View on Facebook') ||
+        line.includes('facebook.com/plugins') ||
+        line.includes('Log into Facebook') ||
+        line.includes('See more on Facebook')
       ) {
         continue;
       }
@@ -1710,8 +1798,9 @@ async function enhanceArticleWithTLDR(content) {
   try {
     console.log(`   📝 Enhancing article with TL;DR and key highlights...`);
     
+    // Use the best model for enhancement (TL;DR, highlights) - quality matters here
     const completion = await groq.chat.completions.create({
-      model: GROQ_PRIMARY_MODEL,
+      model: GROQ_ENHANCEMENT_MODEL,
       messages: [
         {
           role: 'system',
