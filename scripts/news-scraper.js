@@ -1036,8 +1036,11 @@ async function scrapeArticleDetails(url) {
         },
         body: JSON.stringify({
           url: url,
-          formats: ['markdown', 'html'], // Get both for embed extraction
-          onlyMainContent: true
+          formats: ['markdown', 'html', 'rawHtml'], // Get markdown, cleaned HTML, and raw HTML for embed extraction
+          onlyMainContent: true, // Still filter headers/footers but keep embeds
+          waitFor: 2000, // Wait 2 seconds for dynamic content (embeds) to load
+          blockAds: true, // Block ads but keep embeds
+          removeBase64Images: false // Keep base64 images (might be embed thumbnails)
         })
       },
       `article ${url.split('/').pop()}`
@@ -1055,7 +1058,10 @@ async function scrapeArticleDetails(url) {
       throw new Error('Failed to scrape article - no markdown returned');
     }
 
-    const { markdown, html, metadata } = scrapeResult.data;
+    const { markdown, html, rawHtml, metadata } = scrapeResult.data;
+    
+    // Use rawHtml for embed extraction (more reliable than cleaned html)
+    const htmlForEmbeds = rawHtml || html || '';
     
     // Extract title from metadata or markdown
     let title = metadata.title || metadata.ogTitle || '';
@@ -1200,15 +1206,17 @@ async function scrapeArticleDetails(url) {
     // These tokens will be preserved during translation and rendered as React components
     // ============================================
     
-    // Step 1: Extract Tweet IDs from HTML (for dynamic Twitter embeds that Firecrawl can't scrape)
+    // Step 1: Extract Tweet IDs from rawHtml (for dynamic Twitter embeds that Firecrawl can't scrape)
+    // Use rawHtml instead of html for better embed detection (contains original iframes/blockquotes)
     let tweetIdsFromHtml = [];
-    if (html) {
-      const tweetMatches = html.matchAll(/(?:twitter|x)\.com\/[^\/]+\/status\/(\d+)/gi);
+    const htmlForEmbeds = rawHtml || html || '';
+    if (htmlForEmbeds) {
+      const tweetMatches = htmlForEmbeds.matchAll(/(?:twitter|x)\.com\/[^\/]+\/status\/(\d+)/gi);
       for (const match of tweetMatches) {
         const tweetId = match[1];
         if (!tweetIdsFromHtml.includes(tweetId)) {
           tweetIdsFromHtml.push(tweetId);
-          console.log(`  🐦 Found tweet ID in HTML: ${tweetId}`);
+          console.log(`  🐦 Found tweet ID in rawHtml: ${tweetId}`);
         }
       }
     }
@@ -1217,11 +1225,12 @@ async function scrapeArticleDetails(url) {
     console.log(`  🔍 Checking for social media links in markdown...`);
     content = extractAllEmbedsFromMarkdown(content);
     
-    // Step 3: Extract embeds from HTML iframes and inject into markdown at correct positions
+    // Step 3: Extract embeds from rawHtml iframes and inject into markdown at correct positions
+    // Use rawHtml for better embed detection (contains original iframes/blockquotes)
     let embedCount = { tiktok: 0, twitter: 0, youtube: 0 };
-    if (html) {
+    if (htmlForEmbeds) {
       try {
-        const extracted = htmlToTokens(html);
+        const extracted = htmlToTokens(htmlForEmbeds);
         const tokenLines = extracted.contentWithTokens.match(/\[\[EMBED:[^\]]+\]\]/g) || [];
         
         if (tokenLines.length > 0) {
