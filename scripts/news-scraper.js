@@ -316,13 +316,33 @@ function parseTurkishDate(dateStr) {
   
   const str = dateStr.trim().toLowerCase();
   const now = new Date();
+  const currentYear = now.getFullYear();
+  
+  // Helper function to validate a date is not in the future
+  const validateNotFuture = (day, month, year) => {
+    // Year must be between 2020 and current year
+    if (year < 2020 || year > currentYear) {
+      console.warn(`⚠️ Invalid year detected: ${year} for date string "${dateStr}"`);
+      return false;
+    }
+    
+    // Check if date is in the future (with 1 day tolerance)
+    const parsedDate = new Date(year, month - 1, day);
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (parsedDate > tomorrow) {
+      console.warn(`⚠️ Future date detected: ${parsedDate.toDateString()} for "${dateStr}"`);
+      return false;
+    }
+    
+    return true;
+  };
   
   // Already in DD/MM/YYYY format
   if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
     const [day, month, year] = str.split('/').map(Number);
-    // Validate year (must be between 2020 and 2030)
-    if (year < 2020 || year > 2030) {
-      console.warn(`⚠️ Invalid year detected: ${year} for date string "${dateStr}"`);
+    if (!validateNotFuture(day, month, year)) {
       return null;
     }
     return str;
@@ -389,14 +409,12 @@ function parseTurkishDate(dateStr) {
     const monthName = absoluteMatch[2].toLowerCase();
     const year = parseInt(absoluteMatch[3], 10);
     
-    // Validate year (must be between 2020 and 2030)
-    if (year < 2020 || year > 2030) {
-      console.warn(`⚠️ Invalid year detected: ${year} for date string "${dateStr}"`);
-      return null;
-    }
-    
     const month = TURKISH_MONTHS[monthName];
     if (month) {
+      // Validate date is not in the future
+      if (!validateNotFuture(day, month, year)) {
+        return null;
+      }
       return `${day}/${month}/${year}`;
     }
   }
@@ -707,14 +725,34 @@ async function saveArticle(article) {
     let isoDate;
     try {
       const [day, month, year] = article.date.split('/');
+      const parsedYear = parseInt(year, 10);
+      const parsedMonth = parseInt(month, 10);
+      const parsedDay = parseInt(day, 10);
       
-      // Double-check year validation
-      if (year < 2020 || year > 2030) {
-        console.warn(`   ⚠️  Invalid year ${year}, using today's date`);
-        const today = new Date();
-        isoDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const today = new Date();
+      const currentYear = today.getFullYear();
+      
+      // Create the parsed date object for comparison
+      const parsedDate = new Date(parsedYear, parsedMonth - 1, parsedDay);
+      
+      // CRITICAL: Multiple validation checks
+      // 1. Year must be reasonable (2020 to current year)
+      // 2. Date must not be in the future (with 1 day tolerance for timezone)
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const isYearInvalid = parsedYear < 2020 || parsedYear > currentYear;
+      const isFutureDate = parsedDate > tomorrow;
+      
+      if (isYearInvalid || isFutureDate) {
+        if (isYearInvalid) {
+          console.warn(`   ⚠️  Invalid year ${parsedYear}, using today's date`);
+        } else {
+          console.warn(`   ⚠️  Future date detected (${parsedDate.toDateString()}), using today's date`);
+        }
+        isoDate = `${currentYear}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       } else {
-        isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        isoDate = `${parsedYear}-${String(parsedMonth).padStart(2, '0')}-${String(parsedDay).padStart(2, '0')}`;
       }
     } catch (e) {
       console.warn(`   ⚠️  Date parsing failed, using today's date`);
@@ -1393,6 +1431,9 @@ async function scrapeArticleDetails(url) {
         line.includes('TV recommendations') ||
         line.includes('retrieving sharing information') ||
         line.includes('Please try again later') ||
+        line.includes('playback doesn\'t begin') ||
+        line.includes('try restarting your device') ||
+        line.includes('If playback doesn') ||
         line.match(/^\s*\d+:\d+\s*$/) || // "0:00" standalone
         line.match(/^\s*\d+:\d+\s*\/\s*\d+:\d+\s*$/) // "0:00 / 1:00"
       ) {
@@ -1764,20 +1805,29 @@ function calculateSimilarity(str1, str2) {
  * Translate text using Groq AI (Unlimited, High Quality)
  * Handles texts of any length - no chunking needed!
  */
-async function translateWithModel(model, text) {
+async function translateWithModel(model, text, retry = false) {
+  // Use a simpler, more direct prompt for retries or problematic models
+  const systemPrompt = retry 
+    ? `Translate from Turkish to English. Output ONLY the English translation. Do NOT include any notes, explanations, or the original text.`
+    : TRANSLATION_SYSTEM_PROMPT;
+  
+  const userPrompt = retry
+    ? `Translate this Turkish text to English:\n\n${text}`
+    : createTranslationPrompt(text);
+  
   const completion = await groq.chat.completions.create({
     model,
     messages: [
       {
         role: 'system',
-        content: TRANSLATION_SYSTEM_PROMPT // Use the new prompt that preserves tokens
+        content: systemPrompt
       },
       {
         role: 'user',
-        content: createTranslationPrompt(text) // Use template that reminds to preserve tokens
+        content: userPrompt
       }
     ],
-    temperature: 0.3,
+    temperature: retry ? 0.1 : 0.3, // Lower temperature for retries
     max_tokens: 4000,
   });
 
@@ -1877,13 +1927,18 @@ async function translateText(text) {
   
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
-    try {
-      const result = await translateWithModel(model, cleanContent);
+    
+    // Try up to 2 attempts per model: first with full prompt, then with simplified retry prompt
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const isRetry = attempt > 0;
       
-      // Quality check: Make sure translation is not garbage
-      // Check for Turkish characters
-      const turkishChars = /[ğüşıöçĞÜŞİÖÇ]/;
-      const hasTurkishChars = turkishChars.test(result);
+      try {
+        const result = await translateWithModel(model, cleanContent, isRetry);
+        
+        // Quality check: Make sure translation is not garbage
+        // Check for Turkish characters
+        const turkishChars = /[ğüşıöçĞÜŞİÖÇ]/;
+        const hasTurkishChars = turkishChars.test(result);
       
       // Check for Chinese, Japanese, Korean (CJK) characters
       // Chinese: \u4e00-\u9fff, Japanese Hiragana: \u3040-\u309f, Katakana: \u30a0-\u30ff, Korean: \uac00-\ud7af
@@ -1917,6 +1972,24 @@ async function translateText(text) {
         'I have translated',
         'Translation:',
         'Translated text:',
+        // Enhancement prompt leakage
+        'Return the enhanced article',
+        'followed by the full article',
+        'with TL;DR and key highlights',
+        'Analyze this article',
+        'add a TL;DR summary',
+        'Your task:',
+        'Format the output as follows',
+        'Original article content follows',
+        // Translation meta-commentary leakage
+        'I\'ve removed the Turkish',
+        'I have removed the Turkish',
+        'translated the text accordingly',
+        'preserved the markdown formatting',
+        'kept the paragraph structure',
+        'I\'ve also preserved',
+        'I have also preserved',
+        'removed the Turkish characters',
         'The above text',
         'as requested',
         'Please note that'
@@ -1935,42 +2008,58 @@ async function translateText(text) {
         !hasOtherNonLatin && // No Arabic/Hebrew/Thai/Cyrillic
         isMostlyEnglish; // At least 80% Latin characters
       
-      if (isValidTranslation) {
-        translatedContent = result;
-        break; // Success, exit loop
-      } else {
-        let reason = 'unknown issue';
-        if (hasTurkishChars) {
-          reason = 'still contains Turkish characters';
-        } else if (hasCJKChars) {
-          reason = 'contains Chinese/Japanese/Korean characters';
-        } else if (hasOtherNonLatin) {
-          reason = 'contains non-Latin characters (Arabic/Hebrew/Cyrillic)';
-        } else if (!isMostlyEnglish) {
-          reason = `not mostly English (only ${(latinRatio * 100).toFixed(1)}% Latin chars)`;
-        } else if (hasInstructionLeakage) {
-          reason = 'contains instruction leakage (LLM added notes/meta-text)';
+        if (isValidTranslation) {
+          translatedContent = result;
+          break; // Success, exit attempt loop
+        } else {
+          let reason = 'unknown issue';
+          if (hasTurkishChars) {
+            reason = 'still contains Turkish characters';
+          } else if (hasCJKChars) {
+            reason = 'contains Chinese/Japanese/Korean characters';
+          } else if (hasOtherNonLatin) {
+            reason = 'contains non-Latin characters (Arabic/Hebrew/Cyrillic)';
+          } else if (!isMostlyEnglish) {
+            reason = `not mostly English (only ${(latinRatio * 100).toFixed(1)}% Latin chars)`;
+          } else if (hasInstructionLeakage) {
+            reason = 'contains instruction leakage (LLM added notes/meta-text)';
+          }
+          throw new Error(`Translation quality check failed - ${reason}`);
         }
-        throw new Error(`Translation quality check failed - ${reason}`);
+      } catch (error) {
+        const msg = String(error?.message || error);
+        const isRateLimit = msg.includes('429') || msg.includes('rate_limit') || msg.includes('Rate limit');
+        
+        // Only log if this is the second attempt (retry) or last model
+        if (isRetry || i === models.length - 1) {
+          console.warn(`⚠️ Model ${model} failed${isRetry ? ' (retry)' : ''}: ${msg}`);
+        }
+        
+        // If it's a rate limit error, wait longer before next model
+        if (isRateLimit && i < models.length - 1) {
+          console.log(`⏳ Rate limit detected, waiting 3 seconds before trying next model...`);
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          break; // Move to next model on rate limit
+        }
+        
+        // If not retry yet, continue to retry with simplified prompt
+        if (!isRetry) {
+          continue; // Try again with simplified prompt
+        }
+        
+        // If retry also failed and this is the last model, throw error
+        if (i === models.length - 1) {
+          throw new Error(`All translation models failed. Last error: ${msg}`);
+        }
+        
+        // Move to next model
+        break;
       }
-    } catch (error) {
-      const msg = String(error?.message || error);
-      const isRateLimit = msg.includes('429') || msg.includes('rate_limit') || msg.includes('Rate limit');
-      
-      console.warn(`⚠️ Model ${model} failed: ${msg}`);
-      
-      // If it's a rate limit error, wait longer
-      if (isRateLimit && i < models.length - 1) {
-        console.log(`⏳ Rate limit detected, waiting 3 seconds before trying next model...`);
-        await new Promise(resolve => setTimeout(resolve, 3000));
-      }
-      
-      // If this is the last model, throw error
-      if (i === models.length - 1) {
-        throw new Error(`All translation models failed. Last error: ${msg}`);
-      }
-    }
-  }
+    } // end attempt loop
+    
+    // If we got a valid translation, exit the model loop
+    if (translatedContent) break;
+  } // end model loop
   
   if (!translatedContent) {
     throw new Error('All translation models failed');
@@ -1999,7 +2088,7 @@ function cleanTranslation(text) {
   
   let cleaned = text;
   
-  // Remove any instruction leakage patterns
+  // Remove any instruction leakage patterns (translation prompts)
   const instructionPatterns = [
     /^REMINDER:.*$/gim,
     /^Note: I have.*$/gim,
@@ -2013,7 +2102,32 @@ function cleanTranslation(text) {
     /^The translation is.*$/gim,
   ];
   
+  // Remove enhancement prompt leakage (TL;DR generation)
+  const enhancementLeakagePatterns = [
+    /Return the enhanced article.*$/gim,
+    /followed by the full article.*$/gim,
+    /with TL;DR and key highlights.*$/gim,
+    /^Analyze this article.*$/gim,
+    /^add a TL;DR summary.*$/gim,
+    /^Your task:.*$/gim,
+    /^Format the output as follows.*$/gim,
+    /Original article content follows.*$/gim,
+    // Translation meta-commentary (AI explaining what it did)
+    /Note: I've removed.*Turkish.*$/gim,
+    /Note: I have removed.*Turkish.*$/gim,
+    /I've also preserved.*formatting.*$/gim,
+    /I have also preserved.*formatting.*$/gim,
+    /translated the text accordingly.*$/gim,
+    /kept the paragraph structure.*$/gim,
+    /preserved the markdown formatting.*$/gim,
+    /removed the Turkish characters.*$/gim,
+  ];
+  
   instructionPatterns.forEach(pattern => {
+    cleaned = cleaned.replace(pattern, '');
+  });
+  
+  enhancementLeakagePatterns.forEach(pattern => {
     cleaned = cleaned.replace(pattern, '');
   });
   
@@ -2175,7 +2289,17 @@ async function scrapeNews() {
   let consecutiveFailures = 0; // Circuit breaker
   let circuitBreakerTriggered = false;
   
+  // SAME-RUN DUPLICATE TRACKING
+  // Prevent processing the same URL twice in one run (can appear in multiple categories)
+  const processedInThisRun = new Set();
+  
   for (const { url, category } of newArticles) {
+    // Skip if already processed in this run
+    if (processedInThisRun.has(url)) {
+      console.log(`⏭️  [${category}] Skipping (already processed in this run): ${url.split('/').pop()}`);
+      continue;
+    }
+    
     // Circuit breaker: Stop if too many consecutive failures
     if (consecutiveFailures >= CONFIG.MAX_CONSECUTIVE_FAILURES) {
       console.log(`\n🚨 Circuit breaker activated: ${consecutiveFailures} consecutive failures`);
@@ -2201,6 +2325,9 @@ async function scrapeNews() {
     }
     
     console.log(`📰 [${category}] Processing: ${url}`);
+    
+    // Mark as processed in this run (even if it fails)
+    processedInThisRun.add(url);
     
     // Scrape article details
     const article = await scrapeArticleDetails(url);

@@ -101,8 +101,9 @@ export function validateArticleContent(article, autoFix = false) {
     errors.push('❌ CRITICAL: Contains example placeholder from system prompt!');
   }
   
-  // 7. Check for translation instruction leakage
+  // 7. Check for translation/enhancement instruction leakage
   const instructionPatterns = [
+    // Translation prompt leakage
     'REMINDER:',
     'Note: I have',
     'Note: The translation',
@@ -118,7 +119,25 @@ export function validateArticleContent(article, autoFix = false) {
     'Translated text:',
     'The above text',
     'as requested',
-    'Please note that'
+    'Please note that',
+    // Enhancement prompt leakage (TL;DR generation)
+    'Return the enhanced article',
+    'followed by the full article',
+    'with TL;DR and key highlights',
+    'Analyze this article',
+    'add a TL;DR summary',
+    'Your task:',
+    'Format the output as follows',
+    'Original article content follows',
+    // Translation meta-commentary leakage
+    'I\'ve removed the Turkish',
+    'I have removed the Turkish',
+    'translated the text accordingly',
+    'preserved the markdown formatting',
+    'kept the paragraph structure',
+    'I\'ve also preserved',
+    'I have also preserved',
+    'removed the Turkish characters'
   ];
   
   for (const pattern of instructionPatterns) {

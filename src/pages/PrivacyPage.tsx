@@ -22,7 +22,7 @@ function PrivacyPage() {
         'Details legal bases, retention periods, and GDPR rights',
         'Lists third-party processors, security measures, and contact information',
       ],
-      lastUpdated: 'October 12, 2025',
+      lastUpdated: 'December 21, 2024',
     });
 
     return () => setPageInfo(null);
@@ -53,7 +53,7 @@ function PrivacyPage() {
               </div>
               <h1 className="text-3xl sm:text-4xl font-[Hobo_BT]">Privacy Policy</h1>
             </div>
-            <p className="text-muted-foreground">Last updated: October 12, 2025</p>
+            <p className="text-muted-foreground">Last updated: December 21, 2024</p>
             <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
               <Shield className="w-4 h-4 text-primary" />
               <span className="text-sm text-primary">GDPR Compliant</span>
@@ -90,7 +90,7 @@ function PrivacyPage() {
                 <ul className="list-disc list-inside space-y-2 text-muted-foreground">
                   <li><strong>Contact Forms:</strong> Name, email address, and message content</li>
                   <li><strong>Newsletter Subscriptions:</strong> Email address</li>
-                  <li><strong>Chat Widget:</strong> Name, email address, and conversation content</li>
+                  <li><strong>AI Chat Widget:</strong> Conversation content (messages you send and AI responses). This chat is powered by artificial intelligence to provide helpful information about our services. Messages are processed by AI providers and stored for quality improvement.</li>
                 </ul>
               </div>
 
@@ -193,15 +193,17 @@ function PrivacyPage() {
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
             <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">8. Third-Party Services</h2>
             <p className="text-muted-foreground leading-relaxed">
-              We may use the following third-party services that may collect data:
+              We may use the following third-party services that may collect or process data:
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground pl-4">
+              <li><strong>AI Chat Providers:</strong> Groq (Meta Llama models) and OpenAI for processing chat conversations. These providers may process your messages to generate responses. Data is transmitted securely and processed in accordance with their privacy policies.</li>
+              <li><strong>Database Services:</strong> Supabase for secure data storage within the European Economic Area</li>
               <li><strong>Email Services:</strong> For newsletter delivery (GDPR-compliant providers)</li>
               <li><strong>Analytics:</strong> To understand website usage (anonymized data)</li>
               <li><strong>External Links:</strong> GitHub, LinkedIn, WhatsApp (subject to their privacy policies)</li>
             </ul>
             <p className="text-muted-foreground leading-relaxed mt-4">
-              We ensure all third-party processors comply with GDPR requirements.
+              We ensure all third-party processors comply with GDPR requirements. AI providers operate under Standard Contractual Clauses (SCCs) for data transfers outside the EEA.
             </p>
           </section>
 

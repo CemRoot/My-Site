@@ -1,8 +1,78 @@
 name: Scrape Tech News
 
-# Smart scheduling algorithm
-# WEEKDAYS ONLY: Nuvemmag doesn't publish on weekends
+# ============================================================================
+# TECH NEWS SCRAPER - MULTI-CATEGORY AI-POWERED WORKFLOW
+# ============================================================================
 # 
+# Bu workflow NuvemMag'dan (Türkçe) haber çeker, İngilizce'ye çevirir ve
+# Supabase PostgreSQL veritabanına kaydeder.
+#
+# ============================================================================
+# ÖĞRENILEN DERSLER & KALİTE KONTROL MEKANİZMALARI
+# ============================================================================
+#
+# 1. TARİH VALİDASYONU:
+#    - Yıl 2020-{current_year} arasında olmalı
+#    - Gelecek tarihler kabul edilmez (1 gün tolerans)
+#    - Geçersiz tarihler → bugünün tarihi kullanılır
+#
+# 2. ÇEVİRİ KALİTE KONTROL:
+#    - Türkçe karakter kontrolü (ğüşıöçĞÜŞİÖÇ)
+#    - CJK karakter kontrolü (Çince/Japonca/Korece)
+#    - Non-Latin karakter kontrolü (Arapça/İbranice/Kiril)
+#    - Latin oranı kontrolü (>%80 İngilizce olmalı)
+#    - Retry mekanizması (her model için 2 deneme)
+#
+# 3. INSTRUCTION LEAKAGE TESPİTİ:
+#    - "Return the enhanced article" → ❌ Reddet
+#    - "Here is the translation" → ❌ Reddet
+#    - "Note: I have" → ❌ Reddet
+#    - "Your task:" → ❌ Reddet
+#    - "TL;DR and key highlights" → ❌ Reddet
+#
+# 4. EMBED TEMİZLİK:
+#    - YouTube: [[EMBED:YOUTUBE:VIDEO_ID]]
+#    - Twitter: [[EMBED:TWEET:TWEET_ID]]
+#    - TikTok: [[EMBED:TIKTOK:URL]]
+#
+# 5. YOUTUBE GARBAGE TEXT TEMİZLİK:
+#    - "If playback doesn't begin" → ✂️ Sil
+#    - "try restarting your device" → ✂️ Sil
+#    - "More videos" → ✂️ Sil
+#    - "Videos you watch may be added" → ✂️ Sil
+#    - "retrieving sharing information" → ✂️ Sil
+#    - "0:00 / 1:00" → ✂️ Sil
+#
+# 6. TWITTER GARBAGE TEXT TEMİZLİK:
+#    - "Twitter Widget Iframe" → ✂️ Sil
+#    - "Log in" (kısa) → ✂️ Sil
+#    - "View on Twitter" → ✂️ Sil
+#
+# 7. NUVEMMAG BRANDING TEMİZLİK:
+#    - "– NuvemMag" başlıktan → ✂️ Sil
+#    - nuvemmag.com URL'leri → ✂️ Sil
+#    - Logo ve navigasyon → ✂️ Sil
+#
+# 8. DUPLICATE TESPİTİ:
+#    - Slug-based (URL slug'ından çıkarılır)
+#    - Same-run tracking (aynı URL 2 kategoride varsa)
+#    - source_url unique constraint
+#
+# 9. AI MODELLERİ (SADECE PRODUCTION - STABİL):
+#    - Primary: llama-3.1-8b-instant (560 T/s, 250K TPM)
+#    - Fallback: openai/gpt-oss-20b (1000 T/s, 250K TPM)
+#    - Last Resort: llama-3.3-70b-versatile (280 T/s, 300K TPM)
+#    NOT: Preview modelleri (llama-4-scout, qwen3) kullanılmıyor!
+#
+# 10. RATE LIMITING:
+#     - Groq: 1000ms delay between requests
+#     - Firecrawl: 10000ms (10s) delay
+#     - Retry with simplified prompt on failure
+#
+# ============================================================================
+# SCHEDULING (Hafta içi, Türkiye saatine göre)
+# ============================================================================
+#
 # TIMEZONE NOTE: Nuvemmag is a Turkish news site (Europe/Istanbul timezone)
 # The script automatically handles timezone using JavaScript Intl API,
 # including any DST (Daylight Saving Time) changes - no manual updates needed!
@@ -10,12 +80,13 @@ name: Scrape Tech News
 # Schedule is in UTC (GitHub Actions standard):
 # - Morning, afternoon, and evening checks to catch articles throughout the day
 # - Final check is before n8n LinkedIn digest workflow (16:30 UTC)
+
 on:
   schedule:
     # Monday-Friday only - Three daily checks
-    - cron: '0 7 * * 1-5'    # 07:00 UTC - Morning check (catches overnight articles)
-    - cron: '0 12 * * 1-5'   # 12:00 UTC - Afternoon check (catches morning articles)
-    - cron: '0 16 * * 1-5'   # 16:00 UTC - Final check (before n8n digest at 16:30 UTC)
+    - cron: '0 7 * * 1-5'    # 07:00 UTC = 10:00 Turkey - Morning check
+    - cron: '0 12 * * 1-5'   # 12:00 UTC = 15:00 Turkey - Afternoon check  
+    - cron: '0 16 * * 1-5'   # 16:00 UTC = 19:00 Turkey - Final check
   
   # Manual trigger
   workflow_dispatch:
@@ -47,9 +118,7 @@ jobs:
       - name: 🔍 Scrape and translate tech news
         env:
           # GitHub Secrets - These will be available at runtime
-          # IDE warnings are normal - secrets are not accessible locally
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          # Separate API key for AI-powered article list parsing (avoids rate limits on translation key)
           GROQ_PARSER_API_KEY: ${{ secrets.GROQ_PARSER_API_KEY }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -57,7 +126,6 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # Set timezone for Node.js (used for date calculations)
           TZ: UTC
         run: |
           echo "🚀 Starting multi-category tech news scraper..."
@@ -79,22 +147,30 @@ jobs:
           echo "   Fallback: openai/gpt-oss-20b (1000 T/s, 250K TPM) ⚡"
           echo "   Last Resort: llama-3.3-70b-versatile (280 T/s, 300K TPM)"
           echo "   Parser: llama-3.1-8b-instant (article list extraction)"
+          echo "   ⚠️ Preview models (llama-4, qwen3) NOT used for stability"
           echo ""
           echo "⚡ Rate Limiting:"
           echo "   Translation delay: 1000ms between requests"
           echo "   Firecrawl delay: 10000ms (10s) between requests"
-          echo "   Max retries: 2 per request"
+          echo "   Max retries: 2 per model (with simplified prompt)"
           echo ""
-          echo "✅ Quality Controls:"
-          echo "   ✓ Year validation (2020-2030)"
+          echo "✅ Quality Controls (Learned from experience):"
+          echo "   ✓ Date validation (year <= current, no future dates)"
           echo "   ✓ Turkish character detection in translations"
           echo "   ✓ CJK (Chinese/Japanese/Korean) character detection"
           echo "   ✓ Non-Latin character detection (Arabic/Cyrillic)"
           echo "   ✓ Latin ratio check (>80% English)"
-          echo "   ✓ Instruction leakage detection"
+          echo "   ✓ Instruction leakage detection (prompt text in output)"
           echo "   ✓ Title cleaning (removes NuvemMag branding)"
+          echo "   ✓ YouTube garbage text removal (playback errors)"
+          echo "   ✓ Twitter widget text removal"
           echo "   ✓ Content quality checks with auto-fix"
-          echo "   ✓ Duplicate detection (slug-based)"
+          echo "   ✓ Duplicate detection (slug + same-run tracking)"
+          echo ""
+          echo "🎬 Embed Extraction:"
+          echo "   ✓ YouTube: [[EMBED:YOUTUBE:VIDEO_ID]]"
+          echo "   ✓ Twitter: [[EMBED:TWEET:TWEET_ID]]"
+          echo "   ✓ TikTok: [[EMBED:TIKTOK:URL]]"
           echo ""
           npm run scrape:news
       
@@ -111,14 +187,16 @@ jobs:
           echo "⏰ Tamamlanma zamanı: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
           echo ""
           echo "🔍 Yapılan Kontroller:"
-          echo "   ✓ Tarih validasyonu (2020-2030 arası)"
+          echo "   ✓ Tarih validasyonu (yıl <= mevcut, gelecek tarih yok)"
           echo "   ✓ Türkçe karakter kontrolü"
           echo "   ✓ Çince/Japonca/Korece karakter kontrolü"
           echo "   ✓ Non-Latin karakter kontrolü (Arapça/Kiril)"
           echo "   ✓ Instruction leakage tespiti"
           echo "   ✓ NuvemMag branding temizleme (auto-fix)"
+          echo "   ✓ YouTube garbage text temizleme"
+          echo "   ✓ Embed token'ları (YouTube/Twitter/TikTok)"
           echo "   ✓ İçerik kalite kontrolü"
-          echo "   ✓ Duplicate kontrolü (slug-based)"
+          echo "   ✓ Duplicate kontrolü (slug + same-run)"
           echo ""
           echo "💾 Depolama: Supabase PostgreSQL"
           echo "🔄 Website otomatik olarak veritabanından güncel verileri çekecek"
@@ -130,14 +208,10 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # Set to 'false' to disable success notifications (only get error alerts)
           NOTIFY_SUCCESS: 'true'
         run: |
           if [ "$NOTIFY_SUCCESS" = "true" ]; then
             CURRENT_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
-            
-            # Check how many articles were added (parse from npm output if available)
-            # For now, send a simple success notification
             MESSAGE="✅ <b>TECH NEWS SCRAPER - BAŞARILI</b>%0A%0A🎉 Haber toplama işlemi başarıyla tamamlandı!%0A⏰ Zaman: ${CURRENT_TIME}%0A💾 Veritabanı: Supabase PostgreSQL%0A🔄 Durum: Aktif%0A%0A<i>Tüm sistemler normal çalışıyor</i>"
             
             curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
@@ -175,14 +249,15 @@ jobs:
           echo "   • Veritabanı bağlantı sorunu (Supabase)"
           echo "   • Rate limit aşımı (Groq/Firecrawl)"
           echo "   • Kaynak site erişim sorunu (nuvemmag.com)"
-          echo "   • Tarih parsing hatası"
-          echo "   • Çeviri kalite kontrolü başarısız"
+          echo "   • Tarih parsing hatası (gelecek tarih)"
+          echo "   • Çeviri kalite kontrolü başarısız (Türkçe/CJK chars)"
+          echo "   • Instruction leakage tespit edildi"
           echo ""
           echo "🔗 Log kayıtları: ${LOG_URL}"
           echo ""
           echo "═══════════════════════════════════════════════════════════"
           
-          MESSAGE="🚨 <b>TECH NEWS SCRAPER - HATA!</b>%0A%0A❌ Haber toplama işlemi başarısız oldu%0A⏰ Zaman: ${CURRENT_TIME}%0A🔧 Workflow: Scrape Tech News%0A📊 Durum: Başarısız%0A%0A🔍 <b>Olası Sorunlar:</b>%0A• API anahtarı hatası (Firecrawl/Groq)%0A• Veritabanı bağlantı sorunu (Supabase)%0A• Rate limit aşımı (Groq/Firecrawl)%0A• Kaynak site erişim sorunu%0A• Tarih parsing hatası%0A• Çeviri kalite kontrolü başarısız%0A%0A🔗 <a href='${LOG_URL}'>Log kayıtlarını incele</a>%0A%0A<i>⚠️ Sistem otomatik olarak tekrar deneyecek</i>"
+          MESSAGE="🚨 <b>TECH NEWS SCRAPER - HATA!</b>%0A%0A❌ Haber toplama işlemi başarısız oldu%0A⏰ Zaman: ${CURRENT_TIME}%0A🔧 Workflow: Scrape Tech News%0A📊 Durum: Başarısız%0A%0A🔍 <b>Olası Sorunlar:</b>%0A• API anahtarı hatası (Firecrawl/Groq)%0A• Veritabanı bağlantı sorunu (Supabase)%0A• Rate limit aşımı (Groq/Firecrawl)%0A• Kaynak site erişim sorunu%0A• Tarih/Çeviri kalite kontrolü%0A%0A🔗 <a href='${LOG_URL}'>Log kayıtlarını incele</a>%0A%0A<i>⚠️ Sistem otomatik olarak tekrar deneyecek</i>"
           
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TELEGRAM_CHAT_ID}" \
@@ -191,4 +266,3 @@ jobs:
             -d "disable_web_page_preview=false" > /dev/null
           
           echo "📱 Hata bildirimi Telegram'a gönderildi"
-
