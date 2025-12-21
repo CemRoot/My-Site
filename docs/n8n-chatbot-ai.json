@@ -204,10 +204,6 @@
               "fieldValue": "={{ $json.userMessage }}"
             },
             {
-              "fieldId": "source",
-              "fieldValue": "n8n"
-            },
-            {
               "fieldId": "created_at",
               "fieldValue": "={{ $json.timestamp }}"
             }
@@ -245,10 +241,6 @@
             {
               "fieldId": "content",
               "fieldValue": "={{ $('Check Error and Sanitize').first().json.aiResponse }}"
-            },
-            {
-              "fieldId": "source",
-              "fieldValue": "n8n"
             },
             {
               "fieldId": "created_at",
