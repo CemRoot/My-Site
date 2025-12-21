@@ -3,11 +3,172 @@ import { checkRateLimit, getClientIdentifier, sendRateLimitResponse } from '../l
 import { withSentry } from '../lib/sentry-server.js';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client for settings
+// Initialize Supabase client for settings and chat history
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
+
+/**
+ * Generate a unique session ID for chat tracking
+ * @returns {string} - Session ID
+ */
+function generateSessionId() {
+  return `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
+/**
+ * Save chat message to Supabase chat_history table
+ * @param {string} sessionId - Chat session ID
+ * @param {string} role - 'user' or 'assistant'
+ * @param {string} content - Message content
+ * @param {string} source - 'vercel' or 'n8n_fallback'
+ * @returns {Promise<boolean>} - Success status
+ */
+async function saveChatMessage(sessionId, role, content, source = 'vercel') {
+  try {
+    const { error } = await supabase
+      .from('chat_history')
+      .insert({
+        session_id: sessionId,
+        role: role,
+        content: content,
+        source: source, // Track which backend handled this
+        created_at: new Date().toISOString()
+      });
+
+    if (error) {
+      console.error(`❌ Error saving ${role} message to chat_history:`, error);
+      return false;
+    }
+
+    console.log(`✅ Saved ${role} message to chat_history (session: ${sessionId}, source: ${source})`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Exception saving ${role} message:`, error);
+    return false;
+  }
+}
+
+/**
+ * Save both user and AI messages to chat history
+ * @param {string} sessionId - Chat session ID
+ * @param {string} userMessage - User's message
+ * @param {string} aiResponse - AI's response
+ * @param {string} source - 'vercel' or 'n8n_fallback'
+ */
+async function saveChatHistory(sessionId, userMessage, aiResponse, source = 'vercel') {
+  // Save both messages in parallel for better performance
+  await Promise.allSettled([
+    saveChatMessage(sessionId, 'user', userMessage, source),
+    saveChatMessage(sessionId, 'assistant', aiResponse, source)
+  ]);
+}
+
+/**
+ * Update chat backend setting in Supabase when fallback occurs
+ * @param {string} newBackend - 'vercel' or 'n8n'
+ * @param {string} reason - Reason for the switch
+ * @returns {Promise<boolean>} - Success status
+ */
+async function updateChatBackendSetting(newBackend, reason = 'auto_fallback') {
+  try {
+    const { error } = await supabase
+      .from('system_settings')
+      .update({
+        setting_value: newBackend,
+        updated_at: new Date().toISOString(),
+        updated_by: `auto-fallback (${reason})`,
+        description: `Otomatik geçiş: ${reason} - ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`
+      })
+      .eq('setting_key', 'chat_backend');
+
+    if (error) {
+      console.error('❌ Error updating chat_backend setting:', error);
+      return false;
+    }
+
+    console.log(`✅ Chat backend updated to "${newBackend}" (reason: ${reason})`);
+    return true;
+  } catch (error) {
+    console.error('❌ Exception updating chat_backend setting:', error);
+    return false;
+  }
+}
+
+/**
+ * Send Telegram notification when n8n fallback occurs
+ * @param {string} reason - Fallback reason (e.g., 'token_exhausted', 'ai_error', 'connection_error')
+ * @param {string} errorDetails - Detailed error message
+ * @param {string} userMessage - The user's original message (truncated for privacy)
+ */
+async function sendFallbackNotification(reason, errorDetails = '', userMessage = '') {
+  try {
+    const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+    const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+      console.warn('⚠️ Telegram credentials not configured, skipping fallback notification');
+      return false;
+    }
+
+    // Truncate user message for privacy (first 50 chars)
+    const truncatedMessage = userMessage.length > 50 
+      ? userMessage.substring(0, 50) + '...' 
+      : userMessage;
+
+    // Prepare notification message
+    const reasonEmoji = {
+      'token_exhausted': '💰',
+      'ai_error': '🤖',
+      'connection_error': '🔌',
+      'timeout': '⏱️',
+      'rate_limit': '🚫',
+      'unknown': '❓'
+    };
+
+    const emoji = reasonEmoji[reason] || reasonEmoji['unknown'];
+    
+    const message = `⚠️ <b>N8N CHAT FALLBACK UYARISI</b>
+
+${emoji} <b>Sebep:</b> ${reason}
+⏰ <b>Zaman:</b> ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}
+💬 <b>Kullanıcı Mesajı:</b> <code>${truncatedMessage}</code>
+
+${errorDetails ? `📋 <b>Hata Detayı:</b>\n<code>${errorDetails.substring(0, 200)}</code>\n` : ''}
+✅ <b>Durum:</b> Vercel/Groq API'ye otomatik geçildi
+💾 <b>DB Güncellendi:</b> chat_backend → vercel
+
+🔄 <b>Aksiyon Gerekli:</b>
+1. n8n token/quota durumunu kontrol et
+2. Düzeltildikten sonra Telegram'dan /menu → Chat Backend → n8n seç`;
+
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: TELEGRAM_CHAT_ID,
+        text: message,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('❌ Telegram notification failed:', errorData);
+      return false;
+    }
+
+    console.log('📱 Telegram fallback notification sent successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Error sending Telegram fallback notification:', error);
+    return false;
+  }
+}
 
 /**
  * Get chat backend setting from Supabase
@@ -227,14 +388,64 @@ export default withSentry(async function handler(req, res) {
     // Check which backend to use (Telegram controlled)
     const chatBackend = await getChatBackend();
     
+    // Generate session ID for chat history tracking
+    const sessionId = generateSessionId();
+
     // If n8n backend is selected, forward the request
     if (chatBackend === 'n8n') {
       console.log('🔀 Routing chat request to n8n workflow');
       try {
         const n8nResponse = await forwardToN8n(userMessage, pageContext);
-        return res.status(200).json(n8nResponse);
+        
+        // Check if n8n returned a fallback flag (token exhausted, error, etc.)
+        if (n8nResponse.fallback === true || n8nResponse.useFallback === true) {
+          console.log('⚠️ n8n requested fallback to Vercel API (token exhausted or error)');
+          
+          const fallbackReason = n8nResponse.reason || 'unknown';
+          
+          // Update database to switch to Vercel backend (non-blocking)
+          updateChatBackendSetting('vercel', fallbackReason)
+            .catch(err => console.error('DB update error:', err));
+          
+          // Send Telegram notification about fallback (non-blocking)
+          sendFallbackNotification(
+            fallbackReason,
+            n8nResponse.errorDetails || '',
+            userMessage
+          ).catch(err => console.error('Telegram notification error:', err));
+          
+          // Continue to Vercel/Groq backend below
+        } else {
+          // n8n handled successfully - it saves messages on its side
+          // Add session info to response
+          return res.status(200).json({
+            ...n8nResponse,
+            sessionId: n8nResponse.sessionId || sessionId,
+            source: 'n8n'
+          });
+        }
       } catch (n8nError) {
         console.error('n8n forward error:', n8nError);
+        
+        // Determine error type for notification
+        let errorReason = 'connection_error';
+        if (n8nError.message?.includes('timeout')) {
+          errorReason = 'timeout';
+        } else if (n8nError.message?.includes('rate limit')) {
+          errorReason = 'rate_limit';
+        }
+        
+        // Update database to switch to Vercel backend (non-blocking)
+        updateChatBackendSetting('vercel', errorReason)
+          .catch(err => console.error('DB update error:', err));
+        
+        // Send Telegram notification about connection failure (non-blocking)
+        sendFallbackNotification(
+          errorReason,
+          n8nError.message || 'n8n connection failed',
+          userMessage
+        ).catch(err => console.error('Telegram notification error:', err));
+        
         // Fallback to Vercel if n8n fails
         console.log('⚠️ n8n failed, falling back to Vercel API');
       }
@@ -468,7 +679,18 @@ Now answer the user's question following ALL these rules!`;
     // Sanitize the response to remove any unwanted characters
     reply = sanitizeResponse(reply);
 
-    return res.status(200).json({ reply });
+    // Save chat history to Supabase (non-blocking)
+    // Determine source: if we fell back from n8n, mark it as 'n8n_fallback'
+    const source = chatBackend === 'n8n' ? 'n8n_fallback' : 'vercel';
+    saveChatHistory(sessionId, userMessage, reply, source).catch(err => {
+      console.error('Failed to save chat history:', err);
+    });
+
+    return res.status(200).json({ 
+      reply,
+      sessionId,
+      source
+    });
   } catch (error) {
     console.error('Groq API Error:', error);
     

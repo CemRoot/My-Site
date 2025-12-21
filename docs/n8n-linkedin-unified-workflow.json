@@ -6,22 +6,22 @@
           "interval": [
             {
               "field": "cronExpression",
-              "expression": "30 16 * * 1-5"
+              "expression": "0 8 * * 1"
             }
           ]
         }
       },
-      "id": "678a368a-e758-4ee3-8f63-c43888aaf157",
-      "name": "Daily Schedule (16:30 UTC)",
+      "id": "092c3e07-1888-46ba-969a-83b99e4b457e",
+      "name": "Weekly Schedule (Monday 08:00 UTC)",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -1344,
-        480
+        -2832,
+        1744
       ],
       "webhookId": "schedule-trigger-id",
       "notesInFlow": true,
-      "notes": "Triggers daily at 16:30 UTC Mon-Fri (after news scraping at 16:00)"
+      "notes": "Triggers weekly on Monday at 08:00 UTC for weekly digest preparation"
     },
     {
       "parameters": {
@@ -30,13 +30,13 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "7706d1b7-6614-4da4-bfeb-186aeebd88ce",
+      "id": "9188006e-7656-4b1c-8eda-e4cf989cacab",
       "name": "Webhook Trigger (Manual + Callbacks)",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -1344,
-        672
+        -2832,
+        1936
       ],
       "webhookId": "webhook-unified-id",
       "notesInFlow": true,
@@ -44,15 +44,15 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse trigger source and prepare workflow data\nconst items = $input.all();\nconst firstItem = items[0];\n\nlet triggerType = 'schedule';\nlet webhookData = null;\nlet callbackData = null;\n\n// Check if this came from webhook (has body)\nif (firstItem && firstItem.json && firstItem.json.body) {\n  webhookData = firstItem.json.body;\n  \n  // Check if it's a callback (has action and digest_id)\n  if (webhookData.action && webhookData.digest_id) {\n    triggerType = 'callback';\n    callbackData = {\n      action: webhookData.action,\n      digest_id: webhookData.digest_id,\n      callback_query_id: webhookData.callback_query_id,\n      chat_id: webhookData.chat_id,\n      message_id: webhookData.message_id,\n      edited_content: webhookData.edited_content || null\n    };\n  } \n  // Otherwise it's a manual trigger\n  else if (webhookData.trigger === 'manual') {\n    triggerType = 'manual';\n  }\n}\n\n// Get today's date in consistent format (YYYY-MM-DD)\nconst today = new Date();\nconst todayDate = today.toISOString().split('T')[0];\n\n// Get yesterday's date (for fetching articles from last 2 days)\nconst yesterday = new Date(today);\nyesterday.setDate(yesterday.getDate() - 1);\nconst yesterdayDate = yesterday.toISOString().split('T')[0];\n\n// Get Telegram Chat ID\n// Priority: webhook data > hardcoded\nconst telegramChatId = (webhookData && webhookData.chat_id) \n  ? webhookData.chat_id \n  : '1925139795'; // ← SENIN TELEGRAM CHAT ID'N\n\n// Prepare output\nreturn {\n  triggerType: triggerType,\n  todayDate: todayDate,\n  yesterdayDate: yesterdayDate,\n  timestamp: new Date().toISOString(),\n  webhookData: webhookData,\n  callbackData: callbackData,\n  telegramChatId: telegramChatId\n};"
+        "jsCode": "// Parse trigger source and prepare workflow data for WEEKLY digest\nconst items = $input.all();\nconst firstItem = items[0];\n\nlet triggerType = 'schedule';\nlet webhookData = null;\nlet callbackData = null;\n\n// Check if this came from webhook (has body)\nif (firstItem && firstItem.json && firstItem.json.body) {\n  webhookData = firstItem.json.body;\n  \n  // Check if it's a callback (has action and digest_id)\n  if (webhookData.action && webhookData.digest_id) {\n    triggerType = 'callback';\n    callbackData = {\n      action: webhookData.action,\n      digest_id: webhookData.digest_id,\n      callback_query_id: webhookData.callback_query_id,\n      chat_id: webhookData.chat_id,\n      message_id: webhookData.message_id,\n      edited_content: webhookData.edited_content || null\n    };\n  } \n  // Otherwise it's a manual trigger\n  else if (webhookData.trigger === 'manual') {\n    triggerType = 'manual';\n  }\n}\n\n// Get today's date in consistent format (YYYY-MM-DD)\nconst today = new Date();\nconst todayDate = today.toISOString().split('T')[0];\n\n// Get date 7 days ago for weekly digest\nconst weekAgo = new Date(today);\nweekAgo.setDate(weekAgo.getDate() - 7);\nconst weekAgoDate = weekAgo.toISOString().split('T')[0];\n\n// Get week number for digest identification\nconst getWeekNumber = (d) => {\n  d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));\n  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));\n  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));\n  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);\n};\nconst weekNumber = getWeekNumber(today);\nconst weekIdentifier = `${today.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;\n\n// Get Telegram Chat ID\n// Priority: webhook data > hardcoded\nconst telegramChatId = (webhookData && webhookData.chat_id) \n  ? webhookData.chat_id \n  : '1925139795';\n\n// Prepare output\nreturn {\n  triggerType: triggerType,\n  todayDate: todayDate,\n  weekAgoDate: weekAgoDate,\n  weekIdentifier: weekIdentifier,\n  timestamp: new Date().toISOString(),\n  webhookData: webhookData,\n  callbackData: callbackData,\n  telegramChatId: telegramChatId\n};"
       },
-      "id": "52f42af2-02e2-4f91-b071-3a8834f8bc35",
+      "id": "85182df6-aeef-41d4-83e1-20ed2044eb22",
       "name": "Parse Trigger Type",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1120,
-        576
+        -2608,
+        1840
       ],
       "notesInFlow": true,
       "notes": "Determines: schedule, manual, or callback"
@@ -81,13 +81,13 @@
         },
         "options": {}
       },
-      "id": "c1bcf0aa-402c-4aaa-a7ab-c27ccce3c05f",
+      "id": "5b5d28a7-d3ac-42d1-a73b-6f0d1c6eb095",
       "name": "Route by Trigger Type",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -672,
-        480
+        -2160,
+        1744
       ],
       "notesInFlow": true,
       "notes": "TRUE = Callback | FALSE = Schedule/Manual"
@@ -101,28 +101,22 @@
             {
               "keyName": "digest_date",
               "condition": "eq",
-              "keyValue": "={{ $json.todayDate }}"
+              "keyValue": "={{ $json.weekIdentifier }}"
             }
           ]
         }
       },
-      "id": "251005b3-7853-4e99-9e80-597d331f90e0",
+      "id": "1816d39f-14dd-431d-b20d-ec7857f314e2",
       "name": "Check If Digest Exists",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -448,
-        672
+        -1936,
+        1936
       ],
       "notesInFlow": true,
       "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "numSMv5vyngT6jAm",
-          "name": "Supabase account"
-        }
-      },
-      "notes": "Prevents duplicate digests for the same day"
+      "notes": "Prevents duplicate digests for the same week"
     },
     {
       "parameters": {
@@ -149,13 +143,13 @@
         },
         "options": {}
       },
-      "id": "89d5a7df-dd76-490a-892d-27527565fcfa",
+      "id": "f07940b8-66a9-4859-97e0-bd8b38be7679",
       "name": "Digest Exists?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -224,
-        672
+        -1712,
+        1936
       ],
       "notesInFlow": true,
       "notes": "TRUE = Already exists | FALSE = Create new"
@@ -164,50 +158,43 @@
       "parameters": {
         "operation": "getAll",
         "tableId": "tech_news_articles",
-        "limit": 15,
         "matchType": "allFilters",
         "filters": {
           "conditions": [
             {
               "keyName": "date",
-              "condition": "eq",
-              "keyValue": "={{ $('Parse Trigger Type').item.json.todayDate }}"
+              "condition": "gte",
+              "keyValue": "={{ $('Parse Trigger Type').item.json.weekAgoDate }}"
             }
           ]
         }
       },
-      "id": "6411c0b8-09e1-48a2-96b0-4948b1fb07f9",
-      "name": "Fetch Today's Articles",
+      "id": "ecdd21ac-9703-477e-bedc-15f998075e0b",
+      "name": "Fetch Weekly Articles",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        224,
-        768
+        -1264,
+        2032
       ],
       "notesInFlow": true,
       "alwaysOutputData": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "numSMv5vyngT6jAm",
-          "name": "Supabase account"
-        }
-      },
-      "notes": "Get articles where date = today ONLY (not yesterday)"
+      "notes": "Get all articles from the last 7 days for weekly digest"
     },
     {
       "parameters": {
-        "jsCode": "// Group articles into a single array with scoring and sorting\n// IMPORTANT: Generate correct website URLs (cemkoyluoglu.codes) NOT source URLs (nuvemmag.com)\nconst items = $input.all();\nconst SITE_BASE_URL = 'https://cemkoyluoglu.codes/tech-news';\n\n// Define category weights for diversity (higher = more interesting)\nconst categoryWeights = {\n  'AI': 1.2,\n  'Cybersecurity': 1.15,\n  'Cloud': 1.1,\n  'Hardware': 1.1,\n  'Data Science': 1.05,\n  'Software': 1.0,\n  'General': 0.9\n};\n\n// Define trusted sources (add more as needed)\nconst trustedSources = [\n  'techcrunch.com',\n  'theverge.com',\n  'arstechnica.com',\n  'wired.com',\n  'mit.edu',\n  'stanford.edu'\n];\n\n// Calculate score for each article\nconst articlesWithScores = items.map(item => {\n  // Generate the correct article URL for our website\n  const articleUrl = `${SITE_BASE_URL}/${item.json.slug}`;\n  \n  const article = {\n    id: item.json.id,\n    title: item.json.title,\n    title_en: item.json.title_en,\n    summary_en: item.json.summary_en,\n    slug: item.json.slug,\n    category: item.json.category,\n    // CRITICAL: Use our website URL, NOT the source URL (nuvemmag.com)\n    article_url: articleUrl,\n    created_at: item.json.created_at\n  };\n\n  let score = 0;\n\n  // 1. Novelty Score (0-30 points) - newer articles score higher\n  const articleDate = new Date(article.created_at);\n  const now = new Date();\n  const hoursSincePublished = (now - articleDate) / (1000 * 60 * 60);\n  const noveltyScore = Math.max(0, 30 - (hoursSincePublished * 1.5));\n  score += noveltyScore;\n\n  // 2. Category Diversity Score (0-20 points)\n  const categoryWeight = categoryWeights[article.category] || 1.0;\n  score += categoryWeight * 20;\n\n  // 3. Source Credibility Score (0-25 points)\n  // Note: We use the original source_url from the item for scoring, not article_url\n  const originalSourceUrl = item.json.source_url || item.json.original_source || '';\n  const isTrustedSource = trustedSources.some(trusted => originalSourceUrl.includes(trusted));\n  score += isTrustedSource ? 25 : 10;\n\n  // 4. Content Depth Score (0-25 points)\n  const contentLength = (article.content_en || '').length;\n  const summaryLength = (article.summary_en || '').length;\n  const titleLength = (article.title_en || '').length;\n  \n  // Longer, more detailed content scores higher\n  const depthScore = Math.min(25, (contentLength / 200) + (summaryLength / 50) + (titleLength / 10));\n  score += depthScore;\n\n  return {\n    ...article,\n    _score: Math.round(score * 100) / 100 // Round to 2 decimals\n  };\n});\n\n// Sort by score in descending order (highest score first)\nconst sortedArticles = articlesWithScores.sort((a, b) => b._score - a._score);\n\n// Remove the _score field before returning (optional, keep for debugging)\nconst articles = sortedArticles.map(({ _score, ...article }) => article);\n\nreturn {\n  articles: articles,\n  articleCount: articles.length,\n  todayDate: $('Parse Trigger Type').item.json.todayDate,\n  // Include scoring info for debugging\n  scoringInfo: {\n    highestScore: sortedArticles[0]?._score || 0,\n    lowestScore: sortedArticles[sortedArticles.length - 1]?._score || 0,\n    averageScore: sortedArticles.reduce((sum, a) => sum + a._score, 0) / sortedArticles.length\n  }\n};"
+        "jsCode": "// WEEKLY DIGEST: Score and select TOP 5-7 articles from the week\n// Enhanced scoring algorithm for LinkedIn 2025 algorithm compliance\nconst items = $input.all();\nconst SITE_BASE_URL = 'https://cemkoyluoglu.codes/tech-news';\n\n// Category weights optimized for tech audience engagement\nconst categoryWeights = {\n  'AI': 1.5,           // AI content performs best on LinkedIn\n  'Cybersecurity': 1.3,\n  'Cloud': 1.2,\n  'Hardware': 1.2,\n  'Data Science': 1.15,\n  'Software': 1.1,\n  'General': 0.8\n};\n\n// Breaking news keywords that indicate high-impact stories\nconst breakingKeywords = [\n  'breakthrough', 'first', 'launch', 'announce', 'release',\n  'billion', 'million', 'acquisition', 'partnership', 'record',\n  'new', 'major', 'revolutionary', 'game-changing'\n];\n\n// Trusted sources for higher credibility\nconst trustedSources = [\n  'techcrunch.com', 'theverge.com', 'arstechnica.com', 'wired.com',\n  'mit.edu', 'stanford.edu', 'reuters.com', 'bloomberg.com',\n  'zdnet.com', 'cnet.com', 'engadget.com'\n];\n\n// Calculate enhanced score for each article\nconst articlesWithScores = items.map(item => {\n  const articleUrl = `${SITE_BASE_URL}/${item.json.slug}`;\n  \n  const article = {\n    id: item.json.id,\n    title: item.json.title,\n    title_en: item.json.title_en,\n    summary_en: item.json.summary_en,\n    slug: item.json.slug,\n    category: item.json.category,\n    article_url: articleUrl,\n    created_at: item.json.created_at,\n    date: item.json.date\n  };\n\n  let score = 0;\n  const titleLower = (article.title_en || article.title || '').toLowerCase();\n  const summaryLower = (article.summary_en || '').toLowerCase();\n\n  // 1. Breaking News Score (0-40 points) - high-impact stories\n  const breakingScore = breakingKeywords.reduce((acc, keyword) => {\n    if (titleLower.includes(keyword)) return acc + 8;\n    if (summaryLower.includes(keyword)) return acc + 4;\n    return acc;\n  }, 0);\n  score += Math.min(40, breakingScore);\n\n  // 2. Category Weight Score (0-30 points)\n  const categoryWeight = categoryWeights[article.category] || 1.0;\n  score += categoryWeight * 20;\n\n  // 3. Source Credibility Score (0-25 points)\n  const originalSourceUrl = item.json.source_url || item.json.original_source || '';\n  const isTrustedSource = trustedSources.some(trusted => originalSourceUrl.includes(trusted));\n  score += isTrustedSource ? 25 : 8;\n\n  // 4. Content Quality Score (0-20 points)\n  const summaryLength = (article.summary_en || '').length;\n  const hasNumbers = /\\d+/.test(article.title_en || '');\n  const hasCompanyName = /[A-Z][a-z]+/.test(article.title_en || '');\n  \n  let qualityScore = 0;\n  if (summaryLength > 100) qualityScore += 8;\n  if (summaryLength > 200) qualityScore += 4;\n  if (hasNumbers) qualityScore += 4;  // Numbers create curiosity\n  if (hasCompanyName) qualityScore += 4;  // Company names increase relevance\n  score += qualityScore;\n\n  // 5. Recency Bonus (0-15 points) - prefer articles from last 3 days\n  const articleDate = new Date(article.created_at);\n  const now = new Date();\n  const daysSincePublished = (now - articleDate) / (1000 * 60 * 60 * 24);\n  const recencyScore = Math.max(0, 15 - (daysSincePublished * 2.5));\n  score += recencyScore;\n\n  return {\n    ...article,\n    _score: Math.round(score * 100) / 100,\n    _scoreBreakdown: {\n      breaking: Math.min(40, breakingScore),\n      category: categoryWeight * 20,\n      source: isTrustedSource ? 25 : 8,\n      quality: qualityScore,\n      recency: Math.round(recencyScore * 100) / 100\n    }\n  };\n});\n\n// Sort by score and select TOP 7 articles\nconst sortedArticles = articlesWithScores.sort((a, b) => b._score - a._score);\nconst topArticles = sortedArticles.slice(0, 7);\n\n// Ensure category diversity - max 2 articles per category\nconst diverseArticles = [];\nconst categoryCounts = {};\n\nfor (const article of sortedArticles) {\n  const cat = article.category || 'General';\n  categoryCounts[cat] = (categoryCounts[cat] || 0);\n  \n  if (categoryCounts[cat] < 2) {\n    diverseArticles.push(article);\n    categoryCounts[cat]++;\n  }\n  \n  if (diverseArticles.length >= 7) break;\n}\n\n// Use diverse selection if we have enough, otherwise use top scored\nconst finalArticles = diverseArticles.length >= 5 ? diverseArticles : topArticles;\n\n// Clean output (keep scores for debugging in Telegram)\nconst articles = finalArticles.map(({ _scoreBreakdown, ...article }) => article);\n\nreturn {\n  articles: articles,\n  articleCount: articles.length,\n  totalArticlesThisWeek: items.length,\n  weekIdentifier: $('Parse Trigger Type').item.json.weekIdentifier,\n  dateRange: {\n    from: $('Parse Trigger Type').item.json.weekAgoDate,\n    to: $('Parse Trigger Type').item.json.todayDate\n  },\n  scoringInfo: {\n    highestScore: sortedArticles[0]?._score || 0,\n    lowestScore: sortedArticles[sortedArticles.length - 1]?._score || 0,\n    averageScore: Math.round((sortedArticles.reduce((sum, a) => sum + a._score, 0) / sortedArticles.length) * 100) / 100,\n    selectedCount: articles.length,\n    categoryDistribution: categoryCounts\n  }\n};"
       },
-      "id": "513b1261-862e-4335-98e9-1bc763f79178",
-      "name": "Prepare Articles for AI",
+      "id": "420259cc-7824-47a0-84fb-3457a6b52ace",
+      "name": "Score & Select Top Articles",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        672,
-        480
+        -768,
+        1936
       ],
       "notesInFlow": true,
-      "notes": "Format articles for OpenAI prompt"
+      "notes": "Weekly AI Agent: Scores all articles and selects top 5-7 for digest"
     },
     {
       "parameters": {
@@ -216,19 +203,19 @@
           "fieldValues": [
             {
               "fieldId": "digest_date",
-              "fieldValue": "={{ $('Parse Trigger Type').first().json.todayDate }}"
+              "fieldValue": "={{ $('Parse Trigger Type').first().json.weekIdentifier }}"
             },
             {
               "fieldId": "article_ids",
-              "fieldValue": "={{ $('Prepare Articles for AI').first().json.articles.map(a => a.id) }}"
+              "fieldValue": "={{ $('Score & Select Top Articles').first().json.articles.map(a => a.id) }}"
             },
             {
               "fieldId": "article_count",
-              "fieldValue": "={{ $('Prepare Articles for AI').first().json.articleCount }}"
+              "fieldValue": "={{ $('Score & Select Top Articles').first().json.articleCount }}"
             },
             {
               "fieldId": "suggested_content",
-              "fieldValue": "={{ $('Validate Character Limit').first().json.message.content }}"
+              "fieldValue": "={{ $('Generate Dual Content').first().json.feed_content }}"
             },
             {
               "fieldId": "status",
@@ -237,42 +224,57 @@
           ]
         }
       },
-      "id": "89afa960-fc24-47c3-bb87-48f39f02d16e",
+      "id": "4040f97e-85b5-424f-831e-5994cfe10efc",
       "name": "Save Digest to Database",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        1344,
-        480
+        -64,
+        1936
       ],
       "notesInFlow": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "numSMv5vyngT6jAm",
-          "name": "Supabase account"
-        }
-      },
-      "notes": "Insert with status: pending (validated content)"
+      "notes": "Insert weekly digest with status: pending"
     },
     {
       "parameters": {
-        "jsCode": "// Prepare Telegram message with inline buttons\nconst digest = $input.first().json;\nconst content = digest.suggested_content || 'No content generated';\n\n// Telegram has 4096 char limit - show as much as possible\nconst maxLength = 3500; // Leave room for header and buttons\nconst displayContent = content.length > maxLength \n  ? content.substring(0, maxLength) + '\\n\\n⚠️ [Content truncated due to Telegram limit - full version will be posted to LinkedIn]'\n  : content;\n\nconst message = `📰 *Daily LinkedIn Digest Ready!*\\n\\n📅 Date: ${digest.digest_date}\\n📊 Articles: ${digest.article_count}\\n\\n${displayContent}\\n\\n✅ Choose an action:`;\n\n// Inline keyboard - removed \"View Full\" button\nconst replyMarkup = {\n  inline_keyboard: [\n    [\n      { text: '✅ Approve & Post', callback_data: `approve_${digest.id}` },\n      { text: '❌ Reject', callback_data: `reject_${digest.id}` }\n    ],\n    [\n      { text: '✏️ Edit & Approve', callback_data: `edit_${digest.id}` }\n    ]\n  ]\n};\n\nreturn {\n  chatId: $('Parse Trigger Type').first().json.telegramChatId,\n  text: message,\n  replyMarkup: replyMarkup,\n  digestId: digest.id,\n  digestDate: digest.digest_date\n};"
+        "jsCode": "// Prepare Telegram message with DUAL CONTENT (Group + Feed)\nconst digest = $input.first().json;\nconst dualContent = $('Generate Dual Content').first().json;\n\n// Telegram has 4096 char limit per message\nconst MAX_MSG_LENGTH = 4000;\n\n// Truncate helper\nconst truncate = (text, max) => {\n  if (!text || text.length <= max) return text || '';\n  return text.substring(0, max - 50) + '\\n\\n⚠️ [Truncated - see full in database]';\n};\n\n// === MESSAGE 1: GROUP CONTENT ===\nconst groupContent = dualContent.group_content || 'No group content generated';\nconst firstComment = dualContent.group_first_comment || '';\n\nconst groupMessage = `📢 *WEEKLY DIGEST - GROUP CONTENT*\n━━━━━━━━━━━━━━━━━━━━━━━━\n📅 Week: ${dualContent.weekIdentifier}\n📊 Articles: ${dualContent.articleCount} selected from ${dualContent.totalArticlesThisWeek} total\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n📝 *POST CONTENT (copy this):*\n\n${truncate(groupContent, 2500)}\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n💬 *FIRST COMMENT (paste after posting):*\n\n${truncate(firstComment, 800)}\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n📌 *Manual posting instructions:*\n1. Copy the POST CONTENT above\n2. Paste in LinkedIn Group\n3. Post it\n4. Immediately add FIRST COMMENT with links`;\n\n// === MESSAGE 2: FEED CONTENT ===\nconst feedContent = dualContent.feed_content || 'No feed content generated';\nconst validation = dualContent.validation || {};\n\nconst feedMessage = `📰 *WEEKLY DIGEST - FEED CONTENT*\n━━━━━━━━━━━━━━━━━━━━━━━━\n📅 Week: ${dualContent.weekIdentifier}\n📊 Status: ${validation.status || 'unknown'}\n📏 Characters: ${validation.feed_chars || 0}/3000\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n${truncate(feedContent, 2800)}\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Choose an action for FEED post:`;\n\n// Inline keyboard for feed approval\nconst replyMarkup = {\n  inline_keyboard: [\n    [\n      { text: '✅ Approve & Post to Feed', callback_data: `approve_${digest.id}` },\n      { text: '❌ Reject', callback_data: `reject_${digest.id}` }\n    ],\n    [\n      { text: '✏️ Edit Feed Content', callback_data: `edit_${digest.id}` }\n    ]\n  ]\n};\n\nreturn {\n  chatId: $('Parse Trigger Type').first().json.telegramChatId,\n  groupMessage: groupMessage,\n  feedMessage: feedMessage,\n  replyMarkup: replyMarkup,\n  digestId: digest.id,\n  weekIdentifier: dualContent.weekIdentifier\n};"
       },
-      "id": "80c8e86e-ece8-4040-9d1d-c4b93d8fc9eb",
-      "name": "Prepare Telegram Message",
+      "id": "d98a78b5-0f45-4b8a-a0b3-90029249b896",
+      "name": "Prepare Telegram Messages",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1568,
-        480
+        160,
+        1936
       ],
       "notesInFlow": true,
-      "notes": "Format message with Approve/Reject/Edit/View buttons"
+      "notes": "Prepares TWO messages: Group content (manual) + Feed content (for approval)"
     },
     {
       "parameters": {
         "chatId": "={{ $json.chatId }}",
-        "text": "={{ $json.text }}",
+        "text": "={{ $json.groupMessage }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "dad05ace-ce3f-4554-9410-955f0e5e2d45",
+      "name": "Send Group Content",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        432,
+        1952
+      ],
+      "notesInFlow": true,
+      "webhookId": "307492ad-c357-4cef-b89e-f67aa10fab50",
+      "notes": "Sends GROUP content for manual LinkedIn posting"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Prepare Telegram Messages').first().json.chatId }}",
+        "text": "={{ $('Prepare Telegram Messages').first().json.feedMessage }}",
         "replyMarkup": "inlineKeyboard",
         "inlineKeyboard": {
           "rows": [
@@ -280,21 +282,21 @@
               "row": {
                 "buttons": [
                   {
-                    "text": "={{ $json.replyMarkup.inline_keyboard[0][0].text }}",
+                    "text": "={{ $('Prepare Telegram Messages').first().json.replyMarkup.inline_keyboard[0][0].text }}",
                     "additionalFields": {
-                      "callback_data": "={{ $json.replyMarkup.inline_keyboard[0][0].callback_data }}"
+                      "callback_data": "={{ $('Prepare Telegram Messages').first().json.replyMarkup.inline_keyboard[0][0].callback_data }}"
                     }
                   },
                   {
-                    "text": "={{ $json.replyMarkup.inline_keyboard[0][1].text }}",
+                    "text": "={{ $('Prepare Telegram Messages').first().json.replyMarkup.inline_keyboard[0][1].text }}",
                     "additionalFields": {
-                      "callback_data": "={{ $json.replyMarkup.inline_keyboard[0][1].callback_data }}"
+                      "callback_data": "={{ $('Prepare Telegram Messages').first().json.replyMarkup.inline_keyboard[0][1].callback_data }}"
                     }
                   },
                   {
-                    "text": "={{ $json.replyMarkup.inline_keyboard[1][0].text }}",
+                    "text": "={{ $('Prepare Telegram Messages').first().json.replyMarkup.inline_keyboard[1][0].text }}",
                     "additionalFields": {
-                      "callback_data": "={{ $json.replyMarkup.inline_keyboard[1][0].callback_data }}"
+                      "callback_data": "={{ $('Prepare Telegram Messages').first().json.replyMarkup.inline_keyboard[1][0].callback_data }}"
                     }
                   }
                 ]
@@ -307,79 +309,67 @@
           "parse_mode": "Markdown"
         }
       },
-      "id": "59e95ef9-787b-44d6-87a8-aa6eb1bed0e3",
-      "name": "Send to Telegram",
+      "id": "43d1e1a6-83aa-4cb9-96cd-16d94a58e7a0",
+      "name": "Send Feed Content",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1792,
-        480
+        656,
+        1952
       ],
       "notesInFlow": true,
-      "webhookId": "307492ad-c357-4cef-b89e-f67aa10fab50",
-      "credentials": {
-        "telegramApi": {
-          "id": "gowr8FzoZ2pfcjya",
-          "name": "Telegram account"
-        }
-      },
-      "notes": "Send digest with interactive buttons"
+      "webhookId": "feed-content-webhook-id",
+      "notes": "Sends FEED content with Approve/Reject buttons"
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ { success: true, message: 'Digest creation started', date: $('Parse Trigger Type').first().json.todayDate } }}",
+        "responseBody": "={{ { success: true, message: 'Weekly digest creation started', week: $('Parse Trigger Type').first().json.weekIdentifier } }}",
         "options": {}
       },
-      "id": "37e1d4c5-3434-4e29-a343-8f7122c174aa",
+      "id": "668a2b3e-e2dd-4152-8444-5cfb88d395ca",
       "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        0,
-        768
+        -1488,
+        2032
       ]
     },
     {
       "parameters": {
         "chatId": "={{ $('Parse Trigger Type').item.json.telegramChatId }}",
-        "text": "=⚠️ *Daily digest already exists for today!\nStatus: *{{ $json.status }}*\nCreated: {{ $json.created_at }}\nNo action needed.",
+        "text": "=⚠️ *Weekly digest already exists!*\n\n📅 Week: {{ $('Parse Trigger Type').item.json.weekIdentifier }}\n📊 Status: {{ $json.status }}\n🕐 Created: {{ $json.created_at }}\n\nNo action needed - digest was already generated this week.",
         "additionalFields": {
           "appendAttribution": false,
-          "parse_mode": "HTML"
+          "parse_mode": "Markdown"
         }
       },
-      "id": "7ccd767e-8629-42eb-b75f-67e14b25cf65",
+      "id": "98600078-d974-4195-a42b-35800808ea55",
       "name": "Notify Duplicate",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        224,
-        576
+        -1264,
+        1840
       ],
       "notesInFlow": true,
       "webhookId": "cf63a846-811b-4604-aab5-88c76aed3b73",
-      "credentials": {
-        "telegramApi": {
-          "id": "gowr8FzoZ2pfcjya",
-          "name": "Telegram account"
-        }
-      },
-      "notes": "Inform user that digest already exists"
+      "notes": "Inform user that weekly digest already exists"
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ { success: false, message: 'Digest already exists for today', date: $('Parse Trigger Type').first().json.todayDate } }}",
+        "responseBody": "={{ { success: false, message: 'Weekly digest already exists', week: $('Parse Trigger Type').first().json.weekIdentifier } }}",
         "options": {}
       },
-      "id": "f2bc25c5-d051-4573-a93a-37ad9e0a6ec5",
+      "id": "3ed3eb6e-321e-4640-a284-690fd05e448f",
       "name": "Respond Duplicate",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        0,
-        576
+        -1488,
+        1840
       ]
     },
     {
@@ -395,21 +385,15 @@
           ]
         }
       },
-      "id": "8ca21725-94a6-4d7b-95d8-8b916f540824",
+      "id": "494d8b56-4cc4-40f9-92e3-9a468124f9a7",
       "name": "Fetch Digest by ID",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -448,
-        192
+        -1936,
+        1456
       ],
       "notesInFlow": true,
-      "credentials": {
-        "supabaseApi": {
-          "id": "numSMv5vyngT6jAm",
-          "name": "Supabase account"
-        }
-      },
       "notes": "Get digest for callback action"
     },
     {
@@ -488,13 +472,13 @@
           "allMatchingOutputs": false
         }
       },
-      "id": "16694582-6ff7-4f4c-860f-d29a608f4ae0",
+      "id": "b65e821a-65f0-4ac0-b6b4-18432665a272",
       "name": "Route Callback Action",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        -224,
-        176
+        -1712,
+        1440
       ],
       "notesInFlow": true,
       "notes": "Route to: approve / reject / edit"
@@ -521,20 +505,14 @@
           ]
         }
       },
-      "id": "82fbe371-b06f-4752-abf3-5c6b79c9e4c3",
+      "id": "67d385f8-7f3e-4c13-9688-983be985b706",
       "name": "Update Status: Posting",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        224,
-        0
-      ],
-      "credentials": {
-        "supabaseApi": {
-          "id": "numSMv5vyngT6jAm",
-          "name": "Supabase account"
-        }
-      }
+        -1264,
+        1264
+      ]
     },
     {
       "parameters": {
@@ -542,21 +520,15 @@
         "text": "={{ $('Clean Content for LinkedIn').item.json.clean_content }}",
         "additionalFields": {}
       },
-      "id": "f283539c-18bb-4b5f-90f9-28b6fe89384a",
+      "id": "cd234d1f-3c11-454d-ae67-98c51a35dba9",
       "name": "Post to LinkedIn",
       "type": "n8n-nodes-base.linkedIn",
       "typeVersion": 1,
       "position": [
-        672,
-        0
+        -816,
+        1264
       ],
       "notesInFlow": true,
-      "credentials": {
-        "linkedInOAuth2Api": {
-          "id": "6Ih66xopGV0JPRBM",
-          "name": "LinkedIn account"
-        }
-      },
       "notes": "n8n OAuth handles LinkedIn posting"
     },
     {
@@ -589,44 +561,33 @@
           ]
         }
       },
-      "id": "03f684d7-44c1-4c2b-9f6e-50adcd3f88fa",
+      "id": "91349905-1eea-4add-8ede-401c54984b97",
       "name": "Update Status: Posted",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        960,
-        0
-      ],
-      "credentials": {
-        "supabaseApi": {
-          "id": "numSMv5vyngT6jAm",
-          "name": "Supabase account"
-        }
-      }
+        -528,
+        1264
+      ]
     },
     {
       "parameters": {
         "chatId": "={{ $('Parse Trigger Type').item.json.callbackData.chat_id }}",
-        "text": "=✅ Digest posted to LinkedIn!\n📅 Date: {{ $('Fetch Digest by ID').item.json.digest_date }}\n🔗 Post ID: {{ $json.linkedin_post_id }}",
+        "text": "=✅ *Feed content posted to LinkedIn!*\n\n📅 Week: {{ $('Fetch Digest by ID').item.json.digest_date }}\n🔗 Post ID: {{ $json.linkedin_post_id }}\n\n📌 Don't forget to manually post the GROUP content to LinkedIn groups!",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
         }
       },
-      "id": "248bae13-63fa-4c33-981d-7be6f199d50c",
+      "id": "50a68352-8c4d-4a62-96d8-b36233787e67",
       "name": "Telegram: Approve Success",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1248,
-        0
+        -240,
+        1264
       ],
-      "webhookId": "e057ab3d-6ab3-47fc-99e2-541287812570",
-      "credentials": {
-        "telegramApi": {
-          "id": "gowr8FzoZ2pfcjya",
-          "name": "Telegram account"
-        }
-      }
+      "webhookId": "e057ab3d-6ab3-47fc-99e2-541287812570"
     },
     {
       "parameters": {
@@ -634,13 +595,13 @@
         "responseBody": "={{ { success: true, message: 'Digest approved and posted to LinkedIn' } }}",
         "options": {}
       },
-      "id": "19a7cffa-0a87-4a8e-b090-db87d2061b0c",
+      "id": "95821931-20c2-4139-9e3d-e3e66628c5fe",
       "name": "Respond: Approve",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        0,
-        0
+        -1488,
+        1264
       ]
     },
     {
@@ -665,45 +626,33 @@
           ]
         }
       },
-      "id": "bf52375c-1ac2-488d-92e8-0536457b2ae7",
+      "id": "260c5cf7-fbbe-4d24-b092-ad4682ae17f1",
       "name": "Update Status: Rejected",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        224,
-        192
-      ],
-      "credentials": {
-        "supabaseApi": {
-          "id": "numSMv5vyngT6jAm",
-          "name": "Supabase account"
-        }
-      }
+        -1264,
+        1456
+      ]
     },
     {
       "parameters": {
         "chatId": "={{ $('Parse Trigger Type').item.json.callbackData.chat_id }}",
-        "text": "=❌ Digest rejected \nThe digest has been marked as rejected.",
+        "text": "=❌ *Weekly digest rejected*\n\nThe digest has been marked as rejected and will not be posted to LinkedIn Feed.\n\n📌 Note: You can still use the GROUP content for manual posting if needed.",
         "additionalFields": {
           "appendAttribution": false,
           "parse_mode": "Markdown"
         }
       },
-      "id": "a53ae978-e8d2-4dc1-a086-88ba0be48131",
+      "id": "ba406efb-9a00-49ef-bef6-d183b67ac567",
       "name": "Telegram: Reject Success",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        448,
-        192
+        -1040,
+        1456
       ],
-      "webhookId": "7a6cfb1c-c48d-44d0-8043-90ec3523de01",
-      "credentials": {
-        "telegramApi": {
-          "id": "gowr8FzoZ2pfcjya",
-          "name": "Telegram account"
-        }
-      }
+      "webhookId": "7a6cfb1c-c48d-44d0-8043-90ec3523de01"
     },
     {
       "parameters": {
@@ -711,13 +660,13 @@
         "responseBody": "={{ { success: true, message: 'Digest rejected' } }}",
         "options": {}
       },
-      "id": "3bc6c052-995f-4c15-9d3a-e3c1ac7eb38e",
+      "id": "b3e4401f-e22c-4b5e-9b05-55c6aa0015f8",
       "name": "Respond: Reject",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        0,
-        192
+        -1488,
+        1456
       ]
     },
     {
@@ -726,13 +675,13 @@
         "responseBody": "={{ { success: true, message: 'Edit mode (coming soon)' } }}",
         "options": {}
       },
-      "id": "cf4a7cce-ce50-4802-9c13-e0318bb17bc9",
+      "id": "14624cf3-53b5-45c6-aa1f-6654ba92a142",
       "name": "Respond: Edit",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        0,
-        384
+        -1488,
+        1648
       ]
     },
     {
@@ -757,53 +706,47 @@
         },
         "options": {}
       },
-      "id": "63aff6a4-243e-4141-9876-89988a830dfc",
+      "id": "bfc423a0-f54e-485e-83ed-bb42360cddd9",
       "name": "Check If Articles Found",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        448,
-        768
+        -1040,
+        2032
       ]
     },
     {
       "parameters": {
         "chatId": "={{ $('Parse Trigger Type').first().json.telegramChatId }}",
-        "text": "⚠️ *Bugün haber bulunamadı!*\n\nVeritabanında bugüne ait hiçbir haber bulunamadı.\n\n📌 *Yapılacaklar:*\n1. Manuel olarak haber çekme workflow'unu çalıştırın\n2. Tekrar deneyin\n3. Sorun devam ederse n8n loglarını kontrol edin\n\nBu mesaj otomatik olarak n8n tarafından gönderildi.",
+        "text": "⚠️ *No articles found this week!*\n\nNo articles were found in the database for the past 7 days.\n\n📌 *Action items:*\n1. Run the news scraper workflow manually\n2. Try again after scraping completes\n3. Check n8n logs if the problem persists\n\nThis message was sent automatically by n8n.",
         "additionalFields": {
           "appendAttribution": false,
           "parse_mode": "Markdown"
         }
       },
-      "id": "86f81c2e-154c-46bf-a6eb-8566ec118185",
+      "id": "ce57ce15-bc23-4f36-861f-4c093c392bdb",
       "name": "Notify No Articles Found",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        672,
-        864
+        -816,
+        2128
       ],
-      "webhookId": "c1b31ee2-a4ed-4fb3-9bbe-4befd1c76e0b",
-      "credentials": {
-        "telegramApi": {
-          "id": "gowr8FzoZ2pfcjya",
-          "name": "Telegram account"
-        }
-      }
+      "webhookId": "c1b31ee2-a4ed-4fb3-9bbe-4befd1c76e0b"
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ { success: false, message: 'No articles found for today', date: $('Parse Trigger Type').first().json.todayDate } }}",
+        "responseBody": "={{ { success: false, message: 'No articles found for this week', week: $('Parse Trigger Type').first().json.weekIdentifier } }}",
         "options": {}
       },
-      "id": "65099361-3048-4628-b248-f33b1c840095",
+      "id": "dd0b3c1c-2ac0-4da8-b064-45956d49be2b",
       "name": "Respond No Articles",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        960,
-        864
+        -528,
+        2128
       ]
     },
     {
@@ -829,64 +772,58 @@
         },
         "options": {}
       },
-      "id": "86f73cf4-9f0a-4908-a523-16ef6243db3b",
+      "id": "2a742a4e-8eda-4042-b395-222cbe8f1477",
       "name": "Validate Trigger Type",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -896,
-        576
+        -2384,
+        1840
       ]
     },
     {
       "parameters": {
         "errorMessage": "=Invalid trigger type: {{ $('Parse Trigger Type').item.json.triggerType }}. Expected one of: schedule, manual, callback"
       },
-      "id": "36aea26e-4bc8-4c13-9c11-ece309877dbb",
+      "id": "12cc9c4f-3d5a-4649-86bb-c2d8539a4ca2",
       "name": "Stop and Error",
       "type": "n8n-nodes-base.stopAndError",
       "typeVersion": 1,
       "position": [
-        -672,
-        672
+        -2160,
+        1936
       ]
     },
     {
       "parameters": {
         "chatId": "={{ $('Parse Trigger Type').item.json.callbackData.chat_id }}",
-        "text": "=✏️ <b>LinkedIn Digest İçeriği Düzenleme</b>\n\nAşağıdaki içeriği istediğiniz gibi düzenleyip bana geri gönderin.\n\n📝 <b>Mevcut İçerik:</b>\n\n{{ $('Fetch Digest by ID').item.json.suggested_content }}\n\n━━━━━━━━━━━━━━━━━━━━\n\n<b>📋 Nasıl Düzenlerim?</b>\n1️⃣ Yukarıdaki içeriği kopyalayın\n2️⃣ İstediğiniz değişiklikleri yapın\n3️⃣ Düzenlenmiş içeriği bu sohbete GÖNDERİN (metin olarak)\n\n<b>⚠️ Önemli Notlar:</b>\n• Maksimum 3000 karakter\n• Emoji ve formatlamalar korunur\n• Hashtag'leri korumayı unutmayın\n• İptal etmek için /menu yazın\n\n<b>⏱️ 10 dakika içinde göndermezseniz işlem iptal olur.</b>",
+        "text": "=✏️ <b>Edit LinkedIn Feed Content</b>\n\nEdit the content below and send it back to me.\n\n📝 <b>Current Content:</b>\n\n{{ $('Fetch Digest by ID').item.json.suggested_content }}\n\n━━━━━━━━━━━━━━━━━━━━\n\n<b>📋 How to Edit:</b>\n1️⃣ Copy the content above\n2️⃣ Make your changes\n3️⃣ Send the edited content back to this chat (as text)\n\n<b>⚠️ Important Notes:</b>\n• Maximum 3000 characters\n• Emojis and formatting will be preserved\n• Remember to keep the hashtags\n• Type /menu to cancel\n\n<b>⏱️ The edit will timeout after 10 minutes.</b>",
         "additionalFields": {
           "appendAttribution": false,
           "parse_mode": "HTML"
         }
       },
-      "id": "37701c7c-88d5-4c7a-865b-1eebde511306",
+      "id": "b1e089af-f04c-46c2-8b08-d7ab9bf6fff8",
       "name": "Send Edit Instructions",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        448,
-        384
+        -1040,
+        1648
       ],
-      "webhookId": "40e39b5e-e3b4-4e54-b542-f0e16161cb01",
-      "credentials": {
-        "telegramApi": {
-          "id": "gowr8FzoZ2pfcjya",
-          "name": "Telegram account"
-        }
-      }
+      "webhookId": "40e39b5e-e3b4-4e54-b542-f0e16161cb01"
     },
     {
       "parameters": {
-        "jsCode": "// Get the digest data from Fetch Digest by ID node\nconst digest = $('Fetch Digest by ID').first().json;\n\n// Get edited_content if exists, otherwise use suggested_content\nconst content = digest.edited_content || digest.suggested_content;\n\n// Check if content exists\nif (!content) {\n  throw new Error('No content found in digest');\n}\n\n// Remove markdown bold syntax (**text** → text)\nconst cleanContent = content.replace(/\\*\\*(.*?)\\*\\*/g, '$1');\n\n// Return all data with clean_content added\nreturn {\n  json: {\n    ...digest,\n    clean_content: cleanContent\n  }\n};"
+        "jsCode": "// Get the digest data from Fetch Digest by ID node\nconst digest = $('Fetch Digest by ID').first().json;\n\n// Get edited_content if exists, otherwise use suggested_content (which is feed_content)\nconst content = digest.edited_content || digest.suggested_content;\n\n// Check if content exists\nif (!content) {\n  throw new Error('No content found in digest');\n}\n\n// Clean content for LinkedIn posting\n// Remove markdown bold syntax if any (**text** → text)\nlet cleanContent = content.replace(/\\*\\*(.*?)\\*\\*/g, '$1');\n\n// Ensure proper line breaks\ncleanContent = cleanContent.replace(/\\n{3,}/g, '\\n\\n').trim();\n\n// Return all data with clean_content added\nreturn {\n  json: {\n    ...digest,\n    clean_content: cleanContent\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
-        0
+        -1040,
+        1264
       ],
-      "id": "904e7639-5519-4c25-b6bb-e379b422db02",
+      "id": "d54024cd-fb86-4679-84f8-8b401fd37e8f",
       "name": "Clean Content for LinkedIn"
     },
     {
@@ -928,10 +865,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        224,
-        384
+        -1264,
+        1648
       ],
-      "id": "eee24d1e-3bc3-406b-939b-d8bcc9809c2d",
+      "id": "0c17d7e0-b83b-4f40-8e29-55a5ecbb153a",
       "name": "Set Conversation State"
     },
     {
@@ -945,61 +882,57 @@
         "messages": {
           "values": [
             {
-              "content": "=You are an expert LinkedIn Growth Editor creating daily tech news digests.\n\nHARD LIMITS:\n- Maximum 2700 characters total\n- Output ONLY the post - no explanations, no meta info\n\n═══════════════════════════════════════\nUNICODE BOLD REFERENCE (COPY THESE):\n═══════════════════════════════════════\n𝐀𝐁𝐂𝐃𝐄𝐅𝐆𝐇𝐈𝐉𝐊𝐋𝐌𝐍𝐎𝐏𝐐𝐑𝐒𝐓𝐔𝐕𝐖𝐗𝐘𝐙\n𝐚𝐛𝐜𝐝𝐞𝐟𝐠𝐡𝐢𝐣𝐤𝐥𝐦𝐧𝐨𝐩𝐪𝐫𝐬𝐭𝐮𝐯𝐰𝐱𝐲𝐳\n𝟎𝟏𝟐𝟑𝟒𝟓𝟔𝟕𝟖𝟗\n\nUSE ONLY THESE CHARACTERS FOR BOLD. Never use:\n- Markdown bold (**text** or __text__)\n- Sans-serif bold (𝗔𝗕𝗖)\n- Any other font variant\n\n═══════════════════════════════════════\nPOST STRUCTURE:\n═══════════════════════════════════════\n1. TITLE LINE (fully bold):\n   𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭𝐬: [𝐬𝐮𝐦𝐦𝐚𝐫𝐢𝐳𝐞 𝐭𝐨𝐝𝐚𝐲'𝐬 𝐤𝐞𝐲 𝐭𝐡𝐞𝐦𝐞𝐬 𝐢𝐧 𝐛𝐨𝐥𝐝]\n\n2. ARTICLES (4-5 articles, each with):\n   - Unique emoji relevant to the topic\n   - 2 sentences that CREATE CURIOSITY but stay ACCURATE\n   - Bold KEY TERMS: company names, tech names, numbers\n   - Plain link on new line (from article_url field)\n\n3. HASHTAGS: Extract from TODAY'S articles (see rules below)\n\n═══════════════════════════════════════\nWRITING STYLE FOR ARTICLE SUMMARIES:\n═══════════════════════════════════════\n✅ DO: Create curiosity and intrigue\n✅ DO: Highlight the \"why it matters\" angle\n✅ DO: Use concrete numbers and facts from the article\n✅ DO: Make readers want to click the link\n\n❌ DON'T: Exaggerate or make false claims\n❌ DON'T: Use clickbait phrases like \"You won't believe...\"\n❌ DON'T: Add information not in the original article\n❌ DON'T: Be generic - each summary must be unique to that article\n\nGOOD EXAMPLE:\n\"𝐆𝐨𝐨𝐠𝐥𝐞's new 𝐖𝐢𝐥𝐥𝐨𝐰 chip solved a calculation in 𝟓 minutes that would take supercomputers 𝟏𝟎 septillion years. Quantum supremacy just got real.\"\n\nBAD EXAMPLE:\n\"Google made a new chip. It's very fast and impressive.\"\n\n═══════════════════════════════════════\nLINK RULES (CRITICAL):\n═══════════════════════════════════════\n- Use the 'article_url' field EXACTLY as provided\n- Links must start with: https://cemkoyluoglu.codes/tech-news/\n- Output links as PLAIN TEXT - no underscores, no brackets\n- Format: 🔗 https://cemkoyluoglu.codes/tech-news/slug-here\n\n═══════════════════════════════════════\nDYNAMIC HASHTAG RULES (CRITICAL):\n═══════════════════════════════════════\n⚠️ HASHTAGS MUST BE EXTRACTED FROM TODAY'S ARTICLES - NOT COPIED FROM EXAMPLES\n\nPROCESS:\n1. Read each article's title, summary, and content\n2. Identify: Company names, Technology names, Industry terms\n3. Convert to hashtags: Tesla → #Tesla, quantum computing → #QuantumComputing\n4. Add exactly 1 broad hashtag: #TechNews OR #Innovation (pick ONE)\n5. Total: Maximum 5 hashtags\n\nEXTRACTION EXAMPLES:\n- Article about Amazon AWS → #Amazon or #AWS\n- Article about Tesla robotaxi → #Tesla or #ElectricVehicles\n- Article about OpenAI GPT → #OpenAI or #GenerativeAI\n- Article about NVIDIA chips → #NVIDIA or #Semiconductors\n\n❌ NEVER USE:\n- Made-up combinations: #AICloudInfrastructure\n- Generic fillers: #Tech #Future #Trending\n- Hashtags not related to today's specific articles",
+              "content": "You are an expert LinkedIn Growth Strategist creating WEEKLY tech digests optimized for LinkedIn's 2025 algorithm.\n\nYou will generate TWO separate content pieces:\n1. GROUP_CONTENT - For LinkedIn Groups (manual posting, links in first comment)\n2. FEED_CONTENT - For LinkedIn Feed (automated posting, algorithm-optimized)\n\n═══════════════════════════════════════\nLINKEDIN 2025 ALGORITHM REQUIREMENTS:\n═══════════════════════════════════════\n• HOOK: First 3 lines are CRITICAL - must stop the scroll\n• FORMAT: 14+ short paragraphs, NO text walls\n• CHARACTERS: 1500-2500 optimal range\n• DWELL TIME: Content must be engaging enough to read fully\n• NO ENGAGEMENT BAIT: Never use \"Comment YES if...\" or similar\n• LINKS: NEVER in post body for Feed content (algorithm penalty)\n• HASHTAGS: 3-5 maximum, extracted from actual article topics\n\n═══════════════════════════════════════\nHOOK WRITING RULES (CRITICAL):\n═══════════════════════════════════════\n✅ Start with a surprising fact or number\n✅ Ask a thought-provoking question\n✅ Make a bold but accurate statement\n✅ Create curiosity gap (what happens next?)\n\n❌ Never use clickbait (\"You won't believe...\")\n❌ Never exaggerate or make false claims\n❌ Never start with \"I\" or generic greetings\n\nGOOD HOOKS:\n• \"Google just solved in 5 minutes what would take supercomputers 10 septillion years.\"\n• \"This week, 3 companies announced breakthroughs that could reshape entire industries.\"\n• \"The tech news this week reads like science fiction. Here's what you missed:\"\n\nBAD HOOKS:\n• \"Here's my weekly tech roundup!\"\n• \"You won't believe what happened this week!\"\n• \"I wanted to share some interesting news...\"\n\n═══════════════════════════════════════\nOUTPUT FORMAT (STRICT JSON):\n═══════════════════════════════════════\nYou MUST output valid JSON with exactly this structure:\n\n{\n  \"group_content\": \"[Full group post content here]\",\n  \"group_first_comment\": \"[Links list for first comment]\",\n  \"feed_content\": \"[Full feed post content - NO links]\",\n  \"hashtags\": [\"Tag1\", \"Tag2\", \"Tag3\", \"Tag4\", \"TechNews\"]\n}\n\n═══════════════════════════════════════\nGROUP_CONTENT FORMAT:\n═══════════════════════════════════════\n[HOOK - 2-3 lines, attention-grabbing]\n\nThis week in tech:\n\n[Emoji] [Article 1 summary - 2 sentences, curiosity-driven]\n\n[Emoji] [Article 2 summary - 2 sentences, curiosity-driven]\n\n[...5-7 articles total...]\n\nWhich development do you think will have the biggest impact?\n\n---\nSource links in first comment.\n\n═══════════════════════════════════════\nFEED_CONTENT FORMAT (Algorithm Optimized):\n═══════════════════════════════════════\n[HOOK - 2-3 lines maximum, stops the scroll]\n\n[Empty line]\n\n[Personal insight about this week's trends]\n\n[Empty line]\n\n[Key highlights - short bullet points]\n• Point 1\n• Point 2\n• Point 3\n\n[Empty line]\n\n[Your professional take / why this matters]\n\n[Empty line]\n\n[Discussion question - sparks genuine conversation]\n\n#Hashtag1 #Hashtag2 #Hashtag3 #Hashtag4 #TechNews",
               "role": "system"
             },
             {
-              "content": "==Create today's LinkedIn tech digest from these articles:\n\n{{ JSON.stringify($json.articles.slice(0, 8), null, 2) }}\n\nCRITICAL INSTRUCTIONS:\n1. READ each article carefully - extract the most interesting fact\n2. Write summaries that CREATE CURIOSITY but remain ACCURATE\n3. EXTRACT hashtags from these specific articles (company names, tech terms)\n4. Use article_url field for links - PLAIN TEXT, no formatting\n\nOUTPUT FORMAT:\n\n𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭𝐬: [𝐛𝐨𝐥𝐝 𝐬𝐮𝐦𝐦𝐚𝐫𝐲 𝐨𝐟 𝐭𝐨𝐝𝐚𝐲'𝐬 𝐭𝐡𝐞𝐦𝐞𝐬]\n\n[emoji] [Curiosity-driven summary with 𝐛𝐨𝐥𝐝 key terms]. [Why it matters].\n🔗 [article_url]\n\n[emoji] [Curiosity-driven summary with 𝐛𝐨𝐥𝐝 key terms]. [Why it matters].\n🔗 [article_url]\n\n... (4-5 articles total)\n\n#[FromArticle1] #[FromArticle2] #[FromArticle3] #[FromArticle4] #TechNews"
-            },
-            {
-              "content": "=𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭𝐬: 𝐐𝐮𝐚𝐧𝐭𝐮𝐦 𝐥𝐞𝐚𝐩𝐬, 𝐀𝐈 𝐦𝐢𝐥𝐞𝐬𝐭𝐨𝐧𝐞𝐬 𝐚𝐧𝐝 𝐬𝐩𝐚𝐜𝐞 𝐛𝐫𝐞𝐚𝐤𝐭𝐡𝐫𝐨𝐮𝐠𝐡𝐬\n\n🔬 𝐆𝐨𝐨𝐠𝐥𝐞's 𝐖𝐢𝐥𝐥𝐨𝐰 chip just solved a problem in 𝟓 𝐦𝐢𝐧𝐮𝐭𝐞𝐬 that would take today's fastest supercomputers 𝟏𝟎 septillion years. The quantum computing race just entered a new era.\n🔗 https://cemkoyluoglu.codes/tech-news/google-willow-quantum-chip\n\n🚀 𝐁𝐥𝐮𝐞 𝐎𝐫𝐢𝐠𝐢𝐧 landed its 𝐍𝐞𝐰 𝐆𝐥𝐞𝐧𝐧 rocket on the very first attempt - a feat that took 𝐒𝐩𝐚𝐜𝐞𝐗 years to achieve. Jeff Bezos finally has a serious contender in the reusable rocket game.\n🔗 https://cemkoyluoglu.codes/tech-news/blue-origin-new-glenn-landing\n\n🧬 Scientists discovered a fungus in 𝐂𝐡𝐞𝐫𝐧𝐨𝐛𝐲𝐥 that literally eats 𝐧𝐮𝐜𝐥𝐞𝐚𝐫 𝐫𝐚𝐝𝐢𝐚𝐭𝐢𝐨𝐧 and converts it to energy. This could revolutionize how we power long-duration 𝐬𝐩𝐚𝐜𝐞 𝐦𝐢𝐬𝐬𝐢𝐨𝐧𝐬.\n🔗 https://cemkoyluoglu.codes/tech-news/chernobyl-fungus-radiation\n\n💾 𝐒𝐞𝐚𝐠𝐚𝐭𝐞 is pushing HDD capacity to 𝟏𝟎 𝐓𝐁 per platter with next-gen 𝐇𝐀𝐌𝐑 technology. Your future data center might store petabytes in a single rack.\n🔗 https://cemkoyluoglu.codes/tech-news/seagate-hamr-10tb\n\n#Google #QuantumComputing #BlueOrigin #Seagate #TechNews",
-              "role": "assistant"
+              "content": "=Create this week's LinkedIn content from these TOP articles:\n\nWeek: {{ $json.weekIdentifier }}\nArticle Count: {{ $json.articleCount }} (from {{ $json.totalArticlesThisWeek }} total)\n\nARTICLES:\n{{ JSON.stringify($json.articles, null, 2) }}\n\nINSTRUCTIONS:\n1. Read each article carefully\n2. Create GROUP_CONTENT with all 5-7 articles (links go in first_comment)\n3. Create FEED_CONTENT focusing on 3-4 most impactful stories (NO links - algorithm penalty)\n4. Extract hashtags from actual company/tech names in articles\n5. Write hooks that create genuine curiosity\n\nRemember:\n- GROUP_CONTENT: Can mention \"check comments for links\"\n- FEED_CONTENT: NO links at all, focus on insights and discussion\n- Both: Use short paragraphs, professional but engaging tone\n\nOutput ONLY valid JSON, no other text."
             }
           ]
         },
         "options": {
-          "frequency_penalty": 0.1,
-          "maxTokens": 1500,
+          "frequency_penalty": 0.2,
+          "maxTokens": 2500,
           "n": 1,
-          "temperature": 0.1,
-          "topP": 1
+          "temperature": 0.3,
+          "topP": 0.95
         }
       },
-      "id": "a07510af-e99a-4aa1-8dd8-975b9da3e156",
-      "name": "OpenAI - Generate Digest",
+      "id": "f5987684-e260-4427-82f7-a723bd04eb85",
+      "name": "OpenAI - Generate Dual Content",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.3,
       "position": [
-        848,
-        368
+        -592,
+        1872
       ],
       "notesInFlow": true,
       "credentials": {
         "openAiApi": {
-          "id": "eSu164nfTuwc1TFy",
+          "id": "5r3Kk6odsFXc2dn6",
           "name": "n8n free OpenAI API credits"
         }
       },
-      "notes": "Uses $100 free OpenAI credit"
+      "notes": "Generates both Group and Feed content with 2025 algorithm compliance"
     },
     {
       "parameters": {
-        "jsCode": "// CRITICAL: Validate and enforce LinkedIn character limit\nconst MAX_LINKEDIN_CHARS = 3000;\nconst SAFE_LIMIT = 2800;\nconst TARGET_LIMIT = 2700;\n\nconst aiOutput = $input.first().json;\nlet content = aiOutput.message?.content || '';\n\n// POST-PROCESSING: Remove any character count or meta info that AI might have added\n// Patterns like: (Characters: 1,005), [1234 characters], (1234 chars), etc.\ncontent = content\n  .replace(/\\(Characters?:\\s*[\\d,]+\\)/gi, '')\n  .replace(/\\[\\d+[\\s,]*characters?\\]/gi, '')\n  .replace(/\\(\\d+[\\s,]*chars?\\)/gi, '')\n  .replace(/Character count:\\s*\\d+/gi, '')\n  .replace(/Total:\\s*\\d+\\s*characters?/gi, '')\n  .replace(/---[\\s\\S]*$/gm, '') // Remove any trailing notes after ---\n  .replace(/\\n{3,}/g, '\\n\\n') // Clean up excessive newlines\n  .trim();\n\nconst originalCharCount = content.length;\n\nlet validationStatus = 'valid';\nlet validationMessage = '';\nlet finalContent = content;\n\n// If over hard limit, we need to truncate smartly\nif (originalCharCount > MAX_LINKEDIN_CHARS) {\n  validationStatus = 'exceeded_hard_limit';\n  \n  // Smart truncation: remove last article\n  let truncated = content;\n  \n  // Find and remove the last article (starts with emoji before last hashtags)\n  const hashtagIndex = truncated.lastIndexOf('#');\n  if (hashtagIndex > 0) {\n    // Find the start of hashtags section\n    let hashtagStart = truncated.lastIndexOf('\\n\\n#');\n    if (hashtagStart === -1) hashtagStart = truncated.lastIndexOf('\\n#');\n    \n    // Get content before hashtags and hashtags separately\n    const mainContent = hashtagStart > 0 ? truncated.substring(0, hashtagStart) : truncated;\n    const hashtags = hashtagStart > 0 ? truncated.substring(hashtagStart) : '';\n    \n    // Find last article link\n    const lastLinkIndex = mainContent.lastIndexOf('🔗 https://');\n    if (lastLinkIndex > 0) {\n      // Find the emoji that starts this article (go back to find newline + emoji)\n      let articleStart = mainContent.lastIndexOf('\\n\\n', lastLinkIndex - 5);\n      if (articleStart > 0) {\n        truncated = mainContent.substring(0, articleStart) + hashtags;\n      }\n    }\n  }\n  \n  // If still too long, hard cut\n  if (truncated.length > SAFE_LIMIT) {\n    const cutPoint = truncated.lastIndexOf('\\n\\n', SAFE_LIMIT);\n    if (cutPoint > SAFE_LIMIT - 500) {\n      truncated = truncated.substring(0, cutPoint);\n    } else {\n      truncated = truncated.substring(0, SAFE_LIMIT);\n    }\n    // Add hashtags back if missing\n    if (!truncated.includes('#')) {\n      truncated += '\\n\\n#AI #Tech #Innovation';\n    }\n  }\n  \n  finalContent = truncated;\n  validationMessage = `⚠️ Content exceeded ${MAX_LINKEDIN_CHARS} chars (${originalCharCount}). Auto-trimmed to ${finalContent.length} chars.`;\n  \n} else if (originalCharCount > SAFE_LIMIT) {\n  validationStatus = 'warning';\n  validationMessage = `⚠️ Content is ${originalCharCount} chars (close to ${MAX_LINKEDIN_CHARS} limit).`;\n  \n} else {\n  validationStatus = 'valid';\n  validationMessage = `✅ Content validated: ${originalCharCount} chars (under ${SAFE_LIMIT} safe limit).`;\n}\n\nconsole.log(`Character validation: ${validationStatus} - Original: ${originalCharCount}, Final: ${finalContent.length}`);\n\nreturn {\n  message: {\n    content: finalContent\n  },\n  validation: {\n    status: validationStatus,\n    originalCharCount: originalCharCount,\n    finalCharCount: finalContent.length,\n    message: validationMessage,\n    wasTruncated: originalCharCount !== finalContent.length,\n    linkedinLimit: MAX_LINKEDIN_CHARS,\n    safeLimit: SAFE_LIMIT\n  }\n};"
+        "jsCode": "// Parse AI JSON output and prepare dual content for Group + Feed\nconst MAX_LINKEDIN_CHARS = 3000;\nconst SAFE_LIMIT = 2800;\n\nconst aiOutput = $input.first().json;\nlet rawContent = aiOutput.message?.content || '';\n\n// Clean up potential markdown code blocks\nrawContent = rawContent\n  .replace(/```json\\n?/gi, '')\n  .replace(/```\\n?/gi, '')\n  .trim();\n\n// Parse JSON from AI output\nlet parsedContent;\ntry {\n  parsedContent = JSON.parse(rawContent);\n} catch (e) {\n  // If JSON parsing fails, try to extract content manually\n  console.log('JSON parse failed, attempting manual extraction');\n  \n  // Try to find JSON object in the response\n  const jsonMatch = rawContent.match(/\\{[\\s\\S]*\\}/g);\n  if (jsonMatch) {\n    try {\n      parsedContent = JSON.parse(jsonMatch[0]);\n    } catch (e2) {\n      // Fallback: use raw content as feed content\n      parsedContent = {\n        group_content: rawContent,\n        group_first_comment: 'Links will be added manually.',\n        feed_content: rawContent,\n        hashtags: ['TechNews', 'Innovation', 'Technology']\n      };\n    }\n  } else {\n    parsedContent = {\n      group_content: rawContent,\n      group_first_comment: 'Links will be added manually.',\n      feed_content: rawContent,\n      hashtags: ['TechNews', 'Innovation', 'Technology']\n    };\n  }\n}\n\n// Extract and validate each content type\nlet groupContent = parsedContent.group_content || '';\nlet groupFirstComment = parsedContent.group_first_comment || '';\nlet feedContent = parsedContent.feed_content || '';\nlet hashtags = parsedContent.hashtags || ['TechNews'];\n\n// Clean up content\nconst cleanContent = (content) => {\n  return content\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n};\n\ngroupContent = cleanContent(groupContent);\nfeedContent = cleanContent(feedContent);\n\n// Validate and truncate if needed\nconst truncateContent = (content, limit) => {\n  if (content.length <= limit) return { content, truncated: false };\n  \n  // Find last paragraph break before limit\n  const cutPoint = content.lastIndexOf('\\n\\n', limit - 100);\n  if (cutPoint > limit - 500) {\n    return { content: content.substring(0, cutPoint).trim(), truncated: true };\n  }\n  return { content: content.substring(0, limit - 50).trim() + '...', truncated: true };\n};\n\nconst groupResult = truncateContent(groupContent, MAX_LINKEDIN_CHARS);\nconst feedResult = truncateContent(feedContent, SAFE_LIMIT);\n\n// Add hashtags to feed content if not present\nlet finalFeedContent = feedResult.content;\nif (!finalFeedContent.includes('#') && hashtags.length > 0) {\n  finalFeedContent += '\\n\\n' + hashtags.map(t => `#${t.replace('#', '')}`).join(' ');\n}\n\n// Get week info from previous node\nconst weekInfo = $('Score & Select Top Articles').first().json;\n\nreturn {\n  group_content: groupResult.content,\n  group_first_comment: groupFirstComment,\n  feed_content: finalFeedContent,\n  hashtags: hashtags,\n  weekIdentifier: weekInfo.weekIdentifier,\n  articleCount: weekInfo.articleCount,\n  totalArticlesThisWeek: weekInfo.totalArticlesThisWeek,\n  validation: {\n    group_chars: groupResult.content.length,\n    group_truncated: groupResult.truncated,\n    feed_chars: finalFeedContent.length,\n    feed_truncated: feedResult.truncated,\n    status: (groupResult.truncated || feedResult.truncated) ? 'truncated' : 'valid'\n  }\n};"
       },
-      "id": "1b9c41f7-359b-4433-82dd-6b5e508d7205",
-      "name": "Validate Character Limit",
+      "id": "d42f77e1-6ec2-4260-b707-488484a63fbd",
+      "name": "Generate Dual Content",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1120,
-        480
+        -256,
+        1936
       ],
       "notesInFlow": true,
-      "notes": "Enforces LinkedIn 3000 char limit with smart truncation"
+      "notes": "Parses AI JSON output into group_content, feed_content, and first_comment links"
     }
   ],
   "connections": {
-    "Daily Schedule (16:30 UTC)": {
+    "Weekly Schedule (Monday 08:00 UTC)": {
       "main": [
         [
           {
@@ -1079,7 +1012,7 @@
         ]
       ]
     },
-    "Fetch Today's Articles": {
+    "Fetch Weekly Articles": {
       "main": [
         [
           {
@@ -1090,11 +1023,11 @@
         ]
       ]
     },
-    "Prepare Articles for AI": {
+    "Score & Select Top Articles": {
       "main": [
         [
           {
-            "node": "OpenAI - Generate Digest",
+            "node": "OpenAI - Generate Dual Content",
             "type": "main",
             "index": 0
           }
@@ -1105,18 +1038,29 @@
       "main": [
         [
           {
-            "node": "Prepare Telegram Message",
+            "node": "Prepare Telegram Messages",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Prepare Telegram Message": {
+    "Prepare Telegram Messages": {
       "main": [
         [
           {
-            "node": "Send to Telegram",
+            "node": "Send Group Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Group Content": {
+      "main": [
+        [
+          {
+            "node": "Send Feed Content",
             "type": "main",
             "index": 0
           }
@@ -1127,7 +1071,7 @@
       "main": [
         [
           {
-            "node": "Fetch Today's Articles",
+            "node": "Fetch Weekly Articles",
             "type": "main",
             "index": 0
           }
@@ -1262,7 +1206,7 @@
       "main": [
         [
           {
-            "node": "Prepare Articles for AI",
+            "node": "Score & Select Top Articles",
             "type": "main",
             "index": 0
           }
@@ -1327,18 +1271,18 @@
         ]
       ]
     },
-    "OpenAI - Generate Digest": {
+    "OpenAI - Generate Dual Content": {
       "main": [
         [
           {
-            "node": "Validate Character Limit",
+            "node": "Generate Dual Content",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Validate Character Limit": {
+    "Generate Dual Content": {
       "main": [
         [
           {
@@ -1353,6 +1297,6 @@
   "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "83b4d6c03571926783abaab14e53cd3236230b18be1732a2f9aca09c9c302d7f"
+    "instanceId": "be1d41a91ae781ac33f4e3513bc4d34b75c10b5c154bd3f5e40a6c41f7fef4a9"
   }
 }
