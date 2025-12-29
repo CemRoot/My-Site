@@ -85,6 +85,8 @@
             "linkedin:post": "node scripts/daily-linkedin-automation.js post",
             "linkedin:test": "node scripts/daily-linkedin-automation.js test",
             "linkedin:setup-test": "node scripts/test-linkedin-setup.js",
+            "linkedin:groups": "node scripts/linkedin-groups-digest.js daily",
+            "linkedin:groups-weekly": "node scripts/linkedin-groups-digest.js weekly",
             "telegram:webhook-setup": "node scripts/setup-telegram-webhook.js set",
             "telegram:webhook-remove": "node scripts/setup-telegram-webhook.js remove",
             "telegram:reset": "node scripts/reset-telegram-webhook.js reset",

@@ -137,7 +137,23 @@ export function validateArticleContent(article, autoFix = false) {
     'kept the paragraph structure',
     'I\'ve also preserved',
     'I have also preserved',
-    'removed the Turkish characters'
+    'removed the Turkish characters',
+    // AI REFUSAL MESSAGES (CRITICAL - NEVER ALLOW)
+    'I\'m unable to translate',
+    'I am unable to translate',
+    'I cannot translate',
+    'Unable to translate',
+    'contains non-English characters',
+    'contains non-Latin characters',
+    'I apologize, but',
+    'I\'m sorry, but I cannot',
+    'As an AI',
+    'As a language model',
+    'I cannot process',
+    'I\'m not able to',
+    'I do not have the ability',
+    'cannot be translated',
+    'cannot translate this'
   ];
   
   for (const pattern of instructionPatterns) {

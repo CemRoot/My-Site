@@ -1,0 +1,102 @@
+name: LinkedIn Groups Daily Digest
+
+# Daily digest generation for LinkedIn Groups
+# Can be enabled/disabled via Telegram menu
+# 
+# This workflow:
+# 1. Fetches recent tech news articles from Supabase
+# 2. Uses AI (Groq/Llama) to score and select relevant articles
+# 3. Generates group-optimized content with hooks and discussion questions
+# 4. Sends formatted content to Telegram for manual posting
+
+on:
+  schedule:
+    # Run daily at 08:00 UTC (good for European LinkedIn activity)
+    # Adjust based on your target audience peak hours
+    - cron: '0 8 * * *'
+  
+  # Manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Digest mode'
+        required: true
+        default: 'daily'
+        type: choice
+        options:
+          - daily
+          - weekly
+      group_id:
+        description: 'Specific group ID (optional, leave empty for auto)'
+        required: false
+        type: string
+
+# Prevent multiple simultaneous runs
+concurrency:
+  group: linkedin-groups-digest
+  cancel-in-progress: true
+
+jobs:
+  generate-digest:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Generate LinkedIn Groups Digest
+        env:
+          # Supabase Database
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          
+          # Groq AI API
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          
+          # Telegram Bot
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          
+          # Site Configuration
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: |
+          echo "=================================================="
+          echo "LinkedIn Groups Daily Digest Generator"
+          echo "=================================================="
+          echo "Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          echo "Mode: ${{ github.event.inputs.mode || 'daily' }}"
+          echo "Group: ${{ github.event.inputs.group_id || 'auto (priority 1-2)' }}"
+          echo "AI Engine: Groq (Llama 3.3 70B)"
+          echo "=================================================="
+          
+          # Run the digest generator
+          if [ -n "${{ github.event.inputs.group_id }}" ]; then
+            node scripts/linkedin-groups-digest.js ${{ github.event.inputs.mode || 'daily' }} ${{ github.event.inputs.group_id }}
+          else
+            node scripts/linkedin-groups-digest.js ${{ github.event.inputs.mode || 'daily' }}
+          fi
+      
+      - name: Success notification
+        if: success()
+        run: |
+          echo "=================================================="
+          echo "Digest generated successfully!"
+          echo "Check Telegram for the formatted content."
+          echo "=================================================="
+      
+      - name: Failure notification
+        if: failure()
+        run: |
+          echo "=================================================="
+          echo "Digest generation failed!"
+          echo "Check the logs above for error details."
+          echo "=================================================="

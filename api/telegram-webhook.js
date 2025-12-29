@@ -296,6 +296,9 @@ export default async function handler(req, res) {
                 'GitHub Actions ile çalıştırma yakında eklenecek.'
               );
               break;
+            case 'linkedin_groups':
+              await menuHandler.handleLinkedInGroupsDigest();
+              break;
             default:
               await menuHandler.sendTelegramMessage('❓ Bilinmeyen aksiyon');
           }

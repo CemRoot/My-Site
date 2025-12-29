@@ -1990,6 +1990,22 @@ async function translateText(text) {
         'I\'ve also preserved',
         'I have also preserved',
         'removed the Turkish characters',
+        // AI REFUSAL MESSAGES (CRITICAL - NEVER ALLOW)
+        'I\'m unable to translate',
+        'I am unable to translate',
+        'I cannot translate',
+        'Unable to translate',
+        'contains non-English characters',
+        'contains non-Latin characters',
+        'I apologize, but',
+        'I\'m sorry, but I cannot',
+        'As an AI',
+        'As a language model',
+        'I cannot process',
+        'I\'m not able to',
+        'I do not have the ability',
+        'cannot be translated',
+        'cannot translate this',
         'The above text',
         'as requested',
         'Please note that'
@@ -2121,6 +2137,19 @@ function cleanTranslation(text) {
     /kept the paragraph structure.*$/gim,
     /preserved the markdown formatting.*$/gim,
     /removed the Turkish characters.*$/gim,
+    // AI REFUSAL MESSAGES (these should trigger full rejection, but clean just in case)
+    /I'm unable to translate.*$/gim,
+    /I am unable to translate.*$/gim,
+    /I cannot translate.*$/gim,
+    /Unable to translate.*$/gim,
+    /contains non-English characters.*$/gim,
+    /contains non-Latin characters.*$/gim,
+    /I apologize, but.*$/gim,
+    /I'm sorry, but I cannot.*$/gim,
+    /^As an AI.*$/gim,
+    /^As a language model.*$/gim,
+    /I cannot process.*$/gim,
+    /I'm not able to.*$/gim,
   ];
   
   instructionPatterns.forEach(pattern => {

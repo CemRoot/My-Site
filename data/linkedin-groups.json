@@ -1,0 +1,175 @@
+{
+  "groups": [
+    {
+      "id": "ai-ml-professionals",
+      "name": "Artificial Intelligence, Deep Learning, Machine Learning",
+      "topic_keywords": ["AI", "artificial intelligence", "deep learning", "machine learning", "neural network", "LLM", "GPT", "transformer", "model training"],
+      "categories": ["AI", "Data Science"],
+      "language": "en",
+      "links_allowed": true,
+      "timezone": "Europe/Dublin",
+      "members": 2533456,
+      "priority": 1
+    },
+    {
+      "id": "ai-ml-ds-robotics",
+      "name": "Artificial Intelligence, Machine Learning, Data Science & Robotics",
+      "topic_keywords": ["AI", "machine learning", "data science", "robotics", "automation", "computer vision", "NLP"],
+      "categories": ["AI", "Data Science", "Hardware"],
+      "language": "en",
+      "links_allowed": true,
+      "timezone": "Europe/Dublin",
+      "members": 2999978,
+      "priority": 1
+    },
+    {
+      "id": "software-technology",
+      "name": "Software/Technology: AI, Marketing, Social Media, Startups, Blockchain",
+      "topic_keywords": ["software", "technology", "AI", "startup", "blockchain", "SaaS", "cloud", "digital transformation"],
+      "categories": ["Software", "AI", "Cloud"],
+      "language": "en",
+      "links_allowed": true,
+      "timezone": "Europe/Dublin",
+      "members": 2990090,
+      "priority": 2
+    },
+    {
+      "id": "python-developers",
+      "name": "Python Developers Community (moderated)",
+      "topic_keywords": ["Python", "programming", "Django", "Flask", "FastAPI", "data analysis", "automation", "scripting"],
+      "categories": ["Software", "Data Science"],
+      "language": "en",
+      "links_allowed": true,
+      "timezone": "Europe/Dublin",
+      "members": 2711945,
+      "priority": 2
+    },
+    {
+      "id": "ml-community",
+      "name": "Machine Learning Community (Moderated)",
+      "topic_keywords": ["machine learning", "ML", "model", "training", "inference", "MLOps", "deployment"],
+      "categories": ["AI", "Data Science"],
+      "language": "en",
+      "links_allowed": true,
+      "timezone": "Europe/Dublin",
+      "members": 2009542,
+      "priority": 2
+    },
+    {
+      "id": "data-science-community",
+      "name": "Data Science Community (moderated)",
+      "topic_keywords": ["data science", "analytics", "statistics", "visualization", "pandas", "numpy", "jupyter"],
+      "categories": ["Data Science", "Software"],
+      "language": "en",
+      "links_allowed": true,
+      "timezone": "Europe/Dublin",
+      "members": 1113065,
+      "priority": 2
+    },
+    {
+      "id": "data-science-central",
+      "name": "Data Science Central",
+      "topic_keywords": ["data science", "big data", "analytics", "business intelligence", "data engineering"],
+      "categories": ["Data Science"],
+      "language": "en",
+      "links_allowed": true,
+      "timezone": "Europe/Dublin",
+      "members": 646244,
+      "priority": 3
+    },
+    {
+      "id": "big-data-analytics",
+      "name": "Big Data and Analytics",
+      "topic_keywords": ["big data", "analytics", "Hadoop", "Spark", "data warehouse", "ETL", "data pipeline"],
+      "categories": ["Data Science", "Cloud"],
+      "language": "en",
+      "links_allowed": true,
+      "timezone": "Europe/Dublin",
+      "members": 571343,
+      "priority": 3
+    },
+    {
+      "id": "software-developer",
+      "name": "Software Developer",
+      "topic_keywords": ["software", "developer", "programming", "coding", "engineering", "architecture", "devops"],
+      "categories": ["Software"],
+      "language": "en",
+      "links_allowed": true,
+      "timezone": "Europe/Dublin",
+      "members": 535296,
+      "priority": 3
+    },
+    {
+      "id": "r-project",
+      "name": "The R Project for Statistical Computing",
+      "topic_keywords": ["R", "statistics", "data analysis", "visualization", "ggplot", "tidyverse", "statistical modeling"],
+      "categories": ["Data Science"],
+      "language": "en",
+      "links_allowed": true,
+      "timezone": "Europe/Dublin",
+      "members": 289074,
+      "priority": 4
+    },
+    {
+      "id": "zerotomastery",
+      "name": "zerotomastery.io",
+      "topic_keywords": ["learning", "coding", "web development", "career", "bootcamp", "programming"],
+      "categories": ["Software", "General"],
+      "language": "en",
+      "links_allowed": true,
+      "timezone": "Europe/Dublin",
+      "members": 153962,
+      "priority": 4
+    },
+    {
+      "id": "global-data-geeks",
+      "name": "Global Data Geeks: Data / AI / Graphs",
+      "topic_keywords": ["data", "AI", "graphs", "neo4j", "knowledge graphs", "graph database"],
+      "categories": ["Data Science", "AI"],
+      "language": "en",
+      "links_allowed": true,
+      "timezone": "Europe/Dublin",
+      "members": 99943,
+      "priority": 4
+    },
+    {
+      "id": "rework-dl",
+      "name": "Deep Learning, AI, Machine Learning & Machine Intelligence #reworkDL",
+      "topic_keywords": ["deep learning", "AI", "machine learning", "neural networks", "research", "papers"],
+      "categories": ["AI"],
+      "language": "en",
+      "links_allowed": true,
+      "timezone": "Europe/Dublin",
+      "members": 34530,
+      "priority": 4
+    },
+    {
+      "id": "julia-language",
+      "name": "The Julia Language",
+      "topic_keywords": ["Julia", "scientific computing", "numerical", "performance", "parallel computing"],
+      "categories": ["Software", "Data Science"],
+      "language": "en",
+      "links_allowed": true,
+      "timezone": "Europe/Dublin",
+      "members": 3527,
+      "priority": 5
+    }
+  ],
+  "defaults": {
+    "daily_article_count": 3,
+    "weekly_article_count": 5,
+    "min_relevance_score": 40,
+    "max_articles_per_category": 2,
+    "recency_hours": 72,
+    "site_base_url": "https://cemkoyluoglu.codes/tech-news"
+  },
+  "category_mappings": {
+    "AI": ["AI", "Artificial Intelligence", "Machine Learning", "Deep Learning", "LLM", "NLP"],
+    "Data Science": ["Data Science", "Analytics", "Statistics", "Big Data"],
+    "Software": ["Software", "Programming", "Development", "DevOps"],
+    "Cloud": ["Cloud", "AWS", "Azure", "GCP", "Infrastructure"],
+    "Cybersecurity": ["Cybersecurity", "Security", "Privacy", "Encryption"],
+    "Hardware": ["Hardware", "Robotics", "IoT", "Chips", "Semiconductors"],
+    "General": ["General", "Tech", "Technology", "Innovation"]
+  }
+}

@@ -64,14 +64,17 @@ function getMainMenuKeyboard() {
       ],
       [
         { text: '📱 LinkedIn', callback_data: 'action_linkedin' },
+        { text: '🔵 LinkedIn Groups', callback_data: 'action_linkedin_groups' },
+      ],
+      [
         { text: '🔧 Sistem Yönetimi', callback_data: 'action_system_management' },
-      ],
-      [
         { text: '📊 Durum', callback_data: 'action_status' },
-        { text: '📈 İstatistikler', callback_data: 'action_stats' },
       ],
       [
+        { text: '📈 İstatistikler', callback_data: 'action_stats' },
         { text: '💾 Veritabanı', callback_data: 'action_database' },
+      ],
+      [
         { text: 'ℹ️ Yardım', callback_data: 'action_help' },
       ],
     ],
@@ -921,6 +924,7 @@ async function getGitHubWorkflowStatus() {
       'manual-article-scraper.yml': '➕ Manual Article Scraper',
       'system-health-check.yml': '🏥 System Health Check',
       'daily-linkedin.yml': '📱 Daily LinkedIn',
+      'linkedin-groups.yml': '🔵 LinkedIn Groups',
       'vercel-status-monitor.yml': '🔍 Vercel Status Monitor',
     };
 
@@ -1094,6 +1098,7 @@ export async function handleGitHubWorkflowToggle(action, workflowFileName) {
       'manual-article-scraper.yml': 'Manual Article Scraper',
       'system-health-check.yml': 'System Health Check',
       'daily-linkedin.yml': 'Daily LinkedIn',
+      'linkedin-groups.yml': 'LinkedIn Groups',
       'vercel-status-monitor.yml': 'Vercel Status Monitor',
     };
     
@@ -1123,6 +1128,78 @@ export async function handleGitHubWorkflowToggle(action, workflowFileName) {
     await sendTelegramMessage(
       `❌ <b>Hata!</b>\n\n${error.message}\n\n` +
       `GITHUB_TOKEN kontrol edin veya workflow dosya adını doğrulayın.`
+    );
+  }
+}
+
+/**
+ * Handle LinkedIn Groups Daily Digest - Trigger GitHub Action
+ */
+export async function handleLinkedInGroupsDigest(groupId = null) {
+  try {
+    await sendTelegramMessage(
+      '🔵 <b>LinkedIn Groups Digest Oluşturuluyor...</b>\n\n' +
+      '🤖 AI Model: Groq (Llama 3.3 70B)\n' +
+      '📊 Mod: Daily Digest\n\n' +
+      '⏳ GitHub Actions workflow tetikleniyor...'
+    );
+
+    // Trigger GitHub Actions workflow
+    if (CONFIG.GITHUB_TOKEN) {
+      const [owner, repo] = CONFIG.GITHUB_REPO.split('/');
+      
+      const inputs = {
+        mode: 'daily'
+      };
+      
+      if (groupId) {
+        inputs.group_id = groupId;
+      }
+      
+      const response = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/actions/workflows/linkedin-groups.yml/dispatches`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${CONFIG.GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ref: 'main',
+            inputs
+          })
+        }
+      );
+
+      if (response.ok) {
+        await sendTelegramMessage(
+          '✅ <b>LinkedIn Groups Digest Başlatıldı!</b>\n\n' +
+          '📊 GitHub Actions workflow tetiklendi\n' +
+          '⏳ İşlem adımları:\n' +
+          '  1️⃣ Son 48 saatin haberleri çekiliyor\n' +
+          '  2️⃣ Grup için relevance skoru hesaplanıyor\n' +
+          '  3️⃣ En iyi 3 haber seçiliyor\n' +
+          '  4️⃣ AI ile içerik oluşturuluyor\n' +
+          '  5️⃣ Telegram\'a gönderiliyor\n\n' +
+          '🔔 İçerik hazır olduğunda bildirim alacaksınız!\n\n' +
+          '<i>Tahmini süre: 30-60 saniye</i>'
+        );
+      } else {
+        const errorText = await response.text();
+        throw new Error(`GitHub API error: ${response.status} - ${errorText}`);
+      }
+    } else {
+      throw new Error('GITHUB_TOKEN not configured');
+    }
+  } catch (error) {
+    console.error('LinkedIn Groups Digest error:', error);
+    await sendTelegramMessage(
+      `❌ <b>LinkedIn Groups Digest Başlatılamadı!</b>\n\n` +
+      `<code>${error.message}</code>\n\n` +
+      `💡 Alternatif:\n` +
+      `Lokal olarak çalıştırın:\n` +
+      `<code>node scripts/linkedin-groups-digest.js daily</code>`
     );
   }
 }
@@ -1901,6 +1978,7 @@ export default {
   handleStartCommand,
   handleMenuCommand,
   handleLinkedInCommand,
+  handleLinkedInGroupsDigest,
   handleCreateDigestAction,
   handleCleanPendingAction,
   handleConfirmCleanAction,
