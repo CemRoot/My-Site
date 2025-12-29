@@ -1,3 +1,10 @@
+// Polyfills for older browsers (Chrome 79, etc.)
+// Object.hasOwn was introduced in ES2022
+if (!Object.hasOwn) {
+  Object.hasOwn = (obj: object, prop: PropertyKey) => 
+    Object.prototype.hasOwnProperty.call(obj, prop);
+}
+
 import { createRoot } from "react-dom/client";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import App from "./App.tsx";
