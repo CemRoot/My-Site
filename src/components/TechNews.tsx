@@ -7,6 +7,7 @@ import { Skeleton } from './ui/skeleton';
 import { Button } from './ui/button';
 import { NewsletterSignup } from './NewsletterSignup';
 import { usePageContext } from '../lib/context/PageContext';
+import { getOptimizedImageUrl, IMAGE_PRESETS } from '../lib/utils/imageProxy';
 
 interface Article {
   id: string;
@@ -396,16 +397,18 @@ function TechNews() {
                 className="group"
               >
                 <Card className="overflow-hidden h-full transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 border-border/50 hover:border-primary/50">
-                  {/* Article Image */}
+                  {/* Article Image - Optimized via CDN */}
                   {article.image && (
                     <div className="relative overflow-hidden bg-muted" style={{ aspectRatio: '16/9', minHeight: '200px', maxHeight: '200px' }}>
                       <img
-                        src={article.image}
+                        src={getOptimizedImageUrl(article.image, IMAGE_PRESETS.thumbnail)}
                         alt={article.title}
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                         loading="lazy"
                         decoding="async"
                         fetchPriority="low"
+                        width={400}
+                        height={225}
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
                         }}

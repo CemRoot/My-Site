@@ -10,6 +10,7 @@ import { usePageContext } from '../lib/context/PageContext';
 import SmartMarkdown from './markdown/SmartMarkdown';
 import { supabase } from '../../lib/supabase.js';
 import { SEO } from './SEO';
+import { getOptimizedImageUrl, IMAGE_PRESETS } from '../lib/utils/imageProxy';
 
 interface Article {
   id: string;
@@ -390,14 +391,17 @@ function TechNewsDetail() {
             )}
           </header>
 
-          {/* Featured Image */}
+          {/* Featured Image - Optimized via CDN */}
           {article.image && (
             <div className="relative overflow-hidden rounded-lg aspect-video bg-muted">
               <img
-                src={article.image}
+                src={getOptimizedImageUrl(article.image, IMAGE_PRESETS.hero)}
                 alt={article.title}
                 className="w-full h-full object-cover"
-                loading="lazy"
+                loading="eager"
+                fetchPriority="high"
+                width={1200}
+                height={675}
                 onError={(e) => {
                   e.currentTarget.parentElement!.style.display = 'none';
                 }}
@@ -455,10 +459,12 @@ function TechNewsDetail() {
                     {related.image && (
                       <div className="relative overflow-hidden aspect-video bg-muted">
                         <img
-                          src={related.image}
+                          src={getOptimizedImageUrl(related.image, IMAGE_PRESETS.related)}
                           alt={related.title}
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                           loading="lazy"
+                          width={300}
+                          height={169}
                           onError={(e) => {
                             e.currentTarget.style.display = 'none';
                           }}
