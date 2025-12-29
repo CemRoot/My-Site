@@ -342,34 +342,33 @@ async function generateGroupContent(selectedArticles, group) {
     .map(k => `#${k.replace(/\s+/g, '')}`)
     .join(' ');
   
-  const systemPrompt = `You are a LinkedIn content expert.
+  const systemPrompt = `You are a JSON API that generates LinkedIn content. You MUST respond with ONLY a valid JSON object, no other text.
 
-CRITICAL: Use \\n for line breaks in your JSON output.
+Your response format MUST be exactly:
+{"post_text": "...", "first_comment": "..."}
 
-FORMAT (use exactly this structure with \\n for newlines):
+CONTENT RULES:
+- LinkedIn does NOT support markdown. NEVER use **bold** or *italic* or __underline__
+- For emphasis, use Unicode bold characters like: 𝐀𝐈, 𝐓𝐞𝐜𝐡, 𝐌𝐋
+- Each article insight: WHAT happened + WHY it matters (2 sentences max)
+- Use emojis: 🧠 ⚡ 🔮 for the 3 signals
+- End with A/B/C question options
+- NO links in post_text - all links go in first_comment
+- Use \\n for line breaks in JSON strings`;
 
-𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐒𝐢𝐠𝐧𝐚𝐥𝐬: [topic]\\n\\n[1 sentence hook]\\n\\nHere are 3 signals worth your attention:\\n\\n🧠 [Topic 1]\\n[2 sentences max - what + why it matters]\\n\\n⚡ [Topic 2]\\n[2 sentences max]\\n\\n🔮 [Topic 3]\\n[2 sentences max]\\n\\n---\\n\\nWhich trend matters most to you?\\n\\nA) [short option 1]\\nB) [short option 2]\\nC) [short option 3]\\n\\nSources in first comment.\\n\\n#Hashtag1 #Hashtag2 #Hashtag3
+  const userPrompt = `Group: ${group.name}
+Keywords: ${group.topic_keywords.slice(0, 3).join(', ')}
+Hashtags: ${hashtags}
 
-RULES:
-- MUST use \\n for every line break
-- Keep each signal to 2 sentences MAX
-- Options A/B/C should be SHORT (3-5 words each)
-- NO links in post
-- Total 150-200 words
+ARTICLES:
+${articlesData.map((a, i) => `${i + 1}. ${a.title}\n   ${a.summary}\n   URL: ${a.url}`).join('\n\n')}
 
-Output ONLY valid JSON:`;
+IMPORTANT: Use \\n\\n (double newline) to separate sections for readability!
 
-  const userPrompt = `Group: "${group.name}"
-
-Articles to cover:
-${articlesData.map((a, i) => `${i + 1}. "${a.title}"\n   Summary: ${a.summary}\n   URL: ${a.url}`).join('\n\n')}
-
-Hashtags to use: ${hashtags}
-
-Return JSON:
+Return this JSON:
 {
-  "post_text": "Full post following the exact format above",
-  "first_comment": "Sources / Read more:\\n\\n• [Short title]: [url]\\n• [Short title]: [url]\\n• [Short title]: [url]"
+  "post_text": "𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐒𝐢𝐠𝐧𝐚𝐥𝐬: [keywords]\\n\\nHook line 1.\\nHook line 2.\\n\\nHere are 3 signals worth your attention today:\\n\\n🧠 [Topic]: [What + Why]\\n\\n⚡ [Topic]: [What + Why]\\n\\n🔮 [Topic]: [What + Why]\\n\\nQuestion for the group:\\nIf you could only track ONE — which would it be?\\n\\nA) Option\\nB) Option\\nC) Option\\n\\nSources in the first comment.\\n${hashtags}",
+  "first_comment": "Sources / Read more:\\n\\n• Label: url\\n• Label: url\\n• Label: url"
 }`;
 
   try {
@@ -386,36 +385,55 @@ Return JSON:
 
     const responseText = completion.choices[0]?.message?.content || '';
     
+    // Debug: log first 200 chars of response
+    console.log('AI Response preview:', responseText.substring(0, 300));
+    
     // Parse JSON from response
     let parsedContent;
     try {
-      // Clean up response
+      // Clean up response - be careful with Unicode
       let cleanedResponse = responseText
         .replace(/```json\n?/gi, '')
         .replace(/```\n?/gi, '')
-        .replace(/[\x00-\x1F\x7F]/g, ' ')
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Only strip control chars, NOT Unicode
         .replace(/,\s*}/g, '}')
         .replace(/,\s*]/g, ']')
         .trim();
       
+      // Find JSON object in response
       const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        cleanedResponse = jsonMatch[0];
+      if (!jsonMatch) {
+        throw new Error('No JSON object found in response');
+      }
+      cleanedResponse = jsonMatch[0];
+      
+      // Try to parse, if fails try fixing common issues
+      let rawParsed;
+      try {
+        rawParsed = JSON.parse(cleanedResponse);
+      } catch {
+        // Try fixing unescaped newlines in strings
+        const fixedJson = cleanedResponse.replace(/:\s*"([^"]*?)"/g, (match, content) => {
+          const fixed = content.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+          return `: "${fixed}"`;
+        });
+        rawParsed = JSON.parse(fixedJson);
       }
       
-      const rawParsed = JSON.parse(cleanedResponse);
-      
-      // Ensure proper newlines (AI might return \\n as literal)
-      const fixNewlines = (text) => {
+      // Clean up AI output for LinkedIn compatibility
+      const cleanForLinkedIn = (text) => {
         return (text || '')
-          .replace(/\\n/g, '\n')  // Fix escaped newlines
-          .replace(/\n{3,}/g, '\n\n')  // Max 2 consecutive newlines
+          .replace(/\\n/g, '\n')              // Fix escaped newlines from JSON
+          .replace(/\*\*([^*]+)\*\*/g, '$1')  // Remove **markdown bold**
+          .replace(/\*([^*]+)\*/g, '$1')      // Remove *italic*
+          .replace(/^\s+/gm, '')              // Remove leading spaces
+          .replace(/\n{4,}/g, '\n\n\n')       // Max 3 consecutive newlines
           .trim();
       };
       
       parsedContent = {
-        post_text: fixNewlines(rawParsed.post_text),
-        first_comment: fixNewlines(rawParsed.first_comment)
+        post_text: cleanForLinkedIn(rawParsed.post_text),
+        first_comment: cleanForLinkedIn(rawParsed.first_comment)
       };
       
       console.log('AI content generated successfully');
@@ -423,35 +441,45 @@ Return JSON:
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError.message);
       
-      // Fallback: create properly formatted content
+      // Fallback: create high-quality formatted content
       const emojis = ['🧠', '⚡', '🔮'];
-      const topKeyword = group.topic_keywords[0] || 'Tech';
-      const hashtags = group.topic_keywords.slice(0, 3)
-        .map(k => `#${k.replace(/\s+/g, '')}`)
-        .join(' ');
+      const topKeywords = group.topic_keywords.slice(0, 3);
+      const boldKeywords = topKeywords.map(k => {
+        // Convert to unicode bold (simplified)
+        return k.split('').map(c => {
+          const code = c.charCodeAt(0);
+          if (code >= 65 && code <= 90) return String.fromCodePoint(0x1D400 + code - 65);
+          if (code >= 97 && code <= 122) return String.fromCodePoint(0x1D41A + code - 97);
+          return c;
+        }).join('');
+      }).join(', ');
       
-      // Build signals with proper line breaks
+      const hashtags = topKeywords.map(k => `#${k.replace(/\s+/g, '')}`).join(' ');
+      
+      // Build signals with WHAT + WHY format
       const signalLines = selectedArticles.map((a, i) => {
         const emoji = emojis[i] || '📌';
-        const shortTitle = a.title.length > 40 ? a.title.substring(0, 37) + '...' : a.title;
-        const insight = (a.description || '').substring(0, 100);
-        return `${emoji} ${shortTitle}\n${insight}`;
+        const topicLabel = a.category || 'Tech Update';
+        const desc = a.description || '';
+        const whatHappened = desc.substring(0, 80);
+        const whyMatters = desc.length > 80 ? desc.substring(80, 150) : 'This signals a shift in how the industry operates.';
+        return `${emoji} ${topicLabel}: ${whatHappened}\n${whyMatters}`;
       });
       
-      // Build options
+      // Build options (2-4 words each)
       const optionLines = selectedArticles.map((a, i) => {
         const letter = String.fromCharCode(65 + i);
-        const shortTopic = a.title.split(' ').slice(0, 3).join(' ');
-        return `${letter}) ${shortTopic}`;
+        const words = a.title.split(' ').slice(0, 3).join(' ');
+        return `${letter}) ${words}`;
       });
       
-      // Construct with explicit line breaks
       const postText = [
-        `𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 ${topKeyword} 𝐒𝐢𝐠𝐧𝐚𝐥𝐬`,
+        `𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐒𝐢𝐠𝐧𝐚𝐥𝐬: ${boldKeywords}`,
         '',
-        'The tech landscape keeps shifting.',
+        "Tech isn't just evolving — it's reshaping entire industries.",
+        'Here are the developments practitioners should watch.',
         '',
-        'Here are 3 signals worth your attention:',
+        'Here are 3 signals worth your attention today:',
         '',
         signalLines[0],
         '',
@@ -459,21 +487,22 @@ Return JSON:
         '',
         signalLines[2],
         '',
-        '---',
-        '',
-        'Which trend matters most to you?',
+        'Question for the group:',
+        'If you could only track ONE of these trends — which would it be, and why?',
         '',
         optionLines.join('\n'),
         '',
-        'Sources in first comment.',
-        '',
+        'Sources in the first comment.',
         hashtags
       ].join('\n');
       
       const firstComment = [
         'Sources / Read more:',
         '',
-        ...selectedArticles.map(a => `• ${a.title.substring(0, 40)}: ${a.article_url}`)
+        ...selectedArticles.map(a => {
+          const shortLabel = a.title.substring(0, 35);
+          return `• ${shortLabel}: ${a.article_url}`;
+        })
       ].join('\n');
       
       parsedContent = {
@@ -500,10 +529,32 @@ function formatTelegramMessage(content, group, selectedArticles) {
       .replace(/>/g, '&gt;');
   };
   
-  const postText = escapeHtml(content.post_text || '');
+  // Force proper line breaks for readability
+  const formatPostText = (text) => {
+    let formatted = escapeHtml(text || '');
+    
+    // Ensure blank line after title (first line)
+    const lines = formatted.split('\n');
+    if (lines.length > 1 && lines[1].trim() !== '') {
+      lines.splice(1, 0, ''); // Insert blank line after title
+    }
+    formatted = lines.join('\n');
+    
+    // Ensure blank line before each signal emoji
+    formatted = formatted.replace(/([^\n])\n(🧠|⚡|🔮)/g, '$1\n\n$2');
+    
+    // Ensure blank line before "Question for the group"
+    formatted = formatted.replace(/([^\n])\n(Question for the group)/g, '$1\n\n$2');
+    
+    // Ensure blank line before hashtags
+    formatted = formatted.replace(/([^\n])\n(#\w)/g, '$1\n\n$2');
+    
+    return formatted;
+  };
+  
+  const postText = formatPostText(content.post_text || '');
   const firstComment = escapeHtml(content.first_comment || '');
   
-  // Use pre-formatted text for exact spacing
   return `<b>📱 ${escapeHtml(group.name)}</b>
 
 ━━━━━━━━━━━━━━━━━━━━
