@@ -342,34 +342,58 @@ async function generateGroupContent(selectedArticles, group) {
     .map(k => `#${k.replace(/\s+/g, '')}`)
     .join(' ');
   
-  const systemPrompt = `You are a JSON API that generates LinkedIn content. You MUST respond with ONLY a valid JSON object, no other text.
+  const systemPrompt = `You are a JSON API that generates high-engagement LinkedIn Group posts. Respond with ONLY valid JSON.
 
-Your response format MUST be exactly:
-{"post_text": "...", "first_comment": "..."}
+FORMAT: {"post_text": "...", "first_comment": "..."}
 
-CONTENT RULES:
-- LinkedIn does NOT support markdown. NEVER use **bold** or *italic* or __underline__
-- For emphasis, use Unicode bold characters like: 𝐀𝐈, 𝐓𝐞𝐜𝐡, 𝐌𝐋
-- Each article insight: WHAT happened + WHY it matters (2 sentences max)
-- Use emojis: 🧠 ⚡ 🔮 for the 3 signals
-- End with A/B/C question options
-- NO links in post_text - all links go in first_comment
-- Use \\n for line breaks in JSON strings`;
+=== TASTE FRAMEWORK FOR VIRAL LINKEDIN POSTS ===
+
+1) HOOK (first 2 lines) - THIS DETERMINES SUCCESS
+   - Must stop the scroll
+   - Bold claim or surprising insight
+   - NOT generic like "Tech is evolving"
+   - Example: "𝐓𝐡𝐞 𝐜𝐡𝐢𝐩 𝐫𝐚𝐜𝐞 𝐣𝐮𝐬𝐭 𝐠𝐨𝐭 𝐢𝐧𝐭𝐞𝐫𝐞𝐬𝐭𝐢𝐧𝐠.\\n0.2nm chips in 15 years. China blocking Nvidia. Samsung leaks."
+
+2) EACH SIGNAL = exactly 2 lines
+   - Line 1: WHAT happened (the news)
+   - Line 2: WHY it matters (the insight practitioners care about)
+   - Use pattern: "The interesting part isn't X — it's Y"
+
+3) DISCUSSION TRIGGER (critical!)
+   - Single A/B/C question that people WANT to answer
+   - NOT generic like "which is important?"
+   - Make it opinionated: "Which will reshape YOUR work first?"
+
+4) NO LINKS in post body - all in first_comment
+
+STRICT RULES:
+- Unicode bold ONLY for title keywords: 𝐀𝐈, 𝐜𝐡𝐢𝐩𝐬, 𝐞𝐭𝐜
+- NEVER use markdown (**bold** or *italic*)
+- 3-5 hashtags max
+- Use \\n\\n between sections for readability`;
 
   const userPrompt = `Group: ${group.name}
-Keywords: ${group.topic_keywords.slice(0, 3).join(', ')}
+Topics: ${group.topic_keywords.slice(0, 3).join(', ')}
 Hashtags: ${hashtags}
 
-ARTICLES:
-${articlesData.map((a, i) => `${i + 1}. ${a.title}\n   ${a.summary}\n   URL: ${a.url}`).join('\n\n')}
+TODAY'S ARTICLES:
+${articlesData.map((a, i) => `
+ARTICLE ${i + 1}:
+Title: ${a.title}
+Summary: ${a.summary}
+URL: ${a.url}`).join('\n')}
 
-IMPORTANT: Use \\n\\n (double newline) to separate sections for readability!
+=== GENERATE POST ===
 
-Return this JSON:
+Create a scroll-stopping post. The HOOK must be specific to these articles, not generic.
+
+Example structure:
 {
-  "post_text": "𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐒𝐢𝐠𝐧𝐚𝐥𝐬: [keywords]\\n\\nHook line 1.\\nHook line 2.\\n\\nHere are 3 signals worth your attention today:\\n\\n🧠 [Topic]: [What + Why]\\n\\n⚡ [Topic]: [What + Why]\\n\\n🔮 [Topic]: [What + Why]\\n\\nQuestion for the group:\\nIf you could only track ONE — which would it be?\\n\\nA) Option\\nB) Option\\nC) Option\\n\\nSources in the first comment.\\n${hashtags}",
-  "first_comment": "Sources / Read more:\\n\\n• Label: url\\n• Label: url\\n• Label: url"
-}`;
+  "post_text": "𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐒𝐢𝐠𝐧𝐚𝐥𝐬: 𝐜𝐡𝐢𝐩𝐬, 𝐀𝐈, 𝐠𝐞𝐨𝐩𝐨𝐥𝐢𝐭𝐢𝐜𝐬\\n\\n[BOLD HOOK - what makes TODAY's news different]\\n[Second line - why practitioners should care]\\n\\nHere are 3 signals worth your attention today:\\n\\n🧠 [Topic]: [What happened - 1 sentence]\\n[Why it matters - the deeper insight]\\n\\n⚡ [Topic]: [What happened]\\n[The interesting part isn't X — it's Y]\\n\\n🔮 [Topic]: [What happened]\\n[Why this changes things]\\n\\nQuestion for the group:\\n[Specific question that triggers opinion]\\n\\nA) [2-3 word option]\\nB) [2-3 word option]\\nC) [2-3 word option]\\n\\nSources in the first comment.\\n${hashtags}",
+  "first_comment": "Sources / Read more:\\n\\n• [Short label]: [url]\\n• [Short label]: [url]\\n• [Short label]: [url]"
+}
+
+RESPOND WITH ONLY THE JSON.`;
 
   try {
     const completion = await groq.chat.completions.create({
@@ -378,15 +402,17 @@ Return this JSON:
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      temperature: 0.6,
-      max_tokens: 1000, // Reduced - we want concise content
+      temperature: 0.7,
+      max_tokens: 1500, // Enough for full JSON response
       top_p: 0.9
     });
 
     const responseText = completion.choices[0]?.message?.content || '';
     
-    // Debug: log first 200 chars of response
-    console.log('AI Response preview:', responseText.substring(0, 300));
+    // Debug: log response info
+    console.log('AI Response length:', responseText.length, 'chars');
+    console.log('AI Response preview:', responseText.substring(0, 200));
+    console.log('AI Response ends with:', responseText.substring(responseText.length - 100));
     
     // Parse JSON from response
     let parsedContent;
