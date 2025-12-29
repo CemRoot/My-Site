@@ -19,7 +19,7 @@
       ]
     },
     {
-      "source": "/(.*)",
+      "source": "/:path((?!robots\\.txt|sitemap\\.xml|favicon\\.ico|favicon\\.webp|og-image\\.png|og-image\\.webp|portrait\\.webp|assets|fonts).*)",
       "destination": "/index.html"
     }
   ],
@@ -127,9 +127,9 @@
       "memory": 1024,
       "maxDuration": 20
     },
-    "api/**/*.js": {
+    "api/telegram-webhook.js": {
       "memory": 1024,
-      "maxDuration": 15
+      "maxDuration": 30
     }
   }
 }

@@ -85,7 +85,7 @@
       },
     },
     build: {
-      target: ['es2020', 'chrome64', 'firefox67', 'safari12', 'edge79'],
+      target: ['es2021', 'chrome90', 'firefox88', 'safari14', 'edge90'],
       outDir: 'build',
       // Generate source maps for Sentry
       sourcemap: mode === 'production',

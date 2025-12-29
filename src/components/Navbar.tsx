@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Newspaper } from 'lucide-react';
 import { Button } from './ui/button';
-import coinLogo from '../assets/coin-logo.webp';
+import coinLogo from '../assets/coin-logo-optimized.webp';
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -76,14 +76,15 @@ export function Navbar() {
                       animation: 'coinFlip 6s ease-in-out infinite',
                     }}
                   >
-                    {/* Coin Image */}
+                    {/* Coin Image - displayed at 48x48, using 96x96 for retina */}
                     <img
                       src={coinLogo}
                       alt="CK Coin"
-                      width="1024"
-                      height="1024"
+                      width="96"
+                      height="96"
                       className="w-full h-full object-cover rounded-full"
-                      loading="lazy"
+                      loading="eager"
+                      fetchPriority="high"
                       style={{
                         filter: 'drop-shadow(0 0 15px rgba(255, 215, 0, 0.5)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6)) brightness(1.1) contrast(1.15)',
                         transition: 'all 0.3s ease',

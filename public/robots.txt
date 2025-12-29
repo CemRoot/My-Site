@@ -1,0 +1,13 @@
+# https://cemkoyluoglu.codes robots.txt
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://cemkoyluoglu.codes/sitemap.xml
+
+# Crawl-delay for politeness
+Crawl-delay: 1
+
+# Block admin/api paths
+Disallow: /api/
+Disallow: /.well-known/

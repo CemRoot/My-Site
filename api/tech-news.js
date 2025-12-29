@@ -1,76 +1,75 @@
 /**
  * Tech News API
- * Vercel Serverless Function
+ * Vercel Edge Function - Ultra-fast cold starts
  * Fetches tech news articles from Supabase with pagination and filtering
  */
 
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client
+// Edge Runtime for faster cold starts (closer to users)
+export const config = {
+  runtime: 'edge',
+  regions: ['dub1', 'fra1', 'lhr1'], // Dublin, Frankfurt, London - closest to Ireland
+};
+
+// Initialize Supabase client (created once, reused across requests)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
-export default async function handler(req, res) {
-  // CORS headers - Security: Only allow requests from trusted origins
-  const ALLOWED_ORIGINS = [
-    'https://cemkoyluoglu.codes',
-    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-  ].filter(Boolean);
-  
-  const origin = req.headers.origin;
-  if (ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
-  }
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+// Allowed origins for CORS
+const ALLOWED_ORIGINS = [
+  'https://cemkoyluoglu.codes',
+  'https://www.cemkoyluoglu.codes',
+];
 
-  // Cache headers for Vercel Edge and CDN
-  // Reduced cache time to 60 seconds for faster updates when articles are deleted
-  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
-  res.setHeader('CDN-Cache-Control', 'public, max-age=60');
+/**
+ * Edge Function Handler (Web Standards API)
+ */
+export default async function handler(request) {
+  const url = new URL(request.url);
+  const origin = request.headers.get('origin');
+  
+  // CORS headers
+  const corsHeaders = {
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Vary': 'Origin',
+  };
+  
+  if (origin && ALLOWED_ORIGINS.some(o => origin.startsWith(o.replace('www.', '')))) {
+    corsHeaders['Access-Control-Allow-Origin'] = origin;
+  }
 
   // Handle preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   // Only accept GET
-  if (req.method !== 'GET') {
-    return res.status(405).json({ 
-      success: false, 
-      message: 'Method not allowed' 
-    });
+  if (request.method !== 'GET') {
+    return jsonResponse({ success: false, message: 'Method not allowed' }, 405, corsHeaders);
   }
 
   try {
-    const { 
-      page = 1, 
-      limit = 20, 
-      category,
-      slug 
-    } = req.query;
+    // Parse query parameters
+    const page = parseInt(url.searchParams.get('page') || '1', 10);
+    const limit = parseInt(url.searchParams.get('limit') || '20', 10);
+    const category = url.searchParams.get('category');
+    const slug = url.searchParams.get('slug');
 
     // Security: Validate slug input
     if (slug) {
       if (typeof slug !== 'string' || slug.length > 200) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Invalid slug format' 
-        });
+        return jsonResponse({ success: false, message: 'Invalid slug format' }, 400, corsHeaders);
       }
       if (!/^[a-z0-9-]+$/i.test(slug)) {
-        console.warn('Invalid slug characters detected:', slug);
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Slug contains invalid characters' 
-        });
+        return jsonResponse({ success: false, message: 'Slug contains invalid characters' }, 400, corsHeaders);
       }
     }
 
-    // If slug is provided, return single article
+    // If slug is provided, return single article (with full content)
     if (slug) {
       const { data: article, error } = await supabase
         .from('tech_news_articles')
@@ -78,27 +77,28 @@ export default async function handler(req, res) {
         .eq('slug', slug)
         .single();
 
-      if (error) {
-        console.error('Supabase error (slug):', error);
-        return res.status(404).json({ 
-          success: false, 
-          message: 'Article not found' 
-        });
+      if (error || !article) {
+        return jsonResponse({ success: false, message: 'Article not found' }, 404, corsHeaders);
       }
 
-      // Increment view count
-      await supabase.rpc('increment_article_views', { article_id: article.id });
+      // Increment view count (fire and forget - don't wait)
+      supabase.rpc('increment_article_views', { article_id: article.id }).catch(() => {});
 
-      return res.status(200).json({ 
+      return jsonResponse({ 
         success: true, 
-        article: formatArticle(article)
+        article: formatArticle(article, true) 
+      }, 200, {
+        ...corsHeaders,
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
       });
     }
 
-    // Build query
+    // Listing query - Only select needed columns (NOT content - saves bandwidth)
+    const listColumns = 'id,title,description,original_title,image_url,date,category,source_url,original_source,slug,views,created_at';
+    
     let query = supabase
       .from('tech_news_articles')
-      .select('*', { count: 'exact' })
+      .select(listColumns, { count: 'exact' })
       .order('date', { ascending: false })
       .order('created_at', { ascending: false });
 
@@ -108,11 +108,8 @@ export default async function handler(req, res) {
     }
 
     // Apply pagination
-    const pageNum = parseInt(page, 10) || 1;
-    const limitNum = parseInt(limit, 10) || 20;
-    const from = (pageNum - 1) * limitNum;
-    const to = from + limitNum - 1;
-
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
     query = query.range(from, to);
 
     // Execute query
@@ -120,52 +117,64 @@ export default async function handler(req, res) {
 
     if (error) {
       console.error('Supabase error:', error);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Failed to fetch articles' 
-      });
+      return jsonResponse({ success: false, message: 'Failed to fetch articles' }, 500, corsHeaders);
     }
 
     // Calculate pagination metadata
     const totalArticles = count || 0;
-    const totalPages = Math.ceil(totalArticles / limitNum);
+    const totalPages = Math.ceil(totalArticles / limit);
 
-    return res.status(200).json({
+    return jsonResponse({
       success: true,
       data: {
-        articles: articles.map(formatArticle),
+        articles: articles.map(a => formatArticle(a, false)),
         pagination: {
-          page: pageNum,
-          limit: limitNum,
+          page,
+          limit,
           totalArticles,
           totalPages,
-          hasMore: pageNum < totalPages
+          hasMore: page < totalPages
         },
         _cache: {
           generatedAt: new Date().toISOString(),
-          maxAge: 300
+          maxAge: 60
         }
       }
+    }, 200, {
+      ...corsHeaders,
+      'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      'CDN-Cache-Control': 'public, max-age=60',
     });
 
   } catch (error) {
     console.error('Tech News API error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Internal server error' 
-    });
+    return jsonResponse({ success: false, message: 'Internal server error' }, 500, corsHeaders);
   }
 }
 
 /**
- * Format article for frontend consumption
+ * Helper to create JSON responses
  */
-function formatArticle(article) {
-  return {
+function jsonResponse(data, status = 200, headers = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+  });
+}
+
+/**
+ * Format article for frontend consumption
+ * @param {Object} article - Raw article from database
+ * @param {boolean} includeContent - Whether to include full content
+ */
+function formatArticle(article, includeContent = false) {
+  const formatted = {
     id: article.id,
     title: article.title,
     description: article.description,
-    content: article.content,
     originalTitle: article.original_title,
     image: article.image_url,
     date: article.date,
@@ -175,7 +184,12 @@ function formatArticle(article) {
     slug: article.slug,
     views: article.views,
     createdAt: article.created_at,
-    updatedAt: article.updated_at,
   };
+  
+  // Only include content for single article requests
+  if (includeContent && article.content) {
+    formatted.content = article.content;
+  }
+  
+  return formatted;
 }
-
