@@ -332,7 +332,7 @@ function selectTopArticles(articles, group, config) {
 async function generateGroupContent(selectedArticles, group) {
   const articlesData = selectedArticles.map(a => ({
     title: a.title,
-    summary: a.description?.substring(0, 250) || '',
+    summary: a.description?.substring(0, 400) || '', // More context for AI
     category: a.category,
     url: a.article_url
   }));
@@ -344,37 +344,49 @@ async function generateGroupContent(selectedArticles, group) {
   
   const systemPrompt = `Generate a LinkedIn post as JSON. Use \\n for EVERY line break.
 
-OUTPUT FORMAT (use \\n between each line):
-{"post_text": "line1\\nline2\\nline3...", "first_comment": "..."}
+OUTPUT FORMAT:
+{"post_text": "...", "first_comment": "..."}
 
-REQUIRED STRUCTURE (copy this EXACTLY, replacing bracketed parts):
-Today's Top Tech Signals: [3 short keywords]\\n\\n[One sentence hook about today's news]\\n\\nHere are 3 signals worth your attention:\\n\\n🧠 [Topic]: [One sentence about what happened.]\\n\\n⚡ [Topic]: [One sentence about what happened.]\\n\\n🔮 [Topic]: [One sentence about what happened.]\\n\\nWhich matters most to you?\\n\\nA) [2-3 words]\\nB) [2-3 words]\\nC) [2-3 words]\\n\\nSources in first comment.\\n[hashtags]
+STRUCTURE:
+Today's Top Tech Signals: [3 keywords]\\n\\n[Hook sentence]\\n\\nHere are 3 signals worth your attention:\\n\\n🧠 [Signal 1 - detailed]\\n\\n⚡ [Signal 2 - detailed]\\n\\n🔮 [Signal 3 - detailed]\\n\\nWhich matters most to you?\\n\\nA) [option]\\nB) [option]\\nC) [option]\\n\\nSources in first comment.\\n[hashtags]
+
+CRITICAL - EACH SIGNAL MUST BE DETAILED:
+- Include specific numbers, names, metrics from the article
+- Explain WHAT happened AND WHY it matters
+- 2-3 sentences per signal
+
+GOOD EXAMPLE:
+🧠 Chinese robotics company AgiBot launched Qingtian Rent, a humanoid robot rental platform offering services for 16 different event types - from weddings to business meetings, concerts to trade fairs. This signals the shift from robot ownership to robot-as-a-service.
+
+BAD EXAMPLE (too short):
+🧠 AgiBot launches humanoid robot rental service.
 
 RULES:
-- USE ONLY facts from provided articles
-- Plain text only (no markdown)
-- Keep sentences SHORT
+- USE ONLY facts from provided articles - no inventing
+- Plain text only (no markdown, no bold)
 - Use \\n\\n between sections`;
 
-  const userPrompt = `Write a LinkedIn post using ONLY these 3 articles:
+  const userPrompt = `Create a detailed LinkedIn post using these articles. Extract key facts, numbers, and names.
 
 ARTICLE 1: "${articlesData[0]?.title}"
-${articlesData[0]?.summary}
+Details: ${articlesData[0]?.summary}
 URL: ${articlesData[0]?.url}
 
 ARTICLE 2: "${articlesData[1]?.title}"  
-${articlesData[1]?.summary}
+Details: ${articlesData[1]?.summary}
 URL: ${articlesData[1]?.url}
 
 ARTICLE 3: "${articlesData[2]?.title}"
-${articlesData[2]?.summary}
+Details: ${articlesData[2]?.summary}
 URL: ${articlesData[2]?.url}
 
 Group: ${group.name}
-Use hashtags: ${hashtags}
+Hashtags: ${hashtags}
 
-Output JSON only:
-{"post_text": "...", "first_comment": "Sources:\\n\\n• [label]: [url]\\n• [label]: [url]\\n• [label]: [url]"}`;
+REMEMBER: Each signal needs 2-3 detailed sentences with specific facts from the article.
+
+Output JSON:
+{"post_text": "Today's Top Tech Signals: ...\\n\\n[hook]\\n\\nHere are 3 signals...\\n\\n🧠 [detailed signal 1]\\n\\n⚡ [detailed signal 2]\\n\\n🔮 [detailed signal 3]\\n\\nWhich matters most?\\n\\nA)...\\nB)...\\nC)...\\n\\nSources in first comment.\\n${hashtags}", "first_comment": "Sources:\\n\\n• [label]: [url]\\n• [label]: [url]\\n• [label]: [url]"}`;
 
   try {
     const completion = await groq.chat.completions.create({
