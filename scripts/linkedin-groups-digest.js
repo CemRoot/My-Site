@@ -342,58 +342,39 @@ async function generateGroupContent(selectedArticles, group) {
     .map(k => `#${k.replace(/\s+/g, '')}`)
     .join(' ');
   
-  const systemPrompt = `You are a JSON API that generates high-engagement LinkedIn Group posts. Respond with ONLY valid JSON.
+  const systemPrompt = `Generate a LinkedIn post as JSON. Use \\n for EVERY line break.
 
-FORMAT: {"post_text": "...", "first_comment": "..."}
+OUTPUT FORMAT (use \\n between each line):
+{"post_text": "line1\\nline2\\nline3...", "first_comment": "..."}
 
-=== TASTE FRAMEWORK FOR VIRAL LINKEDIN POSTS ===
+REQUIRED STRUCTURE (copy this EXACTLY, replacing bracketed parts):
+Today's Top Tech Signals: [3 short keywords]\\n\\n[One sentence hook about today's news]\\n\\nHere are 3 signals worth your attention:\\n\\n🧠 [Topic]: [One sentence about what happened.]\\n\\n⚡ [Topic]: [One sentence about what happened.]\\n\\n🔮 [Topic]: [One sentence about what happened.]\\n\\nWhich matters most to you?\\n\\nA) [2-3 words]\\nB) [2-3 words]\\nC) [2-3 words]\\n\\nSources in first comment.\\n[hashtags]
 
-1) HOOK (first 2 lines) - THIS DETERMINES SUCCESS
-   - Must stop the scroll
-   - Bold claim or surprising insight
-   - NOT generic like "Tech is evolving"
-   - Example: "𝐓𝐡𝐞 𝐜𝐡𝐢𝐩 𝐫𝐚𝐜𝐞 𝐣𝐮𝐬𝐭 𝐠𝐨𝐭 𝐢𝐧𝐭𝐞𝐫𝐞𝐬𝐭𝐢𝐧𝐠.\\n0.2nm chips in 15 years. China blocking Nvidia. Samsung leaks."
+RULES:
+- USE ONLY facts from provided articles
+- Plain text only (no markdown)
+- Keep sentences SHORT
+- Use \\n\\n between sections`;
 
-2) EACH SIGNAL = exactly 2 lines
-   - Line 1: WHAT happened (the news)
-   - Line 2: WHY it matters (the insight practitioners care about)
-   - Use pattern: "The interesting part isn't X — it's Y"
+  const userPrompt = `Write a LinkedIn post using ONLY these 3 articles:
 
-3) DISCUSSION TRIGGER (critical!)
-   - Single A/B/C question that people WANT to answer
-   - NOT generic like "which is important?"
-   - Make it opinionated: "Which will reshape YOUR work first?"
+ARTICLE 1: "${articlesData[0]?.title}"
+${articlesData[0]?.summary}
+URL: ${articlesData[0]?.url}
 
-4) NO LINKS in post body - all in first_comment
+ARTICLE 2: "${articlesData[1]?.title}"  
+${articlesData[1]?.summary}
+URL: ${articlesData[1]?.url}
 
-STRICT RULES:
-- Unicode bold ONLY for title keywords: 𝐀𝐈, 𝐜𝐡𝐢𝐩𝐬, 𝐞𝐭𝐜
-- NEVER use markdown (**bold** or *italic*)
-- 3-5 hashtags max
-- Use \\n\\n between sections for readability`;
+ARTICLE 3: "${articlesData[2]?.title}"
+${articlesData[2]?.summary}
+URL: ${articlesData[2]?.url}
 
-  const userPrompt = `Group: ${group.name}
-Topics: ${group.topic_keywords.slice(0, 3).join(', ')}
-Hashtags: ${hashtags}
+Group: ${group.name}
+Use hashtags: ${hashtags}
 
-TODAY'S ARTICLES:
-${articlesData.map((a, i) => `
-ARTICLE ${i + 1}:
-Title: ${a.title}
-Summary: ${a.summary}
-URL: ${a.url}`).join('\n')}
-
-=== GENERATE POST ===
-
-Create a scroll-stopping post. The HOOK must be specific to these articles, not generic.
-
-Example structure:
-{
-  "post_text": "𝐓𝐨𝐝𝐚𝐲'𝐬 𝐓𝐨𝐩 𝐓𝐞𝐜𝐡 𝐒𝐢𝐠𝐧𝐚𝐥𝐬: 𝐜𝐡𝐢𝐩𝐬, 𝐀𝐈, 𝐠𝐞𝐨𝐩𝐨𝐥𝐢𝐭𝐢𝐜𝐬\\n\\n[BOLD HOOK - what makes TODAY's news different]\\n[Second line - why practitioners should care]\\n\\nHere are 3 signals worth your attention today:\\n\\n🧠 [Topic]: [What happened - 1 sentence]\\n[Why it matters - the deeper insight]\\n\\n⚡ [Topic]: [What happened]\\n[The interesting part isn't X — it's Y]\\n\\n🔮 [Topic]: [What happened]\\n[Why this changes things]\\n\\nQuestion for the group:\\n[Specific question that triggers opinion]\\n\\nA) [2-3 word option]\\nB) [2-3 word option]\\nC) [2-3 word option]\\n\\nSources in the first comment.\\n${hashtags}",
-  "first_comment": "Sources / Read more:\\n\\n• [Short label]: [url]\\n• [Short label]: [url]\\n• [Short label]: [url]"
-}
-
-RESPOND WITH ONLY THE JSON.`;
+Output JSON only:
+{"post_text": "...", "first_comment": "Sources:\\n\\n• [label]: [url]\\n• [label]: [url]\\n• [label]: [url]"}`;
 
   try {
     const completion = await groq.chat.completions.create({
@@ -402,9 +383,9 @@ RESPOND WITH ONLY THE JSON.`;
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      temperature: 0.7,
-      max_tokens: 1500, // Enough for full JSON response
-      top_p: 0.9
+      temperature: 0.5, // Lower = more consistent, less hallucination
+      max_tokens: 2000, // Prevent truncation
+      top_p: 0.85
     });
 
     const responseText = completion.choices[0]?.message?.content || '';
@@ -557,25 +538,52 @@ function formatTelegramMessage(content, group, selectedArticles) {
   
   // Force proper line breaks for readability
   const formatPostText = (text) => {
-    let formatted = escapeHtml(text || '');
+    let formatted = text || '';
+    
+    // First, convert escaped newlines to actual newlines
+    formatted = formatted.replace(/\\n/g, '\n');
+    
+    // If no newlines exist, try to add them intelligently
+    if (!formatted.includes('\n')) {
+      // Add line break after title (ends with colon or first period)
+      formatted = formatted.replace(/(Top Tech Signals:[^.]+)\.?\s*/, '$1\n\n');
+      
+      // Add line breaks before emojis
+      formatted = formatted.replace(/\s*(🧠|⚡|🔮)/g, '\n\n$1');
+      
+      // Add line break before "Which" or "Question"
+      formatted = formatted.replace(/\s*(Which|Question)/g, '\n\n$1');
+      
+      // Add line breaks before A), B), C)
+      formatted = formatted.replace(/\s*([ABC]\))/g, '\n$1');
+      
+      // Add line break before "Sources"
+      formatted = formatted.replace(/\s*(Sources)/g, '\n\n$1');
+      
+      // Add line break before hashtags
+      formatted = formatted.replace(/\s*(#\w+)/g, '\n\n$1');
+    }
     
     // Ensure blank line after title (first line)
     const lines = formatted.split('\n');
     if (lines.length > 1 && lines[1].trim() !== '') {
-      lines.splice(1, 0, ''); // Insert blank line after title
+      lines.splice(1, 0, '');
     }
     formatted = lines.join('\n');
     
     // Ensure blank line before each signal emoji
     formatted = formatted.replace(/([^\n])\n(🧠|⚡|🔮)/g, '$1\n\n$2');
     
-    // Ensure blank line before "Question for the group"
-    formatted = formatted.replace(/([^\n])\n(Question for the group)/g, '$1\n\n$2');
+    // Ensure blank line before "Which" or "Question"
+    formatted = formatted.replace(/([^\n])\n(Which|Question)/g, '$1\n\n$2');
     
     // Ensure blank line before hashtags
     formatted = formatted.replace(/([^\n])\n(#\w)/g, '$1\n\n$2');
     
-    return formatted;
+    // Clean up excessive newlines (max 2)
+    formatted = formatted.replace(/\n{3,}/g, '\n\n');
+    
+    return escapeHtml(formatted);
   };
   
   const postText = formatPostText(content.post_text || '');
