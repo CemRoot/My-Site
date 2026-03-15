@@ -27,22 +27,22 @@ function Experience() {
           </h2>
 
           {/* ACHIEVEMENT BAR */}
-          <div className="flex flex-wrap justify-center gap-3 mt-10 max-w-4xl mx-auto">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-primary/30 bg-primary/10 text-primary text-sm font-medium">
+          <div className="flex flex-nowrap overflow-x-auto pb-4 sm:pb-0 justify-start sm:justify-center gap-3 mt-10 max-w-5xl mx-auto px-2 no-scrollbar">
+            <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border border-primary/50 bg-primary/10 text-primary text-xs sm:text-sm font-medium">
               <Award className="w-4 h-4" />
-              First Class Honours · MSc AI
+              First Class · MSc AI
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm font-medium">
+            <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border border-[#10b981]/50 bg-[#10b981]/10 text-[#34d399] text-xs sm:text-sm font-medium">
               <BookOpen className="w-4 h-4" />
-              Published Researcher · Springer CCIS 2025
+              Published · Springer CCIS '25
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-secondary/30 bg-secondary/10 text-secondary text-sm font-medium">
+            <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border border-secondary/50 bg-secondary/10 text-secondary text-xs sm:text-sm font-medium">
               <Server className="w-4 h-4" />
-              3+ Years Enterprise Engineering
+              3+ Yrs Enterprise Eng
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-accent/30 bg-accent/10 text-accent text-sm font-medium">
+            <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border border-accent/50 bg-accent/10 text-accent text-xs sm:text-sm font-medium">
               <Rocket className="w-4 h-4" />
-              Startup Founder · AI/Drone Tech
+              Founder · AI/Drone
             </div>
           </div>
         </div>
@@ -60,7 +60,7 @@ function Experience() {
             {/* TIER 1: System Operations Engineer */}
             <div className="relative liquid-glow group">
               <div className="absolute -inset-2 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="relative p-6 rounded-2xl frosted-glass border border-white/10 border-l-4 border-l-primary liquid-shimmer transition-all duration-300">
+              <div className="relative p-6 rounded-2xl frosted-glass border border-white/20 border-l-[4px] border-l-[#d4af37] hover:border-l-[#d4af37] shadow-sm hover:shadow-[#d4af37]/5 liquid-shimmer transition-all duration-300">
                 <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
                   <div>
                     <h4 className="text-xl font-medium text-foreground">System Operations Engineer</h4>
@@ -84,7 +84,7 @@ function Experience() {
             {/* TIER 1: Junior Python Developer */}
             <div className="relative liquid-glow group">
               <div className="absolute -inset-2 bg-gradient-to-br from-secondary/20 to-secondary/5 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="relative p-6 rounded-2xl frosted-glass border border-white/10 border-l-4 border-l-secondary liquid-shimmer transition-all duration-300">
+              <div className="relative p-6 rounded-2xl frosted-glass border border-white/20 border-l-[4px] border-l-[#c0a062] hover:border-l-[#c0a062] shadow-sm hover:shadow-[#c0a062]/5 liquid-shimmer transition-all duration-300">
                 <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
                   <div>
                     <h4 className="text-xl font-medium text-foreground">Junior Python Developer</h4>
@@ -141,7 +141,7 @@ function Experience() {
             {/* TIER 1: MSc Artificial Intelligence */}
             <div className="relative liquid-glow group">
               <div className="absolute -inset-2 bg-gradient-to-br from-accent/20 to-accent/5 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="relative p-6 rounded-2xl frosted-glass border border-white/10 border-l-4 border-l-accent liquid-shimmer transition-all duration-300">
+              <div className="relative p-6 rounded-2xl frosted-glass border border-white/20 border-l-[4px] border-l-accent/90 hover:border-l-accent shadow-sm hover:shadow-accent/5 liquid-shimmer transition-all duration-300">
                 <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
                   <div>
                     <h4 className="text-xl font-medium text-foreground">MSc Artificial Intelligence</h4>
@@ -161,8 +161,8 @@ function Experience() {
                 </p>
 
                 {/* Distinct Publication Badge */}
-                <div className="mb-5 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-medium">
-                  <BookOpen className="w-3.5 h-3.5" />
+                <div className="mb-6 inline-flex items-center gap-3 px-4 py-2.5 rounded-xl border-2 border-[#10b981]/40 bg-[#10b981]/15 text-[#6ee7b7] text-sm font-semibold shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                  <BookOpen className="w-4 h-4 text-[#34d399]" />
                   Published · Springer CCIS · AICS 2025 · 33rd Int'l Conference
                 </div>
 
@@ -179,7 +179,7 @@ function Experience() {
             {/* TIER 1: BSc Software Engineering */}
             <div className="relative liquid-glow group">
               <div className="absolute -inset-2 bg-gradient-to-br from-secondary/20 to-secondary/5 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="relative p-6 rounded-2xl frosted-glass border border-white/10 border-l-4 border-l-secondary liquid-shimmer transition-all duration-300">
+              <div className="relative p-6 rounded-2xl frosted-glass border border-white/20 border-l-[4px] border-l-secondary/90 hover:border-l-secondary shadow-sm hover:shadow-secondary/5 liquid-shimmer transition-all duration-300">
                 <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
                   <div>
                     <h4 className="text-xl font-medium text-foreground">BSc Software Engineering</h4>
