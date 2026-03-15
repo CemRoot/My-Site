@@ -292,6 +292,47 @@ Return ONLY the JSON object, nothing else.`;
 export async function saveToSupabase(article) {
   console.log(`💾 Saving to Supabase...`);
 
+  // Content validation
+  if (article.content !== undefined && article.content !== null) {
+    const lowerContent = article.content.toLowerCase();
+    const rejectionKeywords = ["i'm unable", "i cannot", "i'm sorry", "fulfill this request"];
+    let rejectionReason = null;
+
+    if (article.content.length < 100) {
+      rejectionReason = "Content is under 100 characters";
+    } else {
+      for (const keyword of rejectionKeywords) {
+        if (lowerContent.includes(keyword)) {
+          rejectionReason = `Content contains refusal phrase: "${keyword}"`;
+          break;
+        }
+      }
+    }
+
+    if (rejectionReason) {
+      console.warn(`⚠️  ARTICLE REJECTED: ${rejectionReason}`);
+
+      const { error: rejectError } = await supabase
+        .from('rejected_articles')
+        .insert([{
+          title: article.title || article.original_title || '',
+          content: article.content,
+          source_url: article.source_url,
+          original_source: article.original_source,
+          reason: rejectionReason
+        }]);
+
+      if (rejectError) {
+        console.error('❌ Error saving to rejected_articles table:', rejectError);
+      } else {
+        console.log(`✅ Logged rejected article to database`);
+      }
+
+      // Return a skipped indicator instead of throwing, per requirements
+      return { skipped: true, reason: rejectionReason };
+    }
+  }
+
   const { data, error } = await supabase
     .from('tech_news_articles')
     .insert([article])
@@ -365,6 +406,15 @@ export async function processManualArticle(articleUrl, originalSourceUrl) {
 
     // Step 7: Save to database
     const savedArticle = await saveToSupabase(article);
+
+    if (savedArticle.skipped) {
+      console.log(`\n⚠️  Manual article was rejected during validation: ${savedArticle.reason}`);
+      return {
+        success: false,
+        skipped: true,
+        reason: savedArticle.reason,
+      };
+    }
 
     console.log(`\n✅ Manual article processed successfully!`);
     console.log(`   Title: ${savedArticle.title}`);

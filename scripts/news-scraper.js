@@ -789,6 +789,48 @@ async function saveArticle(article) {
     }
 
     // ============================================
+    // STEP 3.5: CONTENT VALIDATION
+    // ============================================
+    const lowerContent = cleanContent.toLowerCase();
+    const rejectionKeywords = ["i'm unable", "i cannot", "i'm sorry", "fulfill this request"];
+    let rejectionReason = null;
+
+    if (cleanContent.length < 100) {
+      rejectionReason = "Content is under 100 characters";
+    } else {
+      for (const keyword of rejectionKeywords) {
+        if (lowerContent.includes(keyword)) {
+          rejectionReason = `Content contains refusal phrase: "${keyword}"`;
+          break;
+        }
+      }
+    }
+
+    if (rejectionReason) {
+      console.warn(`   ⚠️  ARTICLE REJECTED: ${rejectionReason}`);
+
+      // Log to rejected_articles table
+      const { error: rejectError } = await supabase
+        .from('rejected_articles')
+        .insert([{
+          title: cleanTitle,
+          content: cleanContent,
+          source_url: article.sourceUrl,
+          original_source: article.originalSource,
+          reason: rejectionReason
+        }]);
+
+      if (rejectError) {
+        console.error('   ❌ Error saving to rejected_articles table:', rejectError);
+      } else {
+        console.log(`   ✅ Logged rejected article to database`);
+      }
+
+      // Return success: false but NO error, so the scraper just skips and continues
+      return { success: false, reason: 'rejected_content', error: null, validation };
+    }
+
+    // ============================================
     // STEP 4: SAVE TO DATABASE
     // ============================================
     const { data, error } = await supabase
