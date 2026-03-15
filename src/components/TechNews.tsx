@@ -9,6 +9,7 @@ import { NewsletterSignup } from './NewsletterSignup';
 import { usePageContext } from '../lib/context/PageContext';
 import { getOptimizedImageUrl, IMAGE_PRESETS } from '../lib/utils/imageProxy';
 import ErrorBoundary from './ErrorBoundary';
+import { SEO } from './SEO';
 
 interface Article {
   id: string;
@@ -234,6 +235,13 @@ function TechNews() {
   useEffect(() => () => setPageInfo(null), [setPageInfo]);
 
   return (
+    <>
+      <SEO
+        title="Tech News | Cem Koyluoglu"
+        description="Latest technology news, translated and summarized by AI. Stay up to date with AI, tech, startups, and software engineering news."
+        ogTitle="Tech News | Cem Koyluoglu"
+        ogDescription="Latest technology news, translated and summarized by AI. Stay up to date with AI, tech, startups, and software engineering news."
+      />
     <main
       className="min-h-screen bg-gradient-to-b from-background to-muted/20 pb-24"
       style={{ paddingTop: 'calc(var(--nav-height, 120px) + 56px)' }}
@@ -469,6 +477,7 @@ function TechNews() {
         )}
       </div>
     </main>
+    </>
   );
 }
 

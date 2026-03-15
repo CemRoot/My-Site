@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Shield } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { usePageContext } from '../lib/context/PageContext';
+import { SEO } from '../components/SEO';
 
 /**
  * Privacy Policy Page
@@ -29,6 +30,13 @@ function PrivacyPage() {
   }, [setPageInfo]);
 
   return (
+    <>
+    <SEO
+      title="Privacy Policy | Cem Koyluoglu"
+      description="Privacy Policy detailing data collection, usage, retention, third-party services, cookies, and user rights for Cem Koyluoglu's portfolio."
+      ogTitle="Privacy Policy | Cem Koyluoglu"
+      ogDescription="Privacy Policy detailing data collection, usage, retention, third-party services, cookies, and user rights for Cem Koyluoglu's portfolio."
+    />
     <main
       className="min-h-screen bg-gradient-to-b from-background to-muted/20 px-4 pb-24"
       style={{ paddingTop: 'calc(var(--nav-height, 120px) + 56px)' }}
@@ -280,6 +288,7 @@ function PrivacyPage() {
         </div>
       </div>
     </main>
+    </>
   );
 }
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Scale } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { usePageContext } from '../lib/context/PageContext';
+import { SEO } from '../components/SEO';
 
 /**
  * Terms & Conditions Page
@@ -29,6 +30,13 @@ function TermsPage() {
   }, [setPageInfo]);
 
   return (
+    <>
+    <SEO
+      title="Terms & Conditions | Cem Koyluoglu"
+      description="Terms and conditions for Cem Koyluoglu's portfolio site, covering services, newsletter, communications, IP, and legal compliance."
+      ogTitle="Terms & Conditions | Cem Koyluoglu"
+      ogDescription="Terms and conditions for Cem Koyluoglu's portfolio site, covering services, newsletter, communications, IP, and legal compliance."
+    />
     <main
       className="min-h-screen bg-gradient-to-b from-background to-muted/20 px-4 pb-24"
       style={{ paddingTop: 'calc(var(--nav-height, 120px) + 56px)' }}
@@ -207,6 +215,7 @@ function TermsPage() {
         </div>
       </div>
     </main>
+    </>
   );
 }
 
