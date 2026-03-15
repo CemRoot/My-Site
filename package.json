@@ -75,7 +75,7 @@
       "scripts": {
             "dev": "vite",
             "build": "vite build",
-            "postbuild": "node scripts/post-build-telegram.js || true",
+            "postbuild": "node scripts/sitemap-generator.js && node scripts/post-build-telegram.js || true",
             "scrape:news": "node scripts/news-scraper.js",
             "test:translation": "node scripts/test-groq-translation.js",
             "test:monitoring": "node scripts/test-frontend-monitor.js",

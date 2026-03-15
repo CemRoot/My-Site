@@ -7,6 +7,7 @@ import { Skills } from '../components/Skills';
 import { Contact } from '../components/Contact';
 import { usePageContext } from '../lib/context/PageContext';
 import { lazyWithRetry } from '../lib/chunk-error-handler';
+import { SEO } from '../components/SEO';
 
 // Lazy load heavy components that are below the fold
 // Using lazyWithRetry to handle chunk loading errors after deployments
@@ -87,6 +88,12 @@ function HomePage() {
 
   return (
     <>
+      <SEO
+        title="Cem Koyluoglu - AI Engineer & Microsoft 365 Specialist | Dublin, Ireland"
+        description="AI Engineer specializing in Large Language Models, NLP, Computer Vision, and Microsoft 365 solutions. Based in Dublin, Ireland. Available for freelance projects and full-time opportunities."
+        ogTitle="Cem Koyluoglu - AI Engineer & Microsoft 365 Specialist"
+        ogDescription="AI Engineer with First-Class Honours degree specializing in LLMs, NLP, Computer Vision, Azure & Microsoft 365. Based in Dublin, Ireland."
+      />
       <Hero />
       <Stats />
       <About />
