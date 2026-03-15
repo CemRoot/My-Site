@@ -108,6 +108,12 @@ export function cleanSocialEmbedRemnants(markdown) {
   // Remove Twitter-related text blocks
   cleaned = cleaned.replace(/>\s*Twitter Widget Iframe\s*/gi, '');
   cleaned = cleaned.replace(/>\s*Tweet\s*>/gi, '');
+  cleaned = cleaned.replace(/Loading tweet\.\.\./gi, '');
+  cleaned = cleaned.replace(/View on Twitter/gi, '');
+  cleaned = cleaned.replace(/View on X/gi, '');
+
+  // BUG 3 FIX: Remove stray t.co URLs entirely
+  cleaned = cleaned.replace(/https?:\/\/t\.co\/[a-zA-Z0-9]+/g, '');
   
   // Remove YouTube-related text blocks
   cleaned = cleaned.replace(/>\s*YouTube Widget\s*/gi, '');

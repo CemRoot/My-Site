@@ -14,7 +14,7 @@ type AnyNode = any;
 
 // Regex to detect embed tokens: [[EMBED:TYPE:DATA]]
 const TOKEN_REGEX = /^\s*\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):.+\]\]\s*$/i;
-const GLOBAL_TOKEN_REGEX = /\[\[EMBED:(TIKTOK|TWEET|YOUTUBE):([^\]]+)\]\]/g;
+const GLOBAL_TOKEN_REGEX = /\[\[EMBED:(TIKTOK|TWEET|YOUTUBE):([^\]]+)\]\]/gi;
 
 /**
  * Checks if a paragraph contains an embed token
@@ -122,9 +122,15 @@ interface SmartMarkdownProps {
 }
 
 export default function SmartMarkdown({ content }: SmartMarkdownProps) {
-  // PRE-PROCESS: Extract tokens and split content
+  // PRE-PROCESS: Clean up tokens wrapped in backticks (e.g., `[[EMBED:...]]`)
+  let cleanedContent = content.replace(/`(\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):[^\]]+\]\])`/gi, '$1');
+
+  // Extract TL;DR and highlights FIRST globally before splitting
+  const { tldr, highlights, remainingContent } = extractTLDRAndHighlights(cleanedContent);
+
+  // PRE-PROCESS: Extract tokens and split the remaining content
   const tokens: Array<{ type: string; payload: string; fullToken: string }> = [];
-  const tokenMatches = content.matchAll(GLOBAL_TOKEN_REGEX);
+  const tokenMatches = remainingContent.matchAll(GLOBAL_TOKEN_REGEX);
   
   for (const match of tokenMatches) {
     tokens.push({
@@ -134,23 +140,18 @@ export default function SmartMarkdown({ content }: SmartMarkdownProps) {
     });
   }
   
-  // If no tokens, render normally
-  if (tokens.length === 0) {
-    return renderMarkdown(content);
-  }
-  
   // Split content by tokens
   const parts: Array<{ type: 'markdown' | 'embed'; content: string; embedData?: any }> = [];
   let lastIndex = 0;
   
   for (const token of tokens) {
-    const tokenIndex = content.indexOf(token.fullToken, lastIndex);
+    const tokenIndex = remainingContent.indexOf(token.fullToken, lastIndex);
     
     if (tokenIndex > lastIndex) {
       // Add markdown before token
       parts.push({
         type: 'markdown',
-        content: content.substring(lastIndex, tokenIndex)
+        content: remainingContent.substring(lastIndex, tokenIndex)
       });
     }
     
@@ -165,31 +166,14 @@ export default function SmartMarkdown({ content }: SmartMarkdownProps) {
   }
   
   // Add remaining markdown
-  if (lastIndex < content.length) {
+  if (lastIndex < remainingContent.length) {
     parts.push({
       type: 'markdown',
-      content: content.substring(lastIndex)
+      content: remainingContent.substring(lastIndex)
     });
   }
   
   // Render parts
-  return (
-    <>
-      {parts.map((part, index) => {
-        if (part.type === 'embed' && part.embedData) {
-          return <EmbedFromToken key={index} token={part.content} />;
-        } else {
-          return <Fragment key={index}>{renderMarkdown(part.content)}</Fragment>;
-        }
-      })}
-    </>
-  );
-}
-
-function renderMarkdown(content: string) {
-  // Extract TL;DR and highlights if present
-  const { tldr, highlights, remainingContent } = extractTLDRAndHighlights(content);
-  
   return (
     <div>
       {/* TL;DR Section */}
@@ -220,8 +204,20 @@ function renderMarkdown(content: string) {
           </ul>
         </div>
       )}
-      
-      {/* Main Article Content */}
+
+      {parts.map((part, index) => {
+        if (part.type === 'embed' && part.embedData) {
+          return <EmbedFromToken key={index} token={part.content} />;
+        } else {
+          return <Fragment key={index}>{renderMarkdownContent(part.content)}</Fragment>;
+        }
+      })}
+    </div>
+  );
+}
+
+function renderMarkdownContent(content: string) {
+  return (
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         skipHtml={true}
@@ -294,9 +290,8 @@ function renderMarkdown(content: string) {
         },
       }}
     >
-      {remainingContent}
+      {content}
     </ReactMarkdown>
-    </div>
   );
 }
 
