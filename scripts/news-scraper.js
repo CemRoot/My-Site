@@ -2221,8 +2221,29 @@ function cleanTranslation(text) {
   
   // Clean up excessive whitespace
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
+
+  // BUG 1 FIX: Replace "YZ" with "AI" (since LLMs sometimes leave the Turkish acronym)
+  cleaned = cleaned.replace(/\bYZ\b/g, 'AI');
+  cleaned = cleaned.replace(/\bYZ'nin\b/g, "AI's");
+  cleaned = cleaned.replace(/\byapay zeka\b/gi, 'AI');
+
+  // BUG 2 FIX: Remove stray markdown characters that appear on their own lines
+  const lines = cleaned.split('\n');
+  const filteredLines = lines.filter(line => {
+    const trimmed = line.trim();
+    // Remove lines that are just !, *, **, or ***
+    if (trimmed === '!' || trimmed === '*' || trimmed === '**' || trimmed === '***') {
+      return false;
+    }
+    return true;
+  });
+
+  cleaned = filteredLines.join('\n');
+
+  // Remove empty bold/italic markers like **** or ** **
+  cleaned = cleaned.replace(/\*\*\s*\*\*/g, '');
   
-  return cleaned;
+  return cleaned.trim();
 }
 
 async function translateArticle(article) {
