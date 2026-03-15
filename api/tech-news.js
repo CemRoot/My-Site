@@ -89,7 +89,7 @@ export default async function handler(request) {
         article: formatArticle(article, true) 
       }, 200, {
         ...corsHeaders,
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
       });
     }
 
@@ -137,13 +137,13 @@ export default async function handler(request) {
         },
         _cache: {
           generatedAt: new Date().toISOString(),
-          maxAge: 60
+          maxAge: 300
         }
       }
     }, 200, {
       ...corsHeaders,
-      'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
-      'CDN-Cache-Control': 'public, max-age=60',
+      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=86400',
+      'CDN-Cache-Control': 'public, max-age=300',
     });
 
   } catch (error) {

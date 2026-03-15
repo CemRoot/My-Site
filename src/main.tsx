@@ -10,7 +10,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import App from "./App.tsx";
 import "./fonts.css";
 import "./index.css";
-import { ErrorBoundary } from "./components/ErrorBoundary";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // Render app immediately for fast FCP
 createRoot(document.getElementById("root")!).render(

@@ -11,6 +11,7 @@ import SmartMarkdown from './markdown/SmartMarkdown';
 import { supabase } from '../../lib/supabase.js';
 import { SEO } from './SEO';
 import { getOptimizedImageUrl, IMAGE_PRESETS } from '../lib/utils/imageProxy';
+import ErrorBoundary from './ErrorBoundary';
 
 interface Article {
   id: string;
@@ -491,4 +492,10 @@ function TechNewsDetail() {
   );
 }
 
-export default TechNewsDetail;
+export default function TechNewsDetailWithErrorBoundary() {
+  return (
+    <ErrorBoundary title="Failed to load article detail">
+      <TechNewsDetail />
+    </ErrorBoundary>
+  );
+}
