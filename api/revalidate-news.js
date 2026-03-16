@@ -7,6 +7,8 @@
  * Headers: Authorization: Bearer YOUR_SECRET
  */
 
+import crypto from 'crypto';
+
 export default async function handler(req, res) {
   // Security: Only allow POST requests
   if (req.method !== 'POST') {
@@ -34,8 +36,22 @@ export default async function handler(req, res) {
     });
   }
 
-  const token = authHeader.replace('Bearer ', '');
-  if (token !== expectedSecret) {
+  const token = authHeader.split(' ')[1];
+
+  // Use timing-safe comparison to prevent timing attacks
+  let isAuthorized = false;
+  try {
+    const providedBuffer = Buffer.from(token || '');
+    const expectedBuffer = Buffer.from(expectedSecret);
+
+    if (providedBuffer.length === expectedBuffer.length) {
+      isAuthorized = crypto.timingSafeEqual(providedBuffer, expectedBuffer);
+    }
+  } catch (e) {
+    // In case of any error (e.g., malformed token), it remains false
+  }
+
+  if (!isAuthorized) {
     return res.status(403).json({
       success: false,
       message: 'Invalid token'

@@ -12,6 +12,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 
 const CONFIG = {
   SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -19,11 +20,6 @@ const CONFIG = {
   // Security: API key for authentication (RECOMMENDED)
   API_SECRET: process.env.CONVERSATION_STATE_API_SECRET || process.env.TELEGRAM_CONTROL_API_SECRET || '',
 };
-
-// SECURITY: Log error if API_SECRET is not set
-if (!CONFIG.API_SECRET) {
-  console.error('❌ CRITICAL: CONVERSATION_STATE_API_SECRET is not set! Authentication is required.');
-}
 
 // Create Supabase client
 let supabaseClient = null;
@@ -130,8 +126,8 @@ function verifyAuth(req) {
     return {
       authorized: false,
       status: 500,
-      error: 'Internal Server Error',
-      message: 'API security configuration is missing. Set CONVERSATION_STATE_API_SECRET or TELEGRAM_CONTROL_API_SECRET.'
+      error: 'Configuration error',
+      message: 'API security configuration is missing.'
     };
   }
 
@@ -146,8 +142,22 @@ function verifyAuth(req) {
     };
   }
 
-  const providedSecret = authHeader.replace('Bearer ', '');
-  if (providedSecret !== CONFIG.API_SECRET) {
+  const providedSecret = authHeader.split(' ')[1];
+
+  // Use timing-safe comparison to prevent timing attacks
+  let isAuthorized = false;
+  try {
+    const providedBuffer = Buffer.from(providedSecret || '');
+    const expectedBuffer = Buffer.from(CONFIG.API_SECRET);
+
+    if (providedBuffer.length === expectedBuffer.length) {
+      isAuthorized = crypto.timingSafeEqual(providedBuffer, expectedBuffer);
+    }
+  } catch (e) {
+    // In case of any error (e.g., malformed token), it remains false
+  }
+
+  if (!isAuthorized) {
     return {
       authorized: false,
       status: 403,
