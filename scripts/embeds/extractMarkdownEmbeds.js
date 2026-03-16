@@ -83,9 +83,10 @@ export function extractTikTokFromMarkdown(markdown) {
     }
   );
 
-  // Standalone TikTok URLs
+  // Standalone TikTok URLs (matches start-of-line AND inline mid-paragraph)
+  // Lookbehind prevents re-matching URLs already inside [[EMBED:TIKTOK:...]] tokens
   content = content.replace(
-    /^(https?:\/\/(?:www\.)?tiktok\.com\/@[^\/]+\/video\/\d+).*$/gm,
+    /(?<!TIKTOK:)(https?:\/\/(?:www\.)?tiktok\.com\/@[^\s\/]+\/video\/\d+)[^\s)\]"']*/g,
     (match, url) => {
       count++;
       const cleanUrl = url.split('?')[0];
@@ -118,9 +119,9 @@ export function extractTwitterFromMarkdown(markdown) {
     }
   );
 
-  // Standalone Twitter/X URLs
+  // Standalone Twitter/X URLs (matches start-of-line AND inline mid-paragraph)
   content = content.replace(
-    /^https?:\/\/(?:www\.)?(?:twitter|x)\.com\/[^\/]+\/status\/(\d+).*$/gm,
+    /https?:\/\/(?:www\.)?(?:twitter|x)\.com\/[^\s\/]+\/status\/(\d+)[^\s)\]"']*/g,
     (match, tweetId) => {
       count++;
       return `\n\n[[EMBED:TWEET:${tweetId}]]\n\n`;

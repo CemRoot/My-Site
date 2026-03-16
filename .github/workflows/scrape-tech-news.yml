@@ -30,16 +30,20 @@ name: Scrape Tech News
 #    - "Your task:" → ❌ Reddet
 #    - "TL;DR and key highlights" → ❌ Reddet
 #
-# 4. EMBED TEMİZLİK:
+# 4. EMBED TOKEN SİSTEMİ:
 #    - YouTube: [[EMBED:YOUTUBE:VIDEO_ID]]
 #    - Twitter: [[EMBED:TWEET:TWEET_ID]]
 #    - TikTok: [[EMBED:TIKTOK:URL]]
+#    - Token'lar çeviri sırasında __WIDGET_N__ placeholder'larıyla korunur
+#    - Çeviri sonrası validateTokenPreservation() ile doğrulanır
+#    - Kayıp token'lar otomatik olarak yeniden eklenir
+#    - Inline URL'ler de yakalanır (sadece satır başı değil)
 #
 # 5. YOUTUBE GARBAGE TEXT TEMİZLİK:
+#    - Pattern-based skip (sabit 15 satır yerine akıllı algılama)
+#    - Gerçek içerik: >80 karakter, noktalama, başlık → KORU
+#    - Kısa/belirsiz satırlar: kanal adı, abone sayısı → SİL
 #    - "If playback doesn't begin" → ✂️ Sil
-#    - "try restarting your device" → ✂️ Sil
-#    - "More videos" → ✂️ Sil
-#    - "Videos you watch may be added" → ✂️ Sil
 #    - "retrieving sharing information" → ✂️ Sil
 #    - "0:00 / 1:00" → ✂️ Sil
 #
@@ -66,7 +70,8 @@ name: Scrape Tech News
 #
 # 10. RATE LIMITING:
 #     - Groq: 1000ms delay between requests
-#     - Firecrawl: 10000ms (10s) delay
+#     - Firecrawl: 10000ms (10s) delay between articles
+#     - Firecrawl waitFor: 4500ms (embed JS rendering time)
 #     - Retry with simplified prompt on failure
 #
 # ============================================================================
@@ -151,7 +156,8 @@ jobs:
           echo ""
           echo "⚡ Rate Limiting:"
           echo "   Translation delay: 1000ms between requests"
-          echo "   Firecrawl delay: 10000ms (10s) between requests"
+          echo "   Firecrawl delay: 10000ms (10s) between articles"
+          echo "   Firecrawl waitFor: 4500ms (embed JS rendering)"
           echo "   Max retries: 2 per model (with simplified prompt)"
           echo ""
           echo "✅ Quality Controls (Learned from experience):"
@@ -162,15 +168,18 @@ jobs:
           echo "   ✓ Latin ratio check (>80% English)"
           echo "   ✓ Instruction leakage detection (prompt text in output)"
           echo "   ✓ Title cleaning (removes NuvemMag branding)"
-          echo "   ✓ YouTube garbage text removal (playback errors)"
+          echo "   ✓ YouTube garbage text removal (pattern-based skip)"
           echo "   ✓ Twitter widget text removal"
           echo "   ✓ Content quality checks with auto-fix"
           echo "   ✓ Duplicate detection (slug + same-run tracking)"
           echo ""
-          echo "🎬 Embed Extraction:"
+          echo "🎬 Embed System:"
           echo "   ✓ YouTube: [[EMBED:YOUTUBE:VIDEO_ID]]"
           echo "   ✓ Twitter: [[EMBED:TWEET:TWEET_ID]]"
           echo "   ✓ TikTok: [[EMBED:TIKTOK:URL]]"
+          echo "   ✓ Tokens protected during translation (placeholder swap)"
+          echo "   ✓ Post-translation token validation + auto re-inject"
+          echo "   ✓ Inline URL detection (not just start-of-line)"
           echo ""
           npm run scrape:news
       
@@ -193,8 +202,9 @@ jobs:
           echo "   ✓ Non-Latin karakter kontrolü (Arapça/Kiril)"
           echo "   ✓ Instruction leakage tespiti"
           echo "   ✓ NuvemMag branding temizleme (auto-fix)"
-          echo "   ✓ YouTube garbage text temizleme"
-          echo "   ✓ Embed token'ları (YouTube/Twitter/TikTok)"
+          echo "   ✓ YouTube garbage text temizleme (pattern-based)"
+          echo "   ✓ Embed token koruma (placeholder swap + doğrulama)"
+          echo "   ✓ Inline URL tespiti (Twitter/TikTok mid-paragraph)"
           echo "   ✓ İçerik kalite kontrolü"
           echo "   ✓ Duplicate kontrolü (slug + same-run)"
           echo ""

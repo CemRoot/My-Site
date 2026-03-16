@@ -12,6 +12,8 @@
 import 'dotenv/config';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import { htmlToTokens } from './embeds/extractEmbeds.js';
+import { extractAllEmbedsFromMarkdown } from './embeds/extractMarkdownEmbeds.js';
 
 // Configuration
 const CONFIG = {
@@ -98,12 +100,12 @@ export async function scrapeArticleWithFirecrawl(url) {
     },
     body: JSON.stringify({
       url: url,
-      formats: ['markdown', 'html'],
+      formats: ['markdown', 'html', 'rawHtml'],
       onlyMainContent: true,
-      includeTags: ['article', 'main', 'img'],
-      excludeTags: ['nav', 'footer', 'aside', 'form', 'button', 'iframe', 'script', 'style'],
+      includeTags: ['article', 'main', 'img', 'iframe', 'blockquote'],
+      excludeTags: ['nav', 'footer', 'aside', 'form', 'button', 'script', 'style'],
       removeBase64Images: true,
-      waitFor: 3000,
+      waitFor: 4500,
     }),
   });
 
@@ -121,6 +123,7 @@ export async function scrapeArticleWithFirecrawl(url) {
   return {
     markdown: result.data.markdown || '',
     html: result.data.html || '',
+    rawHtml: result.data.rawHtml || result.data.html || '',
     title: result.data.metadata?.title || 'Untitled',
     description: result.data.metadata?.description || '',
     ogImage: result.data.metadata?.ogImage || result.data.metadata?.image || '',
@@ -186,6 +189,7 @@ Rules:
 2. If English, keep as is but optimize for engagement
 3. Make title compelling but accurate (no clickbait, no false info)
 4. Calculate reading_time: word_count / 200 = minutes (round up)
+5. CRITICAL: Preserve all [[EMBED:...]] tokens EXACTLY as they appear (e.g. [[EMBED:YOUTUBE:abc123]], [[EMBED:TWEET:123456]], [[EMBED:TIKTOK:https://...]]). Do NOT modify, translate, or remove them.
 5. Category must match primary content focus:
    - AI: Artificial Intelligence, Machine Learning, LLMs, AI Applications
    - Cloud: Cloud Computing, AWS, Azure, GCP, Serverless
@@ -380,6 +384,27 @@ export async function processManualArticle(articleUrl, originalSourceUrl) {
 
     // Step 3: Scrape article
     const scrapedContent = await scrapeArticleWithFirecrawl(articleUrl);
+
+    // Step 3.5: Extract social media embeds (YouTube, Twitter, TikTok) as tokens
+    let processedMarkdown = extractAllEmbedsFromMarkdown(scrapedContent.markdown);
+    if (scrapedContent.rawHtml) {
+      try {
+        const htmlEmbeds = htmlToTokens(scrapedContent.rawHtml);
+        const htmlTokens = htmlEmbeds.contentWithTokens.match(/\[\[EMBED:[^\]]+\]\]/g) || [];
+        for (const token of htmlTokens) {
+          if (!processedMarkdown.includes(token)) {
+            processedMarkdown = processedMarkdown.trimEnd() + '\n\n' + token + '\n\n';
+          }
+        }
+        const total = Object.values(htmlEmbeds.embedCount).reduce((a, b) => a + b, 0);
+        if (total > 0) {
+          console.log(`  🎬 Extracted ${total} embed(s) from HTML: ${JSON.stringify(htmlEmbeds.embedCount)}`);
+        }
+      } catch (e) {
+        console.warn(`  ⚠️ HTML embed extraction failed: ${e.message}`);
+      }
+    }
+    scrapedContent.markdown = processedMarkdown;
 
     // Step 4: Process with Gemini AI
     const aiResult = await processWithGemini(scrapedContent, articleUrl, originalSourceUrl);
