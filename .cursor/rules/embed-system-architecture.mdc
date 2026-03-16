@@ -1,0 +1,93 @@
+---
+description: Embed system architecture, token spec, root causes, and fix plan for YouTube/Twitter/TikTok embeds
+alwaysApply: false
+globs: scripts/embeds/**, scripts/news-scraper.js, scripts/manual-article-scraper.js, src/components/markdown/SmartMarkdown.tsx, src/components/embeds/**, src/lib/embed/**
+---
+
+# Embed System Architecture
+
+## End-to-End Pipeline
+
+### Scraping Phase (scripts/news-scraper.js)
+1. Firecrawl scrapes article → returns `markdown`, `html`, `rawHtml`
+2. **Stage 1**: `extractAllEmbedsFromMarkdown(content)` — converts markdown links to tokens
+3. **Stage 2**: `htmlToTokens(rawHtml)` — uses cheerio to find embeds in HTML
+4. **Stage 3**: `replaceTikTokBlockquote()` / `replaceTwitterBlockquote()` — swaps blockquotes with tokens
+5. Line-by-line cleanup removes social media UI garbage text
+6. Content (with tokens) sent to Groq LLM for Turkish→English translation
+7. Translated content saved to Supabase `tech_news_articles.content`
+
+### Rendering Phase (frontend)
+1. `SmartMarkdown.tsx` receives content from Supabase
+2. `GLOBAL_TOKEN_REGEX` extracts `[[EMBED:TYPE:DATA]]` tokens
+3. Content split into markdown parts + embed parts
+4. Embed parts → `EmbedFromToken` → routes to platform-specific component
+5. Fallback: `EmbedFromURL` handles legacy content (plain URLs in paragraphs)
+
+## Token Format Specification
+
+| Platform | Token Format | Data |
+|----------|-------------|------|
+| YouTube  | `[[EMBED:YOUTUBE:VIDEO_ID]]` | 11-char video ID (e.g. `dQw4w9WgXcQ`) |
+| Twitter  | `[[EMBED:TWEET:TWEET_ID]]` | Numeric tweet ID (e.g. `1876543212345678901`) |
+| TikTok   | `[[EMBED:TIKTOK:FULL_URL]]` | Full URL (e.g. `https://www.tiktok.com/@user/video/123`) |
+
+Frontend regex: `/\[\[EMBED:(TIKTOK|TWEET|YOUTUBE):([^\]]+)\]\]/g`
+
+## Key Files
+
+| File | Role |
+|------|------|
+| `scripts/embeds/extractEmbeds.js` | HTML→tokens via cheerio (iframes, blockquotes) |
+| `scripts/embeds/extractMarkdownEmbeds.js` | Markdown links/URLs→tokens |
+| `scripts/embeds/cleanMarkdownEmbeds.js` | Replace blockquotes with tokens, clean remnants |
+| `scripts/translate/prompt.js` | LLM prompts with token preservation instructions |
+| `scripts/news-scraper.js` | Main scraper orchestrating all stages |
+| `scripts/manual-article-scraper.js` | Manual Telegram scraper (NO embed support) |
+| `src/components/markdown/SmartMarkdown.tsx` | Token detection + content splitting |
+| `src/components/embeds/EmbedFromURL.tsx` | Token→component router |
+| `src/components/embeds/TweetEmbedHTML.tsx` | Twitter widget renderer |
+| `src/components/embeds/TikTokEmbedHTML.tsx` | TikTok embed renderer |
+| `src/components/embeds/YouTubeEmbedHTML.tsx` | YouTube iframe renderer |
+| `src/lib/embed/extractors.ts` | URL→ID extractors for legacy fallback |
+
+## Root Causes (all FIXED)
+
+### RC-1: FIXED — Embed tokens now protected during LLM translation
+- `preserveWidgets()` step 0 replaces `[[EMBED:...]]` tokens with `__WIDGET_N__` placeholders
+- `validateTokenPreservation()` wired up after translation — re-injects any lost tokens
+
+### RC-2: FIXED — Inline URLs now matched by markdown extractors
+- TikTok: lookbehind-based non-anchored regex catches mid-paragraph URLs
+- Twitter: non-anchored regex catches mid-paragraph URLs
+- Markdown link patterns still run first (no double-matching)
+
+### RC-3: FIXED — Firecrawl waitFor increased to 4500ms
+- Gives Twitter/TikTok JS widgets more time to render
+- Still within Firecrawl rate limit budget
+
+### RC-4: FIXED — Manual scraper now extracts embeds
+- Imports `htmlToTokens` and `extractAllEmbedsFromMarkdown`
+- Firecrawl request includes `rawHtml`, `iframe`, `blockquote`
+- Step 3.5 extracts tokens before Gemini processing
+- Gemini prompt includes token preservation instruction
+
+### RC-5: FIXED — YouTube skip is now pattern-based
+- `inYouTubeGarbageZone` flag replaces fixed 15-line counter
+- Skips short/ambiguous lines, stops at real content (>80 chars, punctuation, headings)
+
+## Known Limitations
+
+- **Firecrawl + Twitter**: Twitter actively blocks scrapers; JS widgets rarely render fully
+- **TikTok regional blocking**: Some TikTok content is geo-restricted
+- **LLM token mangling**: Even with prompts, LLMs can modify tokens (especially long numeric IDs)
+- **Rate limits**: Firecrawl free tier = 10 req/min; longer waits = fewer articles per run
+
+## What to NEVER Break
+
+1. Token format `[[EMBED:TYPE:DATA]]` — frontend regex depends on exact format
+2. YouTube VIDEO_ID is always 11 chars (`[A-Za-z0-9_-]{11}`)
+3. Tweet ID is always numeric digits only
+4. TikTok token stores FULL URL (not just video ID) — TikTokEmbedHTML needs the URL
+5. `SmartMarkdown.tsx` splits content by tokens — if tokens break, entire article rendering breaks
+6. Translation prompt in `scripts/translate/prompt.js` must always include token preservation rules

@@ -23,7 +23,7 @@ import { createClient } from '@supabase/supabase-js';
 import { htmlToTokens } from './embeds/extractEmbeds.js';
 import { replaceTikTokBlockquote, replaceTwitterBlockquote, cleanSocialEmbedRemnants } from './embeds/cleanMarkdownEmbeds.js';
 import { extractAllEmbedsFromMarkdown } from './embeds/extractMarkdownEmbeds.js';
-import { TRANSLATION_SYSTEM_PROMPT, createTranslationPrompt, ARTICLE_ENHANCEMENT_SYSTEM_PROMPT, createArticleEnhancementPrompt } from './translate/prompt.js';
+import { TRANSLATION_SYSTEM_PROMPT, createTranslationPrompt, ARTICLE_ENHANCEMENT_SYSTEM_PROMPT, createArticleEnhancementPrompt, validateTokenPreservation } from './translate/prompt.js';
 import { assertContentQuality, validateArticleContent } from './validation/contentQualityCheck.js';
 import { validateArticle, autoFixArticle, validateDate, validateTitle, validateContent, validateDescription } from './validation/smartArticleProcessor.js';
 
@@ -1109,7 +1109,7 @@ async function scrapeArticleDetails(url) {
           url: url,
           formats: ['markdown', 'html', 'rawHtml'], // Get markdown, cleaned HTML, and raw HTML for embed extraction
           onlyMainContent: true, // Still filter headers/footers but keep embeds
-          waitFor: 2000, // Wait 2 seconds for dynamic content (embeds) to load
+          waitFor: 4500, // Wait 4.5 seconds for dynamic content (social media embeds need JS rendering)
           blockAds: true, // Block ads but keep embeds
           removeBase64Images: false // Keep base64 images (might be embed thumbnails)
         })
@@ -1363,7 +1363,7 @@ async function scrapeArticleDetails(url) {
     const lines = content.split('\n');
     const cleanedLines = [];
     let skipSection = false;
-    let skipYouTubeUILines = 0; // Skip lines after YouTube embed (UI text)
+    let inYouTubeGarbageZone = false; // Pattern-based skip after YouTube embeds
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -1384,17 +1384,27 @@ async function scrapeArticleDetails(url) {
         }
       }
       
-      // Skip lines after YouTube embed (contains UI text like "Info", "Share", subscribers, etc.)
-      if (skipYouTubeUILines > 0) {
-        skipYouTubeUILines--;
+      // Detect YouTube embed token — enter garbage skip zone
+      if (line.includes('[[EMBED:YOUTUBE:')) {
+        cleanedLines.push(line);
+        inYouTubeGarbageZone = true;
         continue;
       }
       
-      // Detect YouTube embed token and skip next lines
-      if (line.includes('[[EMBED:YOUTUBE:')) {
-        cleanedLines.push(line);
-        skipYouTubeUILines = 15; // Skip next 15 lines after YouTube embed
-        continue;
+      // Pattern-based skip: after a YouTube embed, skip lines that look like
+      // player UI (short text, timestamps, channel names) but stop at real content
+      if (inYouTubeGarbageZone) {
+        const trimmed = line.trim();
+        const looksLikeContent = (
+          trimmed.length > 80 ||
+          trimmed.startsWith('#') ||
+          trimmed.includes('[[EMBED:') ||
+          /[.!?,:;]/.test(trimmed) && trimmed.length > 30
+        );
+        if (!looksLikeContent) {
+          continue;
+        }
+        inYouTubeGarbageZone = false;
       }
       
       // SPECIAL: Replace "Twitter Widget Iframe" with actual tweet token
@@ -1707,6 +1717,17 @@ async function scrapeArticleDetails(url) {
 function preserveWidgets(content) {
   const widgets = [];
   let processedContent = content;
+  
+  // 0. Preserve [[EMBED:...]] tokens (highest priority — these must survive LLM translation)
+  processedContent = processedContent.replace(/\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):[^\]]+\]\]/gi, (match) => {
+    const placeholder = `__WIDGET_${widgets.length}__`;
+    widgets.push({
+      type: 'embed_token',
+      content: match,
+      placeholder
+    });
+    return placeholder;
+  });
   
   // 1. Preserve Twitter Widget Iframes
   processedContent = processedContent.replace(/Twitter Widget Iframe/gi, (match) => {
@@ -2087,6 +2108,20 @@ async function translateText(text) {
   // Log widget preservation stats
   if (widgets.length > 0) {
     console.log(`    🔧 Preserved ${widgets.length} widgets during translation`);
+  }
+  
+  // Step 4: Validate embed tokens survived translation
+  const tokenCheck = validateTokenPreservation(text, finalContent);
+  if (!tokenCheck.valid) {
+    if (tokenCheck.missingTokens.length > 0) {
+      console.warn(`    ⚠️  ${tokenCheck.missingTokens.length} embed token(s) lost during translation — re-injecting`);
+      let patched = finalContent;
+      for (const missing of tokenCheck.missingTokens) {
+        patched = patched.trimEnd() + '\n\n' + missing + '\n\n';
+        console.warn(`       ➕ Re-injected: ${missing}`);
+      }
+      return patched.replace(/\n{3,}/g, '\n\n').trim();
+    }
   }
   
   return finalContent;
