@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { Briefcase, GraduationCap, Award, Shield, Code2, Rocket, Globe } from 'lucide-react';
 
 function Experience() {
+  const [activeTab, setActiveTab] = useState<'work' | 'education'>('work');
+
   const experiences = [
     {
       type: 'education',
@@ -21,22 +24,6 @@ function Experience() {
       color: 'primary',
     },
     {
-      type: 'education',
-      title: 'Business English Certificate (C1)',
-      organization: 'Centre of English Studies (CES), Dublin',
-      period: 'Jan 2024 - Aug 2024',
-      description: 'Advanced (C1 Level) certification in Business English with comprehensive professional communication skills.',
-      achievements: [
-        'Achieved C1 (Advanced) Level certification',
-        'Mastered Grammar & Structure, Lexical Development, Communication Skills',
-        'Developed expertise in report writing and formal correspondence',
-        'Enhanced presentation and public speaking abilities',
-        'Improved cross-cultural communication in global business contexts',
-      ],
-      icon: Globe,
-      color: 'accent',
-    },
-    {
       type: 'work',
       title: 'Security Officer (Part-time)',
       organization: 'RFC Security Group, Dublin',
@@ -51,21 +38,7 @@ function Experience() {
       ],
       icon: Shield,
       color: 'accent',
-    },
-    {
-      type: 'education',
-      title: 'Business English (B2+)',
-      organization: 'Emerald Cultural Institute, Dublin',
-      period: 'May 2023 - Nov 2023',
-      description: 'Upper Intermediate B2+ CEFR certification focusing on business communication and professional English.',
-      achievements: [
-        'Achieved B2+ (Upper Intermediate) CEFR Level',
-        'Developed advanced business English communication skills',
-        'Mastered business terminology and professional correspondence',
-        'Enhanced ability to work in multicultural teams',
-      ],
-      icon: Globe,
-      color: 'primary',
+      className: 'opacity-60', // visually smaller/greyed out
     },
     {
       type: 'work',
@@ -153,20 +126,6 @@ function Experience() {
       icon: Award,
       color: 'secondary',
     },
-    {
-      type: 'education',
-      title: 'Russian Language Preparation',
-      organization: 'National Technical University of Ukraine (KPI)',
-      period: '2018 - 2019',
-      description: 'Intensive Russian language preparation program for university studies.',
-      achievements: [
-        'Achieved exceptional 95.2/100 grade',
-        'Completed comprehensive language training for academic purposes',
-        'Developed proficiency in Russian for technical and academic contexts',
-      ],
-      icon: Globe,
-      color: 'secondary',
-    },
   ];
 
   const workExperiences = experiences.filter(exp => exp.type === 'work');
@@ -206,47 +165,51 @@ function Experience() {
     };
 
     const colors = colorClasses[exp.color as keyof typeof colorClasses];
+    const cardClassName = exp.className ? exp.className : '';
 
     return (
-      <div key={index} className="relative group w-full">
+      <div key={index} className={`relative group w-full ${cardClassName}`}>
         {/* Content card */}
         <div className="relative liquid-glow w-full">
           <div className={`absolute -inset-2 bg-gradient-to-br ${colors.from} rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-          <div className={`relative p-6 rounded-3xl frosted-glass border ${colors.border} liquid-shimmer transition-all duration-300 hover:scale-[1.02] w-full flex flex-col sm:flex-row gap-6`}>
+          {/* Padding 20px -> p-5 */}
+          <div className={`relative p-5 rounded-3xl frosted-glass border ${colors.border} liquid-shimmer transition-all duration-300 hover:scale-[1.01] w-full flex flex-row gap-5`}>
 
-            {/* Icon (Left side inside card) */}
-            <div className={`flex-shrink-0 w-16 h-16 rounded-2xl ${colors.bg} border-2 ${colors.border} flex items-center justify-center shadow-lg`}>
-              <Icon className={`w-7 h-7 ${colors.text}`} />
+            {/* Icon (Left side inside card, 40px square -> w-10 h-10, rounded) */}
+            <div className={`flex-shrink-0 w-10 h-10 rounded-xl ${colors.bg} border ${colors.border} flex items-center justify-center shadow-md`}>
+              <Icon className={`w-5 h-5 ${colors.text}`} />
             </div>
 
             {/* Text Content */}
-            <div className="flex-1 min-w-0">
-              {/* Header */}
-              <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+            <div className="flex-1 min-w-0 flex flex-col items-start text-left">
+              {/* Header & Date */}
+              <div className="w-full flex items-start justify-between gap-4 mb-2">
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-xl sm:text-2xl mb-1 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent break-words">
+                  {/* Title: 15px, font-weight 600 */}
+                  <h3 className="text-[15px] font-semibold text-foreground break-words text-left">
                     {exp.title}
                   </h3>
-                  <p className={`font-medium ${colors.text} break-words`}>
+                  {/* Company: accent color, 13px */}
+                  <p className={`text-[13px] font-medium text-primary break-words text-left`}>
                     {exp.organization}
                   </p>
                 </div>
-                <span className="text-sm text-muted-foreground px-3 py-1 rounded-full liquid-glass whitespace-nowrap flex-shrink-0">
+                {/* Date badge: top right corner, small (11px) */}
+                <span className="text-[11px] font-medium text-muted-foreground px-2 py-0.5 rounded-full bg-muted/50 whitespace-nowrap flex-shrink-0 mt-0.5">
                   {exp.period}
                 </span>
               </div>
 
-              {/* Description */}
-              <p className="text-muted-foreground mb-4 leading-relaxed break-words">
+              {/* Description: left aligned, 14px */}
+              <p className="text-[14px] text-muted-foreground mb-3 leading-relaxed break-words text-left w-full">
                 {exp.description}
               </p>
 
-              {/* Achievements list */}
-              <ul className="space-y-2">
+              {/* Achievements list: left aligned, 14px, line-height 1.5, pl-4 (16px) */}
+              <ul className="space-y-1.5 w-full pl-4 list-disc marker:text-muted-foreground/50">
                 {exp.achievements.map((achievement, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-sm text-muted-foreground">
-                    <div className={`w-1.5 h-1.5 rounded-full ${colors.bg} mt-2 flex-shrink-0`} />
-                    <span className="leading-relaxed break-words">{achievement}</span>
+                  <li key={idx} className="text-[14px] leading-relaxed text-muted-foreground break-words text-left pl-1">
+                    {achievement}
                   </li>
                 ))}
               </ul>
@@ -265,9 +228,9 @@ function Experience() {
         <div className="absolute bottom-1/3 left-0 w-96 h-96 bg-secondary/5 rounded-full blur-3xl liquid-morph" style={{ animationDelay: '1s' }} />
       </div>
 
-      <div className="max-w-7xl mx-auto relative z-10">
+      <div className="max-w-4xl mx-auto relative z-10">
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center mb-4">
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-r from-accent via-primary to-accent rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500" />
@@ -281,12 +244,12 @@ function Experience() {
               Professional Journey
             </span>
           </h2>
-          <p className="text-lg text-muted-foreground max-w-3xl mx-auto mb-16">
+          <p className="text-lg text-muted-foreground max-w-3xl mx-auto mb-10">
             3+ years of System Operations and Python development experience combined with First Class Honours MSc in AI
           </p>
 
-          {/* Achievement Bar */}
-          <div className="flex flex-wrap items-center justify-center gap-4 w-full">
+          {/* Achievement Bar - Always visible above tabs */}
+          <div className="flex flex-wrap items-center justify-center gap-4 w-full mb-10">
             {achievementsBar.map((badge, idx) => (
               <div key={idx} className="flex items-center gap-2 px-4 py-2 rounded-full frosted-glass border border-primary/20 liquid-shimmer text-sm font-medium text-foreground whitespace-nowrap">
                 <badge.icon className="w-4 h-4 text-primary" />
@@ -294,26 +257,58 @@ function Experience() {
               </div>
             ))}
           </div>
+
+          {/* Clean Pill-Style Tabs */}
+          <div className="flex items-center justify-center gap-4 w-full">
+            <button
+              onClick={() => setActiveTab('work')}
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                activeTab === 'work'
+                  ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25'
+                  : 'bg-transparent border border-border text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Work Experience
+            </button>
+            <button
+              onClick={() => setActiveTab('education')}
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                activeTab === 'education'
+                  ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25'
+                  : 'bg-transparent border border-border text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Education
+            </button>
+          </div>
         </div>
 
-        {/* Layout Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-          {/* Left Column: Work Experience */}
-          <div className="flex flex-col gap-6">
-            <h3 className="text-2xl font-semibold mb-6 text-foreground flex items-center justify-center gap-3">
-              <Briefcase className="w-6 h-6 text-primary" />
-              Work Experience
-            </h3>
+        {/* Tab Content Area with Smooth Fade Transition */}
+        <div className="relative w-full">
+          {/* Work Experience Tab */}
+          <div
+            className={`flex flex-col gap-5 transition-opacity duration-300 ease-in-out ${
+              activeTab === 'work' ? 'opacity-100 relative z-10' : 'opacity-0 absolute inset-0 pointer-events-none z-0'
+            }`}
+          >
             {workExperiences.map((exp, index) => renderCard(exp, index))}
           </div>
 
-          {/* Right Column: Education */}
-          <div className="flex flex-col gap-6">
-            <h3 className="text-2xl font-semibold mb-6 text-foreground flex items-center justify-center gap-3">
-              <GraduationCap className="w-6 h-6 text-primary" />
-              Education
-            </h3>
+          {/* Education Tab */}
+          <div
+            className={`flex flex-col gap-5 transition-opacity duration-300 ease-in-out ${
+              activeTab === 'education' ? 'opacity-100 relative z-10' : 'opacity-0 absolute inset-0 pointer-events-none z-0'
+            }`}
+          >
             {educationExperiences.map((exp, index) => renderCard(exp, index))}
+
+            {/* Standalone C1 Business English Badge (Visible only in Education Tab) */}
+            <div className="flex justify-center mt-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-accent/10 text-accent border border-accent/20">
+                <Globe className="w-3.5 h-3.5" />
+                C1 Business English
+              </span>
+            </div>
           </div>
         </div>
       </div>
