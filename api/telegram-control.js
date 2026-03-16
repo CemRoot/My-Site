@@ -11,6 +11,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { spawn } from 'child_process';
+import crypto from 'crypto';
 
 const CONFIG = {
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
@@ -24,11 +25,6 @@ const CONFIG = {
   // Security: API key for authentication (REQUIRED)
   API_SECRET: process.env.TELEGRAM_CONTROL_API_SECRET || '',
 };
-
-// SECURITY: Enforce API authentication - this endpoint can trigger workflows and send messages
-if (!CONFIG.API_SECRET) {
-  console.error('❌ CRITICAL: TELEGRAM_CONTROL_API_SECRET is not set! Authentication is required.');
-}
 
 const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
 
@@ -250,11 +246,7 @@ export default async function handler(req, res) {
     // Security: Check API secret (REQUIRED)
     if (!CONFIG.API_SECRET) {
       console.error('Security violation: TELEGRAM_CONTROL_API_SECRET not set');
-      return res.status(500).json({
-        success: false,
-        error: 'Internal Server Error',
-        message: 'API security configuration is missing. Set TELEGRAM_CONTROL_API_SECRET.'
-      });
+      return res.status(500).json({ error: 'Configuration error' });
     }
 
     const authHeader = req.headers.authorization;
@@ -268,8 +260,22 @@ export default async function handler(req, res) {
       });
     }
 
-    const providedSecret = authHeader.replace('Bearer ', '');
-    if (providedSecret !== CONFIG.API_SECRET) {
+    const providedSecret = authHeader.split(' ')[1];
+
+    // Use timing-safe comparison to prevent timing attacks
+    let isAuthorized = false;
+    try {
+      const providedBuffer = Buffer.from(providedSecret || '');
+      const expectedBuffer = Buffer.from(CONFIG.API_SECRET);
+
+      if (providedBuffer.length === expectedBuffer.length) {
+        isAuthorized = crypto.timingSafeEqual(providedBuffer, expectedBuffer);
+      }
+    } catch (e) {
+      // In case of any error (e.g., malformed token), it remains false
+    }
+
+    if (!isAuthorized) {
       console.warn('Invalid API secret provided to telegram-control API');
       return res.status(403).json({
         success: false,
