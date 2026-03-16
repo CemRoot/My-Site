@@ -545,8 +545,8 @@ export default async function handler(req, res) {
             // Approve and trigger N8N workflow for automatic posting
             updateData = { status: 'approved' };
             
-            // Trigger N8N workflow for each approved post
-            for (const post of postEntries) {
+            // Trigger N8N workflow for each approved post in parallel
+            await Promise.all(postEntries.map(async (post) => {
               try {
                 const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL || 'https://your-n8n-instance.com/webhook/linkedin-post-webhook';
                 await fetch(n8nWebhookUrl, {
@@ -560,7 +560,7 @@ export default async function handler(req, res) {
               } catch (n8nError) {
                 console.error('N8N webhook error:', n8nError.message);
               }
-            }
+            }));
             
             responseText = `🚀 ${postEntries.length} gönderi onaylandı ve otomatik paylaşım başlatıldı!`;
             break;
