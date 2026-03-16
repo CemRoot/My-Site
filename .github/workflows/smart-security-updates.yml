@@ -1,0 +1,186 @@
+name: Smart Security Updates
+
+on:
+  pull_request:
+    types: [opened, reopened]
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  process-dependabot-pr:
+    name: Process Dependabot PR
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]' || github.event_name == 'workflow_dispatch'
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref || 'main' }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts || npm install --ignore-scripts
+
+      - name: Classify Update
+        id: classify
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          echo "PR Title: $PR_TITLE"
+
+          # Expected format: "Bump <package> from <old> to <new>"
+          # We can extract the package, old version, and new version using regex
+          if [[ "$PR_TITLE" =~ Bump\ (.*)\ from\ (.*)\ to\ (.*) ]]; then
+            PACKAGE="${BASH_REMATCH[1]}"
+            OLD_VER="${BASH_REMATCH[2]}"
+            NEW_VER="${BASH_REMATCH[3]}"
+
+            echo "Package: $PACKAGE"
+            echo "Old Version: $OLD_VER"
+            echo "New Version: $NEW_VER"
+
+            # Remove any 'v' prefixes and beta/alpha tags for simplicity of major version check
+            CLEAN_OLD=$(echo "$OLD_VER" | sed -E 's/^v//' | cut -d'-' -f1)
+            CLEAN_NEW=$(echo "$NEW_VER" | sed -E 's/^v//' | cut -d'-' -f1)
+
+            OLD_MAJOR=$(echo "$CLEAN_OLD" | cut -d'.' -f1)
+            NEW_MAJOR=$(echo "$CLEAN_NEW" | cut -d'.' -f1)
+
+            if [ "$OLD_MAJOR" != "$NEW_MAJOR" ]; then
+              BUMP_TYPE="RISKY"
+              echo "Major version bump detected ($OLD_MAJOR -> $NEW_MAJOR)"
+            else
+              BUMP_TYPE="SAFE"
+              echo "Minor/Patch version bump detected"
+            fi
+
+            echo "package=$PACKAGE" >> $GITHUB_OUTPUT
+            echo "old_version=$OLD_VER" >> $GITHUB_OUTPUT
+            echo "new_version=$NEW_VER" >> $GITHUB_OUTPUT
+            echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+          else
+            echo "Could not parse PR title format. Defaulting to RISKY."
+            echo "bump_type=RISKY" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check Severity
+        id: severity
+        run: |
+          PACKAGE="${{ steps.classify.outputs.package }}"
+
+          if [ -z "$PACKAGE" ]; then
+            echo "No package identified. Defaulting to low priority."
+            echo "severity=low priority" >> $GITHUB_OUTPUT
+            echo "severity_level=unknown" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "🔍 Checking npm audit for package: $PACKAGE"
+          # Run audit and ignore failure, parsing the JSON
+          npm audit --json > audit.json || true
+
+          # Use jq to extract the highest severity for this specific package
+          # npm audit json structure: metadata.vulnerabilities.<severity>
+          # We need to find if the package is in the advisories
+
+          # A safer way to find severity for a specific package from npm audit
+          PACKAGE_SEVERITY=$(jq -r ".vulnerabilities[\"$PACKAGE\"].severity // \"unknown\"" audit.json)
+
+          echo "Package Severity: $PACKAGE_SEVERITY"
+
+          if [[ "$PACKAGE_SEVERITY" == "critical" || "$PACKAGE_SEVERITY" == "high" ]]; then
+            echo "severity=urgent" >> $GITHUB_OUTPUT
+          else
+            # Includes moderate, low, info, and unknown
+            echo "severity=low priority" >> $GITHUB_OUTPUT
+          fi
+
+          echo "severity_level=$PACKAGE_SEVERITY" >> $GITHUB_OUTPUT
+
+      - name: Decision Logic
+        id: decision
+        run: |
+          BUMP_TYPE="${{ steps.classify.outputs.bump_type }}"
+          SEVERITY="${{ steps.severity.outputs.severity }}"
+
+          echo "Bump Type: $BUMP_TYPE"
+          echo "Severity: $SEVERITY"
+
+          if [[ "$SEVERITY" == "urgent" ]]; then
+            if [[ "$BUMP_TYPE" == "SAFE" ]]; then
+              echo "Decision: SAFE + Critical/High -> auto-approve"
+              echo "action=approve" >> $GITHUB_OUTPUT
+            else
+              echo "Decision: RISKY + Critical/High -> warn (do NOT approve)"
+              echo "action=warn" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "Decision: Moderate/Low severity -> label as low-priority"
+            echo "action=label" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Execute Actions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          ACTION: ${{ steps.decision.outputs.action }}
+        run: |
+          if [ -z "$PR_URL" ]; then
+            echo "Not a pull request event. Skipping actions."
+            exit 0
+          fi
+
+          if [[ "$ACTION" == "approve" ]]; then
+            echo "✅ Auto-approving PR..."
+            gh pr review "$PR_URL" --approve -b "✅ Auto-approved security update (SAFE bump + Critical/High severity). Please merge manually." || \
+            echo "⚠️ Failed to approve PR. If using default GITHUB_TOKEN, you may need to allow GitHub Actions to create and approve pull requests in repository settings, or use a PAT."
+
+          elif [[ "$ACTION" == "label" ]]; then
+            echo "🏷️ Adding low-priority label..."
+            # Try to add label. If label doesn't exist, gh CLI auto-creates it or we can create it.
+            gh label create "low-priority" --color "E6E6E6" --description "Low priority security update" || true
+            gh pr edit "$PR_URL" --add-label "low-priority" || echo "⚠️ Failed to add label."
+
+          elif [[ "$ACTION" == "warn" ]]; then
+            echo "⚠️ Risky update, not auto-approving."
+            gh pr review "$PR_URL" --comment -b "⚠️ This is a major version bump with high/critical severity. Manual review is required." || echo "⚠️ Failed to add comment."
+          fi
+
+      - name: Send Telegram Notifications
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ACTION: ${{ steps.decision.outputs.action }}
+          PACKAGE: ${{ steps.classify.outputs.package }}
+          OLD_VER: ${{ steps.classify.outputs.old_version }}
+          NEW_VER: ${{ steps.classify.outputs.new_version }}
+          SEVERITY_LEVEL: ${{ steps.severity.outputs.severity_level }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "Telegram secrets not configured. Skipping notification."
+            exit 0
+          fi
+
+          if [[ "$ACTION" == "approve" ]]; then
+            MESSAGE="✅ Security update auto-approved: <b>$PACKAGE</b> <b>$OLD_VER → $NEW_VER</b>"
+          elif [[ "$ACTION" == "warn" ]]; then
+            MESSAGE="⚠️ Breaking change detected: <b>$PACKAGE</b> <b>$OLD_VER → $NEW_VER</b>%0A<b>Severity:</b> $SEVERITY_LEVEL — please review manually"
+          else
+            echo "No Telegram notification needed for action: $ACTION"
+            exit 0
+          fi
+
+          echo "Sending Telegram notification..."
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=HTML"
