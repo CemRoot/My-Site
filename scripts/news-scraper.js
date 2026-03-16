@@ -2258,9 +2258,15 @@ function cleanTranslation(text) {
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
 
   // BUG 1 FIX: Replace "YZ" with "AI" (since LLMs sometimes leave the Turkish acronym)
+  // Handle possessive forms first, then other suffixes, then base form
+  cleaned = cleaned.replace(/\bYZ['’]nin\b/g, "AI's");
+  cleaned = cleaned.replace(/\bYZ['’](?:ye|yi|ya|yu|da|de|dan|den|in|un|ün|le|li|lere|lerin)\b/g, 'AI');
   cleaned = cleaned.replace(/\bYZ\b/g, 'AI');
-  cleaned = cleaned.replace(/\bYZ'nin\b/g, "AI's");
-  cleaned = cleaned.replace(/\byapay zeka\b/gi, 'AI');
+
+  // Also handle full Turkish term 'yapay zeka' and its suffixes
+  cleaned = cleaned.replace(/\byapay zeka(?:n[\u0131i]n)(?![a-z\u0131\u0130\u00e7\u00f6\u015f\u011f\u00fc])/gi, "AI's");
+  cleaned = cleaned.replace(/\byapay zeka(?:y[\u0131i]|y[ae]|d[ae]n?)(?![a-z\u0131\u0130\u00e7\u00f6\u015f\u011f\u00fc])/gi, 'AI');
+  cleaned = cleaned.replace(/\byapay zeka(?![a-z\u0131\u0130\u00e7\u00f6\u015f\u011f\u00fc])/gi, 'AI');
 
   // BUG 2 FIX: Remove stray markdown characters that appear on their own lines
   const lines = cleaned.split('\n');
