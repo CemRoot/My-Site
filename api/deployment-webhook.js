@@ -129,9 +129,15 @@ export default withSentry(async function handler(req, res) {
   try {
     // Verify webhook secret for security
     const webhookSecret = process.env.DEPLOYMENT_WEBHOOK_SECRET;
+
+    if (!webhookSecret) {
+      console.error('⚠️ DEPLOYMENT_WEBHOOK_SECRET is not configured');
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+
     const providedSecret = req.headers['x-vercel-signature'] || req.query.secret;
 
-    if (webhookSecret && providedSecret !== webhookSecret) {
+    if (providedSecret !== webhookSecret) {
       console.warn('⚠️ Invalid webhook secret');
       return res.status(401).json({ error: 'Unauthorized' });
     }
