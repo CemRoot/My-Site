@@ -249,9 +249,9 @@ function Experience() {
           </p>
 
           {/* Achievement Bar - Always visible above tabs */}
-          <div className="flex flex-wrap items-center justify-center gap-4 w-full mb-10">
+          <div className="flex flex-nowrap overflow-x-auto items-center justify-start md:justify-center gap-4 w-full mb-10 pb-4 scrollbar-hide snap-x">
             {achievementsBar.map((badge, idx) => (
-              <div key={idx} className="flex items-center gap-2 px-4 py-2 rounded-full frosted-glass border border-primary/20 liquid-shimmer text-sm font-medium text-foreground whitespace-nowrap">
+              <div key={idx} className="flex snap-center shrink-0 items-center gap-2 px-4 py-2 rounded-full frosted-glass border border-primary/20 liquid-shimmer text-[12px] md:text-sm font-medium text-foreground whitespace-nowrap">
                 <badge.icon className="w-4 h-4 text-primary" />
                 <span>{badge.text}</span>
               </div>
