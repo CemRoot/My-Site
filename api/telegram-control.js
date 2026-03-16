@@ -27,10 +27,7 @@ const CONFIG = {
 
 // SECURITY: Enforce API authentication - this endpoint can trigger workflows and send messages
 if (!CONFIG.API_SECRET) {
-  console.error('CRITICAL: TELEGRAM_CONTROL_API_SECRET is not set! This endpoint is vulnerable.');
-  // In production, this should throw an error, but we'll log a warning for now
-  // Uncomment the line below to enforce authentication:
-  // throw new Error('TELEGRAM_CONTROL_API_SECRET must be set for security');
+  console.error('❌ CRITICAL: TELEGRAM_CONTROL_API_SECRET is not set! Authentication is required.');
 }
 
 const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
@@ -250,31 +247,35 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Security: Check API secret (STRONGLY RECOMMENDED)
-    if (CONFIG.API_SECRET) {
-      const authHeader = req.headers.authorization;
-      
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        console.warn('Unauthorized access attempt to telegram-control API');
-        return res.status(401).json({ 
-          success: false,
-          error: 'Unauthorized',
-          message: 'Bearer token required in Authorization header' 
-        });
-      }
-      
-      const providedSecret = authHeader.replace('Bearer ', '');
-      if (providedSecret !== CONFIG.API_SECRET) {
-        console.warn('Invalid API secret provided to telegram-control API');
-        return res.status(403).json({ 
-          success: false,
-          error: 'Forbidden',
-          message: 'Invalid API secret'
-        });
-      }
-    } else {
-      // Log warning if API_SECRET is not configured
-      console.warn('⚠️  WARNING: TELEGRAM_CONTROL_API_SECRET not set - endpoint is unprotected!');
+    // Security: Check API secret (REQUIRED)
+    if (!CONFIG.API_SECRET) {
+      console.error('Security violation: TELEGRAM_CONTROL_API_SECRET not set');
+      return res.status(500).json({
+        success: false,
+        error: 'Internal Server Error',
+        message: 'API security configuration is missing. Set TELEGRAM_CONTROL_API_SECRET.'
+      });
+    }
+
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.warn('Unauthorized access attempt to telegram-control API');
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized',
+        message: 'Bearer token required in Authorization header'
+      });
+    }
+
+    const providedSecret = authHeader.replace('Bearer ', '');
+    if (providedSecret !== CONFIG.API_SECRET) {
+      console.warn('Invalid API secret provided to telegram-control API');
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden',
+        message: 'Invalid API secret'
+      });
     }
 
     // Get action from query or body

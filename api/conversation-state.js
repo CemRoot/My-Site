@@ -20,9 +20,9 @@ const CONFIG = {
   API_SECRET: process.env.CONVERSATION_STATE_API_SECRET || process.env.TELEGRAM_CONTROL_API_SECRET || '',
 };
 
-// SECURITY: Log warning if API_SECRET is not set
+// SECURITY: Log error if API_SECRET is not set
 if (!CONFIG.API_SECRET) {
-  console.warn('⚠️  WARNING: CONVERSATION_STATE_API_SECRET not set - endpoint is unprotected!');
+  console.error('❌ CRITICAL: CONVERSATION_STATE_API_SECRET is not set! Authentication is required.');
 }
 
 // Create Supabase client
@@ -125,9 +125,14 @@ async function deleteConversationState(userId) {
  * Verify authentication
  */
 function verifyAuth(req) {
-  // If no API_SECRET is set, allow access (with warning logged above)
+  // If no API_SECRET is set, block access as a security measure
   if (!CONFIG.API_SECRET) {
-    return { authorized: true };
+    return {
+      authorized: false,
+      status: 500,
+      error: 'Internal Server Error',
+      message: 'API security configuration is missing. Set CONVERSATION_STATE_API_SECRET or TELEGRAM_CONTROL_API_SECRET.'
+    };
   }
 
   const authHeader = req.headers.authorization;
