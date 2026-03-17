@@ -8,40 +8,42 @@ interface InteractiveMarqueeProps {
 
 export function InteractiveMarquee({
   children,
-  speed = 1,
+  speed = 1.2,
   className = '',
 }: InteractiveMarqueeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<number>(0);
   const [isPaused, setIsPaused] = useState(false);
-  const isDragging = useRef(false);
-  const startX = useRef(0);
-  const currentTranslate = useRef(0);
 
-  // Real width of one set of items
+  const isDragging = useRef(false);
+  const isHovered = useRef(false);
+
+  const initialX = useRef(0);
+  const initialY = useRef(0);
+  const startX = useRef(0);
+  const isHorizontalDrag = useRef<boolean | null>(null);
+
+  const currentTranslate = useRef(0);
   const contentWidth = useRef(0);
 
-  const calculateWidth = useCallback(() => {
-    if (contentRef.current && contentRef.current.children.length > 0) {
-      const firstSet = contentRef.current.children[0] as HTMLElement;
+  useEffect(() => {
+    if (!contentRef.current) return;
+    const firstSet = contentRef.current.children[0] as HTMLElement;
+
+    const observer = new ResizeObserver(() => {
       contentWidth.current = firstSet.offsetWidth;
-    }
+    });
+
+    observer.observe(firstSet);
+    return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    calculateWidth();
-    window.addEventListener('resize', calculateWidth);
-    return () => window.removeEventListener('resize', calculateWidth);
-  }, [calculateWidth, children]);
-
   const animate = useCallback(() => {
-    if (!isPaused && !isDragging.current && contentWidth.current > 0) {
+    if (!isPaused && !isDragging.current && !isHovered.current && contentWidth.current > 0) {
       currentTranslate.current -= speed;
 
-      // Reset position when we've scrolled exactly one full set of items
       if (Math.abs(currentTranslate.current) >= contentWidth.current) {
-        // Use modulo to handle extreme speeds
         currentTranslate.current = currentTranslate.current % contentWidth.current;
       }
 
@@ -57,24 +59,58 @@ export function InteractiveMarquee({
     return () => cancelAnimationFrame(requestRef.current);
   }, [animate]);
 
-  // Interaction Timeout
   const resumeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleDragStart = (clientX: number) => {
+  const pauseAutoScroll = () => {
     setIsPaused(true);
-    isDragging.current = true;
-    startX.current = clientX;
     if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
   };
 
-  const handleDragMove = (clientX: number) => {
-    if (!isDragging.current) return;
-    const dx = clientX - startX.current;
+  const resumeAutoScroll = () => {
+    if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
+    resumeTimeoutRef.current = setTimeout(() => {
+      setIsPaused(false);
+    }, 1500);
+  };
 
-    // allow dragging in both directions
+  const handleDragStart = (clientX: number, clientY: number) => {
+    pauseAutoScroll();
+    isDragging.current = true;
+    initialX.current = clientX;
+    initialY.current = clientY;
+    startX.current = clientX;
+    isHorizontalDrag.current = null;
+  };
+
+  const handleDragMove = (clientX: number, clientY: number) => {
+    if (!isDragging.current) return;
+
+    const totalDx = clientX - initialX.current;
+    const totalDy = clientY - initialY.current;
+
+    // Determine if it's a horizontal swipe or vertical scroll
+    if (isHorizontalDrag.current === null) {
+        if (Math.abs(totalDx) > 5 && Math.abs(totalDx) > Math.abs(totalDy)) {
+            isHorizontalDrag.current = true;
+        } else if (Math.abs(totalDy) > 5) {
+            isHorizontalDrag.current = false;
+        }
+    }
+
+    // If it's a vertical scroll, stop dragging and resume animation immediately
+    if (isHorizontalDrag.current === false) {
+       isDragging.current = false;
+       resumeAutoScroll();
+       return;
+    }
+
+    // Still trying to figure out direction
+    if (isHorizontalDrag.current === null) return;
+
+    // Normal horizontal drag
+    const dx = clientX - startX.current;
     let newTranslate = currentTranslate.current + dx;
 
-    // Wrap around infinitely using modulo
     if (contentWidth.current > 0) {
         if (newTranslate > 0) {
             newTranslate = -contentWidth.current + (newTranslate % contentWidth.current);
@@ -84,7 +120,7 @@ export function InteractiveMarquee({
     }
 
     currentTranslate.current = newTranslate;
-    startX.current = clientX; // update startX to current for continuous diff
+    startX.current = clientX;
 
     if (contentRef.current) {
       contentRef.current.style.transform = `translate3d(${currentTranslate.current}px, 0, 0)`;
@@ -92,23 +128,28 @@ export function InteractiveMarquee({
   };
 
   const handleDragEnd = () => {
-    isDragging.current = false;
-    if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
-    resumeTimeoutRef.current = setTimeout(() => {
-      setIsPaused(false);
-    }, 1500);
+    if (isDragging.current) {
+        isDragging.current = false;
+        resumeAutoScroll();
+    }
   };
 
   return (
     <div
-      className={`marquee-mask overflow-hidden touch-pan-y ${className}`}
+      className={`marquee-mask overflow-hidden touch-pan-y select-none ${className}`}
       ref={containerRef}
-      onMouseDown={(e) => handleDragStart(e.clientX)}
-      onMouseMove={(e) => handleDragMove(e.clientX)}
+      onMouseDown={(e) => handleDragStart(e.clientX, e.clientY)}
+      onMouseMove={(e) => handleDragMove(e.clientX, e.clientY)}
       onMouseUp={handleDragEnd}
-      onMouseLeave={handleDragEnd}
-      onTouchStart={(e) => handleDragStart(e.touches[0].clientX)}
-      onTouchMove={(e) => handleDragMove(e.touches[0].clientX)}
+      onMouseLeave={() => {
+        isHovered.current = false;
+        handleDragEnd();
+      }}
+      onMouseEnter={() => {
+        isHovered.current = true;
+      }}
+      onTouchStart={(e) => handleDragStart(e.touches[0].clientX, e.touches[0].clientY)}
+      onTouchMove={(e) => handleDragMove(e.touches[0].clientX, e.touches[0].clientY)}
       onTouchEnd={handleDragEnd}
       style={{ cursor: isDragging.current ? 'grabbing' : 'grab' }}
     >
@@ -117,7 +158,9 @@ export function InteractiveMarquee({
         className="flex w-max will-change-transform"
       >
         <div className="flex gap-2.5 pr-2.5">{children}</div>
-        <div className="flex gap-2.5 pr-2.5">{children}</div>
+        <div className="flex gap-2.5 pr-2.5" aria-hidden="true">{children}</div>
+        <div className="flex gap-2.5 pr-2.5" aria-hidden="true">{children}</div>
+        <div className="flex gap-2.5 pr-2.5" aria-hidden="true">{children}</div>
       </div>
     </div>
   );
