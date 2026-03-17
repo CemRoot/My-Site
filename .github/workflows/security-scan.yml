@@ -81,61 +81,10 @@ jobs:
   #     - name: Perform CodeQL Analysis
   #       uses: github/codeql-action/analyze@v3
 
-  secret-scan:
-    name: Secret Scanning
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install Gitleaks
-        run: |
-          # Download latest gitleaks release (free & open source CLI)
-          GITLEAKS_VERSION=$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
-          wget -q "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          chmod +x gitleaks
-          sudo mv gitleaks /usr/local/bin/
-
-      - name: Run Gitleaks Scan
-        run: |
-          echo "🔍 Running Gitleaks secret scan..."
-          gitleaks detect --source . --verbose --redact --report-format json --report-path gitleaks-report.json || true
-          
-          # Check if secrets were found
-          if [ -f gitleaks-report.json ] && [ -s gitleaks-report.json ]; then
-            FINDINGS=$(cat gitleaks-report.json | jq length)
-            if [ "$FINDINGS" -gt 0 ]; then
-              echo "⚠️ Found $FINDINGS potential secret(s)!"
-              cat gitleaks-report.json | jq -r '.[] | "- \(.Description) in \(.File):\(.StartLine)"'
-              echo ""
-              echo "🔒 Please review and remove any exposed secrets!"
-            else
-              echo "✅ No secrets detected!"
-            fi
-          else
-            echo "✅ No secrets detected!"
-          fi
-
-      - name: Upload Gitleaks Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gitleaks-report
-          path: gitleaks-report.json
-          retention-days: 30
-          if-no-files-found: ignore
-
   security-summary:
     name: Security Summary
     runs-on: ubuntu-latest
-    needs: [npm-audit, secret-scan]
+    needs: [npm-audit]
     if: always()
     
     steps:

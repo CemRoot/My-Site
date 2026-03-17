@@ -9,48 +9,8 @@
  * Consider migrating to the new digest-based system.
  */
 
-import 'dotenv/config';
-import { createClient } from '@supabase/supabase-js';
-
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-
-/**
- * Send message to Telegram
- */
-async function sendTelegramMessage(text, options = {}) {
-  try {
-    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    
-    const payload = {
-      chat_id: TELEGRAM_CHAT_ID,
-      text: text,
-      parse_mode: 'HTML',
-      disable_web_page_preview: true,
-      ...options
-    };
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Telegram API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.result;
-  } catch (error) {
-    console.error('❌ Telegram send error:', error.message);
-    throw error;
-  }
-}
+import { supabase } from './lib/supabaseAdmin.js';
+import { sendTelegramMessage, callTelegramApi } from './lib/telegram.js';
 
 /**
  * Send articles for manual sharing with ready-to-copy LinkedIn content
@@ -268,14 +228,9 @@ export async function handleTelegramWebhook(update) {
         await sendSystemStatus();
       }
       
-      // Acknowledge the callback
-      await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          callback_query_id: update.callback_query.id,
-          text: 'İşlem tamamlandı ✅'
-        })
+      await callTelegramApi('answerCallbackQuery', {
+        callback_query_id: update.callback_query.id,
+        text: 'İşlem tamamlandı ✅',
       });
     }
     

@@ -3,16 +3,7 @@
  * Removes articles with Turkish content, wrong dates, and fixes titles
  */
 
-import dotenv from 'dotenv';
-dotenv.config();
-dotenv.config({ path: '.env.local', override: true });
-
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { supabase } from './lib/supabaseAdmin.js';
 
 async function cleanBasedOnFirecrawl() {
   console.log('🔍 Firecrawl analizine göre temizlik yapılıyor...\n');

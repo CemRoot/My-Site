@@ -6,13 +6,12 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Edge Runtime for faster cold starts (closer to users)
 export const config = {
   runtime: 'edge',
-  regions: ['dub1', 'fra1', 'lhr1'], // Dublin, Frankfurt, London - closest to Ireland
+  regions: ['dub1', 'fra1', 'lhr1'],
 };
 
-// Initialize Supabase client (created once, reused across requests)
+// Edge Runtime: uses anon key for public read-only access (no service role needed)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

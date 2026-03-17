@@ -10,7 +10,14 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import EmbedFromURL, { EmbedFromToken } from '../embeds/EmbedFromURL';
 
-type AnyNode = any;
+interface MarkdownNode {
+  children?: Array<{
+    type?: string;
+    value?: string;
+    tagName?: string;
+    properties?: Record<string, unknown>;
+  }>;
+}
 
 // Regex to detect embed tokens: [[EMBED:TYPE:DATA]]
 const TOKEN_REGEX = /^\s*\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):.+\]\]\s*$/i;
@@ -20,7 +27,7 @@ const GLOBAL_TOKEN_REGEX = /\[\[EMBED:(TIKTOK|TWEET|YOUTUBE):([^\]]+)\]\]/gi;
  * Checks if a paragraph contains an embed token
  * Returns the token if found, null otherwise
  */
-function maybeEmbedToken(node: AnyNode): string | null {
+function maybeEmbedToken(node: MarkdownNode): string | null {
   if (!node?.children || node.children.length !== 1) {
     return null;
   }
@@ -42,7 +49,7 @@ function maybeEmbedToken(node: AnyNode): string | null {
  * Checks if a paragraph node contains only a single URL (fallback for legacy content)
  * Returns the URL if found, null otherwise
  */
-function maybeEmbedFromParagraph(node: AnyNode): string | null {
+function maybeEmbedFromParagraph(node: MarkdownNode): string | null {
   if (!node?.children || node.children.length !== 1) {
     return null;
   }
@@ -141,7 +148,7 @@ export default function SmartMarkdown({ content }: SmartMarkdownProps) {
   }
   
   // Split content by tokens
-  const parts: Array<{ type: 'markdown' | 'embed'; content: string; embedData?: any }> = [];
+  const parts: Array<{ type: 'markdown' | 'embed'; content: string; embedData?: { type: string; payload: string } }> = [];
   let lastIndex = 0;
   
   for (const token of tokens) {
@@ -224,7 +231,7 @@ function renderMarkdownContent(content: string) {
         components={{
           p({ node, children, ...props }) {
             // Check for standalone URL (fallback for legacy content)
-            const url = maybeEmbedFromParagraph(node as any);
+            const url = maybeEmbedFromParagraph(node as MarkdownNode);
             if (url) {
               return <EmbedFromURL url={url} />;
             }
@@ -271,7 +278,7 @@ function renderMarkdownContent(content: string) {
           );
         },
         // Style code blocks
-        code({ inline, children, ...props }: any) {
+        code({ inline, children, ...props }: { inline?: boolean; children?: React.ReactNode; className?: string }) {
           if (inline) {
             return <code className="bg-muted px-1.5 py-0.5 rounded text-sm" {...props}>{children}</code>;
           }

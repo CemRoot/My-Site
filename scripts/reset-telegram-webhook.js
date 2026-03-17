@@ -5,12 +5,10 @@
  * Use this when switching n8n instances or when messages get stuck in queue
  */
 
-import 'dotenv/config';
+import { env } from './lib/config.js';
+import { callTelegramApi } from './lib/telegram.js';
 
-const CONFIG = {
-  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
-  WEBHOOK_URL: process.env.WEBHOOK_URL || 'https://cemkoyluoglu.codes/api/telegram-webhook',
-};
+const WEBHOOK_URL = process.env.WEBHOOK_URL || 'https://cemkoyluoglu.codes/api/telegram-webhook';
 
 // ANSI color codes
 const colors = {
@@ -28,34 +26,16 @@ function log(message, color = 'reset') {
 }
 
 async function getWebhookInfo() {
-  const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/getWebhookInfo`;
-  const response = await fetch(url);
-  const result = await response.json();
-  
-  if (!result.ok) {
-    throw new Error(`Failed to get webhook info: ${result.description}`);
-  }
-  
-  return result.result;
+  const data = await callTelegramApi('getWebhookInfo');
+  return data.result;
 }
 
 async function deleteWebhook(dropPendingUpdates = false) {
   log('\n🗑️  Deleting existing webhook...', 'yellow');
   
-  const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/deleteWebhook`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      drop_pending_updates: dropPendingUpdates
-    })
+  const result = await callTelegramApi('deleteWebhook', {
+    drop_pending_updates: dropPendingUpdates,
   });
-  
-  const result = await response.json();
-  
-  if (!result.ok) {
-    throw new Error(`Failed to delete webhook: ${result.description}`);
-  }
   
   log(`✅ Webhook deleted successfully!`, 'green');
   if (dropPendingUpdates) {
@@ -69,23 +49,12 @@ async function setWebhook(url, options = {}) {
   log(`\n🔧 Setting up new webhook...`, 'cyan');
   log(`📡 URL: ${url}`, 'blue');
   
-  const setWebhookUrl = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/setWebhook`;
-  const response = await fetch(setWebhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      url: url,
-      allowed_updates: options.allowed_updates || ['callback_query', 'message'],
-      max_connections: options.max_connections || 40,
-      drop_pending_updates: options.drop_pending_updates || false
-    })
+  const result = await callTelegramApi('setWebhook', {
+    url,
+    allowed_updates: options.allowed_updates || ['callback_query', 'message'],
+    max_connections: options.max_connections || 40,
+    drop_pending_updates: options.drop_pending_updates || false,
   });
-  
-  const result = await response.json();
-  
-  if (!result.ok) {
-    throw new Error(`Failed to set webhook: ${result.description}`);
-  }
   
   log(`✅ Webhook set successfully!`, 'green');
   return result;
@@ -94,24 +63,13 @@ async function setWebhook(url, options = {}) {
 async function getUpdates(offset = 0, limit = 100) {
   log(`\n📥 Checking for pending updates...`, 'cyan');
   
-  const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/getUpdates`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      offset: offset,
-      limit: limit,
-      timeout: 0
-    })
+  const data = await callTelegramApi('getUpdates', {
+    offset,
+    limit,
+    timeout: 0,
   });
   
-  const result = await response.json();
-  
-  if (!result.ok) {
-    throw new Error(`Failed to get updates: ${result.description}`);
-  }
-  
-  return result.result;
+  return data.result;
 }
 
 async function clearPendingUpdatesManually() {
@@ -178,7 +136,7 @@ async function displayWebhookInfo(info) {
 }
 
 async function fullReset() {
-  if (!CONFIG.TELEGRAM_BOT_TOKEN) {
+  if (!env.TELEGRAM_BOT_TOKEN) {
     log('❌ TELEGRAM_BOT_TOKEN is required!', 'red');
     log('   Please set it in your .env file', 'yellow');
     process.exit(1);
@@ -196,7 +154,7 @@ async function fullReset() {
 
     // Step 2: Delete webhook with drop_pending_updates
     log('\n📋 Step 2: Deleting webhook and clearing queue...', 'cyan');
-    await deleteWebhook(true); // This will drop ALL pending updates
+    await deleteWebhook(true);
     
     // Wait for Telegram to process
     log('   Waiting for Telegram to process...', 'yellow');
@@ -209,7 +167,7 @@ async function fullReset() {
 
     // Step 4: Set new webhook
     log('\n📋 Step 4: Setting up new webhook...', 'cyan');
-    await setWebhook(CONFIG.WEBHOOK_URL, {
+    await setWebhook(WEBHOOK_URL, {
       allowed_updates: ['callback_query', 'message'],
       max_connections: 40,
       drop_pending_updates: true // Extra safety
@@ -249,7 +207,7 @@ async function fullReset() {
 }
 
 async function quickCheck() {
-  if (!CONFIG.TELEGRAM_BOT_TOKEN) {
+  if (!env.TELEGRAM_BOT_TOKEN) {
     log('❌ TELEGRAM_BOT_TOKEN is required!', 'red');
     process.exit(1);
   }

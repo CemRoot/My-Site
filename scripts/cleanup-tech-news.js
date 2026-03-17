@@ -1,48 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-
-// Required environment variables
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('Missing Supabase environment variables');
-  process.exit(1);
-}
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-/**
- * Sends a notification to Telegram
- */
-async function sendTelegramNotification(message) {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-    console.log('Telegram credentials not found, skipping notification.');
-    return;
-  }
-
-  try {
-    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: TELEGRAM_CHAT_ID,
-        text: message,
-        parse_mode: 'HTML',
-      }),
-    });
-
-    if (!response.ok) {
-      console.error(`Failed to send Telegram message: ${response.statusText}`);
-    }
-  } catch (error) {
-    console.error('Error sending Telegram message:', error.message);
-  }
-}
+import { supabase } from './lib/supabaseAdmin.js';
+import { notifyTelegram } from './lib/telegram.js';
 
 /**
  * Main cleanup function
@@ -105,7 +62,7 @@ I have successfully cleaned up old articles from the database.
 <i>This runs automatically every Monday to keep the database healthy.</i>
     `.trim();
 
-    await sendTelegramNotification(message);
+    await notifyTelegram(message);
 
     // Also output for GitHub Actions log parsing if needed
     console.log(`::set-output name=tech_news_deleted::${totalDeletedTechNews}`);
@@ -121,7 +78,7 @@ An error occurred while trying to clean up old articles.
 <b>Error:</b> ${error.message}
     `.trim();
 
-    await sendTelegramNotification(errorMessage);
+    await notifyTelegram(errorMessage);
     process.exit(1);
   }
 }

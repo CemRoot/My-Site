@@ -25,6 +25,8 @@ export const PERSONAL_INFO = {
     onSite: true,
     responseTime: '24 hours',
   },
+  twitterHandle: '@CemKoyluoglu',
+  portraitImage: '/portrait.webp',
 } as const;
 
 export const SOCIAL_LINKS = {

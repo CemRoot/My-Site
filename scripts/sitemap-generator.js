@@ -1,18 +1,11 @@
 import fs from 'fs';
 import path from 'path';
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
+import { supabase } from './lib/supabaseAdmin.js';
+import { env } from './lib/config.js';
 
-dotenv.config();
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.warn('Supabase credentials not found in environment variables. Sitemap will only contain static routes.');
+if (!env.SUPABASE_URL) {
+  console.warn('Supabase credentials not found. Sitemap will only contain static routes.');
 }
-
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 const BASE_URL = 'https://cemkoyluoglu.codes';
 
@@ -42,8 +35,7 @@ async function generateSitemap() {
       xml += `  </url>\n`;
     }
 
-    if (supabase) {
-      // Fetch dynamic routes from Supabase
+    if (env.SUPABASE_URL) {
       console.log('Fetching articles from Supabase...');
       const { data: articles, error } = await supabase
         .from('tech_news_articles')

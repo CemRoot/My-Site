@@ -5,49 +5,9 @@
  * Can be run manually or as a scheduled job
  */
 
-import 'dotenv/config';
-import { createClient } from '@supabase/supabase-js';
-
-const CONFIG = {
-  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
-  TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
-  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  GROQ_API_KEY: process.env.GROQ_API_KEY,
-  FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY,
-};
-
-// Initialize Supabase client
-const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
-
-/**
- * Send message to Telegram
- */
-async function sendTelegramMessage(text) {
-  try {
-    const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`;
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: CONFIG.TELEGRAM_CHAT_ID,
-        text: text,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Telegram API error: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Telegram send error:', error.message);
-    throw error;
-  }
-}
+import { supabase } from './lib/supabaseAdmin.js';
+import { env } from './lib/config.js';
+import { sendTelegramMessage } from './lib/telegram.js';
 
 /**
  * Check Supabase connection and get stats
@@ -103,7 +63,7 @@ async function checkFirecrawl() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${CONFIG.FIRECRAWL_API_KEY}`
+        'Authorization': `Bearer ${env.FIRECRAWL_API_KEY}`
       },
       body: JSON.stringify({
         url: 'https://example.com',
@@ -142,7 +102,7 @@ async function checkGroq() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${CONFIG.GROQ_API_KEY}`
+        'Authorization': `Bearer ${env.GROQ_API_KEY}`
       },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
@@ -176,7 +136,7 @@ async function checkTelegram() {
   try {
     console.log('🔍 Checking Telegram Bot...');
     
-    const response = await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/getMe`);
+    const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getMe`);
     
     if (!response.ok) {
       throw new Error(`Telegram API error: ${response.status}`);

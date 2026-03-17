@@ -5,105 +5,20 @@
  * Commands: /start, /menu, /status, /scrape, /health, /help
  */
 
-import 'dotenv/config';
-import { createClient } from '@supabase/supabase-js';
 import { spawn } from 'child_process';
+import { supabase } from './lib/supabaseAdmin.js';
+import { env } from './lib/config.js';
+import { sendTelegramMessage, callTelegramApi } from './lib/telegram.js';
+import { getMainMenuKeyboard, getSystemManagementKeyboard } from './lib/menu/keyboards.js';
 
 const CONFIG = {
-  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
-  TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
-  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  GROQ_API_KEY: process.env.GROQ_API_KEY,
-  FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY,
+  GROQ_API_KEY: env.GROQ_API_KEY,
+  FIRECRAWL_API_KEY: env.FIRECRAWL_API_KEY,
   GITHUB_TOKEN: process.env.GITHUB_TOKEN,
   GITHUB_REPO: process.env.GITHUB_REPOSITORY || 'username/My-Site',
 };
 
-const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
-
-/**
- * Send message to Telegram
- */
-export async function sendTelegramMessage(text, options = {}) {
-  try {
-    const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`;
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: CONFIG.TELEGRAM_CHAT_ID,
-        text: text,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-        ...options
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Telegram API error: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Telegram send error:', error.message);
-    throw error;
-  }
-}
-
-/**
- * Main menu keyboard - Reorganized with System Management section
- */
-function getMainMenuKeyboard() {
-  return {
-    inline_keyboard: [
-      [
-        { text: '📰 Haberleri Çek', callback_data: 'action_scrape' },
-        { text: '➕ Manuel Ekle', callback_data: 'action_add_article' },
-      ],
-      [
-        { text: '📱 LinkedIn', callback_data: 'action_linkedin' },
-        { text: '🔵 LinkedIn Groups', callback_data: 'action_linkedin_groups' },
-      ],
-      [
-        { text: '🔧 Sistem Yönetimi', callback_data: 'action_system_management' },
-        { text: '📊 Durum', callback_data: 'action_status' },
-      ],
-      [
-        { text: '📈 İstatistikler', callback_data: 'action_stats' },
-        { text: '💾 Veritabanı', callback_data: 'action_database' },
-      ],
-      [
-        { text: 'ℹ️ Yardım', callback_data: 'action_help' },
-      ],
-    ],
-  };
-}
-
-/**
- * System Management submenu keyboard
- */
-function getSystemManagementKeyboard() {
-  return {
-    inline_keyboard: [
-      [
-        { text: '🤖 n8n Durumu', callback_data: 'action_n8n_status' },
-        { text: '🔄 Webhook Reset', callback_data: 'action_webhook_reset' },
-      ],
-      [
-        { text: '🔀 Chat Backend', callback_data: 'action_chat_backend' },
-        { text: '🏥 Sağlık Kontrolü', callback_data: 'action_health' },
-      ],
-      [
-        { text: '🔧 GitHub Actions', callback_data: 'action_github' },
-      ],
-      [
-        { text: '🔙 Ana Menü', callback_data: 'action_refresh_menu' },
-      ],
-    ],
-  };
-}
+export { sendTelegramMessage };
 
 /**
  * Handle /start command
@@ -450,7 +365,7 @@ ${nullSource > 0 ? `⚠️ ${nullSource} kayıtta source eksik\n\nDüzeltmek iç
 
 <b>🔗 Bağlantı</b>
 Supabase: ✅ Bağlı
-URL: ${CONFIG.SUPABASE_URL.substring(0, 30)}...`;
+URL: ${env.SUPABASE_URL.substring(0, 30)}...`;
 
     await sendTelegramMessage(dbText, {
       reply_markup: {
@@ -1408,7 +1323,7 @@ export async function handleCreateDigestAction() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         trigger: 'manual',
-        chat_id: CONFIG.TELEGRAM_CHAT_ID,
+        chat_id: env.TELEGRAM_CHAT_ID,
         timestamp: new Date().toISOString(),
         force_recreate: existingDigest?.status === 'rejected' // Flag for n8n
       })
@@ -1953,21 +1868,8 @@ export async function setBotCommands() {
   ];
 
   try {
-    const response = await fetch(
-      `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/setMyCommands`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ commands })
-      }
-    );
-
-    if (response.ok) {
-      console.log('✅ Bot commands set successfully!');
-    } else {
-      const error = await response.json();
-      console.error('❌ Failed to set bot commands:', error);
-    }
+    await callTelegramApi('setMyCommands', { commands });
+    console.log('✅ Bot commands set successfully!');
   } catch (error) {
     console.error('❌ Error setting bot commands:', error);
   }

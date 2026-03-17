@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect } from 'react';
+import { TWITTER_WIDGET_SCRIPT_URL } from '../../lib/constants/urls';
 
 interface TweetEmbedHTMLProps {
   id: string;
@@ -15,28 +16,28 @@ let twitterScriptLoaded = false;
 function ensureTwitterScript() {
   if (twitterScriptLoaded) {
     // Script already loaded, trigger widget reload
-    if ((window as any).twttr?.widgets) {
-      (window as any).twttr.widgets.load();
+    if (window.twttr?.widgets) {
+      window.twttr.widgets.load();
     }
     return;
   }
 
   if (document.querySelector('[data-twitter-embed="true"]')) {
     twitterScriptLoaded = true;
-    if ((window as any).twttr?.widgets) {
-      (window as any).twttr.widgets.load();
+    if (window.twttr?.widgets) {
+      window.twttr.widgets.load();
     }
     return;
   }
 
   const script = document.createElement('script');
-  script.src = 'https://platform.twitter.com/widgets.js';
+  script.src = TWITTER_WIDGET_SCRIPT_URL;
   script.async = true;
   script.charset = 'utf-8';
   script.onload = () => {
     twitterScriptLoaded = true;
-    if ((window as any).twttr?.widgets) {
-      (window as any).twttr.widgets.load();
+    if (window.twttr?.widgets) {
+      window.twttr.widgets.load();
     }
   };
   script.setAttribute('data-twitter-embed', 'true');

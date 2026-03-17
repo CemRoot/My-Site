@@ -5,6 +5,7 @@
 
 'use client';
 import React, { useEffect, useRef } from 'react';
+import { TIKTOK_EMBED_SCRIPT_URL } from '../../lib/constants/urls';
 
 interface TikTokEmbedHTMLProps {
   url: string;
@@ -14,27 +15,27 @@ let tiktokScriptLoaded = false;
 
 function ensureTikTokScript() {
   if (tiktokScriptLoaded) {
-    if ((window as any).tiktokEmbed) {
-      (window as any).tiktokEmbed.lib.render(document.querySelectorAll('.tiktok-embed'));
+    if (window.tiktokEmbed) {
+      window.tiktokEmbed.lib.render(document.querySelectorAll('.tiktok-embed'));
     }
     return;
   }
 
   if (document.querySelector('[data-tiktok-embed="true"]')) {
     tiktokScriptLoaded = true;
-    if ((window as any).tiktokEmbed) {
-      (window as any).tiktokEmbed.lib.render(document.querySelectorAll('.tiktok-embed'));
+    if (window.tiktokEmbed) {
+      window.tiktokEmbed.lib.render(document.querySelectorAll('.tiktok-embed'));
     }
     return;
   }
 
   const script = document.createElement('script');
-  script.src = 'https://www.tiktok.com/embed.js';
+  script.src = TIKTOK_EMBED_SCRIPT_URL;
   script.async = true;
   script.onload = () => {
     tiktokScriptLoaded = true;
-    if ((window as any).tiktokEmbed) {
-      (window as any).tiktokEmbed.lib.render(document.querySelectorAll('.tiktok-embed'));
+    if (window.tiktokEmbed) {
+      window.tiktokEmbed.lib.render(document.querySelectorAll('.tiktok-embed'));
     }
   };
   script.setAttribute('data-tiktok-embed', 'true');
@@ -53,8 +54,8 @@ export default function TikTokEmbedHTML({ url }: TikTokEmbedHTMLProps) {
     
     // Force re-render after mount
     const timer = setTimeout(() => {
-      if ((window as any).tiktokEmbed) {
-        (window as any).tiktokEmbed.lib.render(document.querySelectorAll('.tiktok-embed'));
+      if (window.tiktokEmbed) {
+        window.tiktokEmbed.lib.render(document.querySelectorAll('.tiktok-embed'));
       }
     }, 500);
     

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Shield } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { usePageContext } from '../lib/context/PageContext';
+import { PERSONAL_INFO } from '../lib/constants/personal';
 import { SEO } from '../components/SEO';
 
 /**
@@ -75,7 +76,7 @@ function PrivacyPage() {
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
             <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">1. Introduction</h2>
             <p className="text-muted-foreground leading-relaxed">
-              This Privacy Policy explains how Cem Koyluoglu ("we," "us," or "our") collects, uses, and protects your 
+              This Privacy Policy explains how {PERSONAL_INFO.name} ("we," "us," or "our") collects, uses, and protects your 
               personal information when you visit our website or use our services. We are committed to protecting your 
               privacy in accordance with the General Data Protection Regulation (GDPR) and Irish data protection laws.
             </p>
@@ -193,7 +194,7 @@ function PrivacyPage() {
               <li><strong>Right to Withdraw Consent:</strong> Unsubscribe from newsletters at any time</li>
             </ul>
             <p className="text-muted-foreground leading-relaxed mt-4">
-              To exercise any of these rights, please contact us at <a href="mailto:cemkoyluoglu@icloud.com" className="text-primary hover:underline">cemkoyluoglu@icloud.com</a>
+              To exercise any of these rights, please contact us at <a href={`mailto:${PERSONAL_INFO.email}`} className="text-primary hover:underline">{PERSONAL_INFO.email}</a>
             </p>
           </section>
 
@@ -265,9 +266,9 @@ function PrivacyPage() {
               For any privacy-related questions, concerns, or to exercise your GDPR rights, please contact:
             </p>
             <div className="space-y-2 text-muted-foreground pl-4 mt-4">
-              <p><strong>Cem Koyluoglu</strong></p>
-              <p>Email: <a href="mailto:cemkoyluoglu@icloud.com" className="text-primary hover:underline">cemkoyluoglu@icloud.com</a></p>
-              <p>Location: Dublin, Ireland</p>
+              <p><strong>{PERSONAL_INFO.name}</strong></p>
+              <p>Email: <a href={`mailto:${PERSONAL_INFO.email}`} className="text-primary hover:underline">{PERSONAL_INFO.email}</a></p>
+              <p>Location: {PERSONAL_INFO.location}</p>
             </div>
             <p className="text-muted-foreground leading-relaxed mt-4">
               You also have the right to lodge a complaint with the Irish Data Protection Commission (DPC) at{' '}

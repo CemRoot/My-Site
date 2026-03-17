@@ -7,6 +7,8 @@
  * - Reduce bandwidth and improve LCP
  */
 
+import { WSRV_CDN_BASE_URL } from '../constants/urls';
+
 interface ImageProxyOptions {
   width?: number;
   height?: number;
@@ -38,7 +40,7 @@ export function getOptimizedImageUrl(
   if (
     originalUrl.startsWith('/') ||
     originalUrl.includes('cemkoyluoglu.codes') ||
-    originalUrl.includes('wsrv.nl') ||
+    originalUrl.includes(WSRV_CDN_BASE_URL) ||
     originalUrl.includes('images.weserv.nl')
   ) {
     return originalUrl;
@@ -78,7 +80,7 @@ export function getOptimizedImageUrl(
   // Enable caching
   params.set('n', '-1'); // Do not upscale
   
-  return `https://wsrv.nl/?${params.toString()}`;
+  return `${WSRV_CDN_BASE_URL}?${params.toString()}`;
 }
 
 /**

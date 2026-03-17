@@ -8,17 +8,10 @@
  * - Provides "Reset Trial" button when expired
  */
 
-import 'dotenv/config';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from './lib/supabaseAdmin.js';
+import { env } from './lib/config.js';
+import { sendTelegramMessage } from './lib/telegram.js';
 
-const CONFIG = {
-  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
-  TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID || '',
-};
-
-// ANSI colors
 const colors = {
   reset: '\x1b[0m',
   red: '\x1b[31m',
@@ -32,8 +25,6 @@ const colors = {
 function log(message, color = 'reset') {
   console.log(`${colors[color]}${message}${colors.reset}`);
 }
-
-const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
 
 /**
  * Get setting from Supabase
@@ -109,37 +100,6 @@ async function calculateRemainingDays() {
     };
   } catch (error) {
     log(`❌ Error calculating remaining days: ${error.message}`, 'red');
-    throw error;
-  }
-}
-
-/**
- * Send Telegram message
- */
-async function sendTelegramMessage(text, options = {}) {
-  try {
-    const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`;
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: CONFIG.TELEGRAM_CHAT_ID,
-        text: text,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-        ...options
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Telegram API error: ${response.status} - ${JSON.stringify(errorData)}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    log(`❌ Failed to send Telegram message: ${error.message}`, 'red');
     throw error;
   }
 }
@@ -290,13 +250,12 @@ async function resetTrialPeriod(updatedBy = 'telegram-bot') {
  * Main function
  */
 async function main() {
-  // Check for required environment variables
-  if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_SERVICE_KEY) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) {
     log('❌ Supabase credentials not configured', 'red');
     process.exit(1);
   }
 
-  if (!CONFIG.TELEGRAM_BOT_TOKEN || !CONFIG.TELEGRAM_CHAT_ID) {
+  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) {
     log('❌ Telegram credentials not configured', 'red');
     process.exit(1);
   }

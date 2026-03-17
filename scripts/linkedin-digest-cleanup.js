@@ -5,17 +5,7 @@
  * Prevents stuck states and allows retry
  */
 
-require('dotenv').config();
-const { createClient } = require('@supabase/supabase-js');
-
-const CONFIG = {
-  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
-  TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
-  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-};
-
-const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
+import { supabase } from './lib/supabaseAdmin.js';
 
 /**
  * Clean up pending digests older than 24 hours
@@ -240,11 +230,10 @@ async function getPendingDigestsSummary() {
   }
 }
 
-// Export all functions (CommonJS)
-module.exports = {
+export {
   cleanOldPendingDigests,
   deletePendingDigest,
   deleteAllPendingDigests,
   checkStuckDigests,
-  getPendingDigestsSummary
+  getPendingDigestsSummary,
 };

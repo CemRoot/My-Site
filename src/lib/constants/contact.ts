@@ -4,6 +4,7 @@
 
 import { Mail, Phone, MessageCircle, Github, Linkedin, MapPin } from 'lucide-react';
 import { PERSONAL_INFO, SOCIAL_LINKS } from './personal';
+import { GOOGLE_MAPS_DUBLIN_URL } from './urls';
 import type { ContactMethod } from '../types';
 
 export const CONTACT_METHODS: ContactMethod[] = [
@@ -62,7 +63,7 @@ export const CONTACT_METHODS: ContactMethod[] = [
     icon: MapPin,
     label: 'Location',
     value: PERSONAL_INFO.location,
-    href: 'https://www.google.com/maps/place/Dublin,+Ireland',
+    href: GOOGLE_MAPS_DUBLIN_URL,
     color: 'accent',
     description: 'Based in Dublin with EU/US overlap and remote availability.',
     meta: 'EU & remote-friendly',

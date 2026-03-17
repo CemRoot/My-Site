@@ -8,6 +8,7 @@ import { Contact } from '../components/Contact';
 import { usePageContext } from '../lib/context/PageContext';
 import { lazyWithRetry } from '../lib/chunk-error-handler';
 import { SEO } from '../components/SEO';
+import { PERSONAL_INFO, EDUCATION } from '../lib/constants/personal';
 
 // Lazy load heavy components that are below the fold
 // Using lazyWithRetry to handle chunk loading errors after deployments
@@ -44,16 +45,16 @@ function HomePage() {
   useEffect(() => {
     setPageInfo({
       path: '/',
-      title: 'Cem Koyluoglu - AI Engineer & System Operations Specialist',
+      title: `${PERSONAL_INFO.name} - ${PERSONAL_INFO.title}`,
       summary:
-        "Portfolio homepage showcasing Cem Koyluoglu's AI engineering expertise, professional services, signature projects, work experience, technical skills, and contact information.",
+        `Portfolio homepage showcasing ${PERSONAL_INFO.name}'s AI engineering expertise, professional services, signature projects, work experience, technical skills, and contact information.`,
       description:
-        'This is the main landing page featuring comprehensive information about Cem Koyluoglu, an AI Engineer and System Operations Specialist based in Dublin, Ireland with 3+ years of Python experience.',
+        `This is the main landing page featuring comprehensive information about ${PERSONAL_INFO.name}, an ${PERSONAL_INFO.title} based in ${PERSONAL_INFO.location} with 3+ years of Python experience.`,
       highlights: [
-        'AI Engineer & System Operations Specialist with MSc in AI (First Class Honours, 71.4%)',
+        `${PERSONAL_INFO.title} with ${EDUCATION.degree} (${EDUCATION.classification}, ${EDUCATION.grade}%)`,
         'Specializes in LLMs, NLP, Computer Vision, and Cloud Solutions',
         'Available for both freelance projects and full-time opportunities',
-        'Based in Dublin, Ireland with remote and on-site work options',
+        `Based in ${PERSONAL_INFO.location} with remote and on-site work options`,
         '100% client satisfaction rate with 5+ professional certifications',
       ],
       features: [
@@ -80,7 +81,7 @@ function HomePage() {
         'Deep Learning',
       ],
       content:
-        "The homepage provides a complete overview of Cem's professional profile, from his educational background (MSc in AI from National College of Ireland) to his technical expertise in Large Language Models, Natural Language Processing, and Cloud Solutions. Visitors can explore his services, view his project portfolio, understand his career journey, and easily get in touch via email (cemkoyluoglu@icloud.com) or WhatsApp (+353 87 344 5918).",
+        `The homepage provides a complete overview of ${PERSONAL_INFO.name.split(' ')[0]}'s professional profile, from his educational background (${EDUCATION.degree} from ${EDUCATION.institution}) to his technical expertise in Large Language Models, Natural Language Processing, and Cloud Solutions. Visitors can explore his services, view his project portfolio, understand his career journey, and easily get in touch via email (${PERSONAL_INFO.email}) or WhatsApp (${PERSONAL_INFO.phone}).`,
     });
 
     return () => setPageInfo(null);

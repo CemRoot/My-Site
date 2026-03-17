@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Newspaper } from 'lucide-react';
 import { Button } from './ui/button';
 import coinLogo from '../assets/coin-logo-optimized.webp';
+import { NAV_ITEMS } from '../lib/constants/navigation';
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -36,14 +37,6 @@ export function Navbar() {
   useEffect(() => {
     updateNavHeight();
   }, [isScrolled, isMobileMenuOpen, location.pathname]);
-
-  const navItems = [
-    { label: 'About', href: '#about', isHash: true },
-    { label: 'Projects', href: '#projects', isHash: true },
-    { label: 'Experience', href: '#experience', isHash: true },
-    { label: 'Skills', href: '#skills', isHash: true },
-    { label: 'Contact', href: '#contact', isHash: true },
-  ];
 
   return (
     <nav
@@ -167,7 +160,7 @@ export function Navbar() {
               {/* Desktop Navigation */}
               <div className="hidden md:flex items-center space-x-1">
                 {/* Home Page Links */}
-                {isHomePage && navItems.map((item) => (
+                {isHomePage && NAV_ITEMS.map((item) => (
                   <a
                     key={item.href}
                     href={item.href}
@@ -224,7 +217,7 @@ export function Navbar() {
             {isMobileMenuOpen && (
               <div className="md:hidden border-t border-primary/20 px-6 py-4 space-y-2 bg-background/95">
                 {/* Home Page Links */}
-                {isHomePage && navItems.map((item) => (
+                {isHomePage && NAV_ITEMS.map((item) => (
                   <a
                     key={item.href}
                     href={item.href}
