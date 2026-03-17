@@ -67,12 +67,11 @@ ${articles.map((article, index) => {
     const message = await sendTelegramMessage(summary, { reply_markup: keyboard });
 
     // Save message ID for later reference
-    for (const article of articles) {
-      await supabase
-        .from('linkedin_posts')
-        .update({ telegram_message_id: message.message_id })
-        .eq('article_id', article.id);
-    }
+    const articleIds = articles.map(article => article.id);
+    await supabase
+      .from('linkedin_posts')
+      .update({ telegram_message_id: message.message_id })
+      .in('article_id', articleIds);
 
     console.log('✅ Manual sharing request sent successfully');
     return message;
