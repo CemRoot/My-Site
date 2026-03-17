@@ -109,11 +109,15 @@ export function cleanSocialEmbedRemnants(markdown) {
   cleaned = cleaned.replace(/>\s*Twitter Widget Iframe\s*/gi, '');
   cleaned = cleaned.replace(/>\s*Tweet\s*>/gi, '');
   cleaned = cleaned.replace(/Loading tweet\.\.\./gi, '');
-  cleaned = cleaned.replace(/View on Twitter/gi, '');
-  cleaned = cleaned.replace(/View on X/gi, '');
+  cleaned = cleaned.replace(/View on Twitter[:\s]*/gi, '');
+  cleaned = cleaned.replace(/View on X[:\s]*/gi, '');
 
-  // BUG 3 FIX: Remove stray t.co URLs entirely
+  // BUG 3 FIX: Remove stray t.co URLs entirely (including markdown links)
+  cleaned = cleaned.replace(/\[[^\]]*\]\(https?:\/\/t\.co\/[a-zA-Z0-9]+\)/g, '');
   cleaned = cleaned.replace(/https?:\/\/t\.co\/[a-zA-Z0-9]+/g, '');
+
+  // Remove twitter/x links in blockquotes
+  cleaned = cleaned.replace(/>\s*\[[^\]]+\]\(https:\/\/(?:www\.)?(?:twitter|x)\.com[^\)]*\)/gi, '');
   
   // Remove YouTube-related text blocks
   cleaned = cleaned.replace(/>\s*YouTube Widget\s*/gi, '');
@@ -122,6 +126,9 @@ export function cleanSocialEmbedRemnants(markdown) {
   cleaned = cleaned.replace(/>\s*\[[\d.KM]+\]\(https:\/\/(?:www\.)?tiktok\.com[^\)]*\)/gi, '');
   cleaned = cleaned.replace(/>\s*\[@[^\]]+\]\(https:\/\/(?:www\.)?tiktok\.com[^\)]*\)/gi, '');
   
+  // Remove remaining empty blockquote lines
+  cleaned = cleaned.replace(/^>\s*$/gm, '');
+
   // Clean up excessive newlines
   cleaned = cleaned.replace(/(\r?\n){3,}/g, '\n\n');
   
