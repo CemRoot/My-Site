@@ -40,6 +40,7 @@
             "vite": "^6.4.1"
       },
       "scripts": {
+            "test": "node --test",
             "dev": "vite",
             "build": "vite build",
             "postbuild": "node scripts/sitemap-generator.js && node scripts/post-build-telegram.js || true",
