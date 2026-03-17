@@ -3,7 +3,7 @@
  * Renders Twitter's official embed HTML with script loader
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { TWITTER_WIDGET_SCRIPT_URL } from '../../lib/constants/urls';
 
 interface TweetEmbedHTMLProps {
@@ -12,47 +12,61 @@ interface TweetEmbedHTMLProps {
 }
 
 let twitterScriptLoaded = false;
+let twitterScriptPromise: Promise<void> | null = null;
 
 function ensureTwitterScript() {
-  if (twitterScriptLoaded) {
-    // Script already loaded, trigger widget reload
-    if (window.twttr?.widgets) {
-      window.twttr.widgets.load();
-    }
-    return;
+  if (twitterScriptLoaded && window.twttr?.widgets) {
+    return Promise.resolve();
   }
 
-  if (document.querySelector('[data-twitter-embed="true"]')) {
-    twitterScriptLoaded = true;
-    if (window.twttr?.widgets) {
-      window.twttr.widgets.load();
-    }
-    return;
+  if (twitterScriptPromise) {
+    return twitterScriptPromise;
   }
 
-  const script = document.createElement('script');
-  script.src = TWITTER_WIDGET_SCRIPT_URL;
-  script.async = true;
-  script.charset = 'utf-8';
-  script.onload = () => {
-    twitterScriptLoaded = true;
-    if (window.twttr?.widgets) {
-      window.twttr.widgets.load();
+  twitterScriptPromise = new Promise((resolve) => {
+    const existingScript = document.querySelector('[data-twitter-embed="true"]') as HTMLScriptElement | null;
+
+    const onReady = () => {
+      twitterScriptLoaded = true;
+      resolve();
+    };
+
+    if (existingScript) {
+      if (window.twttr?.widgets) {
+        onReady();
+      } else {
+        existingScript.addEventListener('load', onReady, { once: true });
+      }
+      return;
     }
-  };
-  script.setAttribute('data-twitter-embed', 'true');
-  document.body.appendChild(script);
+
+    const script = document.createElement('script');
+    script.src = TWITTER_WIDGET_SCRIPT_URL;
+    script.async = true;
+    script.charset = 'utf-8';
+    script.setAttribute('data-twitter-embed', 'true');
+    script.onload = onReady;
+    script.onerror = () => resolve();
+    document.body.appendChild(script);
+  });
+
+  return twitterScriptPromise;
 }
 
 export default function TweetEmbedHTML({ id, url }: TweetEmbedHTMLProps) {
   const tweetUrl = url || `https://twitter.com/i/status/${id}`;
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    ensureTwitterScript();
+    void ensureTwitterScript().then(() => {
+      if (window.twttr?.widgets && containerRef.current) {
+        window.twttr.widgets.load(containerRef.current);
+      }
+    });
   }, [id]);
 
   return (
-    <div className="my-8 mx-auto w-full max-w-[550px]">
+    <div ref={containerRef} className="my-8 mx-auto w-full max-w-[550px]">
       <blockquote className="twitter-tweet" data-theme="light">
         <p lang="en" dir="ltr">Loading tweet...</p>
         <a href={tweetUrl}>View on Twitter</a>
@@ -60,4 +74,3 @@ export default function TweetEmbedHTML({ id, url }: TweetEmbedHTMLProps) {
     </div>
   );
 }
-

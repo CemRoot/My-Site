@@ -14,7 +14,7 @@ export function extractYouTubeFromMarkdown(markdown) {
 
   // Pattern 1: [Text](https://www.youtube.com/watch?v=VIDEO_ID)
   content = content.replace(
-    /\[([^\]]+)\]\(https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([A-Za-z0-9_-]{11})[^\)]*\)/g,
+    /\[([^\]]*)\]\(https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([A-Za-z0-9_-]{11})[^\)]*\)/g,
     (match, text, videoId) => {
       count++;
       return `\n\n[[EMBED:YOUTUBE:${videoId}]]\n\n`;
@@ -23,7 +23,7 @@ export function extractYouTubeFromMarkdown(markdown) {
 
   // Pattern 2: [Text](https://youtu.be/VIDEO_ID)
   content = content.replace(
-    /\[([^\]]+)\]\(https?:\/\/youtu\.be\/([A-Za-z0-9_-]{11})[^\)]*\)/g,
+    /\[([^\]]*)\]\(https?:\/\/youtu\.be\/([A-Za-z0-9_-]{11})[^\)]*\)/g,
     (match, text, videoId) => {
       count++;
       return `\n\n[[EMBED:YOUTUBE:${videoId}]]\n\n`;
@@ -32,7 +32,7 @@ export function extractYouTubeFromMarkdown(markdown) {
 
   // Pattern 3: [Text](https://www.youtube.com/shorts/VIDEO_ID)
   content = content.replace(
-    /\[([^\]]+)\]\(https?:\/\/(?:www\.)?youtube\.com\/shorts\/([A-Za-z0-9_-]{11})[^\)]*\)/g,
+    /\[([^\]]*)\]\(https?:\/\/(?:www\.)?youtube\.com\/shorts\/([A-Za-z0-9_-]{11})[^\)]*\)/g,
     (match, text, videoId) => {
       count++;
       return `\n\n[[EMBED:YOUTUBE:${videoId}]]\n\n`;
@@ -74,7 +74,7 @@ export function extractTikTokFromMarkdown(markdown) {
 
   // Pattern: [Text](https://www.tiktok.com/@username/video/VIDEO_ID)
   content = content.replace(
-    /\[([^\]]+)\]\((https?:\/\/(?:www\.)?tiktok\.com\/@[^\/]+\/video\/\d+)[^\)]*\)/g,
+    /\[([^\]]*)\]\((https?:\/\/(?:www\.)?tiktok\.com\/@[^\/]+\/video\/\d+)[^\)]*\)/g,
     (match, text, url) => {
       count++;
       // Clean URL (remove query params)
@@ -112,7 +112,7 @@ export function extractTwitterFromMarkdown(markdown) {
 
   // Pattern: [Text](https://twitter.com/username/status/TWEET_ID)
   content = content.replace(
-    /\[([^\]]+)\]\(https?:\/\/(?:www\.)?(?:twitter|x)\.com\/[^\/]+\/status\/(\d+)[^\)]*\)/g,
+    /\[([^\]]*)\]\(https?:\/\/(?:www\.)?(?:twitter|x)\.com\/[^\/]+\/status\/(\d+)[^\)]*\)/g,
     (match, text, tweetId) => {
       count++;
       return `\n\n[[EMBED:TWEET:${tweetId}]]\n\n`;
@@ -152,4 +152,3 @@ export function extractAllEmbedsFromMarkdown(markdown) {
   
   return content;
 }
-

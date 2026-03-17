@@ -10,6 +10,7 @@
  * @returns {string} - Cleaned markdown with token
  */
 export function replaceTikTokBlockquote(markdown, url) {
+  if (!url) return markdown;
   // Pattern: > TikTok Embed followed by links
   // We need to remove everything from "> TikTok Embed" until the end of the blockquote
   
@@ -59,6 +60,7 @@ export function replaceTikTokBlockquote(markdown, url) {
  * @returns {string} - Cleaned markdown with token
  */
 export function replaceTwitterBlockquote(markdown, tweetId) {
+  if (!tweetId) return markdown;
   const lines = markdown.split('\n');
   const cleanedLines = [];
   let inTwitterBlockquote = false;
@@ -127,4 +129,3 @@ export function cleanSocialEmbedRemnants(markdown) {
   
   return cleaned.trim();
 }
-

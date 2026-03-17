@@ -314,7 +314,13 @@ async function scrapeArticleDetails(url) {
   let embedTokens = [];
   if (htmlContent) {
     try {
-      embedTokens = htmlToTokens(htmlContent);
+      const htmlWithTokens = htmlToTokens(htmlContent);
+      embedTokens = Array.from(
+        new Set(
+          (htmlWithTokens?.contentWithTokens?.match(/\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):[^\]]+\]\]/gi) || [])
+            .map(t => t.trim())
+        )
+      );
     } catch { /* ignore embed extraction errors */ }
   }
 
@@ -333,18 +339,8 @@ async function scrapeArticleDetails(url) {
   // Process social embeds in markdown
   markdownContent = replaceTikTokBlockquote(markdownContent);
   markdownContent = replaceTwitterBlockquote(markdownContent);
+  markdownContent = extractAllEmbedsFromMarkdown(markdownContent);
   markdownContent = cleanSocialEmbedRemnants(markdownContent);
-
-  // Extract and inject embed tokens from markdown
-  const markdownEmbeds = extractAllEmbedsFromMarkdown(markdownContent);
-  if (markdownEmbeds.length > 0) {
-    for (const embed of markdownEmbeds) {
-      if (!embedTokens.some(t => t === embed.token)) {
-        embedTokens.push(embed.token);
-      }
-      markdownContent = markdownContent.replace(embed.originalText, embed.token);
-    }
-  }
 
   // Inject HTML embed tokens that weren't found in markdown
   if (embedTokens.length > 0) {
