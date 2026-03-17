@@ -7,6 +7,7 @@ import {
   CERTIFICATION_THEMES,
 } from '../lib/constants/skills';
 import type { SkillCategory } from '../lib/constants/skills';
+import { InteractiveMarquee } from './InteractiveMarquee';
 
 /* ─── Types ─── */
 type TabId = 'skills' | 'methods' | 'certs';
@@ -42,14 +43,14 @@ const COLOR_CLASSES = {
 } as const;
 
 const MARQUEE_SPEEDS = [
-  'animate-marquee-fast',
-  'animate-marquee-med',
-  'animate-marquee-slow',
-  'animate-marquee-fast',
-  'animate-marquee-med',
-  'animate-marquee-slow',
-  'animate-marquee-fast',
-  'animate-marquee-med',
+  1.5,
+  1.2,
+  0.9,
+  1.5,
+  1.2,
+  0.9,
+  1.5,
+  1.2,
 ] as const;
 
 const SORTED_CATEGORIES = [...SKILL_CATEGORIES].sort((a, b) => a.priority - b.priority);
@@ -76,7 +77,7 @@ function getColumnColor(index: number): ThemeColor {
 function MarqueeRow({ category, index }: { category: SkillCategory; index: number }) {
   const color = getColumnColor(index);
   const classes = COLOR_CLASSES[color];
-  const speed = MARQUEE_SPEEDS[index] || 'animate-marquee-med';
+  const speed = MARQUEE_SPEEDS[index] || 1.2;
   const Icon = category.icon;
   const items = category.skills;
 
@@ -89,20 +90,17 @@ function MarqueeRow({ category, index }: { category: SkillCategory; index: numbe
         </span>
         <span className="text-[10px] text-muted-foreground font-mono">({items.length})</span>
       </div>
-      <div className="marquee-mask overflow-hidden">
-        <div className={`flex gap-2.5 w-max ${speed} hover:paused`}>
-          {[...items, ...items].map((skill, idx) => (
-            <div
-              key={idx}
-              aria-hidden={idx >= items.length}
-              className={`flex shrink-0 items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r ${classes.gradientBg} border ${classes.border} backdrop-blur-sm`}
-            >
-              <span className="text-[11px] font-medium text-foreground">{skill.name}</span>
-              <span className={`text-[9px] font-mono ${classes.text} opacity-80`}>{skill.years}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <InteractiveMarquee speed={speed}>
+        {items.map((skill, idx) => (
+          <div
+            key={idx}
+            className={`flex shrink-0 items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r ${classes.gradientBg} border ${classes.border} backdrop-blur-sm`}
+          >
+            <span className="text-[11px] font-medium text-foreground">{skill.name}</span>
+            <span className={`text-[9px] font-mono ${classes.text} opacity-80`}>{skill.years}</span>
+          </div>
+        ))}
+      </InteractiveMarquee>
     </div>
   );
 }
@@ -121,22 +119,19 @@ function MethodologyMarquee() {
         </span>
         <span className="text-[10px] text-muted-foreground font-mono">({items.length})</span>
       </div>
-      <div className="marquee-mask overflow-hidden">
-        <div className="flex gap-2.5 w-max animate-marquee-med hover:paused">
-          {[...items, ...items].map((m, idx) => {
-            const classes = COLOR_CLASSES[m.color];
-            return (
-              <div
-                key={idx}
-                aria-hidden={idx >= items.length}
-                className={`flex shrink-0 items-center px-3 py-1.5 rounded-full bg-gradient-to-r ${classes.gradientBg} border ${classes.border} backdrop-blur-sm`}
-              >
-                <span className={`text-[11px] font-semibold ${classes.text}`}>{m.name}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <InteractiveMarquee speed={1.2}>
+        {items.map((m, idx) => {
+          const classes = COLOR_CLASSES[m.color];
+          return (
+            <div
+              key={idx}
+              className={`flex shrink-0 items-center px-3 py-1.5 rounded-full bg-gradient-to-r ${classes.gradientBg} border ${classes.border} backdrop-blur-sm`}
+            >
+              <span className={`text-[11px] font-semibold ${classes.text}`}>{m.name}</span>
+            </div>
+          );
+        })}
+      </InteractiveMarquee>
     </div>
   );
 }
@@ -193,7 +188,7 @@ function TabBar({ activeTab, onTabChange }: { activeTab: TabId; onTabChange: (t:
   ];
 
   return (
-    <div className="flex justify-center mb-10">
+    <div className="flex justify-center mb-14">
       <div className="inline-flex gap-1 p-1.5 rounded-2xl frosted-glass border border-primary/10">
         {tabs.map((tab) => (
           <button
@@ -226,7 +221,7 @@ function CategoryFilters({
   onCategoryChange: (c: CategoryKey) => void;
 }) {
   return (
-    <div className="flex flex-wrap justify-center gap-2 mb-8">
+    <div className="flex flex-wrap justify-center gap-3 mb-10">
       {CATEGORY_FILTERS.map((f) => {
         const isActive = activeCategory === f.key;
         return (
@@ -254,7 +249,7 @@ function SkillChipsGrid({ activeCategory }: { activeCategory: CategoryKey }) {
       : SORTED_CATEGORIES.filter((c) => c.title === activeCategory);
 
   return (
-    <div className="flex flex-wrap justify-center gap-2.5">
+    <div className="flex flex-wrap justify-center gap-3.5">
       {filteredCategories.map((category, catIdx) => {
         const color = getColumnColor(SORTED_CATEGORIES.indexOf(category));
         const classes = COLOR_CLASSES[color];
