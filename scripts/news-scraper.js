@@ -13,7 +13,7 @@ import { supabase } from './lib/supabaseAdmin.js';
 import { env } from './lib/config.js';
 import { notifyTelegram } from './lib/telegram.js';
 import { htmlToTokens } from './embeds/extractEmbeds.js';
-import { replaceTikTokBlockquote, replaceTwitterBlockquote, cleanSocialEmbedRemnants } from './embeds/cleanMarkdownEmbeds.js';
+import { cleanSocialEmbedRemnants } from './embeds/cleanMarkdownEmbeds.js';
 import { extractAllEmbedsFromMarkdown } from './embeds/extractMarkdownEmbeds.js';
 
 import { SCRAPER_CONFIG, GROQ_PRIMARY_MODEL, GROQ_FALLBACK_MODEL, GROQ_LAST_RESORT_MODEL } from './lib/scraper/config.js';
@@ -337,8 +337,6 @@ async function scrapeArticleDetails(url) {
   markdownContent = cleanedLines.join('\n');
 
   // Process social embeds in markdown
-  markdownContent = replaceTikTokBlockquote(markdownContent);
-  markdownContent = replaceTwitterBlockquote(markdownContent);
   markdownContent = extractAllEmbedsFromMarkdown(markdownContent);
   markdownContent = cleanSocialEmbedRemnants(markdownContent);
 
