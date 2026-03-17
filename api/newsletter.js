@@ -4,7 +4,7 @@
  * Stores emails securely in Supabase (Postgres)
  */
 
-import { supabase } from './lib/supabaseAdmin.js';
+import { supabase } from '../lib/supabaseAdmin.js';
 
 export default async function handler(req, res) {
   // CORS headers - Security: Only allow requests from trusted origins

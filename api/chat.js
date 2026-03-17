@@ -1,7 +1,7 @@
 import Groq from 'groq-sdk';
 import { checkRateLimit, getClientIdentifier, sendRateLimitResponse } from '../lib/rate-limit.js';
 import { withSentry } from '../lib/sentry-server.js';
-import { notifyTelegram } from './lib/telegram.js';
+import { notifyTelegram } from '../lib/telegram.js';
 import {
   generateSessionId,
   saveChatHistory,
@@ -11,8 +11,8 @@ import {
   sanitizeResponse,
   hasSuspiciousCharacters,
   formatPageContext,
-} from './lib/chatHelpers.js';
-import { CHAT_SYSTEM_PROMPT } from './lib/chatSystemPrompt.js';
+} from '../lib/chatHelpers.js';
+import { CHAT_SYSTEM_PROMPT } from '../lib/chatSystemPrompt.js';
 
 const FALLBACK_REASON_EMOJI = {
   'token_exhausted': '💰',

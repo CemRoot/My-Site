@@ -10,8 +10,8 @@
  */
 
 import crypto from 'crypto';
-import { supabase } from './lib/supabaseAdmin.js';
-import { sendTelegramMessage, callTelegramApi } from './lib/telegram.js';
+import { supabase } from '../lib/supabaseAdmin.js';
+import { sendTelegramMessage, callTelegramApi } from '../lib/telegram.js';
 
 const CONFIG = {
   GITHUB_TOKEN: process.env.GITHUB_TOKEN || '',

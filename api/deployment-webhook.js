@@ -11,7 +11,7 @@
  */
 
 import { withSentry } from '../lib/sentry-server.js';
-import { notifyTelegram } from './lib/telegram.js';
+import { notifyTelegram } from '../lib/telegram.js';
 
 function formatDeploymentMessage(payload) {
   const { deployment, project } = payload;

@@ -12,7 +12,7 @@
  */
 
 import crypto from 'crypto';
-import { supabase } from './lib/supabaseAdmin.js';
+import { supabase } from '../lib/supabaseAdmin.js';
 
 const CONFIG = {
   API_SECRET: process.env.CONVERSATION_STATE_API_SECRET || process.env.TELEGRAM_CONTROL_API_SECRET || '',

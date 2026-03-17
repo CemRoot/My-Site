@@ -8,8 +8,8 @@
  * Body: { type: 'error' | 'crash' | 'performance', data: {...} }
  */
 
-import { supabase } from './lib/supabaseAdmin.js';
-import { notifyTelegram } from './lib/telegram.js';
+import { supabase } from '../lib/supabaseAdmin.js';
+import { notifyTelegram } from '../lib/telegram.js';
 
 const CONFIG = {
   SENTRY_DSN: process.env.VITE_SENTRY_DSN || '',

@@ -3,8 +3,8 @@
  * Handles Telegram bot callbacks for LinkedIn automation approval workflow
  */
 
-import { supabase } from './lib/supabaseAdmin.js';
-import { sendTelegramMessage, callTelegramApi } from './lib/telegram.js';
+import { supabase } from '../lib/supabaseAdmin.js';
+import { sendTelegramMessage, callTelegramApi } from '../lib/telegram.js';
 
 const TELEGRAM_CHAT_ID = () => process.env.TELEGRAM_CHAT_ID || '';
 

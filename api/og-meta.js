@@ -4,7 +4,7 @@
  * Handles social media crawler detection
  */
 
-import { supabase } from './lib/supabaseAdmin.js';
+import { supabase } from '../lib/supabaseAdmin.js';
 
 // Detect if request is from a social media crawler
 function isCrawler(userAgent) {
