@@ -3496,6 +3496,12 @@
   }
 
   @media (width >= 48rem) {
+    .md\:block {
+      display: block;
+    }
+  }
+
+  @media (width >= 48rem) {
     .md\:h-8 {
       height: calc(var(--spacing) * 8);
     }
@@ -4052,6 +4058,31 @@
 
   .liquid-pulse {
     animation: 3s ease-in-out infinite pulse-glow;
+  }
+
+  .animate-marquee-slow {
+    animation: marquee 16s linear infinite;
+  }
+
+  .animate-marquee-med {
+    animation: marquee 12s linear infinite;
+  }
+
+  .animate-marquee-fast {
+    animation: marquee 9s linear infinite;
+  }
+
+  .marquee-mask {
+    mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%);
+  }
+
+  .hover\:paused:hover {
+    animation-play-state: paused;
+  }
+
+  .animate-chip-in {
+    animation: chipIn 0.3s ease backwards;
   }
 }
 
@@ -4801,5 +4832,31 @@ html {
 @media (width >= 48rem) {
   .md\:animate-none {
     animation: none;
+  }
+}
+
+@keyframes chipIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.mobile-only {
+  display: block;
+}
+.desktop-only {
+  display: none;
+}
+@media (width >= 48rem) {
+  .mobile-only {
+    display: none;
+  }
+  .desktop-only {
+    display: block;
   }
 }
