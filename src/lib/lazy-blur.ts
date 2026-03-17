@@ -29,11 +29,8 @@ const isMobileDevice = (): boolean => {
 export const initLazyBlur = (): (() => void) | null => {
   // Skip on desktop - let full blur run always
   if (!isMobileDevice()) {
-    console.log('💻 Desktop detected: Full blur active (no lazy loading)');
     return null;
   }
-
-  console.log('📱 Mobile detected: Lazy blur optimization enabled');
 
   // Find all liquid-glass elements
   const elements = document.querySelectorAll<HTMLElement>(
@@ -41,7 +38,6 @@ export const initLazyBlur = (): (() => void) | null => {
   );
 
   if (elements.length === 0) {
-    console.warn('⚠️ No liquid-glass elements found');
     return null;
   }
 
@@ -78,15 +74,12 @@ export const initLazyBlur = (): (() => void) | null => {
     observer.observe(el);
   });
 
-  console.log(`✅ Lazy blur observer attached to ${elements.length} elements`);
-
   // Return cleanup function
   return () => {
     observer.disconnect();
     elements.forEach(el => {
       el.classList.remove('blur-inactive', 'blur-active');
     });
-    console.log('🧹 Lazy blur observer cleaned up');
   };
 };
 
