@@ -15,37 +15,22 @@
  *   node scripts/linkedin-groups-digest.js [daily|weekly] [group-id]
  */
 
-import dotenv from 'dotenv';
-import { createClient } from '@supabase/supabase-js';
 import Groq from 'groq-sdk';
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { supabase } from './lib/supabaseAdmin.js';
+import { env } from './lib/config.js';
+import { sendTelegramMessage as sendTelegram } from './lib/telegram.js';
 
-// Load environment variables from multiple .env files
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const projectRoot = join(__dirname, '..');
 
-// Load .env first, then .env.local (local overrides)
-dotenv.config({ path: join(projectRoot, '.env') });
-if (existsSync(join(projectRoot, '.env.local'))) {
-  dotenv.config({ path: join(projectRoot, '.env.local'), override: true });
-}
-
-// Configuration
 const CONFIG = {
-  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  GROQ_API_KEY: process.env.GROQ_API_KEY,
-  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
-  TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
-  SITE_BASE_URL: process.env.SITE_URL || 'https://cemkoyluoglu.codes'
+  SITE_BASE_URL: env.SITE_URL,
 };
 
-// Initialize clients
-const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
-const groq = new Groq({ apiKey: CONFIG.GROQ_API_KEY });
+const groq = new Groq({ apiKey: env.GROQ_API_KEY });
 
 // Load group configurations
 function loadGroupConfig() {
@@ -59,41 +44,13 @@ function loadGroupConfig() {
   }
 }
 
-/**
- * Send message to Telegram
- */
+const TELEGRAM_MAX_LENGTH = 4000;
+
 async function sendTelegramMessage(text, options = {}) {
-  try {
-    const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`;
-    
-    // Telegram message limit is 4096 characters
-    const MAX_LENGTH = 4000;
-    const truncatedText = text.length > MAX_LENGTH 
-      ? text.substring(0, MAX_LENGTH - 50) + '\n\n... [Truncated]'
-      : text;
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: CONFIG.TELEGRAM_CHAT_ID,
-        text: truncatedText,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-        ...options
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Telegram API error: ${response.status} - ${JSON.stringify(errorData)}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Telegram send error:', error.message);
-    throw error;
-  }
+  const truncatedText = text.length > TELEGRAM_MAX_LENGTH
+    ? text.substring(0, TELEGRAM_MAX_LENGTH - 50) + '\n\n... [Truncated]'
+    : text;
+  return sendTelegram(truncatedText, options);
 }
 
 /**

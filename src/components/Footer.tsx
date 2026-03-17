@@ -1,26 +1,15 @@
 import { Heart, Github, Linkedin, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { PERSONAL_INFO, SOCIAL_LINKS } from '../lib/constants/personal';
+
+const FOOTER_SOCIAL_LINKS = [
+  { icon: Github, href: SOCIAL_LINKS.github.url, label: 'GitHub' },
+  { icon: Linkedin, href: SOCIAL_LINKS.linkedin.url, label: 'LinkedIn' },
+  { icon: Mail, href: `mailto:${PERSONAL_INFO.email}`, label: 'Email' },
+] as const;
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
-
-  const socialLinks = [
-    {
-      icon: Github,
-      href: 'https://github.com/CemRoot',
-      label: 'GitHub',
-    },
-    {
-      icon: Linkedin,
-      href: 'https://www.linkedin.com/in/cem-koyluoglu/',
-      label: 'LinkedIn',
-    },
-    {
-      icon: Mail,
-      href: 'mailto:cemkoyluoglu@icloud.com',
-      label: 'Email',
-    },
-  ];
 
   return (
     <footer className="relative py-12 overflow-hidden px-4 sm:px-6 lg:px-8 border-t border-white/5">
@@ -36,7 +25,7 @@ export function Footer() {
 
           {/* Social Links */}
           <div className="flex items-center gap-4">
-            {socialLinks.map((link, index) => {
+            {FOOTER_SOCIAL_LINKS.map((link, index) => {
               const Icon = link.icon;
               return (
                 <a
@@ -73,10 +62,10 @@ export function Footer() {
           {/* Copyright */}
           <div className="text-center space-y-2">
             <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
-              Made with <Heart className="w-4 h-4 text-primary fill-primary" /> by Cem Koyluoglu
+              Made with <Heart className="w-4 h-4 text-primary fill-primary" /> by {PERSONAL_INFO.name}
             </p>
             <p className="text-xs text-muted-foreground">
-              © {currentYear} All rights reserved. Dublin, Ireland 🇮🇪
+              © {currentYear} All rights reserved. {PERSONAL_INFO.location} 🇮🇪
             </p>
           </div>
         </div>

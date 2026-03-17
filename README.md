@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18.3-61dafb)](https://reactjs.org/)
 [![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-000000?logo=vercel)](https://vercel.com)
 [![Sentry](https://img.shields.io/badge/Monitored%20by-Sentry-362d59?logo=sentry)](https://sentry.io)
@@ -180,9 +180,9 @@
 
 | Layer | Component | Technology | Purpose |
 |-------|-----------|------------|---------|
-| **Frontend** | React SPA | React 18.3 + TypeScript | Modern, responsive UI |
+| **Frontend** | React SPA | React 18.3 + TypeScript 5.9 | Modern, responsive UI |
 | | Build Tool | Vite 6.4 | Fast build & HMR |
-| | Styling | Tailwind CSS + Radix UI | Component library |
+| | Styling | Tailwind CSS 4 (CSS-first) | Utility-first styling |
 | **Backend** | API Gateway | Vercel Edge Functions | Serverless endpoints |
 | | Webhooks | Telegram, Deployment | Event handling |
 | **Database** | Primary DB | Supabase PostgreSQL | Structured data storage |
@@ -205,10 +205,10 @@
 | Technology | Version | Purpose |
 |-----------|---------|---------|
 | **React** | 18.3 | UI Framework |
-| **TypeScript** | 5.0 | Type Safety |
+| **TypeScript** | 5.9 | Type Safety |
 | **Vite** | 6.4 | Build Tool |
-| **Tailwind CSS** | 3.x | Styling |
-| **Radix UI** | Latest | Components |
+| **Tailwind CSS** | 4.x (CSS-first) | Styling |
+| **Radix UI** | Selective | Dialog, Checkbox, Separator |
 | **React Router** | 7.9 | Navigation |
 | **React Markdown** | 10.1 | Content Rendering |
 
@@ -270,9 +270,6 @@ npm run telegram:setup-menu
 
 # Run initial health check
 npm run health:check
-
-# Test translation system
-npm run test:translation
 ```
 
 ---
@@ -499,35 +496,65 @@ npm run health:check
 
 ```
 My-Site/
-├── api/                    # Vercel Serverless Functions
-│   ├── chat.js             # AI Chatbot endpoint
-│   ├── newsletter.js       # Newsletter subscription
-│   ├── telegram-webhook.js # Telegram bot webhook
-│   ├── telegram-control.js # Bot control endpoint
-│   ├── tech-news.js        # News API endpoint
-│   └── ...
-├── docs/                   # n8n Workflow JSONs
-│   ├── n8n-chatbot-ai.json             # Chatbot workflow
+├── api/                          # Vercel Serverless Functions
+│   ├── lib/                      # Shared API modules
+│   │   ├── supabaseAdmin.js      # Shared Supabase admin client
+│   │   ├── telegram.js           # Shared Telegram utilities
+│   │   ├── chatHelpers.js        # Chat endpoint helpers
+│   │   └── chatSystemPrompt.js   # AI system prompt
+│   ├── chat.js                   # AI Chatbot endpoint
+│   ├── tech-news.js              # News API (Edge Runtime)
+│   ├── telegram-webhook.js       # Telegram bot webhook
+│   ├── telegram-control.js       # Bot control endpoint
+│   ├── newsletter.js             # Newsletter subscription
+│   ├── og-meta.js                # Dynamic Open Graph meta
+│   ├── deployment-webhook.js     # Deploy notifications
+│   ├── frontend-health-monitor.js# Error monitoring
+│   ├── conversation-state.js     # Telegram state management
+│   └── revalidate-news.js        # News cache revalidation
+├── docs/                         # Workflow & SQL references
+│   ├── n8n-chatbot-ai.json
 │   ├── n8n-linkedin-unified-workflow.json
-│   └── n8n-news-scraper-workflow-FIXED.json
-├── lib/                    # Shared libraries
-│   ├── rate-limit.js       # Rate limiting
-│   ├── sentry-server.js    # Sentry integration
-│   └── supabase.js         # Database client
-├── scripts/                # Automation scripts
-│   ├── news-scraper.js     # News scraping
-│   ├── manual-article-scraper.js    # Manual article processing
-│   ├── ai-content-generator.js      # Gemini AI content gen
-│   ├── telegram-bot.js     # Telegram bot logic
-│   ├── system-health-check.js       # Health monitoring
-│   └── validation/         # Content validation
-│       ├── smartArticleProcessor.js
-│       └── contentQualityCheck.js
-├── src/                    # React Frontend
-│   ├── components/         # UI Components
-│   ├── pages/              # Page components
-│   └── lib/                # Frontend utilities
-└── public/                 # Static assets
+│   ├── n8n-linkedin-digest-for-groups.json
+│   └── supabase-*.sql            # Database schema files
+├── lib/                          # Server-side shared libraries
+│   ├── rate-limit.js             # Rate limiting
+│   ├── sentry-server.js          # Sentry integration
+│   ├── supabase.js               # Database client
+│   └── conversation-state.js     # Conversation state logic
+├── scripts/                      # Automation & CI scripts
+│   ├── lib/                      # Shared script modules
+│   │   ├── config.js             # Centralized env config
+│   │   ├── supabaseAdmin.js      # Shared Supabase client
+│   │   ├── telegram.js           # Shared Telegram utilities
+│   │   ├── scraper/              # News scraper sub-modules
+│   │   │   ├── config.js         # Scraper configuration
+│   │   │   ├── database.js       # Article storage & dedup
+│   │   │   ├── dateUtils.js      # Date parsing utilities
+│   │   │   └── translator.js     # AI translation pipeline
+│   │   └── menu/                 # Telegram bot menu modules
+│   │       └── keyboards.js      # Keyboard layouts
+│   ├── news-scraper.js           # News scraping orchestrator
+│   ├── telegram-menu-handler.js  # Telegram bot menu handler
+│   ├── manual-article-scraper.js # Manual article processing
+│   ├── system-health-check.js    # Health monitoring
+│   ├── validation/               # Content validation
+│   └── translate/                # Translation prompts
+├── src/                          # React Frontend
+│   ├── components/               # UI Components
+│   │   ├── ui/                   # shadcn/radix primitives
+│   │   ├── chat/                 # Chat widget sub-components
+│   │   ├── embeds/               # Social media embeds
+│   │   └── markdown/             # Markdown rendering
+│   ├── pages/                    # Page components
+│   ├── lib/                      # Frontend shared modules
+│   │   ├── constants/            # Centralized constants
+│   │   ├── types/                # Shared TypeScript types
+│   │   ├── hooks/                # Custom React hooks
+│   │   ├── utils/                # Utility functions
+│   │   └── context/              # React context providers
+│   └── styles/                   # CSS files
+└── public/                       # Static assets
 ```
 
 ---
@@ -536,20 +563,30 @@ My-Site/
 
 ### Development
 ```bash
-npm run dev                     # Start dev server (port 5173)
+npm run dev                     # Start dev server (port 3000)
 npm run build                   # Production build
 ```
 
 ### Tech News System
 ```bash
 npm run scrape:news             # Manual news scraping
-npm run test:translation        # Test translation quality
+npm run cleanup:db              # Clean up old/invalid articles
+```
+
+### LinkedIn Automation
+```bash
+npm run linkedin:analyze        # Analyze content for posting
+npm run linkedin:post           # Post to LinkedIn
+npm run linkedin:test           # Test LinkedIn workflow
+npm run linkedin:groups         # Daily LinkedIn groups digest
+npm run linkedin:groups-weekly  # Weekly LinkedIn groups digest
 ```
 
 ### Telegram Bot
 ```bash
 npm run telegram:setup-menu     # Setup bot menu
 npm run telegram:webhook-setup  # Configure webhook
+npm run telegram:webhook-remove # Remove webhook
 npm run telegram:reset          # Reset webhook & clear queue
 npm run telegram:check          # Check webhook status
 ```
@@ -701,7 +738,7 @@ copies or substantial portions of the Software.
 
 ---
 
-**Last Updated**: December 21, 2025 | **Version**: 2.3.0
+**Last Updated**: March 16, 2026 | **Version**: 3.0.0
 
 [![Built with Love](https://img.shields.io/badge/Built%20with-❤️-red?style=flat-square)](https://github.com/CemRoot/My-Site)
 [![Maintained](https://img.shields.io/badge/Maintained-Yes-green?style=flat-square)](https://github.com/CemRoot/My-Site)

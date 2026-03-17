@@ -1,37 +1,28 @@
 import { useState, useEffect } from 'react';
 import { Github, Linkedin, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
-
-// Use public folder path for preloaded hero image (faster LCP)
-const portraitImage = '/portrait.webp';
+import { PERSONAL_INFO, SOCIAL_LINKS } from '../lib/constants/personal';
+import { HERO_ROLES, HERO_TAGLINE, SCRAMBLE_CHARS, HERO_STATS } from '../lib/constants/content';
+import { ROLE_ROTATE_INTERVAL_MS, SCRAMBLE_FRAME_DELAY_MS } from '../lib/constants/animation';
 
 export function Hero() {
-  const roles = [
-    "AI Engineer",
-    "GenAI Specialist",
-    "DeepFake Detection Expert",
-    "Python Developer",
-    "Azure Cloud Architect",
-    "AI Automation Engineer"
-  ];
 
   const [currentRoleIndex, setCurrentRoleIndex] = useState(0);
-  const [scrambledText, setScrambledText] = useState(roles[0]);
+  const [scrambledText, setScrambledText] = useState(HERO_ROLES[0]);
   const [isScrambling, setIsScrambling] = useState(false);
 
-  // Auto-rotate roles every 3 seconds
   useEffect(() => {
     const rotateInterval = setInterval(() => {
-      setCurrentRoleIndex((prev) => (prev + 1) % roles.length);
-    }, 3000);
+      setCurrentRoleIndex((prev) => (prev + 1) % HERO_ROLES.length);
+    }, ROLE_ROTATE_INTERVAL_MS);
 
     return () => clearInterval(rotateInterval);
   }, []);
 
   // Scramble effect when role changes - optimized interval
   useEffect(() => {
-    const currentRole = roles[currentRoleIndex];
-    const chars = '!<>-_\\/[]{}—=+*^?#________';
+    const currentRole = HERO_ROLES[currentRoleIndex];
+    const chars = SCRAMBLE_CHARS;
     let iterations = 0;
     const maxIterations = currentRole.length;
 
@@ -42,7 +33,7 @@ export function Hero() {
     let animationFrame: number;
     
     const animate = (currentTime: number) => {
-      if (currentTime - lastTime >= 50) { // 50ms delay between updates
+      if (currentTime - lastTime >= SCRAMBLE_FRAME_DELAY_MS) {
         setScrambledText(
           currentRole
             .split('')
@@ -158,7 +149,7 @@ export function Hero() {
                 </span>
               </h1>
               <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto lg:mx-0" style={{ paddingTop: '0.25em', paddingBottom: '0.25em', lineHeight: '1.6' }}>
-                AI Engineer crafting intelligent automation systems with Python, GenAI, and Azure Cloud. Expert in DeepFake detection and AI-powered solutions.
+                {HERO_TAGLINE}
               </p>
             </div>
 
@@ -171,7 +162,7 @@ export function Hero() {
                 Python · 3+ Years
               </div>
               <div className="px-4 py-2 rounded-xl liquid-glass border border-accent/20 liquid-shimmer">
-                Dublin, Ireland
+                {PERSONAL_INFO.location}
               </div>
             </div>
 
@@ -183,7 +174,7 @@ export function Hero() {
                 asChild
                 className="group relative overflow-hidden border-primary/20 hover:border-primary/40 rounded-2xl px-8 backdrop-blur-sm bg-primary/5 hover:bg-primary/10 transition-all duration-300"
               >
-                <a href="https://github.com/CemRoot" target="_blank" rel="noopener noreferrer">
+                <a href={SOCIAL_LINKS.github.url} target="_blank" rel="noopener noreferrer">
                   <Github className="w-4 h-4 mr-2" />
                   GitHub
                 </a>
@@ -194,7 +185,7 @@ export function Hero() {
                 asChild
                 className="group relative overflow-hidden border-secondary/20 hover:border-secondary/40 rounded-2xl px-8 backdrop-blur-sm bg-secondary/5 hover:bg-secondary/10 transition-all duration-300"
               >
-                <a href="https://www.linkedin.com/in/cem-koyluoglu/" target="_blank" rel="noopener noreferrer">
+                <a href={SOCIAL_LINKS.linkedin.url} target="_blank" rel="noopener noreferrer">
                   <Linkedin className="w-4 h-4 mr-2" />
                   LinkedIn
                 </a>
@@ -203,30 +194,16 @@ export function Hero() {
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4 pt-4">
-              <div className="relative group liquid-glow">
-                <div className="relative p-4 rounded-2xl frosted-glass neon-border-primary hover:scale-105 transition-all duration-300 liquid-shimmer">
-                  <div className="text-3xl sm:text-4xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-1">
-                    97%
+              {HERO_STATS.map((stat, index) => (
+                <div key={index} className="relative group liquid-glow">
+                  <div className={`relative p-4 rounded-2xl frosted-glass ${stat.border} hover:scale-105 transition-all duration-300 liquid-shimmer`}>
+                    <div className={`text-3xl sm:text-4xl bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent mb-1`}>
+                      {stat.value}
+                    </div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">{stat.label}</div>
                   </div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">Deepfake Detection</div>
                 </div>
-              </div>
-              <div className="relative group liquid-glow">
-                <div className="relative p-4 rounded-2xl frosted-glass neon-border-secondary hover:scale-105 transition-all duration-300 liquid-shimmer">
-                  <div className="text-3xl sm:text-4xl bg-gradient-to-r from-secondary to-accent bg-clip-text text-transparent mb-1">
-                    45%
-                  </div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">Load Reduction</div>
-                </div>
-              </div>
-              <div className="relative group liquid-glow">
-                <div className="relative p-4 rounded-2xl frosted-glass border border-accent/30 hover:border-accent/50 hover:scale-105 transition-all duration-300 liquid-shimmer">
-                  <div className="text-3xl sm:text-4xl bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent mb-1">
-                    40%
-                  </div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">Ops Efficiency</div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
@@ -240,8 +217,8 @@ export function Hero() {
               <div className="relative rounded-3xl liquid-border">
                 {/* Image */}
                 <img
-                  src={portraitImage}
-                  alt="Cem Koyluoglu - AI Engineer"
+                  src={PERSONAL_INFO.portraitImage}
+                  alt={`${PERSONAL_INFO.name} - ${PERSONAL_INFO.title}`}
                   width="1024"
                   height="1024"
                   className="w-full h-auto relative rounded-3xl transition-all duration-300 group-hover:scale-105"

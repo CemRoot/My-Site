@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { PERSONAL_INFO, SOCIAL_LINKS, EDUCATION } from '../lib/constants/personal';
+import { DEFAULT_OG_IMAGE_URL } from '../lib/constants/urls';
+import { SEO_DEFAULT_KEYWORDS, SEO_KNOWS_ABOUT } from '../lib/constants/content';
 import type { SEOMetadata } from '../lib/types';
 
 /**
@@ -9,11 +11,11 @@ import type { SEOMetadata } from '../lib/types';
 export function SEO({
   title = 'Welcome',
   description = `${PERSONAL_INFO.bio.short} Based in ${PERSONAL_INFO.location}. Available for freelance projects and full-time opportunities.`,
-  keywords = 'AI Engineer, Machine Learning, NLP, Computer Vision, LLMs, Python Developer, Azure Specialist, Microsoft 365, System Operations, Dublin Ireland, Freelance AI Developer, RAG, LangChain, Deep Learning, TensorFlow, PyTorch, Cloud Solutions, Data Engineering',
+  keywords = SEO_DEFAULT_KEYWORDS,
   author = PERSONAL_INFO.name,
   ogTitle = `${PERSONAL_INFO.name} - ${PERSONAL_INFO.title}`,
   ogDescription = `AI Engineer with ${EDUCATION.degree} (${EDUCATION.classification}). Expert in LLMs, NLP, Computer Vision, Azure & Microsoft 365. Based in ${PERSONAL_INFO.location}, available for freelance & full-time opportunities.`,
-  ogImage = 'https://cemkoyluoglu.codes/og-image.png',
+  ogImage = DEFAULT_OG_IMAGE_URL,
   twitterCard = 'summary_large_image',
 }: SEOMetadata = {}) {
   useEffect(() => {
@@ -56,7 +58,7 @@ export function SEO({
     setMetaTag('twitter:title', ogTitle);
     setMetaTag('twitter:description', ogDescription);
     setMetaTag('twitter:image', ogImage);
-    setMetaTag('twitter:creator', '@CemKoyluoglu');
+    setMetaTag('twitter:creator', PERSONAL_INFO.twitterHandle);
 
     // Additional SEO tags
     setMetaTag('theme-color', '#5BE7FF');
@@ -94,19 +96,7 @@ export function SEO({
         name: EDUCATION.institution,
         degree: EDUCATION.degree,
       },
-      knowsAbout: [
-        'Artificial Intelligence',
-        'Machine Learning',
-        'Natural Language Processing',
-        'Computer Vision',
-        'Large Language Models',
-        'Python Programming',
-        'Microsoft Azure',
-        'Microsoft 365',
-        'System Operations',
-        'Cloud Computing',
-        'Data Engineering',
-      ],
+      knowsAbout: [...SEO_KNOWS_ABOUT],
       sameAs: [
         SOCIAL_LINKS.github.url,
         SOCIAL_LINKS.linkedin.url,

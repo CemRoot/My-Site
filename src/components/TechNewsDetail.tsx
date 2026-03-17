@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Calendar, ArrowLeft, ExternalLink, Clock, Share2 } from 'lucide-react';
 import { Badge } from './ui/badge';
@@ -6,192 +6,26 @@ import { Button } from './ui/button';
 import { Skeleton } from './ui/skeleton';
 import { Separator } from './ui/separator';
 import { toast } from 'sonner';
+import { DEFAULT_OG_IMAGE_URL } from '../lib/constants/urls';
 import { usePageContext } from '../lib/context/PageContext';
 import SmartMarkdown from './markdown/SmartMarkdown';
-import { supabase } from '../../lib/supabase.js';
 import { SEO } from './SEO';
 import { getOptimizedImageUrl, IMAGE_PRESETS } from '../lib/utils/imageProxy';
 import ErrorBoundary from './ErrorBoundary';
-
-interface Article {
-  id: string;
-  title: string;
-  description: string;
-  content: string;
-  image: string;
-  date: string;
-  sourceUrl: string;
-  slug: string;
-  createdAt: string;
-  originalTitle?: string;
-  category?: string;
-  originalSource?: string;
-}
-
-interface NewsDatabase {
-  articles: Article[];
-}
-
-/**
- * Tech News Detail Component
- * Displays full article content with markdown rendering
- */
-function sanitizeArticleContent(content: string) {
-  if (!content) {
-    return content;
-  }
-
-  let sanitized = content;
-
-  // ============================================
-  // FRONTEND CONTENT SANITIZATION
-  // Minimal cleanup only - embeds are now handled via [[EMBED:...]] tokens
-  // ============================================
-  
-  // 1. Remove ANY remaining markdown images (backend already handles this)
-  sanitized = sanitized.replace(/!\[[^\]]*\]\([^)]+\)/g, '');
-
-  // 2. Remove Nuvemmag logo and branding
-  sanitized = sanitized.replace(
-    /\[!\[[^\]]*\]\([^)]+\)\]\(\s*https?:\/\/(?:www\.)?nuvemmag\.com\/?\s*\)/gi,
-    '',
-  );
-  sanitized = sanitized.replace(
-    /<a[^>]*href="https?:\/\/(?:www\.)?nuvemmag\.com\/?"[^>]*>\s*<img[\s\S]*?<\/a>/gi,
-    '',
-  );
-  sanitized = sanitized.replace(
-    /!\[[^\]]*\]\([^)]*NuvemMag-Logo[^)]*\)/gi,
-    '',
-  );
-
-  // 3. Clean up any remaining broken widget text (legacy content only)
-  sanitized = sanitized
-    .replace(/>\s*TikTok Embed\s*/gi, '')
-    .replace(/>\s*Twitter Widget Iframe\s*/gi, '')
-    .replace(/>\s*YouTube Widget\s*/gi, '')
-    .replace(/>\s*Watch more exciting videos on TikTok[\\]*\s*/gi, '')
-    .replace(/>\s*\[[\d.MK]+\]\([^)]+\)/gi, '') // Remove view count links
-    .replace(/>\s*Watch now\s*/gi, '')
-    .replace(/>\s*\\?\s*/gi, '')
-    .replace(/>\s*$/gm, '');
-
-  // 4. Clean up excessive whitespace
-  sanitized = sanitized.replace(/(\r?\n){3,}/g, '\n\n');
-  sanitized = sanitized.replace(/[ \t]+$/gm, '');
-
-  return sanitized.trim();
-}
+import { formatDate } from '../lib/utils/formatDate';
+import {
+  getCategoryColor,
+  getSourceDomain,
+  estimateReadTime,
+  sanitizeArticleContent,
+} from '../lib/utils/articleHelpers';
+import { useArticle } from '../lib/hooks/useArticle';
 
 function TechNewsDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const [article, setArticle] = useState<Article | null>(null);
-  const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { article, relatedArticles, loading, error } = useArticle(slug);
   const { setPageInfo } = usePageContext();
-
-  useEffect(() => {
-    fetchArticle();
-  }, [slug]);
-
-  const fetchArticle = async () => {
-    try {
-      setLoading(true);
-      
-      // Use direct Supabase query (works in both dev and production)
-      const { data: articleData, error: articleError } = await supabase
-        .from('tech_news_articles')
-        .select('*')
-        .eq('slug', slug)
-        .single();
-
-      if (articleError || !articleData) {
-        throw new Error('Article not found');
-      }
-
-      // Format article to match interface
-      const formattedArticle: Article = {
-        id: articleData.id,
-        title: articleData.title,
-        description: articleData.description,
-        content: articleData.content,
-        originalTitle: articleData.original_title,
-        image: articleData.image_url,
-        date: articleData.date,
-        category: articleData.category,
-        sourceUrl: articleData.source_url,
-        originalSource: articleData.original_source,
-        slug: articleData.slug,
-        createdAt: articleData.created_at,
-      };
-
-      setArticle(formattedArticle);
-
-      // Increment view count
-      await supabase.rpc('increment_article_views', { article_id: articleData.id });
-      
-      // Fetch related articles (3 recent articles from same category if available)
-      const category = formattedArticle.category;
-      const { data: relatedData } = await supabase
-        .from('tech_news_articles')
-        .select('*')
-        .eq('category', category || 'AI')
-        .neq('id', articleData.id)
-        .order('date', { ascending: false })
-        .limit(3);
-
-      if (relatedData) {
-        const formattedRelated = relatedData.map((a: any) => ({
-          id: a.id,
-          title: a.title,
-          description: a.description,
-          content: a.content,
-          originalTitle: a.original_title,
-          image: a.image_url,
-          date: a.date,
-          category: a.category,
-          sourceUrl: a.source_url,
-          originalSource: a.original_source,
-          slug: a.slug,
-          createdAt: a.created_at,
-        }));
-        setRelatedArticles(formattedRelated);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    try {
-      // Handle format: "2/7/2025" (day/month/year) or ISO format
-      if (dateString.includes('/')) {
-        const [day, month, year] = dateString.split('/');
-        return new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`).toLocaleDateString('en-GB', {
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric'
-        });
-      }
-      return new Date(dateString).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric'
-      });
-    } catch {
-      return dateString;
-    }
-  };
-
-  const estimateReadTime = (content: string) => {
-    const wordsPerMinute = 200;
-    const wordCount = content.split(/\s+/).length;
-    return Math.ceil(wordCount / wordsPerMinute);
-  };
 
   const handleShare = async () => {
     const shareData = {
@@ -211,29 +45,6 @@ function TechNewsDetail() {
       if (err instanceof Error && err.name !== 'AbortError') {
         toast.error('Failed to share');
       }
-    }
-  };
-
-  const getCategoryColor = (category?: string) => {
-    const colors: Record<string, string> = {
-      'AI': '#FF6B6B',
-      'AI Applications': '#4ECDC4',
-      'Tech': '#45B7D1',
-      'Science': '#96CEB4',
-      'Sustainability': '#95E1D3',
-      'News': '#FFB6C1',
-      'Latest News': '#DDA15E'
-    };
-    return colors[category || ''] || '#A8DADC';
-  };
-
-  const getSourceDomain = (url: string) => {
-    try {
-      const domain = new URL(url).hostname.replace('www.', '');
-      // Capitalize first letter
-      return domain.charAt(0).toUpperCase() + domain.slice(1);
-    } catch {
-      return 'Original Source';
     }
   };
 
@@ -326,7 +137,7 @@ function TechNewsDetail() {
         description={article.description}
         ogTitle={article.title}
         ogDescription={article.description}
-        ogImage={article.image || 'https://cemkoyluoglu.codes/og-image.png'}
+        ogImage={article.image || DEFAULT_OG_IMAGE_URL}
       />
       
       <main

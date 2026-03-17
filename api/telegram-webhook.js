@@ -3,81 +3,37 @@
  * Handles Telegram bot callbacks for LinkedIn automation approval workflow
  */
 
-// ES Module imports for Vercel serverless function
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from './lib/supabaseAdmin.js';
+import { sendTelegramMessage, callTelegramApi } from './lib/telegram.js';
 
-const CONFIG = {
-  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
-  TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID || '',
-};
+const TELEGRAM_CHAT_ID = () => process.env.TELEGRAM_CHAT_ID || '';
 
-const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
-
-// Rate limiting cache (in-memory, resets on function restart)
 const rateLimitCache = new Map();
-
-// Callback query deduplication cache (prevent infinite loops)
 const processedCallbacks = new Map();
 
-// Conversation state management moved to Supabase (lib/supabase.js)
-// to handle Vercel serverless cold starts properly
-
-// UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Helper function: Validate UUID
 function isValidUUID(uuid) {
   return UUID_REGEX.test(uuid);
 }
 
-// Helper function: Rate limiting check
 function checkRateLimit(userId, maxRequests = 10, windowMs = 60000) {
   const now = Date.now();
   const userKey = `user_${userId}`;
-  
+
   if (!rateLimitCache.has(userKey)) {
     rateLimitCache.set(userKey, []);
   }
-  
+
   const requests = rateLimitCache.get(userKey).filter(time => now - time < windowMs);
-  
+
   if (requests.length >= maxRequests) {
-    return false; // Rate limit exceeded
+    return false;
   }
-  
+
   requests.push(now);
   rateLimitCache.set(userKey, requests);
   return true;
-}
-
-// Note: LinkedIn posting is now handled by n8n workflow
-// This keeps the webhook lightweight and delegates OAuth-based posting to n8n
-
-// Helper function to send Telegram messages
-async function sendTelegramMessage(text, options = {}) {
-  const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`;
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: CONFIG.TELEGRAM_CHAT_ID,
-        text: text,
-        parse_mode: 'HTML',
-        ...options,
-      }),
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Telegram API error: ${response.status} - ${JSON.stringify(errorData)}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Failed to send Telegram message:', error.message);
-    throw error;
-  }
 }
 
 export default async function handler(req, res) {
@@ -130,13 +86,12 @@ export default async function handler(req, res) {
       const text = message.text;
 
       // Ensure the message is from the authorized chat ID
-      if (chatId.toString() !== CONFIG.TELEGRAM_CHAT_ID) {
+      if (chatId.toString() !== TELEGRAM_CHAT_ID()) {
         console.warn(`Unauthorized Telegram message from chat ID: ${chatId}`);
         return res.status(200).json({ success: false, message: 'Unauthorized chat ID' });
       }
 
       try {
-        // Import menu handler functions
         const menuHandler = await import('../scripts/telegram-menu-handler.js');
 
         // Handle commands
@@ -210,7 +165,7 @@ export default async function handler(req, res) {
       const fromId = callback_query.from.id;
 
       // Ensure the callback is from the authorized chat ID
-      if (chatId.toString() !== CONFIG.TELEGRAM_CHAT_ID) {
+      if (chatId.toString() !== TELEGRAM_CHAT_ID()) {
         console.warn(`Unauthorized Telegram callback from chat ID: ${chatId}`);
         return res.status(200).json({ success: false, message: 'Unauthorized chat ID' });
       }
@@ -223,14 +178,9 @@ export default async function handler(req, res) {
         if (data.startsWith('action_')) {
           const action = data.replace('action_', '');
           
-          // Answer callback query first
-          await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              callback_query_id: callback_query.id,
-              text: 'İşlem yapılıyor...'
-            })
+          await callTelegramApi('answerCallbackQuery', {
+            callback_query_id: callback_query.id,
+            text: 'İşlem yapılıyor...',
           });
 
           switch (action) {
@@ -310,13 +260,9 @@ export default async function handler(req, res) {
         if (data.startsWith('chat_backend_')) {
           const backend = data.replace('chat_backend_', '');
           
-          await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              callback_query_id: callback_query.id,
-              text: 'Backend değiştiriliyor...'
-            })
+          await callTelegramApi('answerCallbackQuery', {
+            callback_query_id: callback_query.id,
+            text: 'Backend değiştiriliyor...',
           });
 
           const menuHandler = await import('../scripts/telegram-menu-handler.js');
@@ -331,13 +277,9 @@ export default async function handler(req, res) {
           if (parts.length === 3) {
             const [_, action, workflowName] = parts;
             
-            await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                callback_query_id: callback_query.id,
-                text: 'İşlem yapılıyor...'
-              })
+            await callTelegramApi('answerCallbackQuery', {
+              callback_query_id: callback_query.id,
+              text: 'İşlem yapılıyor...',
             });
 
             const menuHandler = await import('../scripts/telegram-menu-handler.js');
@@ -351,13 +293,9 @@ export default async function handler(req, res) {
         if (data.startsWith('source_')) {
           const [_, confirmation] = data.split('_');
           
-          await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              callback_query_id: callback_query.id,
-              text: 'İşleniyor...'
-            })
+          await callTelegramApi('answerCallbackQuery', {
+            callback_query_id: callback_query.id,
+            text: 'İşleniyor...',
           });
           
           if (confirmation === 'yes' || confirmation === 'no') {
@@ -396,14 +334,10 @@ export default async function handler(req, res) {
           
           // Answer callback query IMMEDIATELY (before any DB checks)
           try {
-            await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                callback_query_id: callbackQueryId,
-                text: '⏳ İşleniyor...',
-                show_alert: false
-              })
+            await callTelegramApi('answerCallbackQuery', {
+              callback_query_id: callbackQueryId,
+              text: '⏳ İşleniyor...',
+              show_alert: false,
             });
             console.log(`✅ Callback acknowledged: ${callbackQueryId}`);
           } catch (ackError) {
@@ -600,28 +534,18 @@ export default async function handler(req, res) {
           }
         }
 
-        // Edit the original message to show it's been handled
-        await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/editMessageText`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            message_id: messageId,
-            text: `${callback_query.message.text}\n\n--- \n<i>${responseText}</i>`,
-            parse_mode: 'HTML',
-            reply_markup: { inline_keyboard: [] } // Remove keyboard
-          }),
+        await callTelegramApi('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text: `${callback_query.message.text}\n\n--- \n<i>${responseText}</i>`,
+          parse_mode: 'HTML',
+          reply_markup: { inline_keyboard: [] },
         });
 
-        // Answer the callback query to remove loading state
-        await fetch(`https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            callback_query_id: callback_query.id,
-            text: responseText,
-            show_alert: false
-          }),
+        await callTelegramApi('answerCallbackQuery', {
+          callback_query_id: callback_query.id,
+          text: responseText,
+          show_alert: false,
         });
 
         return res.status(200).json({ success: true, message: responseText });

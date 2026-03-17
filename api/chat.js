@@ -1,135 +1,36 @@
 import Groq from 'groq-sdk';
 import { checkRateLimit, getClientIdentifier, sendRateLimitResponse } from '../lib/rate-limit.js';
 import { withSentry } from '../lib/sentry-server.js';
-import { createClient } from '@supabase/supabase-js';
+import { notifyTelegram } from './lib/telegram.js';
+import {
+  generateSessionId,
+  saveChatHistory,
+  updateChatBackendSetting,
+  getChatBackend,
+  forwardToN8n,
+  sanitizeResponse,
+  hasSuspiciousCharacters,
+  formatPageContext,
+} from './lib/chatHelpers.js';
+import { CHAT_SYSTEM_PROMPT } from './lib/chatSystemPrompt.js';
 
-// Initialize Supabase client for settings and chat history
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
+const FALLBACK_REASON_EMOJI = {
+  'token_exhausted': '💰',
+  'ai_error': '🤖',
+  'connection_error': '🔌',
+  'timeout': '⏱️',
+  'rate_limit': '🚫',
+  'unknown': '❓',
+};
 
-/**
- * Generate a unique session ID for chat tracking
- * @returns {string} - Session ID
- */
-function generateSessionId() {
-  return `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-}
-
-/**
- * Save chat message to Supabase chat_history table
- * @param {string} sessionId - Chat session ID
- * @param {string} role - 'user' or 'assistant'
- * @param {string} content - Message content
- * @param {string} source - 'vercel' or 'n8n_fallback'
- * @returns {Promise<boolean>} - Success status
- */
-async function saveChatMessage(sessionId, role, content, source = 'vercel') {
-  try {
-    const { error } = await supabase
-      .from('chat_history')
-      .insert({
-        session_id: sessionId,
-        role: role,
-        content: content,
-        source: source, // Track which backend handled this
-        created_at: new Date().toISOString()
-      });
-
-    if (error) {
-      console.error(`❌ Error saving ${role} message to chat_history:`, error);
-      return false;
-    }
-
-    console.log(`✅ Saved ${role} message to chat_history (session: ${sessionId}, source: ${source})`);
-    return true;
-  } catch (error) {
-    console.error(`❌ Exception saving ${role} message:`, error);
-    return false;
-  }
-}
-
-/**
- * Save both user and AI messages to chat history
- * @param {string} sessionId - Chat session ID
- * @param {string} userMessage - User's message
- * @param {string} aiResponse - AI's response
- * @param {string} source - 'vercel' or 'n8n_fallback'
- */
-async function saveChatHistory(sessionId, userMessage, aiResponse, source = 'vercel') {
-  // Save both messages in parallel for better performance
-  await Promise.allSettled([
-    saveChatMessage(sessionId, 'user', userMessage, source),
-    saveChatMessage(sessionId, 'assistant', aiResponse, source)
-  ]);
-}
-
-/**
- * Update chat backend setting in Supabase when fallback occurs
- * @param {string} newBackend - 'vercel' or 'n8n'
- * @param {string} reason - Reason for the switch
- * @returns {Promise<boolean>} - Success status
- */
-async function updateChatBackendSetting(newBackend, reason = 'auto_fallback') {
-  try {
-    const { error } = await supabase
-      .from('system_settings')
-      .update({
-        setting_value: newBackend,
-        updated_at: new Date().toISOString(),
-        updated_by: `auto-fallback (${reason})`,
-        description: `Otomatik geçiş: ${reason} - ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`
-      })
-      .eq('setting_key', 'chat_backend');
-
-    if (error) {
-      console.error('❌ Error updating chat_backend setting:', error);
-      return false;
-    }
-
-    console.log(`✅ Chat backend updated to "${newBackend}" (reason: ${reason})`);
-    return true;
-  } catch (error) {
-    console.error('❌ Exception updating chat_backend setting:', error);
-    return false;
-  }
-}
-
-/**
- * Send Telegram notification when n8n fallback occurs
- * @param {string} reason - Fallback reason (e.g., 'token_exhausted', 'ai_error', 'connection_error')
- * @param {string} errorDetails - Detailed error message
- * @param {string} userMessage - The user's original message (truncated for privacy)
- */
 async function sendFallbackNotification(reason, errorDetails = '', userMessage = '') {
-  try {
-    const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-    const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+  const truncatedMessage = userMessage.length > 50
+    ? userMessage.substring(0, 50) + '...'
+    : userMessage;
 
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-      console.warn('⚠️ Telegram credentials not configured, skipping fallback notification');
-      return false;
-    }
+  const emoji = FALLBACK_REASON_EMOJI[reason] || FALLBACK_REASON_EMOJI['unknown'];
 
-    // Truncate user message for privacy (first 50 chars)
-    const truncatedMessage = userMessage.length > 50 
-      ? userMessage.substring(0, 50) + '...' 
-      : userMessage;
-
-    // Prepare notification message
-    const reasonEmoji = {
-      'token_exhausted': '💰',
-      'ai_error': '🤖',
-      'connection_error': '🔌',
-      'timeout': '⏱️',
-      'rate_limit': '🚫',
-      'unknown': '❓'
-    };
-
-    const emoji = reasonEmoji[reason] || reasonEmoji['unknown'];
-    
-    const message = `⚠️ <b>N8N CHAT FALLBACK UYARISI</b>
+  const message = `⚠️ <b>N8N CHAT FALLBACK UYARISI</b>
 
 ${emoji} <b>Sebep:</b> ${reason}
 ⏰ <b>Zaman:</b> ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}
@@ -143,215 +44,15 @@ ${errorDetails ? `📋 <b>Hata Detayı:</b>\n<code>${errorDetails.substring(0, 2
 1. n8n token/quota durumunu kontrol et
 2. Düzeltildikten sonra Telegram'dan /menu → Chat Backend → n8n seç`;
 
-    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: TELEGRAM_CHAT_ID,
-        text: message,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('❌ Telegram notification failed:', errorData);
-      return false;
-    }
-
-    console.log('📱 Telegram fallback notification sent successfully');
-    return true;
-  } catch (error) {
-    console.error('❌ Error sending Telegram fallback notification:', error);
-    return false;
-  }
+  await notifyTelegram(message);
 }
 
-/**
- * Get chat backend setting from Supabase
- * @returns {Promise<string>} - 'vercel' or 'n8n'
- */
-async function getChatBackend() {
-  try {
-    const { data, error } = await supabase
-      .from('system_settings')
-      .select('setting_value')
-      .eq('setting_key', 'chat_backend')
-      .single();
-
-    if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching chat backend setting:', error);
-      return 'vercel'; // Default fallback
-    }
-
-    return data?.setting_value || 'vercel';
-  } catch (error) {
-    console.error('Chat backend check error:', error);
-    return 'vercel'; // Default fallback on error
-  }
-}
-
-/**
- * Forward request to n8n webhook
- */
-async function forwardToN8n(message, pageContext) {
-  const N8N_CHAT_WEBHOOK = process.env.N8N_CHAT_WEBHOOK;
-  
-  if (!N8N_CHAT_WEBHOOK) {
-    throw new Error('N8N_CHAT_WEBHOOK environment variable not configured');
-  }
-
-  const response = await fetch(N8N_CHAT_WEBHOOK, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message,
-      pageContext,
-      sessionId: `session_${Date.now()}`,
-      timestamp: new Date().toISOString()
-    })
-  });
-
-  // Get response as text first to handle empty responses
-  const responseText = await response.text();
-  
-  if (!response.ok) {
-    throw new Error(`n8n webhook error (${response.status}): ${responseText}`);
-  }
-
-  // Handle empty response
-  if (!responseText || responseText.trim() === '') {
-    throw new Error('n8n returned empty response');
-  }
-
-  // Parse JSON safely
-  try {
-    return JSON.parse(responseText);
-  } catch (parseError) {
-    console.error('n8n response parse error:', responseText.substring(0, 200));
-    throw new Error(`n8n returned invalid JSON: ${parseError.message}`);
-  }
-}
-
-/**
- * Sanitize AI response to remove unwanted characters and fix common issues
- * @param {string} text - The raw AI response
- * @returns {string} - Cleaned response
- */
-function sanitizeResponse(text) {
-  if (!text || typeof text !== 'string') return text;
-
-  // Remove Chinese, Japanese, Korean characters (CJK Unified Ideographs)
-  // Keep only Latin characters, numbers, common punctuation, emojis, and Turkish characters
-  let cleaned = text
-    // Remove CJK characters (Chinese, Japanese Kanji, Korean Hanja)
-    .replace(/[\u4E00-\u9FFF]/g, '')
-    // Remove Japanese Hiragana and Katakana
-    .replace(/[\u3040-\u309F\u30A0-\u30FF]/g, '')
-    // Remove Korean Hangul
-    .replace(/[\uAC00-\uD7AF\u1100-\u11FF]/g, '')
-    // Remove other CJK symbols
-    .replace(/[\u3000-\u303F\u31F0-\u31FF\uFF00-\uFFEF]/g, '')
-    // Remove Arabic script
-    .replace(/[\u0600-\u06FF]/g, '')
-    // Remove Hebrew script
-    .replace(/[\u0590-\u05FF]/g, '')
-    // Remove Cyrillic (Russian, etc.) - unless specifically needed
-    .replace(/[\u0400-\u04FF]/g, '')
-    // Clean up multiple spaces
-    .replace(/\s{3,}/g, '  ')
-    // Clean up empty brackets or parentheses that might remain
-    .replace(/\(\s*\)/g, '')
-    .replace(/\[\s*\]/g, '')
-    // Trim whitespace
-    .trim();
-
-  // If the response became too short after cleaning, return a fallback
-  if (cleaned.length < 10 && text.length > 20) {
-    console.warn('Response was heavily cleaned, original length:', text.length, 'cleaned length:', cleaned.length);
-    return '[TOPIC:CEM] I apologize, but I encountered an issue with my response. Please try asking your question again!';
-  }
-
-  return cleaned;
-}
-
-/**
- * Detect if text contains suspicious non-Latin characters
- * @param {string} text - Text to check
- * @returns {boolean} - True if suspicious characters found
- */
-function hasSuspiciousCharacters(text) {
-  if (!text) return false;
-  // Check for CJK, Arabic, Hebrew characters
-  return /[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF\u0600-\u06FF\u0590-\u05FF]/.test(text);
-}
-
-function formatPageContext(context) {
-  if (!context || typeof context !== 'object') {
-    return null;
-  }
-
-  const parts = ['=== CURRENT PAGE INFORMATION ==='];
-
-  if (context.title) {
-    parts.push(`📄 Page Title: ${context.title}`);
-  }
-
-  if (context.path) {
-    parts.push(`🔗 Page URL: ${context.path}`);
-  }
-
-  if (context.summary) {
-    parts.push(`\n📝 Page Summary:\n${context.summary}`);
-  }
-
-  if (context.description) {
-    parts.push(`\n💬 Description:\n${context.description}`);
-  }
-
-  if (Array.isArray(context.highlights) && context.highlights.length > 0) {
-    parts.push('\n✨ Key Highlights:');
-    for (const highlight of context.highlights) {
-      parts.push(`  • ${highlight}`);
-    }
-  }
-
-  if (Array.isArray(context.features) && context.features.length > 0) {
-    parts.push('\n🎯 Key Features:');
-    for (const feature of context.features) {
-      parts.push(`  • ${feature}`);
-    }
-  }
-
-  if (context.technologies && Array.isArray(context.technologies)) {
-    parts.push(`\n⚙️ Technologies: ${context.technologies.join(', ')}`);
-  }
-
-  if (context.content) {
-    parts.push(`\n📖 Main Content:\n${context.content}`);
-  }
-
-  if (context.lastUpdated) {
-    parts.push(`\n🕐 Last Updated: ${context.lastUpdated}`);
-  }
-
-  parts.push('\n=== END OF PAGE INFORMATION ===');
-  parts.push('\nUSE THIS INFORMATION when the user asks about "this page", "here", "current section", etc.');
-
-  return parts.join('\n');
-}
-
-// Vercel Serverless Function
 export default withSentry(async function handler(req, res) {
-  // CORS headers - Security: Only allow requests from trusted origins
   const ALLOWED_ORIGINS = [
     'https://cemkoyluoglu.codes',
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
   ].filter(Boolean);
-  
+
   const origin = req.headers.origin;
   if (ALLOWED_ORIGINS.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
@@ -368,10 +69,9 @@ export default withSentry(async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Security: Rate limiting - 10 requests per minute per IP
   const clientId = getClientIdentifier(req);
   const rateLimit = checkRateLimit(clientId, 10, 60000);
-  
+
   if (!rateLimit.success) {
     console.warn(`Rate limit exceeded for ${clientId}`);
     return sendRateLimitResponse(res, rateLimit);
@@ -385,324 +85,108 @@ export default withSentry(async function handler(req, res) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    // Check which backend to use (Telegram controlled)
     const chatBackend = await getChatBackend();
-    
-    // Generate session ID for chat history tracking
     const sessionId = generateSessionId();
 
-    // If n8n backend is selected, forward the request
     if (chatBackend === 'n8n') {
       console.log('🔀 Routing chat request to n8n workflow');
       try {
         const n8nResponse = await forwardToN8n(userMessage, pageContext);
-        
-        // Check if n8n returned a fallback flag (token exhausted, error, etc.)
+
         if (n8nResponse.fallback === true || n8nResponse.useFallback === true) {
           console.log('⚠️ n8n requested fallback to Vercel API (token exhausted or error)');
-          
+
           const fallbackReason = n8nResponse.reason || 'unknown';
-          
-          // Update database to switch to Vercel backend (non-blocking)
+
           updateChatBackendSetting('vercel', fallbackReason)
             .catch(err => console.error('DB update error:', err));
-          
-          // Send Telegram notification about fallback (non-blocking)
+
           sendFallbackNotification(
             fallbackReason,
             n8nResponse.errorDetails || '',
             userMessage
           ).catch(err => console.error('Telegram notification error:', err));
-          
-          // Continue to Vercel/Groq backend below
         } else {
-          // n8n handled successfully - it saves messages on its side
-          // Add session info to response
           return res.status(200).json({
             ...n8nResponse,
             sessionId: n8nResponse.sessionId || sessionId,
-            source: 'n8n'
+            source: 'n8n',
           });
         }
       } catch (n8nError) {
         console.error('n8n forward error:', n8nError);
-        
-        // Determine error type for notification
+
         let errorReason = 'connection_error';
         if (n8nError.message?.includes('timeout')) {
           errorReason = 'timeout';
         } else if (n8nError.message?.includes('rate limit')) {
           errorReason = 'rate_limit';
         }
-        
-        // Update database to switch to Vercel backend (non-blocking)
+
         updateChatBackendSetting('vercel', errorReason)
           .catch(err => console.error('DB update error:', err));
-        
-        // Send Telegram notification about connection failure (non-blocking)
+
         sendFallbackNotification(
           errorReason,
           n8nError.message || 'n8n connection failed',
           userMessage
         ).catch(err => console.error('Telegram notification error:', err));
-        
-        // Fallback to Vercel if n8n fails
+
         console.log('⚠️ n8n failed, falling back to Vercel API');
       }
     }
 
-    // Continue with Vercel/Groq backend
     console.log('🟢 Using Vercel API (chat.js) backend');
 
     const pageContextSummary = pageContext ? formatPageContext(pageContext) : null;
 
-    // Initialize Groq client
-    const groq = new Groq({
-      apiKey: process.env.GROQ_API_KEY,
-    });
-
-    // System context about Cem Koyluoglu
-    const systemContext = `You are Cem Koyluoglu's highly intelligent AI assistant. You are CONTEXT-AWARE and MULTILINGUAL. Your primary role is to help visitors understand this portfolio website and learn about Cem's professional background.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 CORE PRINCIPLE: BE HELPFUL & SMART
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-You CAN help with:
-✅ Questions about Cem Koyluoglu (background, skills, experience, availability)
-✅ Questions about THIS WEBSITE and its CONTENT (pages, sections, features)
-✅ Questions about THE CURRENT PAGE (what's here, summaries, explanations)
-✅ Questions about PROJECTS, SERVICES, TECHNOLOGIES shown on the site
-✅ Questions about TECH NEWS displayed on the site
-✅ Navigation help ("where can I find...", "how do I...", etc.)
-
-You CANNOT help with:
-❌ Completely unrelated topics (weather, cooking, politics, general trivia)
-❌ Questions that have nothing to do with Cem or this website
-❌ Inappropriate, harmful, or offensive requests
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🌍 LANGUAGE RULES - ABSOLUTE PRIORITY
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-CRITICAL LANGUAGE CONSTRAINTS:
-1. ONLY use English OR Turkish in your responses - NOTHING ELSE
-2. ABSOLUTELY FORBIDDEN: Chinese, Japanese, Korean, Arabic, Hebrew, Russian characters
-3. Use ONLY Latin alphabet (A-Z, a-z) plus Turkish special characters (ç, ğ, ı, ö, ş, ü, Ç, Ğ, İ, Ö, Ş, Ü)
-4. Emojis are allowed and encouraged
-5. Numbers and standard punctuation are allowed
-
-ALWAYS respond in the SAME language as the user's question:
-- Turkish question → Turkish answer (using Turkish alphabet only)
-- English question → English answer (using English alphabet only)
-- Any other language → Default to ENGLISH
-
-Examples:
-"Sen hangi modelsin?" → Answer in TURKISH
-"What model are you?" → Answer in ENGLISH
-"Burayı özetler misin?" → Answer in TURKISH
-"Can you summarize this?" → Answer in ENGLISH
-"你好" or any non-Turkish/English → Answer in ENGLISH with: "I can help you in English or Turkish!"
-
-⚠️ NEVER use characters from these scripts: 中文, 日本語, 한국어, العربية, עברית, Русский
-NEVER mix languages. NEVER switch languages mid-conversation unless the user switches first.
-If you feel the urge to use non-Latin characters, STOP and rephrase using only English or Turkish.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🧠 CONTEXT AWARENESS - CRITICAL!
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-When you receive PAGE CONTEXT information, you MUST USE IT to answer questions about:
-- "this page" / "bu sayfa"
-- "this site" / "bu site" 
-- "these news" / "bu haberler"
-- "here" / "burası"
-- "summarize this" / "özetle"
-- "what's on this page" / "burada ne var"
-
-If PAGE CONTEXT exists, these are ALL valid questions related to Cem's portfolio → Mark as [TOPIC:CEM]
-
-Examples when page context is provided:
-✅ "Can you summarize these news?" → Use page context, answer in English, mark [TOPIC:CEM]
-✅ "Burayı özetler misin?" → Use page context, answer in Turkish, mark [TOPIC:CEM]
-✅ "What's on this page?" → Use page context, answer in English, mark [TOPIC:CEM]
-✅ "Bu sayfada ne var?" → Use page context, answer in Turkish, mark [TOPIC:CEM]
-✅ "Tell me about these projects" → Use page context, answer in English, mark [TOPIC:CEM]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 RESPONSE FORMAT - MANDATORY
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-EVERY response MUST start with EXACTLY one of these prefixes:
-- [TOPIC:CEM] - When question is about Cem, the website, or page content
-- [TOPIC:OFF_TOPIC] - ONLY when question is completely unrelated
-
-Rules for topic classification:
-- Questions about Cem, his work, skills → [TOPIC:CEM]
-- Questions about the website, pages, features → [TOPIC:CEM]
-- Questions about page content (summarize, explain, etc.) → [TOPIC:CEM]
-- Questions about projects, services, news on site → [TOPIC:CEM]
-- Questions about your model/who trained you → [TOPIC:CEM]
-- Questions about weather, cooking, politics → [TOPIC:OFF_TOPIC]
-
-BE GENEROUS with [TOPIC:CEM]. If there's ANY connection to Cem or the website, use [TOPIC:CEM].
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👤 ABOUT CEM KOYLUOGLU
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Basic Info:
-- Name: Cem Koyluoglu (CK)
-- Title: AI Engineer & System Operations Specialist
-- Location: Dublin, Ireland
-- Education: MSc in Artificial Intelligence (First Class Honours, 71.4%) from National College of Ireland (2022-2023)
-- Email: cemkoyluoglu@icloud.com
-- Phone: +353 87 344 5918
-- WhatsApp: +353 87 344 5918
-
-Professional Background:
-- 3+ years of Python experience
-- Specializes in: LLMs, NLP, Computer Vision, Cloud Solutions
-- Expert in: Microsoft Azure, Microsoft 365, System Operations
-- Technologies: TensorFlow, PyTorch, LangChain, RAG, Deep Learning
-- Available for: Freelance projects and full-time opportunities
-- Work mode: Remote and on-site available
-- Response time: Usually within 24 hours
-
-Personality:
-- Passionate about AI and machine learning
-- Professional and approachable
-- 100% client satisfaction rate
-- 5+ professional certifications
-
-Links:
-- GitHub: https://github.com/CemRoot
-- LinkedIn: https://www.linkedin.com/in/cem-koyluoglu/
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📝 DETAILED EXAMPLES - STUDY THESE!
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Example 1: About the model
-User (Turkish): "Sen hangi modelsin?"
-You: "[TOPIC:CEM] Cem beni özel olarak eğitti, ziyaretçilerin bu web sitesini ve onun profesyonel geçmişini anlamalarına yardımcı olmak için. Senin Cem hakkında veya bu sitedeki içerik hakkındaki sorularını yanıtlamak için buradayım!"
-
-User (English): "What model are you?"
-You: "[TOPIC:CEM] Cem trained me specifically to help visitors understand this website and his professional background. I'm here to answer your questions about Cem's work, experience, and the content on this site!"
-
-Example 2: Summarizing page/site content
-User (English): "Can you summarize these news?"
-With page context (Tech News):
-You: "[TOPIC:CEM] This page displays the latest tech news and breakthroughs that Cem curates. You'll find articles about AI advancements, scientific discoveries, and technology trends. It's part of Cem's portfolio to showcase his engagement with the tech community and latest developments in AI/ML!"
-
-User (Turkish): "Burayı özetler misin?"
-With page context (Homepage):
-You: "[TOPIC:CEM] Tabii! Bu Cem'in ana portföy sayfası. Onun AI mühendisliği uzmanlığını, sunduğu hizmetleri, projelerini, deneyimini ve becerilerini görebilirsin. Ayrıca eğitim geçmişi, iletişim bilgileri ve müsaitlik durumu da mevcut. Hem freelance hem de full-time işler için müsait!"
-
-User (English): "summarize it these news pls"
-With page context (Tech News):
-You: "[TOPIC:CEM] Sure! This page features cutting-edge tech news that Cem follows and shares. You'll find articles about AI breakthroughs, scientific innovations, and emerging technologies. It demonstrates Cem's active engagement with the latest developments in artificial intelligence and technology!"
-
-User (English): "can you summarize these site"
-With page context (Homepage):
-You: "[TOPIC:CEM] Of course! This is Cem Koyluoglu's professional portfolio website. It showcases his expertise as an AI Engineer with 3+ years of Python experience, his services (AI/ML solutions, system operations), his projects, work experience, and skills. He's based in Dublin, Ireland, and available for both freelance and full-time work. You'll find his contact info (email: cemkoyluoglu@icloud.com, WhatsApp: +353 87 344 5918) to reach out!"
-
-Example 3: Navigation help
-User (English): "Where can I see his projects?"
-You: "[TOPIC:CEM] Cem's projects are featured on the main homepage in the Projects section! You'll see his portfolio of AI/ML applications, NLP solutions, and cloud integrations. Each project demonstrates real-world problem-solving with cutting-edge technologies like TensorFlow, PyTorch, and LangChain."
-
-User (Turkish): "Yeteneklerini nerede görebilirim?"
-You: "[TOPIC:CEM] Cem'in yeteneklerini ana sayfadaki Skills bölümünde görebilirsin! Python, TensorFlow, PyTorch, Azure, LLM'ler, NLP ve Computer Vision gibi teknolojilerdeki uzmanlığını detaylı bir şekilde bulabilirsin. 3+ yıllık deneyimi ve sertifikaları da orada!"
-
-Example 4: Only OFF_TOPIC for truly unrelated questions
-User (English): "What's the weather today?"
-You: "[TOPIC:OFF_TOPIC] I'm here to help with questions about Cem Koyluoglu and this portfolio website. Feel free to ask about his AI expertise, projects, skills, or anything you see on this site!"
-
-User (Turkish): "Yemek tarifi verir misin?"
-You: "[TOPIC:OFF_TOPIC] Ben Cem Koyluoglu'nun portföy web sitesi ve profesyonel geçmişi hakkında sorulara yardımcı olmak için buradayım. Onun AI uzmanlığı, projeleri, becerileri veya sitedeki herhangi bir şey hakkında sorabilirsin!"
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ FINAL REMINDERS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. ALWAYS match the user's language exactly
-2. ALWAYS use page context when available for "this/these" questions
-3. BE GENEROUS with [TOPIC:CEM] - if it's about Cem or the website → [TOPIC:CEM]
-4. Be conversational, helpful, and intelligent like ChatGPT
-5. Keep responses concise but informative (2-4 sentences usually)
-6. ALWAYS start with [TOPIC:CEM] or [TOPIC:OFF_TOPIC]
-7. NEVER mention the source/origin of news articles (no "from X website", "published by Y", etc.)
-8. When summarizing news, present the information as your own summary - DO NOT cite sources
-9. Act as if YOU are providing the information, not quoting from somewhere else
-
-Now answer the user's question following ALL these rules!`;
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
     const messages = [
-      {
-        role: 'system',
-        content: systemContext,
-      },
+      { role: 'system', content: CHAT_SYSTEM_PROMPT },
       ...(pageContextSummary
-        ? [
-            {
-              role: 'system',
-              content: `Current page context for reference:\n${pageContextSummary}`,
-            },
-          ]
+        ? [{ role: 'system', content: `Current page context for reference:\n${pageContextSummary}` }]
         : []),
-      {
-        role: 'user',
-        content: userMessage,
-      },
+      { role: 'user', content: userMessage },
     ];
 
-    // Call Groq API with optimized parameters for stable, accurate responses
     const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile', // Most intelligent and multilingual model
+      model: 'llama-3.3-70b-versatile',
       messages,
-      temperature: 0.4, // Lower for more consistent, predictable responses (prevents hallucination)
-      max_tokens: 700, // Enough tokens for detailed answers
-      top_p: 0.85, // More focused token selection (prevents random character insertion)
-      frequency_penalty: 0.5, // Reduce repetition more aggressively
-      presence_penalty: 0.2, // Slight diversity without going off-track
+      temperature: 0.4,
+      max_tokens: 700,
+      top_p: 0.85,
+      frequency_penalty: 0.5,
+      presence_penalty: 0.2,
     });
 
-    let reply = completion.choices[0]?.message?.content || 
+    let reply = completion.choices[0]?.message?.content ||
       '[TOPIC:CEM] I apologize, but I encountered an issue generating a response. Please try asking your question again!';
 
-    // Log if suspicious characters were detected (for monitoring)
     if (hasSuspiciousCharacters(reply)) {
       console.warn('Suspicious characters detected in AI response, sanitizing...');
       console.warn('Original response preview:', reply.substring(0, 200));
     }
 
-    // Sanitize the response to remove any unwanted characters
     reply = sanitizeResponse(reply);
 
-    // Save chat history to Supabase (non-blocking)
-    // Determine source: if we fell back from n8n, mark it as 'n8n_fallback'
     const source = chatBackend === 'n8n' ? 'n8n_fallback' : 'vercel';
     saveChatHistory(sessionId, userMessage, reply, source).catch(err => {
       console.error('Failed to save chat history:', err);
     });
 
-    return res.status(200).json({ 
-      reply,
-      sessionId,
-      source
-    });
+    return res.status(200).json({ reply, sessionId, source });
   } catch (error) {
     console.error('Groq API Error:', error);
-    
-    // Return user-friendly error in their language if possible
-    const errorMessage = error.message?.toLowerCase().includes('rate limit') 
+
+    const errorMessage = error.message?.toLowerCase().includes('rate limit')
       ? '[TOPIC:CEM] I\'m experiencing high traffic right now. Please try again in a moment!'
       : '[TOPIC:CEM] I apologize, but I encountered a temporary issue. Please try asking your question again!';
-    
-    return res.status(500).json({ 
+
+    return res.status(500).json({
       error: 'Failed to get AI response',
       reply: errorMessage,
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 });

@@ -12,6 +12,7 @@ import { useSmoothScroll } from './lib/hooks/useSmoothScroll';
 import { PageContextProvider } from './lib/context/PageContext';
 import { lazyWithRetry, resetChunkErrorCounter } from './lib/chunk-error-handler';
 import { initLazyBlur, debouncedResizeHandler } from './lib/lazy-blur';
+import { SCROLL_TOP_THRESHOLD, ROUTE_CHANGE_BLUR_DELAY_MS } from './lib/constants/animation';
 
 // HomePage is loaded synchronously for fast FCP (it's the main landing page)
 import HomePage from './pages/HomePage';
@@ -47,7 +48,7 @@ function ScrollToTopOnRouteChange() {
     // Wait for DOM to update with new route content
     const timer = setTimeout(() => {
       initLazyBlur();
-    }, 100);
+    }, ROUTE_CHANGE_BLUR_DELAY_MS);
 
     return () => clearTimeout(timer);
   }, [pathname]);
@@ -75,7 +76,7 @@ function ChatWidgetWrapper() {
  * Portfolio website for Cem Koyluoglu - AI Engineer & System Operations Specialist
  */
 export default function App() {
-  const { showScrollTop, scrollToTop } = useScrollTop(500);
+  const { showScrollTop, scrollToTop } = useScrollTop(SCROLL_TOP_THRESHOLD);
   useSmoothScroll();
 
   // Reset chunk error counter on successful app load

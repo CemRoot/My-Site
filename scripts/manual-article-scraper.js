@@ -9,23 +9,17 @@
  * - Supabase storage
  */
 
-import 'dotenv/config';
 import crypto from 'crypto';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from './lib/supabaseAdmin.js';
+import { env } from './lib/config.js';
 import { htmlToTokens } from './embeds/extractEmbeds.js';
 import { extractAllEmbedsFromMarkdown } from './embeds/extractMarkdownEmbeds.js';
 
-// Configuration
 const CONFIG = {
-  FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY || '',
+  FIRECRAWL_API_KEY: env.FIRECRAWL_API_KEY,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
-  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   GEMINI_API_ENDPOINT: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent',
 };
-
-// Initialize Supabase client
-const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
 
 /**
  * Generate unique ID from URL

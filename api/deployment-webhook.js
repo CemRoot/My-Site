@@ -11,41 +11,7 @@
  */
 
 import { withSentry } from '../lib/sentry-server.js';
-
-async function sendTelegramMessage(text) {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-
-  if (!token || !chatId) {
-    console.log('⚠️ Telegram credentials not configured');
-    return false;
-  }
-
-  try {
-    const url = `https://api.telegram.org/bot${token}/sendMessage`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error('Telegram API error:', response.status);
-      return false;
-    }
-
-    console.log('✅ Telegram notification sent');
-    return true;
-  } catch (error) {
-    console.error('Failed to send Telegram message:', error);
-    return false;
-  }
-}
+import { notifyTelegram } from './lib/telegram.js';
 
 function formatDeploymentMessage(payload) {
   const { deployment, project } = payload;
@@ -151,21 +117,13 @@ export default withSentry(async function handler(req, res) {
       project: payload?.project?.name,
     });
 
-    // Send Telegram notification
     const message = formatDeploymentMessage(payload);
-    const sent = await sendTelegramMessage(message);
+    await notifyTelegram(message);
 
-    if (sent) {
-      return res.status(200).json({
-        success: true,
-        message: 'Notification sent',
-      });
-    } else {
-      return res.status(200).json({
-        success: false,
-        message: 'Failed to send notification',
-      });
-    }
+    return res.status(200).json({
+      success: true,
+      message: 'Notification sent',
+    });
   } catch (error) {
     console.error('❌ Webhook processing error:', error);
     return res.status(500).json({

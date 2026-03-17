@@ -13,8 +13,8 @@
  * 4. Direct LinkedIn API posting
  */
 
-import 'dotenv/config';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from './lib/supabaseAdmin.js';
+import { env } from './lib/config.js';
 import { selectTopArticles, generateTelegramSummary } from './ai-content-generator.js';
 import { 
   sendApprovalRequest, 
@@ -24,19 +24,13 @@ import {
   sendDailySummary 
 } from './telegram-bot.js';
 
-// Configuration
 const CONFIG = {
-  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   LINKEDIN_ACCESS_TOKEN: process.env.LINKEDIN_ACCESS_TOKEN,
   LINKEDIN_PERSON_ID: process.env.LINKEDIN_PERSON_ID,
   MAX_ARTICLES_PER_DAY: 5,
-  MIN_AI_SCORE: parseInt(process.env.MIN_AI_SCORE) || 60, // Lowered from 70 to 60 for better content selection
-  SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || 'https://yoursite.com'
+  MIN_AI_SCORE: parseInt(process.env.MIN_AI_SCORE) || 60,
+  SITE_URL: env.SITE_URL,
 };
-
-// Initialize Supabase
-const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
 
 /**
  * Get recent articles from Supabase (last 24 hours)

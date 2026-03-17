@@ -4,57 +4,39 @@
  * This script registers the webhook URL with Telegram Bot API
  */
 
-import 'dotenv/config';
+import { env } from './lib/config.js';
+import { callTelegramApi } from './lib/telegram.js';
 
-const CONFIG = {
-  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
-  WEBHOOK_URL: process.env.WEBHOOK_URL || 'https://cemkoyluoglu.codes/api/telegram-webhook',
-};
+const WEBHOOK_URL = process.env.WEBHOOK_URL || 'https://cemkoyluoglu.codes/api/telegram-webhook';
 
 async function setupWebhook() {
-  if (!CONFIG.TELEGRAM_BOT_TOKEN) {
+  if (!env.TELEGRAM_BOT_TOKEN) {
     console.error('❌ TELEGRAM_BOT_TOKEN is required');
     process.exit(1);
   }
 
   console.log('🔧 Setting up Telegram webhook...');
-  console.log(`📡 Bot Token: ${CONFIG.TELEGRAM_BOT_TOKEN.substring(0, 10)}...`);
-  console.log(`🌐 Webhook URL: ${CONFIG.WEBHOOK_URL}`);
+  console.log(`📡 Bot Token: ${env.TELEGRAM_BOT_TOKEN.substring(0, 10)}...`);
+  console.log(`🌐 Webhook URL: ${WEBHOOK_URL}`);
 
   try {
-    // Set webhook
-    const setWebhookUrl = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/setWebhook`;
-    const setResponse = await fetch(setWebhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        url: CONFIG.WEBHOOK_URL,
-        allowed_updates: ['callback_query', 'message']
-      }),
+    await callTelegramApi('setWebhook', {
+      url: WEBHOOK_URL,
+      allowed_updates: ['callback_query', 'message'],
     });
-
-    const setResult = await setResponse.json();
-    
-    if (!setResult.ok) {
-      throw new Error(`Failed to set webhook: ${setResult.description}`);
-    }
-
     console.log('✅ Webhook set successfully!');
 
-    // Verify webhook
-    const getWebhookUrl = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/getWebhookInfo`;
-    const getResponse = await fetch(getWebhookUrl);
-    const getResult = await getResponse.json();
-
+    const getResult = await callTelegramApi('getWebhookInfo');
     if (getResult.ok) {
+      const info = getResult.result;
       console.log('\n📊 Webhook Info:');
-      console.log(`   URL: ${getResult.result.url}`);
-      console.log(`   Has Custom Certificate: ${getResult.result.has_custom_certificate}`);
-      console.log(`   Pending Update Count: ${getResult.result.pending_update_count}`);
-      console.log(`   Last Error Date: ${getResult.result.last_error_date || 'None'}`);
-      console.log(`   Last Error Message: ${getResult.result.last_error_message || 'None'}`);
-      console.log(`   Max Connections: ${getResult.result.max_connections || 'Default'}`);
-      console.log(`   Allowed Updates: ${JSON.stringify(getResult.result.allowed_updates)}`);
+      console.log(`   URL: ${info.url}`);
+      console.log(`   Has Custom Certificate: ${info.has_custom_certificate}`);
+      console.log(`   Pending Update Count: ${info.pending_update_count}`);
+      console.log(`   Last Error Date: ${info.last_error_date || 'None'}`);
+      console.log(`   Last Error Message: ${info.last_error_message || 'None'}`);
+      console.log(`   Max Connections: ${info.max_connections || 'Default'}`);
+      console.log(`   Allowed Updates: ${JSON.stringify(info.allowed_updates)}`);
     }
 
     console.log('\n🎉 Telegram webhook setup completed successfully!');
@@ -67,7 +49,7 @@ async function setupWebhook() {
 }
 
 async function removeWebhook() {
-  if (!CONFIG.TELEGRAM_BOT_TOKEN) {
+  if (!env.TELEGRAM_BOT_TOKEN) {
     console.error('❌ TELEGRAM_BOT_TOKEN is required');
     process.exit(1);
   }
@@ -75,14 +57,7 @@ async function removeWebhook() {
   console.log('🗑️  Removing Telegram webhook...');
 
   try {
-    const deleteWebhookUrl = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/deleteWebhook`;
-    const response = await fetch(deleteWebhookUrl, { method: 'POST' });
-    const result = await response.json();
-
-    if (!result.ok) {
-      throw new Error(`Failed to delete webhook: ${result.description}`);
-    }
-
+    await callTelegramApi('deleteWebhook');
     console.log('✅ Webhook removed successfully!');
     console.log('🔔 Bot will now use polling mode (if applicable).');
 

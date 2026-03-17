@@ -9,49 +9,15 @@
  * - /api/telegram-control?action=health-check
  */
 
-import { createClient } from '@supabase/supabase-js';
-import { spawn } from 'child_process';
 import crypto from 'crypto';
+import { supabase } from './lib/supabaseAdmin.js';
+import { sendTelegramMessage, callTelegramApi } from './lib/telegram.js';
 
 const CONFIG = {
-  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
-  TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID || '',
-  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-  GROQ_API_KEY: process.env.GROQ_API_KEY || '',
-  FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY || '',
   GITHUB_TOKEN: process.env.GITHUB_TOKEN || '',
   GITHUB_REPO: process.env.GITHUB_REPOSITORY || 'username/My-Site',
-  // Security: API key for authentication (REQUIRED)
   API_SECRET: process.env.TELEGRAM_CONTROL_API_SECRET || '',
 };
-
-const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
-
-/**
- * Send message to Telegram
- */
-async function sendTelegramMessage(text, options = {}) {
-  const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`;
-  
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: CONFIG.TELEGRAM_CHAT_ID,
-      text: text,
-      parse_mode: 'HTML',
-      disable_web_page_preview: true,
-      ...options
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`Telegram API error: ${response.status}`);
-  }
-
-  return await response.json();
-}
 
 /**
  * Setup bot menu
@@ -67,14 +33,7 @@ async function setupBotMenu() {
     { command: 'help', description: 'Yardım ve komutlar' },
   ];
 
-  await fetch(
-    `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/setMyCommands`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands })
-    }
-  );
+  await callTelegramApi('setMyCommands', { commands });
 
   // Send welcome message with menu
   const welcomeText = `

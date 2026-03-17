@@ -11,37 +11,19 @@
  * - DELETE /api/conversation-state?user_id=123 - Delete conversation state
  */
 
-import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { supabase } from './lib/supabaseAdmin.js';
 
 const CONFIG = {
-  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-  // Security: API key for authentication (RECOMMENDED)
   API_SECRET: process.env.CONVERSATION_STATE_API_SECRET || process.env.TELEGRAM_CONTROL_API_SECRET || '',
 };
-
-// Create Supabase client
-let supabaseClient = null;
-
-function getSupabaseClient() {
-  if (!supabaseClient) {
-    if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_SERVICE_KEY) {
-      throw new Error('Missing Supabase configuration in environment variables');
-    }
-    supabaseClient = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
-  }
-  return supabaseClient;
-}
 
 /**
  * Get user's current conversation state
  */
 async function getConversationState(userId) {
   try {
-    const client = getSupabaseClient();
-
-    const { data, error } = await client
+    const { data, error } = await supabase
       .from('conversation_states')
       .select('*')
       .eq('user_id', userId)
@@ -65,9 +47,7 @@ async function getConversationState(userId) {
  */
 async function setConversationState(userId, step, additionalData = {}) {
   try {
-    const client = getSupabaseClient();
-
-    const { error } = await client
+    const { error } = await supabase
       .from('conversation_states')
       .upsert({
         user_id: userId,
@@ -98,9 +78,7 @@ async function setConversationState(userId, step, additionalData = {}) {
  */
 async function deleteConversationState(userId) {
   try {
-    const client = getSupabaseClient();
-
-    const { error } = await client
+    const { error } = await supabase
       .from('conversation_states')
       .delete()
       .eq('user_id', userId);

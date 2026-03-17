@@ -5,48 +5,17 @@
  * Only runs in production environment
  */
 
-import 'dotenv/config';
+import { env } from './lib/config.js';
+import { notifyTelegram, callTelegramApi } from './lib/telegram.js';
 
 const CONFIG = {
-  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
-  TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
-  VERCEL_ENV: process.env.VERCEL_ENV || 'development',
-  VERCEL_URL: process.env.VERCEL_URL,
+  VERCEL_ENV: env.VERCEL_ENV,
+  VERCEL_URL: env.VERCEL_URL,
   VERCEL_GIT_COMMIT_MESSAGE: process.env.VERCEL_GIT_COMMIT_MESSAGE || 'Manual deployment',
 };
 
-async function sendTelegramMessage(text) {
-  if (!CONFIG.TELEGRAM_BOT_TOKEN || !CONFIG.TELEGRAM_CHAT_ID) {
-    console.log('⚠️  Telegram credentials not found, skipping notification');
-    return;
-  }
-
-  try {
-    const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`;
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: CONFIG.TELEGRAM_CHAT_ID,
-        text: text,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true
-      })
-    });
-
-    if (response.ok) {
-      console.log('✅ Telegram notification sent');
-    } else {
-      console.log('⚠️  Telegram notification failed:', response.status);
-    }
-  } catch (error) {
-    console.log('⚠️  Telegram error:', error.message);
-  }
-}
-
 async function setupBotCommands() {
-  if (!CONFIG.TELEGRAM_BOT_TOKEN) {
+  if (!env.TELEGRAM_BOT_TOKEN) {
     console.log('⚠️  Telegram bot token not found, skipping setup');
     return;
   }
@@ -61,20 +30,8 @@ async function setupBotCommands() {
       { command: 'help', description: 'Yardım ve komutlar' },
     ];
 
-    const response = await fetch(
-      `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/setMyCommands`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ commands })
-      }
-    );
-
-    if (response.ok) {
-      console.log('✅ Bot commands configured');
-    } else {
-      console.log('⚠️  Bot commands setup failed:', response.status);
-    }
+    await callTelegramApi('setMyCommands', { commands });
+    console.log('✅ Bot commands configured');
   } catch (error) {
     console.log('⚠️  Bot setup error:', error.message);
   }
@@ -112,7 +69,7 @@ async function postBuildSetup() {
 <i>Bot menüsü güncellendi - /menu</i>
 <i>⏳ Deployment durumu ayrıca bildirilecek...</i>`;
 
-    await sendTelegramMessage(buildMessage);
+    await notifyTelegram(buildMessage);
 
     console.log('\n✅ Post-build setup completed successfully!');
     console.log('='.repeat(60));

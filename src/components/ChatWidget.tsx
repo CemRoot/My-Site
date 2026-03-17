@@ -1,49 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
+import { MessageCircle, X, Send, Bot } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
-import { toast } from 'sonner';
 import { PERSONAL_INFO } from '../lib/constants/personal';
 import { usePageContext } from '../lib/context/PageContext';
-
-/**
- * Configuration
- */
-const WIDGET_CONFIG = {
-  showDelay: 2000, // Show widget after 2 seconds
-  initialMessage: `👋 Hey! I'm Cem's AI assistant. Ask me anything about Cem, his work, or this website!`,
-  offTopicThreshold: 5, // Allow 5 off-topic questions before warning
-} as const;
-
-const BLOCK_DURATION_MS = 5 * 60 * 1000;
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
-
-type TopicTag = 'cem' | 'off_topic';
-
-const createMessageId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-const parseAssistantReply = (reply: string): { topic: TopicTag; content: string } => {
-  const topicPattern = /^\s*\[TOPIC:(CEM|OFF_TOPIC)\]\s*/i;
-  const match = reply.match(topicPattern);
-
-  if (!match) {
-    return {
-      topic: 'cem',
-      content: reply.trim(),
-    };
-  }
-
-  const topic = match[1].toUpperCase() === 'OFF_TOPIC' ? 'off_topic' : 'cem';
-  const content = reply.replace(topicPattern, '').trimStart();
-
-  return { topic, content };
-};
+import {
+  WIDGET_SHOW_DELAY_MS,
+  NEWS_NOTIFICATION_SHOW_DELAY_MS,
+  NEWS_NOTIFICATION_HIDE_DELAY_MS,
+} from '../lib/constants/animation';
+import { ChatMessageBubble } from './chat/ChatMessageBubble';
+import { TypingIndicator } from './chat/TypingIndicator';
+import { useChat } from '../lib/hooks/useChat';
 
 interface ChatWidgetProps {
   showNewsNotification?: boolean;
@@ -57,47 +25,36 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showWidget, setShowWidget] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: WIDGET_CONFIG.initialMessage,
-      timestamp: new Date(),
-    },
-  ]);
-  const [inputMessage, setInputMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const { pageInfo } = usePageContext();
-  const [offTopicCount, setOffTopicCount] = useState(0);
-  const [awaitingRelevantQuestion, setAwaitingRelevantQuestion] = useState(false);
-  const [blockedUntil, setBlockedUntil] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const now = Date.now();
-  const isChatBlocked = blockedUntil !== null && blockedUntil > now;
-  const remainingBlockMinutes = isChatBlocked
-    ? Math.max(1, Math.ceil((blockedUntil - now) / 60000))
-    : 0;
 
-  // Show widget after delay
+  const {
+    messages,
+    inputMessage,
+    setInputMessage,
+    isLoading,
+    isChatBlocked,
+    remainingBlockMinutes,
+    sendMessage,
+    canToggleChat,
+  } = useChat(pageInfo);
+
   useEffect(() => {
-    const timer = setTimeout(() => setShowWidget(true), WIDGET_CONFIG.showDelay);
+    const timer = setTimeout(() => setShowWidget(true), WIDGET_SHOW_DELAY_MS);
     return () => clearTimeout(timer);
   }, []);
 
-  // News notification timing logic
   useEffect(() => {
     if (!showNewsNotification) return;
 
-    // Show notification after 4 seconds
     const showTimer = setTimeout(() => {
       setShowNotification(true);
-    }, 4000);
+    }, NEWS_NOTIFICATION_SHOW_DELAY_MS);
 
-    // Hide notification after 24 seconds (4s delay + 20s display)
     const hideTimer = setTimeout(() => {
       setShowNotification(false);
-    }, 24000);
+    }, NEWS_NOTIFICATION_HIDE_DELAY_MS);
 
     return () => {
       clearTimeout(showTimer);
@@ -105,193 +62,37 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
     };
   }, [showNewsNotification]);
 
-  // Hide notification when chat opens
   useEffect(() => {
-    if (isOpen) {
-      setShowNotification(false);
-    }
+    if (isOpen) setShowNotification(false);
   }, [isOpen]);
 
-  // Auto-scroll to bottom when messages change (like Deep Chat)
   useEffect(() => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [messages, isLoading]);
 
-  // Auto-focus textarea when chat opens
   useEffect(() => {
     if (isOpen && !isChatBlocked) {
-      // Small delay to ensure DOM is ready
-      setTimeout(() => {
-        textareaRef.current?.focus();
-      }, 100);
+      setTimeout(() => textareaRef.current?.focus(), 100);
     }
   }, [isOpen, isChatBlocked]);
 
-  const sendMessage = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const trimmedMessage = inputMessage.trim();
-    if (!trimmedMessage || isLoading) return;
+    if (!trimmedMessage) return;
 
-    const attemptTimestamp = Date.now();
-    if (blockedUntil && attemptTimestamp >= blockedUntil) {
-      setBlockedUntil(null);
-      setOffTopicCount(0);
-      setAwaitingRelevantQuestion(false);
-    } else if (blockedUntil && attemptTimestamp < blockedUntil) {
-      toast.warning('Chat temporarily closed', {
-        description: 'Please wait a few minutes or ask about Cem\'s work.',
-      });
-      // Refocus after showing error
-      setTimeout(() => {
-        textareaRef.current?.focus();
-      }, 150);
+    const sent = await sendMessage(trimmedMessage);
+    if (!sent) {
+      setTimeout(() => textareaRef.current?.focus(), 150);
       return;
     }
-
-    const userMessage: Message = {
-      id: createMessageId(),
-      role: 'user',
-      content: trimmedMessage,
-      timestamp: new Date(),
-    };
-
-    // Clear input immediately for better UX
-    setInputMessage('');
-    setMessages((prev) => [...prev, userMessage]);
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: trimmedMessage,
-          pageContext: pageInfo,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to get response');
-      }
-
-      const rawReply = typeof data.reply === 'string' ? data.reply : '';
-      const { topic, content } = parseAssistantReply(rawReply);
-
-      const assistantMessage: Message = {
-        id: createMessageId(),
-        role: 'assistant',
-        content,
-        timestamp: new Date(),
-      };
-
-      let nextOffTopicCount = offTopicCount;
-      let issueWarning = false;
-      let enforceBlock = false;
-
-      if (topic === 'off_topic') {
-        const potentialCount = offTopicCount + 1;
-        if (awaitingRelevantQuestion) {
-          enforceBlock = true;
-          nextOffTopicCount = 0;
-        } else {
-          nextOffTopicCount = potentialCount;
-          if (potentialCount >= WIDGET_CONFIG.offTopicThreshold) {
-            issueWarning = true;
-          }
-        }
-      } else {
-        nextOffTopicCount = 0;
-      }
-
-      const outgoingMessages: Message[] = [assistantMessage];
-
-      if (issueWarning) {
-        outgoingMessages.push({
-          id: createMessageId(),
-          role: 'assistant',
-          content:
-            "⚠️ Friendly reminder: I'm specifically designed to help with questions about Cem Koyluoglu and this website. Please ask relevant questions or I'll need to temporarily close the chat. Thanks for understanding! 😊",
-          timestamp: new Date(),
-        });
-      }
-
-      if (enforceBlock) {
-        const blockTimestamp = Date.now() + BLOCK_DURATION_MS;
-        setBlockedUntil(blockTimestamp);
-        outgoingMessages.push({
-          id: createMessageId(),
-          role: 'assistant',
-          content:
-            '🔒 Chat temporarily closed due to off-topic questions. Please come back in 5 minutes or ask questions about Cem Koyluoglu and his work. Thanks!',
-          timestamp: new Date(),
-        });
-        toast.warning('Chat temporarily closed', {
-          description: 'Come back in 5 minutes or ask about Cem\'s work to continue chatting.',
-        });
-      }
-
-      setMessages((prev) => [...prev, ...outgoingMessages]);
-      setOffTopicCount(nextOffTopicCount);
-
-      if (topic === 'off_topic') {
-        if (issueWarning) {
-          setAwaitingRelevantQuestion(true);
-        } else if (enforceBlock) {
-          setAwaitingRelevantQuestion(false);
-        }
-      } else {
-        if (blockedUntil && Date.now() >= blockedUntil) {
-          setBlockedUntil(null);
-        }
-        setAwaitingRelevantQuestion(false);
-      }
-    } catch (error: any) {
-      console.error('Chat error:', error);
-      toast.error('Failed to send message', {
-        description: 'Please try again or contact directly via WhatsApp',
-      });
-      
-      const fallbackMessage: Message = {
-        id: createMessageId(),
-        role: 'assistant',
-        content: `Sorry, I'm having trouble connecting right now. Please reach out directly:\n📧 ${PERSONAL_INFO.email}\n📱 WhatsApp: +353 87 344 5918`,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, fallbackMessage]);
-    } finally {
-      setIsLoading(false);
-      // Focus textarea after message is sent - increased timeout for reliability on both desktop and mobile
-      setTimeout(() => {
-        textareaRef.current?.focus();
-      }, 150);
-    }
+    setTimeout(() => textareaRef.current?.focus(), 150);
   };
 
   const handleToggleChat = () => {
-    const toggleTimestamp = Date.now();
-
-    if (!isOpen) {
-      if (blockedUntil && toggleTimestamp >= blockedUntil) {
-        setBlockedUntil(null);
-        setOffTopicCount(0);
-        setAwaitingRelevantQuestion(false);
-      }
-
-      if (blockedUntil && toggleTimestamp < blockedUntil) {
-        toast.warning('Chat temporarily closed', {
-          description: 'Come back in a few minutes or ask about Cem\'s work.',
-        });
-        return;
-      }
-    }
-
+    if (!isOpen && !canToggleChat()) return;
     setIsOpen((prev) => !prev);
   };
 
@@ -352,64 +153,14 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
                 }}
               >
                 {messages.map((msg) => (
-                  <div 
-                    key={msg.id} 
-                    className={`flex items-start gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
-                  >
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
-                      {msg.role === 'assistant' ? (
-                        <Bot className="w-4 h-4 text-black" />
-                      ) : (
-                        <User className="w-4 h-4 text-black" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0 max-w-[calc(100%-2.5rem)]">
-                      <div className={`rounded-xl sm:rounded-2xl p-2.5 sm:p-3 ${
-                        msg.role === 'assistant' 
-                          ? 'bg-primary/10 border border-primary/20 rounded-tl-sm' 
-                          : 'bg-accent/10 border border-accent/20 rounded-tr-sm'
-                      }`}>
-                        <p
-                          className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words font-[Hobo_BT]"
-                          style={{ 
-                            wordBreak: 'break-word', 
-                            overflowWrap: 'break-word',
-                            hyphens: 'auto'
-                          }}
-                        >
-                          {msg.content}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <ChatMessageBubble key={msg.id} message={msg} />
                 ))}
                 
-                {/* Typing indicator - Zendesk/Live chat style */}
-                {isLoading && (
-                  <div className="flex items-start gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-4 h-4 text-black" />
-                    </div>
-                    <div className="flex-1 min-w-0 max-w-[calc(100%-2.5rem)]">
-                      <div className="bg-primary/10 border border-primary/20 rounded-xl sm:rounded-2xl rounded-tl-sm p-2.5 sm:p-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs sm:text-sm text-primary/80 font-medium font-[Hobo_BT]">
-                            Typing
-                          </span>
-                          <div className="flex gap-0.5">
-                            <div className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
-                            <div className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
-                            <div className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {isLoading && <TypingIndicator />}
               </div>
 
               {/* Message Input */}
-              <form onSubmit={sendMessage} className="border-t border-white/10 p-2 sm:p-4 bg-background/50">
+              <form onSubmit={handleSubmit} className="border-t border-white/10 p-2 sm:p-4 bg-background/50">
                 <div className="flex gap-1.5 sm:gap-2 items-end">
                   <Textarea
                     ref={textareaRef}
@@ -419,7 +170,7 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
-                        sendMessage(e);
+                        handleSubmit(e);
                       }
                     }}
                     disabled={isLoading || isChatBlocked}
@@ -445,7 +196,7 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground text-center mt-2 leading-relaxed font-[Hobo_BT]">
-                  <span className="text-primary">🛠️ Hand made</span> by Cem Koyluoglu
+                  <span className="text-primary">🛠️ Hand made</span> by {PERSONAL_INFO.name}
                 </p>
               </form>
             </div>

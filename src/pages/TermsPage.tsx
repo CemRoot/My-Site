@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Scale } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { usePageContext } from '../lib/context/PageContext';
+import { PERSONAL_INFO } from '../lib/constants/personal';
 import { SEO } from '../components/SEO';
 
 /**
@@ -71,7 +72,7 @@ function TermsPage() {
           <section className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-4">
             <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">1. Introduction</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Welcome to the personal portfolio and professional website of Cem Koyluoglu ("we," "us," or "our"). 
+              Welcome to the personal portfolio and professional website of {PERSONAL_INFO.name} ("we," "us," or "our"). 
               By accessing or using our website located at this domain, you agree to be bound by these Terms and Conditions. 
               This website is operated from Dublin, Ireland, and is subject to Irish and European Union law, including the 
               General Data Protection Regulation (GDPR).
@@ -148,7 +149,7 @@ function TermsPage() {
             <h2 className="text-xl sm:text-2xl text-primary font-[Hobo_BT]">6. Intellectual Property</h2>
             <p className="text-muted-foreground leading-relaxed">
               All content on this website, including but not limited to text, graphics, logos, code, and design elements, 
-              is the property of Cem Koyluoglu and protected by international copyright laws. You may not reproduce, 
+              is the property of {PERSONAL_INFO.name} and protected by international copyright laws. You may not reproduce, 
               distribute, or create derivative works without explicit written permission.
             </p>
           </section>
@@ -199,8 +200,8 @@ function TermsPage() {
               If you have any questions about these Terms and Conditions, please contact us:
             </p>
             <div className="space-y-2 text-muted-foreground pl-4">
-              <p>Email: <a href="mailto:cemkoyluoglu@icloud.com" className="text-primary hover:underline">cemkoyluoglu@icloud.com</a></p>
-              <p>Location: Dublin, Ireland</p>
+              <p>Email: <a href={`mailto:${PERSONAL_INFO.email}`} className="text-primary hover:underline">{PERSONAL_INFO.email}</a></p>
+              <p>Location: {PERSONAL_INFO.location}</p>
             </div>
           </section>
         </div>

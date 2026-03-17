@@ -25,7 +25,7 @@ This document outlines the security measures, policies, and reporting procedures
 
 ### 3. Rate Limiting
 - **Status**: ✅ Implemented
-- **Location**: `lib/rate-limit.js`, `api/chat.js`
+- **Location**: `lib/rate-limit.js`, `api/chat.js`, `api/lib/chatHelpers.js`
 - **Protection**: 10 requests per minute per IP for chat endpoint
 - **Note**: In-memory cache (resets on cold starts)
 - **Recommendation**: Upgrade to Upstash Redis for production
@@ -79,10 +79,11 @@ If you discover a security vulnerability, please follow responsible disclosure:
 
 ### Required Secrets (Set in Vercel)
 ```bash
-# ⚠️ NEVER commit these to git!
+# ⚠️ NEVER commit these to git! See .env.example for full list.
 
 # Critical - Set immediately
 TELEGRAM_CONTROL_API_SECRET=<generate with: openssl rand -hex 32>
+DEPLOYMENT_WEBHOOK_SECRET=<generate with: openssl rand -hex 32>
 
 # AI Services
 GROQ_API_KEY=<from https://console.groq.com/>
@@ -101,8 +102,13 @@ TELEGRAM_CHAT_ID=<your chat ID>
 # GitHub (auto-provided in Actions)
 GITHUB_TOKEN=<auto>
 
+# Sentry
+VITE_SENTRY_DSN=<from Sentry project settings>
+SENTRY_DSN=<from Sentry project settings>
+
 # Optional
 N8N_LINKEDIN_WORKFLOW_WEBHOOK=<your n8n webhook URL>
+N8N_CHATBOT_WEBHOOK=<your n8n chatbot webhook URL>
 ```
 
 ### Secret Rotation Schedule
@@ -184,7 +190,7 @@ chmod +x .git/hooks/pre-commit
 
 ## 📝 Changelog
 
-### 2025-01-XX - Initial Security Implementation
+### 2025-01 - Initial Security Implementation
 - ✅ Fixed wildcard CORS (F-0001)
 - ✅ Added security headers (F-0002)
 - ✅ Implemented rate limiting (F-0003)
@@ -194,8 +200,16 @@ chmod +x .git/hooks/pre-commit
 - ✅ Configured security scanning (F-0012)
 - ✅ Updated function timeouts (F-0008)
 
+### 2026-03 - Codebase Refactoring & Hardening
+- ✅ Extracted shared modules (`api/lib/`, `scripts/lib/`) to eliminate credential duplication
+- ✅ Centralized Supabase client creation (single admin client per layer)
+- ✅ Centralized Telegram API utilities (no more inline `fetch` calls)
+- ✅ Removed 16 unused npm dependencies (reduced attack surface)
+- ✅ Eliminated all `any` TypeScript types in frontend
+- ✅ Deleted dead code, test files, and temporary logs from repository
+
 ---
 
-**Last Updated**: January 2025  
+**Last Updated**: March 2026  
 **Maintained by**: Cem Koyluoğlu (cemkoyluoglu@icloud.com)
 

@@ -8,17 +8,12 @@
  * Body: { type: 'error' | 'crash' | 'performance', data: {...} }
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from './lib/supabaseAdmin.js';
+import { notifyTelegram } from './lib/telegram.js';
 
 const CONFIG = {
-  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
-  TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID || '',
-  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   SENTRY_DSN: process.env.VITE_SENTRY_DSN || '',
 };
-
-const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_SERVICE_KEY);
 
 // Rate limiting cache (in-memory)
 const rateLimitCache = new Map();
@@ -44,35 +39,9 @@ function checkRateLimit(key, maxRequests = 5, windowMs = 300000) { // 5 requests
   return true;
 }
 
-/**
- * Send Telegram message
- */
-async function sendTelegramMessage(text, options = {}) {
-  if (!CONFIG.TELEGRAM_BOT_TOKEN || !CONFIG.TELEGRAM_CHAT_ID) {
-    console.warn('Telegram credentials not configured');
-    return null;
-  }
-
+async function sendTelegramMessage(text) {
   try {
-    const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`;
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: CONFIG.TELEGRAM_CHAT_ID,
-        text: text,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-        ...options,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Telegram API error: ${response.status}`);
-    }
-
-    return await response.json();
+    await notifyTelegram(text);
   } catch (error) {
     console.error('Failed to send Telegram message:', error.message);
     return null;
