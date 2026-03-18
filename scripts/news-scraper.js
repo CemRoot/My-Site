@@ -302,8 +302,10 @@ async function scrapeArticleDetails(url) {
   }
 
   let markdownContent = articleData.markdown || '';
-  const htmlContent = articleData.html || '';
+  let htmlContent = articleData.html || '';
   const metadata = articleData.metadata || {};
+  articleData.markdown = null;
+  articleData.html = null;
 
   if (!markdownContent && !htmlContent) {
     console.error(`   ❌ No content found for article`);
@@ -318,6 +320,8 @@ async function scrapeArticleDetails(url) {
       embedTokens = contentWithTokens.match(/\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):[^\]]+\]\]/g) || [];
     } catch { /* ignore embed extraction errors */ }
   }
+
+  htmlContent = null;
 
   // Clean markdown: remove Nuvemmag branding and URLs
   const lines = markdownContent.split('\n');
