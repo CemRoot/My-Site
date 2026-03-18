@@ -336,54 +336,76 @@ async function scrapeAllCategories() {
 async function scrapeArticleDetails(url) {
   console.log(`   🔍 Scraping article details: ${url}`);
 
-  const firecrawlResult = await fetchWithRetry(
-    'https://api.firecrawl.dev/v1/scrape',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${CONFIG.FIRECRAWL_API_KEY}`,
-      },
-      body: JSON.stringify({
-        url,
-        formats: ['markdown', 'html'],
-        onlyMainContent: true,
-        waitFor: 3000,
-      }),
-    },
-    `article ${url.split('/').pop()}`
-  );
+  const firecrawlHeaders = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${CONFIG.FIRECRAWL_API_KEY}`,
+  };
+  const slug = url.split('/').pop();
 
-  if (!firecrawlResult.success) {
-    console.error(`   ❌ Failed to scrape article: ${firecrawlResult.status || firecrawlResult.error}`);
+  const [markdownResult, htmlResult] = await Promise.all([
+    fetchWithRetry(
+      'https://api.firecrawl.dev/v1/scrape',
+      {
+        method: 'POST',
+        headers: firecrawlHeaders,
+        body: JSON.stringify({
+          url,
+          formats: ['markdown'],
+          onlyMainContent: true,
+          waitFor: 3000,
+        }),
+      },
+      `article-markdown ${slug}`
+    ),
+    fetchWithRetry(
+      'https://api.firecrawl.dev/v1/scrape',
+      {
+        method: 'POST',
+        headers: firecrawlHeaders,
+        body: JSON.stringify({
+          url,
+          formats: ['html'],
+          onlyMainContent: false,
+          waitFor: 3000,
+        }),
+      },
+      `article-html ${slug}`
+    ),
+  ]);
+
+  if (!markdownResult.success) {
+    console.error(`   ❌ Failed to scrape article: ${markdownResult.status || markdownResult.error}`);
     return null;
   }
 
-  const data = await firecrawlResult.response.json();
-  const articleData = data?.data;
+  const markdownData = (await markdownResult.response.json())?.data;
+  const htmlData = htmlResult.success ? (await htmlResult.response.json())?.data : null;
 
-  if (!articleData) {
+  if (!markdownData) {
     console.error(`   ❌ No article data in response`);
     return null;
   }
 
-  let markdownContent = articleData.markdown || '';
-  let htmlContent = articleData.html || '';
-  const metadata = articleData.metadata || {};
-  articleData.markdown = null;
-  articleData.html = null;
+  let markdownContent = markdownData?.markdown || '';
+  let htmlContent = htmlData?.html || '';
+  const metadata = markdownData?.metadata || htmlData?.metadata || {};
+  if (markdownData) markdownData.markdown = null;
+  if (htmlData) htmlData.html = null;
 
   if (!markdownContent && !htmlContent) {
     console.error(`   ❌ No content found for article`);
     return null;
   }
 
-  // Extract embeds from HTML before processing markdown
   let embedTokens = [];
   if (htmlContent) {
     try {
-      const { contentWithTokens } = htmlToTokens(htmlContent);
+      const { contentWithTokens, embedCount } = htmlToTokens(htmlContent);
       embedTokens = contentWithTokens.match(/\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):[^\]]+\]\]/g) || [];
+      const total = embedCount.youtube + embedCount.twitter + embedCount.tiktok;
+      if (total > 0) {
+        console.log(`  ✅ Extracted ${total} embed(s) from raw HTML (YT:${embedCount.youtube} TW:${embedCount.twitter} TT:${embedCount.tiktok})`);
+      }
     } catch { /* ignore embed extraction errors */ }
   }
 

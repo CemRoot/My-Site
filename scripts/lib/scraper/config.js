@@ -25,7 +25,7 @@ export const SCRAPER_CONFIG = {
   MAX_CONSECUTIVE_FAILURES: 3,
 };
 
-export const GROQ_PRIMARY_MODEL = 'llama-3.1-8b-instant';
+export const GROQ_PRIMARY_MODEL = 'llama-3.3-70b-versatile';
 export const GROQ_FALLBACK_MODEL = 'openai/gpt-oss-20b';
-export const GROQ_LAST_RESORT_MODEL = 'llama-3.3-70b-versatile';
+export const GROQ_LAST_RESORT_MODEL = 'llama-3.1-8b-instant';
 export const GROQ_ENHANCEMENT_MODEL = 'llama-3.1-8b-instant';

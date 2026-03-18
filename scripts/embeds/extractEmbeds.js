@@ -162,7 +162,7 @@ export function htmlToTokens(html) {
     }
   });
 
-  let contentWithTokens = $.html();
+  let contentWithTokens = $('body').html() || $.html();
   
   contentWithTokens = contentWithTokens
     .replace(/\n{3,}/g, '\n\n')

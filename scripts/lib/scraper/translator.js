@@ -88,7 +88,7 @@ async function translateWithModel(model, text, retry = false) {
     : TRANSLATION_SYSTEM_PROMPT;
 
   const userPrompt = retry
-    ? `Translate this Turkish text to English:\n\n${text}`
+    ? `Translate this Turkish text to English.\n\nCRITICAL RULES:\n1. Output ONLY the English translation, nothing else.\n2. Keep ALL __WIDGET_0__, __WIDGET_1__, __WIDGET_N__ placeholders exactly as-is. Do not translate, remove, or modify them.\n3. No notes, no explanations.\n\nText:\n${text}`
     : createTranslationPrompt(text);
 
   const completion = await groq.chat.completions.create({
@@ -108,6 +108,13 @@ async function translateWithModel(model, text, retry = false) {
   }
 
   translatedText = translatedText
+    .replace(/^I('m| am) sorry[^.\n]*\.?/gim, '')
+    .replace(/^I don'?t understand[^.\n]*\.?/gim, '')
+    .replace(/^Could you please (provide|clarify)[^.\n]*\.?/gim, '')
+    .replace(/^I('m| am) unable to[^.\n]*\.?/gim, '')
+    .replace(/^I cannot[^.\n]*\.?/gim, '')
+    .replace(/^Please provide the text[^.\n]*\.?/gim, '')
+    .replace(/^What you('re| are) asking for[^.\n]*\.?/gim, '')
     .replace(/^REMINDER:.*$/gim, '')
     .replace(/^Note: I have.*$/gim, '')
     .replace(/^Translate the following.*$/gim, '')
@@ -180,6 +187,9 @@ const INSTRUCTION_LEAKAGE_PATTERNS = [
   'As an AI', 'As a language model', 'I cannot process', "I'm not able to",
   'I do not have the ability', 'cannot be translated', 'cannot translate this',
   'The above text', 'as requested', 'Please note that',
+  "i'm sorry", 'i am sorry', "i don't understand", 'i do not understand',
+  'could you please provide', 'please provide the text',
+  "what you're asking for", 'what you are asking for',
 ];
 
 function validateTranslationQuality(result) {

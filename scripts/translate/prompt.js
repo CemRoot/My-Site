@@ -26,6 +26,11 @@ Examples of tokens to preserve:
 [[EMBED:TWEET:1876543212345678901]]
 [[EMBED:YOUTUBE:VIDEO_ID_HERE]]
 
+CRITICAL RULES FOR WIDGET PLACEHOLDERS:
+- Any __WIDGET_N__ placeholder (e.g. __WIDGET_0__, __WIDGET_1__) must be kept EXACTLY as-is
+- DO NOT translate, remove, or modify these placeholders
+- These are internal markers that will be restored after translation
+
 Translation rules:
 - Translate ONLY the Turkish text provided by the user
 - Output ONLY the English translation, nothing else
