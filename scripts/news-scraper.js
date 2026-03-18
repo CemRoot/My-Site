@@ -34,6 +34,66 @@ const groq = new Groq({ apiKey: CONFIG.GROQ_API_KEY });
 
 const groqParser = new Groq({ apiKey: CONFIG.GROQ_PARSER_API_KEY });
 
+// ─── URL & Content Blocklists ───
+
+const BLOCKED_URL_SLUGS = [
+  'hesabim', 'my-account', 'giris', 'login', 'kayit', 'register',
+  'sepet', 'cart', 'checkout', 'odeme', 'wp-admin', 'wp-login',
+  'wp-register', 'feed', 'rss', 'sitemap', 'robots', 'favicon',
+  'iletisim', 'contact', 'hakkimizda', 'about', 'gizlilik',
+  'privacy', 'terms', 'kvkk', 'cerez', 'cookie', 'yazarlar',
+  'author', 'profil', 'profile', 'ayarlar', 'settings',
+  'abone', 'subscribe', 'newsletter', 'search', 'ara',
+];
+
+const GARBAGE_CONTENT_PATTERNS = [
+  /we use cookies/i,
+  /cookie\s*(policy|settings|preferences|consent)/i,
+  /çerez\s*(politika|ayar)/i,
+  /by clicking .{0,20}accept/i,
+  /personalized ads/i,
+  /sign\s*in|log\s*in|create\s*account/i,
+  /forgot\s*(your\s*)?password/i,
+  /şifre(mi)?\s*unuttum/i,
+  /giriş\s*yap|kayıt\s*ol|hesap\s*oluştur/i,
+  /your\s*cart\s*is\s*empty/i,
+  /add\s*to\s*cart/i,
+];
+
+const GARBAGE_TITLE_PATTERNS = [
+  /^my\s*account$/i,
+  /^hesab[ıi]m$/i,
+  /^(giriş|kayıt|login|register|sign\s*up|sign\s*in)$/i,
+  /^(cart|sepet|checkout|ödeme)$/i,
+  /^(contact|iletişim|hakkımızda|about)$/i,
+  /^(search|ara|arama)$/i,
+  /^(cookie|çerez|privacy|gizlilik)$/i,
+  /^(404|page not found|sayfa bulunamadı)$/i,
+];
+
+function isBlockedUrl(url) {
+  try {
+    const pathname = new URL(url).pathname.replace(/\/$/, '').toLowerCase();
+    const slug = pathname.split('/').pop();
+    return BLOCKED_URL_SLUGS.some(blocked => slug === blocked || pathname.includes(`/${blocked}/`) || pathname.includes(`/${blocked}`));
+  } catch {
+    return false;
+  }
+}
+
+function isGarbageContent(title, content) {
+  for (const pattern of GARBAGE_TITLE_PATTERNS) {
+    if (pattern.test(title?.trim())) return `Blocked title: "${title}"`;
+  }
+  const sample = (content || '').substring(0, 1500);
+  let hits = 0;
+  for (const pattern of GARBAGE_CONTENT_PATTERNS) {
+    if (pattern.test(sample)) hits++;
+  }
+  if (hits >= 2) return `Content matched ${hits} garbage patterns (cookie/login/form)`;
+  return null;
+}
+
 function hasNuvemmagDomain(line) {
   const urlRegex = /(https?:\/\/[^\s)>]+)/ig;
   let match;
@@ -108,6 +168,8 @@ CRITICAL URL PATTERNS (updated December 2025):
 - NEW format: https://nuvemmag.com/article-slug-here/
 - OLD format: https://nuvemmag.com/post/article-slug/ (still valid)
 - Do NOT include category URLs like /category/
+- Do NOT include utility pages: /hesabim/, /giris/, /kayit/, /iletisim/, /hakkimizda/, /gizlilik/, /cerez/, /my-account/, /login/, /register/, /contact/, /about/, /privacy/, /cookie/
+- ONLY include actual news article URLs
 
 DATE FORMATS to recognize:
 - Absolute: "16 Aralık 2025", "17 Aralık 2024"
@@ -146,6 +208,10 @@ Output JSON:
     for (const article of articles) {
       if (!article.url || !article.url.includes('nuvemmag.com/')) continue;
       if (article.url.includes('/category/')) continue;
+      if (isBlockedUrl(article.url)) {
+        console.log(`  🚫 Blocked non-article URL: ${article.url}`);
+        continue;
+      }
 
       const parsedDate = parseTurkishDate(article.date);
       if (!parsedDate) {
@@ -226,7 +292,7 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
   console.log(`  ⚠️ AI parsing returned no results, trying regex fallback...`);
   const urlRegex = /https:\/\/nuvemmag\.com\/(?:post\/)?[a-z0-9-]+\/?/gi;
   const matches = [...new Set(markdown.match(urlRegex) || [])];
-  const filtered = matches.filter(url => !url.includes('/category/'));
+  const filtered = matches.filter(url => !url.includes('/category/') && !isBlockedUrl(url));
 
   const today = new Date();
   const todayStr = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
@@ -495,6 +561,11 @@ async function scrapeNews() {
       break;
     }
 
+    if (isBlockedUrl(url)) {
+      console.log(`🚫 [${category}] Blocked non-article URL: ${url}\n`);
+      continue;
+    }
+
     console.log(`📰 [${category}] Processing: ${url}`);
     processedInThisRun.add(url);
 
@@ -504,6 +575,12 @@ async function scrapeNews() {
       failedCount++;
       consecutiveFailures++;
       console.log(`❌ Failed (${consecutiveFailures} consecutive failures)\n`);
+      continue;
+    }
+
+    const garbageReason = isGarbageContent(article.title, article.content);
+    if (garbageReason) {
+      console.log(`🚫 [${category}] Rejected garbage page: ${garbageReason}\n`);
       continue;
     }
 
