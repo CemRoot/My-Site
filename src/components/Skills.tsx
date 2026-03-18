@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Award } from 'lucide-react';
+import { Award, Code2, Puzzle, ShieldCheck } from 'lucide-react';
 import {
   SKILL_CATEGORIES,
   METHODOLOGIES,
@@ -185,34 +185,45 @@ function CertCarousel() {
    DESKTOP COMPONENTS (>= 768px)
    ═══════════════════════════════════════════ */
 
-function TabBar({ activeTab, onTabChange }: { activeTab: TabId; onTabChange: (t: TabId) => void }) {
-  const tabs: { id: TabId; label: string; count: number }[] = [
-    { id: 'skills', label: 'Skills', count: TOTAL_SKILL_COUNT },
-    { id: 'methods', label: 'Methodologies', count: METHODOLOGIES.length },
-    { id: 'certs', label: 'Certifications', count: CERTIFICATIONS.length },
-  ];
+const TAB_CONFIG: { id: TabId; label: string; count: number; icon: typeof Code2; color: ThemeColor }[] = [
+  { id: 'skills', label: 'Skills', count: TOTAL_SKILL_COUNT, icon: Code2, color: 'primary' },
+  { id: 'methods', label: 'Methodologies', count: METHODOLOGIES.length, icon: Puzzle, color: 'secondary' },
+  { id: 'certs', label: 'Certifications', count: CERTIFICATIONS.length, icon: ShieldCheck, color: 'accent' },
+];
 
+function TabBar({ activeTab, onTabChange }: { activeTab: TabId; onTabChange: (t: TabId) => void }) {
   return (
-    <div className="flex justify-center mb-10">
-      <div className="inline-flex gap-1 p-1.5 rounded-2xl frosted-glass border border-primary/10">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => onTabChange(tab.id)}
-            className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
-              activeTab === tab.id
-                ? 'bg-primary/12 text-primary shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {tab.label}
-            <span className={`ml-1.5 text-[10px] font-mono ${
-              activeTab === tab.id ? 'text-primary/60' : 'text-muted-foreground/50'
-            }`}>
-              {tab.count}
-            </span>
-          </button>
-        ))}
+    <div className="flex justify-center mb-8">
+      <div className="inline-flex gap-2 p-2 rounded-2xl liquid-glass-strong border border-primary/15">
+        {TAB_CONFIG.map((tab) => {
+          const isActive = activeTab === tab.id;
+          const Icon = tab.icon;
+          const classes = COLOR_CLASSES[tab.color];
+
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onTabChange(tab.id)}
+              className={`group relative flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 ${
+                isActive
+                  ? `bg-gradient-to-r ${classes.gradientBg} border ${classes.borderStrong} ${classes.text} shadow-lg shadow-${tab.color}/10`
+                  : 'border border-transparent text-muted-foreground hover:text-foreground hover:bg-white/5'
+              }`}
+            >
+              <Icon className={`w-4 h-4 transition-colors duration-300 ${
+                isActive ? classes.text : 'text-muted-foreground group-hover:text-foreground'
+              }`} />
+              <span>{tab.label}</span>
+              <span className={`inline-flex items-center justify-center min-w-[26px] px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold leading-none transition-all duration-300 border ${
+                isActive
+                  ? `${classes.chipBg} ${classes.text} ${classes.border}`
+                  : 'bg-white/5 text-muted-foreground/60 border-white/5 group-hover:bg-white/10 group-hover:border-white/10'
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -226,7 +237,7 @@ function CategoryFilters({
   onCategoryChange: (c: CategoryKey) => void;
 }) {
   return (
-    <div className="flex flex-wrap justify-center gap-2 mb-8">
+    <div className="flex flex-wrap justify-center gap-2 mt-8 mb-8">
       {CATEGORY_FILTERS.map((f) => {
         const isActive = activeCategory === f.key;
         return (
@@ -254,7 +265,7 @@ function SkillChipsGrid({ activeCategory }: { activeCategory: CategoryKey }) {
       : SORTED_CATEGORIES.filter((c) => c.title === activeCategory);
 
   return (
-    <div className="flex flex-wrap justify-center gap-2.5">
+    <div className="flex flex-wrap justify-center gap-4">
       {filteredCategories.map((category, catIdx) => {
         const color = getColumnColor(SORTED_CATEGORIES.indexOf(category));
         const classes = COLOR_CLASSES[color];
@@ -277,7 +288,7 @@ function SkillChipsGrid({ activeCategory }: { activeCategory: CategoryKey }) {
 
 function MethodologyPills() {
   return (
-    <div className="flex flex-wrap justify-center gap-3">
+    <div className="flex flex-wrap justify-center gap-4 mt-8 mb-8">
       {METHODOLOGIES.map((m, idx) => {
         const classes = COLOR_CLASSES[m.color];
         return (
@@ -295,19 +306,20 @@ function MethodologyPills() {
 
 function CertCompactList() {
   return (
-    <div className="max-w-4xl mx-auto flex flex-col gap-2">
-      {CERTIFICATIONS.map((cert) => {
+    <div className="max-w-4xl mx-auto flex flex-col mt-8 mb-8 rounded-xl overflow-hidden frosted-glass border border-primary/20 bg-background/60">
+      {CERTIFICATIONS.map((cert, idx) => {
         const theme = CERTIFICATION_THEMES[cert.color];
+        const isLast = idx === CERTIFICATIONS.length - 1;
         return (
           <div
             key={`${cert.title}-${cert.year}`}
-            className={`flex items-center gap-4 px-5 py-3.5 rounded-xl frosted-glass border ${theme.border} bg-background/60 transition-all duration-200 hover:border-primary/30`}
+            className={`flex items-center gap-4 px-5 py-3.5 transition-all duration-200 hover:bg-primary/5 ${!isLast ? 'border-b border-primary/10' : ''}`}
           >
             <span
-              className={`px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wide border flex-shrink-0 w-[56px] text-center ${
+              className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider flex-shrink-0 ${
                 cert.type === 'License'
-                  ? 'border-accent/30 text-accent'
-                  : 'border-primary/30 text-primary'
+                  ? 'bg-accent/10 text-accent border border-accent/20'
+                  : 'bg-primary/10 text-primary border border-primary/20'
               }`}
             >
               {cert.type === 'License' ? 'License' : 'Cert'}

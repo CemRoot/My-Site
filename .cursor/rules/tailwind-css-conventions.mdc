@@ -1,0 +1,44 @@
+---
+description: Tailwind CSS and styling conventions for this project
+globs: "**/*.{tsx,jsx,css}"
+alwaysApply: false
+---
+
+# Tailwind CSS Conventions
+
+## Verify CSS Classes Exist Before Using
+
+Before adding or changing Tailwind utility classes, verify the class actually exists in the compiled CSS (`src/index.css`). This project uses a pre-compiled Tailwind CSS output — not all utility classes are available.
+
+```tsx
+// BAD: Using shorthand/fractional classes that don't exist in compiled CSS
+<div className="my-8 mb-10 gap-2.5">
+
+// GOOD: Using individual classes that are verified to exist
+<div className="mt-8 mb-8 gap-3">
+```
+
+Known missing classes (NOT in compiled CSS): `my-*`, `mb-10`, `gap-2.5`, `gap-5`.
+Available gap classes: `gap-1`, `gap-1.5`, `gap-2`, `gap-3`, `gap-4`, `gap-6`, `gap-8`, `gap-12`.
+Available margin-bottom: `mb-1` thru `mb-8`, `mb-12`, `mb-16` (no `mb-10`).
+
+When unsure, search `src/index.css` for the class (e.g., grep for `.my-8` or `.gap-2.5`) before using it.
+
+## Never Stack Duplicate or Conflicting Classes
+
+Do not add new classes on top of existing ones that target the same CSS property. Always replace — never accumulate.
+
+```tsx
+// BAD: Stacking conflicting margin classes
+<div className="mt-4 mt-8">
+
+// GOOD: Single, correct value
+<div className="mt-8">
+```
+
+## Preserve Existing Code Structure
+
+When making styling changes:
+- Replace the specific class that needs changing; do not rewrite the entire className string
+- Do not remove unrelated classes
+- Do not add classes without verifying they won't conflict with existing ones

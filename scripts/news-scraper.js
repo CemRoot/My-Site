@@ -314,7 +314,8 @@ async function scrapeArticleDetails(url) {
   let embedTokens = [];
   if (htmlContent) {
     try {
-      embedTokens = htmlToTokens(htmlContent);
+      const { contentWithTokens } = htmlToTokens(htmlContent);
+      embedTokens = contentWithTokens.match(/\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):[^\]]+\]\]/g) || [];
     } catch { /* ignore embed extraction errors */ }
   }
 
