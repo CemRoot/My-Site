@@ -451,6 +451,51 @@ async function scrapeArticleDetails(url) {
   // Clean up excessive whitespace
   markdownContent = markdownContent.replace(/\n{3,}/g, '\n\n').trim();
 
+  // Extract original source before trimming (source refs are often near the end)
+  let originalSource = '';
+  const sourcePatterns = [
+    /(?:kaynak|source)[:\s]+(https?:\/\/[^\s\)\]>\n"']+)/i,
+    /(?:kaynak|source)[:\s]+\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/i,
+    /via[:\s]+\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/i,
+  ];
+  for (const pattern of sourcePatterns) {
+    const match = markdownContent.match(pattern);
+    if (match) {
+      const url = match[2] || match[1];
+      originalSource = url.trim().replace(/[.,;:!?\s]+$/, '');
+      break;
+    }
+  }
+
+  // Trim trailing non-article content (cookie banners, comment sections, etc.)
+  const CONTENT_END_MARKERS = [
+    /\n+Post Views\s*:\s*\d+/i,
+    /\n+What (?:is|do) (?:your|you think about)/i,
+    /\n+(?:We value your privacy|We use cookies)/i,
+    /\n+Notifications?\s*\n/i,
+    /\n+Related Topics\s*\n/i,
+    /\n+Similar Articles\s*\n/i,
+    /\n+Show Comments/i,
+    /\n+No more articles/i,
+    /\n+(?:Log\s*in|Sign\s*in|Login)\s*\n/i,
+    /\n+\d+\s+(?:I liked it|I am applauding)/i,
+    /\n+CustomizeDeclineAccept/i,
+    /\n+NecessaryAlways Active/i,
+  ];
+
+  let earliestTrimIndex = -1;
+  for (const marker of CONTENT_END_MARKERS) {
+    const match = marker.exec(markdownContent);
+    if (match && (earliestTrimIndex === -1 || match.index < earliestTrimIndex)) {
+      earliestTrimIndex = match.index;
+    }
+  }
+  if (earliestTrimIndex > 0) {
+    const trimmedChars = markdownContent.length - earliestTrimIndex;
+    markdownContent = markdownContent.slice(0, earliestTrimIndex).trim();
+    console.log(`   ✂️  Trimmed ${trimmedChars} trailing chars (non-article content)`);
+  }
+
   // Extract title from metadata or markdown
   let title = metadata.title || metadata['og:title'] || '';
   title = title.replace(/\s*[–—\-]\s*NuvemMag\s*$/i, '').trim();
@@ -486,21 +531,6 @@ async function scrapeArticleDetails(url) {
   if (!date) {
     const today = new Date();
     date = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
-  }
-
-  // Extract original source from article content
-  let originalSource = '';
-  const sourcePatterns = [
-    /kaynak[:\s]*([^\n]+)/i,
-    /source[:\s]*([^\n]+)/i,
-    /via[:\s]*\[([^\]]+)\]/i,
-  ];
-  for (const pattern of sourcePatterns) {
-    const match = markdownContent.match(pattern);
-    if (match) {
-      originalSource = match[1].trim();
-      break;
-    }
   }
 
   if (!title || !markdownContent) {

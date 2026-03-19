@@ -19,6 +19,7 @@ export const env = {
   GROQ_API_KEY: process.env.GROQ_API_KEY || '',
   GROQ_PARSER_API_KEY: process.env.GROQ_PARSER_API_KEY || process.env.GROQ_API_KEY || '',
   FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY || '',
+  OLLAMA_API_KEY: process.env.OLLAMA_API_KEY || '',
   VERCEL_ENV: process.env.VERCEL_ENV || 'development',
   VERCEL_URL: process.env.VERCEL_URL || '',
   VERCEL_TOKEN: process.env.VERCEL_TOKEN || '',

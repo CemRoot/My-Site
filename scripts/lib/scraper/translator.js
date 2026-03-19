@@ -4,7 +4,8 @@
  */
 
 import Groq from 'groq-sdk';
-import { SCRAPER_CONFIG, GROQ_PRIMARY_MODEL, GROQ_FALLBACK_MODEL, GROQ_LAST_RESORT_MODEL, GROQ_ENHANCEMENT_MODEL } from './config.js';
+import { Ollama } from 'ollama';
+import { SCRAPER_CONFIG, GROQ_PRIMARY_MODEL, GROQ_FALLBACK_MODEL, GROQ_LAST_RESORT_MODEL, GROQ_ENHANCEMENT_MODEL, OLLAMA_PRIMARY_MODEL, OLLAMA_API_KEY } from './config.js';
 import {
   TRANSLATION_SYSTEM_PROMPT,
   createTranslationPrompt,
@@ -16,6 +17,13 @@ import { assertContentQuality } from '../../validation/contentQualityCheck.js';
 import { validateArticle } from '../../validation/smartArticleProcessor.js';
 
 const groq = new Groq({ apiKey: SCRAPER_CONFIG.GROQ_API_KEY });
+
+const ollama = OLLAMA_API_KEY
+  ? new Ollama({
+      host: 'https://ollama.com',
+      headers: { Authorization: `Bearer ${OLLAMA_API_KEY}` },
+    })
+  : null;
 
 function preserveWidgets(content) {
   const widgets = [];
@@ -133,6 +141,47 @@ async function translateWithModel(model, text, retry = false) {
   return translatedText;
 }
 
+async function translateWithOllama(text) {
+  if (!ollama) throw new Error('Ollama client not configured (missing API key)');
+
+  const completion = await ollama.chat({
+    model: OLLAMA_PRIMARY_MODEL,
+    messages: [
+      { role: 'system', content: TRANSLATION_SYSTEM_PROMPT },
+      { role: 'user', content: createTranslationPrompt(text) },
+    ],
+    options: { temperature: 0.3 },
+  });
+
+  let translatedText = completion.message?.content || '';
+
+  if (!translatedText || translatedText.trim().length === 0) {
+    throw new Error('Ollama translation returned empty result');
+  }
+
+  translatedText = translatedText
+    .replace(/^I('m| am) sorry[^.\n]*\.?/gim, '')
+    .replace(/^I don'?t understand[^.\n]*\.?/gim, '')
+    .replace(/^Could you please (provide|clarify)[^.\n]*\.?/gim, '')
+    .replace(/^I('m| am) unable to[^.\n]*\.?/gim, '')
+    .replace(/^I cannot[^.\n]*\.?/gim, '')
+    .replace(/^Please provide the text[^.\n]*\.?/gim, '')
+    .replace(/^REMINDER:.*$/gim, '')
+    .replace(/^Note: I have.*$/gim, '')
+    .replace(/^Translation:.*$/gim, '')
+    .trim();
+
+  const turkishChars = /[ğüşıöçĞÜŞİÖÇ]/;
+  if (turkishChars.test(translatedText) && translatedText.length > 50) {
+    const similarity = calculateSimilarity(text, translatedText);
+    if (similarity > 0.8) {
+      throw new Error(`Ollama translation still contains Turkish: ${translatedText.substring(0, 100)}...`);
+    }
+  }
+
+  return translatedText;
+}
+
 async function enhanceArticleWithTLDR(content) {
   try {
     console.log(`   📝 Enhancing article with TL;DR and key highlights...`);
@@ -218,10 +267,27 @@ export async function translateText(text) {
   if (!text || text.trim().length === 0) return text;
 
   const { content: cleanContent, widgets } = preserveWidgets(text);
-  const models = [GROQ_PRIMARY_MODEL, GROQ_FALLBACK_MODEL, GROQ_LAST_RESORT_MODEL];
   let translatedContent = null;
 
-  for (let i = 0; i < models.length; i++) {
+  // Ollama Cloud is the first attempt before the Groq cascade
+  if (ollama) {
+    try {
+      const result = await translateWithOllama(cleanContent);
+      const quality = validateTranslationQuality(result);
+      if (quality.valid) {
+        translatedContent = result;
+        console.log(`    ✅ Ollama (${OLLAMA_PRIMARY_MODEL}) translation succeeded`);
+      } else {
+        console.warn(`    ⚠️  Ollama quality check failed: ${quality.reason}`);
+      }
+    } catch (error) {
+      console.warn(`    ⚠️  Ollama translation failed: ${error.message}`);
+    }
+  }
+
+  const models = [GROQ_PRIMARY_MODEL, GROQ_FALLBACK_MODEL, GROQ_LAST_RESORT_MODEL];
+
+  for (let i = 0; i < models.length && !translatedContent; i++) {
     const model = models[i];
 
     for (let attempt = 0; attempt < 2; attempt++) {
