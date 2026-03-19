@@ -344,7 +344,7 @@ async function scrapeArticleDetails(url) {
 
   const [markdownResult, htmlResult] = await Promise.all([
     fetchWithRetry(
-      'https://api.firecrawl.dev/v1/scrape',
+      'https://api.firecrawl.dev/v2/scrape',
       {
         method: 'POST',
         headers: firecrawlHeaders,
@@ -353,12 +353,18 @@ async function scrapeArticleDetails(url) {
           formats: ['markdown'],
           onlyMainContent: true,
           waitFor: 3000,
+          excludeTags: [
+            '[class*="cookie"]', '[class*="consent"]', '[class*="gdpr"]',
+            '[class*="privacy-banner"]', '[class*="reaction"]',
+            '[class*="notification"]', '.post-views', '.related-posts',
+            '.comments-section', '#comments', '.cookie-bar', '#cookie-banner',
+          ],
         }),
       },
       `article-markdown ${slug}`
     ),
     fetchWithRetry(
-      'https://api.firecrawl.dev/v1/scrape',
+      'https://api.firecrawl.dev/v2/scrape',
       {
         method: 'POST',
         headers: firecrawlHeaders,
@@ -419,6 +425,9 @@ async function scrapeArticleDetails(url) {
     if (hasNuvemmagDomain(trimmed)) return false;
     if (/^\[?\s*!\[[^\]]*\]\([^)]*nuvemmag[^)]*\)/i.test(trimmed)) return false;
     if (/^\[?\s*!\[[^\]]*nuvemmag[^\]]*\]/i.test(trimmed)) return false;
+    if (/^\s*Share\s*$/i.test(trimmed)) return false;
+    if (/^\s*\d+\s+min\s+read\s*$/i.test(trimmed)) return false;
+    if (/^\s*\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\s*$/i.test(trimmed)) return false;
     return true;
   });
   markdownContent = cleanedLines.join('\n');

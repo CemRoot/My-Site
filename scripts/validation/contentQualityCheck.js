@@ -85,8 +85,10 @@ export function validateArticleContent(article, autoFix = false) {
   const youtubeUIPatterns = [
     /youtube\.com\/channel/,
     /embeds_referring_euri/,
-    /^\s*(Info|Share|Subscribe)\s*$/mi,
-    /\d+\.?\d*[KM]\s+subscribers/i
+    /\d+\.?\d*[KM]\s+subscribers/i,
+    /If playback doesn.*begin/i,
+    /retrieving sharing information/i,
+    /\d+:\d+\s*\/\s*\d+:\d+/,
   ];
   
   for (const pattern of youtubeUIPatterns) {
