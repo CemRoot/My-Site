@@ -264,14 +264,14 @@ function validateTranslationQuality(result) {
   return { valid: true };
 }
 
-export async function translateText(text) {
+export async function translateText(text, useOllama = false) {
   if (!text || text.trim().length === 0) return text;
 
   const { content: cleanContent, widgets } = preserveWidgets(text);
   let translatedContent = null;
 
-  // Ollama Cloud is the first attempt before the Groq cascade
-  if (ollama) {
+  // Ollama Cloud — only used for content translation (useOllama=true)
+  if (useOllama && ollama) {
     try {
       const result = await translateWithOllama(cleanContent);
       const quality = validateTranslationQuality(result);
@@ -415,15 +415,15 @@ export async function translateArticle(article) {
 
   try {
     console.log(`   🔤 Translating title...`);
-    const translatedTitle = cleanTranslation(await translateText(article.title));
+    const translatedTitle = cleanTranslation(await translateText(article.title, false));
     await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.TRANSLATION_DELAY));
 
     console.log(`   📝 Translating description...`);
-    const translatedDescription = cleanTranslation(await translateText(article.description));
+    const translatedDescription = cleanTranslation(await translateText(article.description, false));
     await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.TRANSLATION_DELAY));
 
     console.log(`   📄 Translating full content...`);
-    let translatedContent = cleanTranslation(await translateText(article.content));
+    let translatedContent = cleanTranslation(await translateText(article.content, true));
 
     await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.TRANSLATION_DELAY));
     translatedContent = await enhanceArticleWithTLDR(translatedContent);
