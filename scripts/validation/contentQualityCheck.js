@@ -89,6 +89,9 @@ export function validateArticleContent(article, autoFix = false) {
     /If playback doesn.*begin/i,
     /retrieving sharing information/i,
     /\d+:\d+\s*\/\s*\d+:\d+/,
+    /ytp-title-text/i,
+    /ytp-chapter-title/i,
+    /Watch on YouTube/i,
   ];
   
   for (const pattern of youtubeUIPatterns) {
