@@ -15,6 +15,7 @@ import {
 } from '../../translate/prompt.js';
 import { assertContentQuality } from '../../validation/contentQualityCheck.js';
 import { validateArticle } from '../../validation/smartArticleProcessor.js';
+import { notifyTelegram } from '../../lib/telegram.js';
 
 const groq = new Groq({ apiKey: SCRAPER_CONFIG.GROQ_API_KEY });
 
@@ -282,6 +283,7 @@ export async function translateText(text) {
       }
     } catch (error) {
       console.warn(`    ⚠️  Ollama translation failed: ${error.message}`);
+      notifyTelegram(`⚠️ <b>Ollama Fallback</b>\nGroq cascade started\n<code>${error.message.substring(0,100)}</code>`);
     }
   }
 
@@ -318,7 +320,10 @@ export async function translateText(text) {
         }
 
         if (!isRetry) continue;
-        if (i === models.length - 1) throw new Error(`All translation models failed. Last error: ${msg}`);
+        if (i === models.length - 1) {
+          notifyTelegram(`❌ <b>Tüm modeller başarısız</b>\n<code>${msg.substring(0,150)}</code>`);
+          throw new Error(`All translation models failed. Last error: ${msg}`);
+        }
         break;
       }
     }
@@ -326,7 +331,10 @@ export async function translateText(text) {
     if (translatedContent) break;
   }
 
-  if (!translatedContent) throw new Error('All translation models failed');
+  if (!translatedContent) {
+    notifyTelegram(`❌ <b>Tüm modeller başarısız</b>\n<code>All translation models exhausted</code>`);
+    throw new Error('All translation models failed');
+  }
 
   const finalContent = restoreWidgets(translatedContent, widgets);
 

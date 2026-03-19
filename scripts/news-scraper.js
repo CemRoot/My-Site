@@ -561,6 +561,8 @@ async function scrapeNews() {
   CONFIG.CATEGORIES.forEach(cat => console.log(`   • ${cat.tag}: ${cat.name}`));
   console.log('='.repeat(60));
 
+  await notifyTelegram(`🚀 <b>Scraper Başladı</b>\n📂 ${CONFIG.CATEGORIES.length} kategori | 🕐 ${new Date().toLocaleString('tr-TR', {timeZone:'Europe/Istanbul'})}`);
+
   const currentCount = await getArticleCount();
   console.log(`\n📊 Current database: ${currentCount} articles\n`);
 
@@ -593,6 +595,7 @@ async function scrapeNews() {
   let consecutiveFailures = 0;
   let circuitBreakerTriggered = false;
   const processedInThisRun = new Set();
+  let garbageNotifyCount = 0;
 
   for (const { url, category } of newArticles) {
     if (processedInThisRun.has(url)) {
@@ -627,12 +630,19 @@ async function scrapeNews() {
       failedCount++;
       consecutiveFailures++;
       console.log(`❌ Failed (${consecutiveFailures} consecutive failures)\n`);
+      if (consecutiveFailures >= 2) {
+        notifyTelegram(`❌ <b>Makale scrape başarısız</b> (${consecutiveFailures} ardışık)\n${url}`);
+      }
       continue;
     }
 
     const garbageReason = isGarbageContent(article.title, article.content);
     if (garbageReason) {
       console.log(`🚫 [${category}] Rejected garbage page: ${garbageReason}\n`);
+      if (garbageNotifyCount < 3) {
+        garbageNotifyCount++;
+        notifyTelegram(`🚫 <b>Garbage reddedildi</b>\n${garbageReason.substring(0,100)}`);
+      }
       continue;
     }
 
@@ -665,6 +675,7 @@ async function scrapeNews() {
     } catch (translationError) {
       failedCount++;
       console.log(`❌ [${category}] Translation failed: ${translationError.message}\n`);
+      notifyTelegram(`❌ <b>Çeviri hatası</b> [${category}]\n<code>${translationError.message.substring(0,120)}</code>`);
       continue;
     }
 
