@@ -11,6 +11,9 @@ export function getMainMenuKeyboard() {
         { text: '➕ Manuel Ekle', callback_data: 'action_add_article' },
       ],
       [
+        { text: '🗑️ Haber Sil', callback_data: 'action_delete_article' },
+      ],
+      [
         { text: '📱 LinkedIn', callback_data: 'action_linkedin' },
         { text: '🔵 LinkedIn Groups', callback_data: 'action_linkedin_groups' },
       ],

@@ -126,23 +126,27 @@ export default async function handler(req, res) {
               );
           }
         } else {
-          // Handle text messages for conversation flow (non-command messages)
           const userId = message.from.id;
-          
-          // Get conversation state from Supabase
+
+          // Auto-detect site article URLs for quick deletion
+          if (/cemkoyluoglu\.codes\/tech-news\/[a-z0-9-]+/i.test(text)) {
+            await menuHandler.handleDeleteUrlInput(text, userId);
+            return res.status(200).json({ success: true, message: 'Delete article flow initiated' });
+          }
+
+          // Handle text messages for conversation flow (non-command messages)
           const { getConversationState } = await import('../lib/conversation-state.js');
           const state = await getConversationState(userId);
           
           if (state) {
-            const menuHandler = await import('../scripts/telegram-menu-handler.js');
-            
             if (state.step === 'awaiting_url') {
               await menuHandler.handleArticleUrlInput(text, userId);
             } else if (state.step === 'awaiting_original_source') {
               await menuHandler.handleOriginalSourceInput(text, userId, state.article_url);
             } else if (state.step === 'awaiting_digest_edit') {
-              // LinkedIn digest edit handler
               await menuHandler.handleDigestEditInput(text, userId, state.digest_id);
+            } else if (state.step === 'awaiting_delete_url') {
+              await menuHandler.handleDeleteUrlInput(text, userId);
             }
             
             return res.status(200).json({ success: true, message: 'Conversation message processed' });
@@ -238,6 +242,9 @@ export default async function handler(req, res) {
             case 'chat_backend':
               await menuHandler.handleChatBackendMenu();
               break;
+            case 'delete_article':
+              await menuHandler.handleDeleteArticleAction(fromId);
+              break;
             case 'fix_sources':
               await menuHandler.sendTelegramMessage(
                 '🔧 <b>Source Düzeltme</b>\n\n' +
@@ -287,6 +294,19 @@ export default async function handler(req, res) {
             
             return res.status(200).json({ success: true, message: 'GitHub workflow toggle processed' });
           }
+        }
+
+        // Handle article deletion confirmation
+        if (data.startsWith('delete_confirm_')) {
+          const articleId = data.replace('delete_confirm_', '');
+
+          await callTelegramApi('answerCallbackQuery', {
+            callback_query_id: callback_query.id,
+            text: 'Siliniyor...',
+          });
+
+          await menuHandler.handleDeleteArticleConfirm(articleId);
+          return res.status(200).json({ success: true, message: 'Article deleted' });
         }
 
         // Handle source confirmation callbacks

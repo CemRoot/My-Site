@@ -1347,6 +1347,130 @@ export async function handleCreateDigestAction() {
 }
 
 /**
+ * Handle action_delete_article - Start delete article flow
+ */
+export async function handleDeleteArticleAction(userId) {
+  try {
+    const { setConversationState } = await import('../lib/conversation-state.js');
+    await setConversationState(userId, 'awaiting_delete_url');
+
+    await sendTelegramMessage(
+      '🗑️ <b>Haber Silme</b>\n\n' +
+      '📎 Silmek istediğiniz haberin linkini gönderin:\n\n' +
+      '<i>Örnek: https://cemkoyluoglu.codes/tech-news/article-slug</i>\n\n' +
+      '💡 Doğrudan link gönderirseniz de otomatik algılanır.\n' +
+      '⏱️ 10 dakika içinde göndermezsaniz işlem iptal olur.'
+    );
+  } catch (error) {
+    console.error('Delete article action error:', error);
+    await sendTelegramMessage(`❌ <b>Hata!</b>\n\n${error.message}`);
+  }
+}
+
+/**
+ * Handle delete article URL input — auto-detected or from conversation flow
+ */
+export async function handleDeleteUrlInput(url, userId) {
+  try {
+    const { deleteConversationState } = await import('../lib/conversation-state.js');
+
+    const siteMatch = url.match(/cemkoyluoglu\.codes\/tech-news\/([a-z0-9][a-z0-9-]*[a-z0-9])/i);
+    if (!siteMatch) {
+      await sendTelegramMessage(
+        '❌ <b>Geçersiz link!</b>\n\n' +
+        'Lütfen geçerli bir haber linki gönderin:\n' +
+        '<i>https://cemkoyluoglu.codes/tech-news/article-slug</i>'
+      );
+      return;
+    }
+
+    const slug = siteMatch[1];
+    await deleteConversationState(userId);
+
+    const { data: article, error } = await supabase
+      .from('tech_news_articles')
+      .select('id, title, slug, category')
+      .eq('slug', slug)
+      .single();
+
+    if (error || !article) {
+      await sendTelegramMessage(
+        `❌ <b>Haber bulunamadı!</b>\n\n` +
+        `Slug: <code>${slug}</code>\n\n` +
+        `Zaten silinmiş olabilir.`,
+        { reply_markup: getMainMenuKeyboard() }
+      );
+      return;
+    }
+
+    const titlePreview = article.title.length > 80
+      ? article.title.substring(0, 80) + '...'
+      : article.title;
+
+    await sendTelegramMessage(
+      '🗑️ <b>Bu Haberi Silmek İstiyor Musunuz?</b>\n\n' +
+      `📰 <b>${titlePreview}</b>\n` +
+      `🏷️ Kategori: ${article.category || 'N/A'}\n\n` +
+      '⚠️ Bu işlem geri alınamaz!',
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '✅ Evet, Sil', callback_data: `delete_confirm_${article.id}` },
+              { text: '❌ İptal', callback_data: 'action_refresh_menu' },
+            ]
+          ]
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Delete URL input error:', error);
+    await sendTelegramMessage(`❌ <b>Hata!</b>\n\n${error.message}`);
+    const { deleteConversationState } = await import('../lib/conversation-state.js');
+    await deleteConversationState(userId);
+  }
+}
+
+/**
+ * Handle delete article confirmation callback
+ */
+export async function handleDeleteArticleConfirm(articleId) {
+  try {
+    const { data: deleted, error } = await supabase
+      .from('tech_news_articles')
+      .delete()
+      .eq('id', articleId)
+      .select('title')
+      .single();
+
+    if (error) {
+      await sendTelegramMessage(`❌ <b>Silme hatası!</b>\n\n<code>${error.message}</code>`);
+      return;
+    }
+
+    if (!deleted) {
+      await sendTelegramMessage(
+        '❌ <b>Haber bulunamadı!</b>\n\nZaten silinmiş olabilir.',
+        { reply_markup: getMainMenuKeyboard() }
+      );
+      return;
+    }
+
+    const titlePreview = deleted.title.length > 60
+      ? deleted.title.substring(0, 60) + '...'
+      : deleted.title;
+
+    await sendTelegramMessage(
+      `✅ <b>Haber Silindi!</b>\n\n📰 "${titlePreview}"`,
+      { reply_markup: getMainMenuKeyboard() }
+    );
+  } catch (error) {
+    console.error('Delete article confirm error:', error);
+    await sendTelegramMessage(`❌ <b>Silme hatası!</b>\n\n<code>${error.message}</code>`);
+  }
+}
+
+/**
  * Handle action_help - Help and commands
  */
 export async function handleHelpAction() {
@@ -1889,6 +2013,9 @@ export default {
   handleSourceConfirmation,
   handleOriginalSourceInput,
   handleDigestEditInput,
+  handleDeleteArticleAction,
+  handleDeleteUrlInput,
+  handleDeleteArticleConfirm,
   handleScrapeAction,
   handleHealthAction,
   handleStatusAction,
