@@ -17,35 +17,69 @@ export function extractSlugFromUrl(url) {
   }
 }
 
+function normalizeSlug(slug) {
+  if (!slug) return null;
+  try {
+    return decodeURIComponent(slug).toLowerCase().replace(/\/$/, '');
+  } catch {
+    return slug.toLowerCase().replace(/\/$/, '');
+  }
+}
+
 export async function getExistingArticles(urls) {
   try {
-    const slugs = urls.map(extractSlugFromUrl).filter(Boolean);
-
-    const { data, error } = await supabase
-      .from('tech_news_articles')
-      .select('source_url, slug');
-
-    if (error) {
-      console.error('Error checking existing articles:', error);
-      return new Set();
-    }
-
-    const existingSlugs = new Set();
-    for (const article of data) {
-      const slugFromUrl = extractSlugFromUrl(article.source_url);
-      if (slugFromUrl) existingSlugs.add(slugFromUrl);
-      if (article.slug) existingSlugs.add(article.slug);
-    }
+    if (urls.length === 0) return new Set();
 
     const existingUrls = new Set();
-    for (const url of urls) {
-      const slug = extractSlugFromUrl(url);
-      if (slug && existingSlugs.has(slug)) {
-        existingUrls.add(url);
+
+    // 1) Direct source_url match — fastest, no row-limit issues
+    const batchSize = 200;
+    for (let i = 0; i < urls.length; i += batchSize) {
+      const batch = urls.slice(i, i + batchSize);
+      const { data, error } = await supabase
+        .from('tech_news_articles')
+        .select('source_url')
+        .in('source_url', batch);
+
+      if (!error && data) {
+        data.forEach(a => existingUrls.add(a.source_url));
       }
     }
 
-    console.log(`  📊 Slug-based duplicate check: ${existingUrls.size}/${urls.length} already exist`);
+    // 2) Slug-based fallback for URLs with encoding differences (%96 vs – etc.)
+    const unchecked = urls.filter(u => !existingUrls.has(u));
+    if (unchecked.length > 0) {
+      const incomingSlugs = new Map();
+      for (const u of unchecked) {
+        const raw = extractSlugFromUrl(u);
+        const norm = normalizeSlug(raw);
+        if (norm) incomingSlugs.set(norm, u);
+      }
+
+      let from = 0;
+      const pageSize = 1000;
+      while (incomingSlugs.size > 0) {
+        const { data, error } = await supabase
+          .from('tech_news_articles')
+          .select('source_url')
+          .range(from, from + pageSize - 1);
+
+        if (error || !data || data.length === 0) break;
+
+        for (const article of data) {
+          const dbSlug = normalizeSlug(extractSlugFromUrl(article.source_url));
+          if (dbSlug && incomingSlugs.has(dbSlug)) {
+            existingUrls.add(incomingSlugs.get(dbSlug));
+            incomingSlugs.delete(dbSlug);
+          }
+        }
+
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+    }
+
+    console.log(`  📊 Duplicate check: ${existingUrls.size}/${urls.length} already exist`);
     return existingUrls;
   } catch (error) {
     console.error('Error in bulk check:', error);
