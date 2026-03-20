@@ -32,7 +32,7 @@ OUTPUT RULES:
 - Output ONLY the rewritten article text
 - No meta-commentary, no notes, no explanations
 - No preamble like "Here is the rewritten article"
-- Maintain markdown formatting (## headings, **bold**, etc.)
+- Do NOT use markdown headings (# or ##) — use **bold text** for subheadings instead
 - Do NOT output any Turkish characters (ğ, ü, ş, ı, ö, ç)`;
 
 /**
