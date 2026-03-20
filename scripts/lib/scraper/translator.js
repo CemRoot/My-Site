@@ -405,6 +405,10 @@ export function cleanTranslation(text) {
   cleaned = cleaned.replace(/\byapay zeka(?:y[\u0131i]|y[ae]|d[ae]n?)(?![a-z\u0131\u0130\u00e7\u00f6\u015f\u011f\u00fc])/gi, 'AI');
   cleaned = cleaned.replace(/\byapay zeka(?![a-z\u0131\u0130\u00e7\u00f6\u015f\u011f\u00fc])/gi, 'AI');
 
+  cleaned = cleaned.replace(/!(\s*\n)/g, '.$1');
+  cleaned = cleaned.replace(/!(\s*$)/gm, '.');
+  cleaned = cleaned.replace(/^\s*!\s*$/gm, '');
+
   const lines = cleaned.split('\n');
   const filteredLines = lines.filter(line => {
     const trimmed = line.trim();

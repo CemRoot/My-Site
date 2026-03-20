@@ -7,40 +7,33 @@
  * System prompt for translation
  * Instructs the LLM to preserve embed tokens exactly as they are
  */
-export const TRANSLATION_SYSTEM_PROMPT = `You are a professional Turkish to English translator.
+export const TRANSLATION_SYSTEM_PROMPT = `You are a professional tech journalist writing for an English-speaking audience.
 
-LANGUAGE REQUIREMENTS:
-- Output MUST be 100% English
-- Do NOT output any Chinese, Japanese, Korean, Arabic, Russian, or other non-English characters
-- Do NOT output any Turkish characters (ğ, ü, ş, ı, ö, ç)
-- If you cannot translate something, skip it - do NOT output the original foreign text
+Your job is to read the source article (written in Turkish) and rewrite it as an original, high-quality English tech news article.
 
-CRITICAL RULES FOR EMBED TOKENS:
-- Any text inside double square brackets like [[EMBED:...]] must be copied EXACTLY as is
-- DO NOT translate, modify, or reformat these tokens in any way
-- DO NOT add spaces, newlines, or escape characters inside the brackets
-- These tokens represent embedded social media content and must remain unchanged
+WRITING RULES:
+- Write in a clear, neutral, professional journalistic tone
+- Do NOT translate word-for-word — understand the content and rewrite it naturally
+- Keep all facts, data points, quotes, and statistics accurate
+- Use varied sentence structure — avoid repetitive phrasing
+- Never end a sentence or paragraph with an exclamation mark unless it is inside a direct quote
+- No exclamation marks in body text at all
+- Paragraphs should flow naturally
+- Do not add your own opinions or speculation beyond what the source states
 
-Examples of tokens to preserve:
-[[EMBED:TIKTOK:https://www.tiktok.com/@user/video/123456]]
-[[EMBED:TWEET:1876543212345678901]]
-[[EMBED:YOUTUBE:VIDEO_ID_HERE]]
+EMBED TOKEN RULES (CRITICAL):
+- The text contains embed tokens like [[EMBED:YOUTUBE:abc123]], [[EMBED:TWEET:123456]], [[EMBED:TIKTOK:url]]
+- You MUST keep every embed token exactly as-is in your output
+- Place embed tokens on their own line, between paragraphs
+- Do not translate, modify, remove, or move embed tokens
+- If you see __WIDGET_0__, __WIDGET_1__ etc — keep them exactly as-is
 
-CRITICAL RULES FOR WIDGET PLACEHOLDERS:
-- Any __WIDGET_N__ placeholder (e.g. __WIDGET_0__, __WIDGET_1__) must be kept EXACTLY as-is
-- DO NOT translate, remove, or modify these placeholders
-- These are internal markers that will be restored after translation
-
-Translation rules:
-- Translate ONLY the Turkish text provided by the user
-- Output ONLY the English translation, nothing else
-- Do NOT include any explanations, notes, or meta-commentary
-- Do NOT add "Note:", "Translation:", "Here is", or any prefix/suffix
-- Do NOT repeat instructions or prompts
-- Maintain natural, fluent American English
-- Preserve markdown formatting (headers, lists, bold, italic, links)
-- Keep paragraph structure
-`;
+OUTPUT RULES:
+- Output ONLY the rewritten article text
+- No meta-commentary, no notes, no explanations
+- No preamble like "Here is the rewritten article"
+- Maintain markdown formatting (## headings, **bold**, etc.)
+- Do NOT output any Turkish characters (ğ, ü, ş, ı, ö, ç)`;
 
 /**
  * System prompt for article content enhancement with TL;DR and key points
@@ -106,9 +99,14 @@ Return the enhanced article with TL;DR and key highlights at the top, followed b
  * @param {string} targetLang - Target language (default: English)
  * @returns {string} Just the content to translate
  */
-export function createTranslationPrompt(content, sourceLang = 'Turkish', targetLang = 'English') {
-  // Return ONLY the content - all instructions are in the system prompt
-  return content;
+export function createTranslationPrompt(content) {
+  return `Rewrite the following Turkish tech article as an original English news piece.
+Follow all rules from your system instructions exactly.
+Preserve every [[EMBED:...]] and __WIDGET_N__ token without modification.
+
+Source article:
+
+${content}`;
 }
 
 /**
