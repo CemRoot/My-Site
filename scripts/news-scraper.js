@@ -249,7 +249,7 @@ async function scrapeArticleListFromCategory(categoryUrl, categoryTag) {
   console.log(`\n📂 Scraping category: ${categoryTag} from ${categoryUrl}`);
 
   const firecrawlResult = await fetchWithRetry(
-    'https://api.firecrawl.dev/v1/scrape',
+    'https://api.firecrawl.dev/v2/scrape',
     {
       method: 'POST',
       headers: {

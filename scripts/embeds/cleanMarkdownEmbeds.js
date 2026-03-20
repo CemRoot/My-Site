@@ -4,51 +4,58 @@
  */
 
 /**
- * Removes TikTok embed blockquotes from markdown and inserts token at that position
- * @param {string} markdown - Markdown content
- * @param {string} url - TikTok URL to insert as token
- * @returns {string} - Cleaned markdown with token
+ * Removes TikTok embed blocks from markdown and inserts token at that position.
+ * Extracts the TikTok URL from within the block automatically.
+ * Handles both blockquote (> TikTok Embed) and plain text (TikTok Embed) formats.
  */
-export function replaceTikTokBlockquote(markdown, url) {
-  // Pattern: > TikTok Embed followed by links
-  // We need to remove everything from "> TikTok Embed" until the end of the blockquote
-  
+export function replaceTikTokBlockquote(markdown) {
   const lines = markdown.split('\n');
   const cleanedLines = [];
-  let inTikTokBlockquote = false;
-  let tokenInserted = false;
-  let blockquoteStartIndex = -1;
-  
+  let inTikTokBlock = false;
+  let blockTikTokUrl = null;
+  let blockLines = [];
+
+  const TIKTOK_URL_RE = /https?:\/\/(?:www\.)?tiktok\.com\/@[^\s\/]+\/video\/\d+/;
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    
-    // Detect start of TikTok blockquote
-    if (line.includes('> TikTok Embed')) {
-      inTikTokBlockquote = true;
-      blockquoteStartIndex = i;
-      // Insert token instead
-      cleanedLines.push('');
-      cleanedLines.push(`[[EMBED:TIKTOK:${url}]]`);
-      cleanedLines.push('');
-      tokenInserted = true;
+    const trimmed = line.trim();
+
+    if (!inTikTokBlock && (/^>\s*TikTok\s+Embed/i.test(trimmed) || /^TikTok\s+Embed$/i.test(trimmed))) {
+      inTikTokBlock = true;
+      blockTikTokUrl = null;
+      blockLines = [];
       continue;
     }
-    
-    // Skip lines within TikTok blockquote
-    if (inTikTokBlockquote) {
-      // Check if this line is still part of blockquote (starts with > or is empty)
-      if (line.startsWith('>') || line.trim() === '') {
-        continue;
-      } else {
-        // End of blockquote
-        inTikTokBlockquote = false;
-        cleanedLines.push(line);
+
+    if (inTikTokBlock) {
+      if (!blockTikTokUrl) {
+        const m = TIKTOK_URL_RE.exec(line);
+        if (m) blockTikTokUrl = m[0].split('?')[0];
       }
+
+      if (trimmed === '' || line.startsWith('>') || /tiktok\.com/i.test(line)) {
+        continue;
+      }
+
+      inTikTokBlock = false;
+      if (blockTikTokUrl) {
+        cleanedLines.push('');
+        cleanedLines.push(`[[EMBED:TIKTOK:${blockTikTokUrl}]]`);
+        cleanedLines.push('');
+      }
+      cleanedLines.push(line);
     } else {
       cleanedLines.push(line);
     }
   }
-  
+
+  if (inTikTokBlock && blockTikTokUrl) {
+    cleanedLines.push('');
+    cleanedLines.push(`[[EMBED:TIKTOK:${blockTikTokUrl}]]`);
+    cleanedLines.push('');
+  }
+
   return cleanedLines.join('\n');
 }
 

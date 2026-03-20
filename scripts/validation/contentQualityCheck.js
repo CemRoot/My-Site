@@ -233,11 +233,12 @@ export function validateArticleContent(article, autoFix = false) {
     warnings.push('⚠️  Title is very long (> 200 chars)');
   }
   
-  // 5. Check for incomplete markdown
-  const openBrackets = (content.match(/\[/g) || []).length;
-  const closeBrackets = (content.match(/\]/g) || []).length;
-  const openParens = (content.match(/\(/g) || []).length;
-  const closeParens = (content.match(/\)/g) || []).length;
+  // 5. Check for incomplete markdown (exclude embed tokens from count)
+  const contentWithoutTokens = content.replace(/\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):[^\]]+\]\]/g, '');
+  const openBrackets = (contentWithoutTokens.match(/\[/g) || []).length;
+  const closeBrackets = (contentWithoutTokens.match(/\]/g) || []).length;
+  const openParens = (contentWithoutTokens.match(/\(/g) || []).length;
+  const closeParens = (contentWithoutTokens.match(/\)/g) || []).length;
   
   if (openBrackets !== closeBrackets || openParens !== closeParens) {
     warnings.push('⚠️  Unbalanced markdown brackets/parentheses');
