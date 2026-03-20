@@ -53,42 +53,68 @@ export function replaceTikTokBlockquote(markdown, url) {
 }
 
 /**
- * Removes Twitter embed blockquotes from markdown and inserts token at that position
- * @param {string} markdown - Markdown content
- * @param {string} tweetId - Tweet ID to insert as token
- * @returns {string} - Cleaned markdown with token
+ * Removes Twitter/X embed blocks from markdown and inserts token at that position.
+ * Handles both blockquote format (> Twitter...) and Firecrawl expanded format
+ * (plain "Twitter Embed" followed by twitter.com links and tweet content text).
  */
-export function replaceTwitterBlockquote(markdown, tweetId) {
+export function replaceTwitterBlockquote(markdown) {
   const lines = markdown.split('\n');
   const cleanedLines = [];
-  let inTwitterBlockquote = false;
-  
+  let inTwitterBlock = false;
+  let blockTweetId = null;
+
+  const hasTwitterUrl = (line) =>
+    /twitter\.com|x\.com\/\w+\/status|twimg\.com|t\.co\/|help\.twitter/i.test(line);
+
+  const lookaheadHasTwitter = (fromIndex) => {
+    const window = Math.min(fromIndex + 8, lines.length);
+    for (let j = fromIndex; j < window; j++) {
+      if (hasTwitterUrl(lines[j])) return true;
+    }
+    return false;
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    
-    // Detect start of Twitter blockquote
-    if (line.includes('> Twitter') || line.includes('> Tweet')) {
-      inTwitterBlockquote = true;
-      // Insert token instead
-      cleanedLines.push('');
-      cleanedLines.push(`[[EMBED:TWEET:${tweetId}]]`);
-      cleanedLines.push('');
+    const trimmed = line.trim();
+
+    if (!inTwitterBlock && (/^>\s*Twitter/i.test(trimmed) || /^Twitter\s+Embed$/i.test(trimmed))) {
+      inTwitterBlock = true;
+      blockTweetId = null;
       continue;
     }
-    
-    // Skip lines within Twitter blockquote
-    if (inTwitterBlockquote) {
-      if (line.startsWith('>') || line.trim() === '') {
-        continue;
-      } else {
-        inTwitterBlockquote = false;
-        cleanedLines.push(line);
+
+    if (inTwitterBlock) {
+      if (!blockTweetId) {
+        const m = /\/status\/(\d+)/.exec(line);
+        if (m) blockTweetId = m[1];
       }
+
+      const isTweetRelated = !trimmed || hasTwitterUrl(line);
+      if (isTweetRelated) continue;
+
+      // Non-twitter line: check if more twitter links come soon (tweet text in between)
+      if (lookaheadHasTwitter(i + 1)) continue;
+
+      // No more twitter links ahead — end of block
+      inTwitterBlock = false;
+      if (blockTweetId) {
+        cleanedLines.push('');
+        cleanedLines.push(`[[EMBED:TWEET:${blockTweetId}]]`);
+        cleanedLines.push('');
+      }
+      cleanedLines.push(line);
     } else {
       cleanedLines.push(line);
     }
   }
-  
+
+  if (inTwitterBlock && blockTweetId) {
+    cleanedLines.push('');
+    cleanedLines.push(`[[EMBED:TWEET:${blockTweetId}]]`);
+    cleanedLines.push('');
+  }
+
   return cleanedLines.join('\n');
 }
 

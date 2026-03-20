@@ -445,6 +445,9 @@ async function scrapeArticleDetails(url) {
     if (/^\s*Share\s*$/i.test(trimmed)) return false;
     if (/^\s*\d+\s+min\s+read\s*$/i.test(trimmed)) return false;
     if (/^\s*\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\s*$/i.test(trimmed)) return false;
+    if (/^\[?Nuvem\]?\s*\(.*nuvemmag\.com\/author/i.test(trimmed)) return false;
+    if (/^\s*Yazarın Profili\s*$/i.test(trimmed)) return false;
+    if (/^\[Yazarın Profili\]/i.test(trimmed)) return false;
     return true;
   });
   markdownContent = cleanedLines.join('\n');
@@ -454,21 +457,19 @@ async function scrapeArticleDetails(url) {
   markdownContent = replaceTwitterBlockquote(markdownContent);
   markdownContent = cleanSocialEmbedRemnants(markdownContent);
 
-  // Extract and inject embed tokens from markdown
-  const markdownEmbeds = extractAllEmbedsFromMarkdown(markdownContent);
-  if (markdownEmbeds.length > 0) {
-    for (const embed of markdownEmbeds) {
-      if (!embedTokens.some(t => t === embed.token)) {
-        embedTokens.push(embed.token);
-      }
-      markdownContent = markdownContent.replace(embed.originalText, embed.token);
-    }
+  // Extract embed tokens from markdown links (YouTube/Twitter/TikTok URLs → tokens)
+  markdownContent = extractAllEmbedsFromMarkdown(markdownContent);
+
+  // Collect all embed tokens now present in markdown
+  const mdTokens = markdownContent.match(/\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):[^\]]+\]\]/gi) || [];
+  for (const t of mdTokens) {
+    if (!embedTokens.includes(t)) embedTokens.push(t);
   }
 
-  // Inject HTML embed tokens that weren't found in markdown
+  // Inject HTML-extracted tokens that aren't already in markdown
   if (embedTokens.length > 0) {
-    const existingTokens = markdownContent.match(/\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):[^\]]+\]\]/gi) || [];
-    const newTokens = embedTokens.filter(t => !existingTokens.includes(t));
+    const existingTokens = new Set(mdTokens);
+    const newTokens = embedTokens.filter(t => !existingTokens.has(t));
     if (newTokens.length > 0) {
       markdownContent = markdownContent.trimEnd() + '\n\n' + newTokens.join('\n\n') + '\n\n';
     }
@@ -477,7 +478,7 @@ async function scrapeArticleDetails(url) {
   // Clean up excessive whitespace
   markdownContent = markdownContent.replace(/\n{3,}/g, '\n\n').trim();
 
-  // Extract original source before trimming (source refs are often near the end)
+  // Extract original source before trimming, then remove source line from content
   let originalSource = '';
   const sourcePatterns = [
     /(?:kaynak|source)[:\s]+(https?:\/\/[^\s\)\]>\n"']+)/i,
@@ -489,6 +490,11 @@ async function scrapeArticleDetails(url) {
     if (match) {
       const url = match[2] || match[1];
       originalSource = url.trim().replace(/[.,;:!?\s]+$/, '');
+      // Remove the entire source block from content (plain text or code block)
+      markdownContent = markdownContent
+        .replace(/```\s*\n?\s*(?:kaynak|source)\s*:\s*https?:\/\/[^\n]*\n?\s*```/gi, '')
+        .replace(/^[>\s]*(?:kaynak|source)\s*:\s*https?:\/\/[^\n]*$/gim, '')
+        .replace(/^[>\s]*via\s*:\s*\[[^\]]*\]\([^\)]+\)\s*$/gim, '');
       break;
     }
   }
@@ -732,11 +738,95 @@ async function scrapeNews() {
   }
 }
 
-scrapeNews().catch(async error => {
-  console.error('💥 Fatal error:', error);
-  await notifyTelegram(
-    `💥 <b>Haber Scraper: Fatal Hata</b>\n\n` +
-    `<code>${error.message || 'Bilinmeyen hata'}</code>`
-  );
-  process.exit(1);
-});
+// ─── Single-article test mode ───
+
+async function testSingleUrl(url) {
+  console.log(`\n🧪 TEST MODE — Single article pipeline`);
+  console.log(`📰 URL: ${url}`);
+  console.log('='.repeat(60));
+
+  const dryRun = process.argv.includes('--dry-run');
+  if (dryRun) console.log('🔍 DRY RUN — will not save to database\n');
+
+  console.log('\n1️⃣  scrapeArticleDetails()...');
+  const article = await scrapeArticleDetails(url);
+
+  if (!article) {
+    console.error('❌ scrapeArticleDetails returned null — scraping failed');
+    process.exit(1);
+  }
+
+  console.log(`   ✅ Title: "${article.title.substring(0, 70)}"`);
+  console.log(`   ✅ Content: ${article.content.length} chars`);
+  console.log(`   ✅ Source: ${article.originalSource}`);
+  console.log(`   ✅ Slug: ${article.slug}`);
+
+  console.log('\n2️⃣  isGarbageContent()...');
+  const garbageReason = isGarbageContent(article.title, article.content);
+  if (garbageReason) {
+    console.error(`   ❌ GARBAGE REJECTED: ${garbageReason}`);
+    process.exit(1);
+  }
+  console.log('   ✅ Passed — no garbage detected');
+
+  console.log('\n3️⃣  translateArticle()...');
+  const translatedArticle = await translateArticle(article);
+
+  if (!translatedArticle || translatedArticle.title === article.title) {
+    console.error('   ❌ Translation failed or returned original text');
+    process.exit(1);
+  }
+
+  console.log(`   ✅ Title: "${translatedArticle.title}"`);
+  console.log(`   ✅ Description: "${translatedArticle.description.substring(0, 100)}..."`);
+  console.log(`   ✅ Content: ${translatedArticle.content.length} chars`);
+
+  console.log('\n── Translated content (first 500 chars) ──');
+  console.log(translatedArticle.content.substring(0, 500));
+  console.log('── end preview ──\n');
+
+  const category = process.argv.find((a, i) => process.argv[i - 1] === '--category') || 'News';
+  const articleData = {
+    ...translatedArticle,
+    category,
+    slug: generateSlug(translatedArticle.title),
+  };
+
+  if (dryRun) {
+    console.log('4️⃣  saveArticle() — SKIPPED (dry run)');
+    console.log(`   Slug would be: ${articleData.slug}`);
+    console.log('\n✅ DRY RUN COMPLETE — pipeline works!\n');
+    return;
+  }
+
+  console.log('4️⃣  saveArticle()...');
+  const result = await saveArticle(articleData);
+
+  if (result.success) {
+    console.log(`   ✅ Saved! (ID: ${result.data?.id})`);
+    console.log(`\n🎉 TEST COMPLETE — article live at:`);
+    console.log(`   https://cemkoyluoglu.codes/tech-news/${articleData.slug}\n`);
+  } else {
+    console.error(`   ❌ Save failed: ${result.error?.message || result.reason}`);
+    process.exit(1);
+  }
+}
+
+// ─── Entry point ───
+
+const testUrlIndex = process.argv.indexOf('--test-url');
+if (testUrlIndex !== -1 && process.argv[testUrlIndex + 1]) {
+  testSingleUrl(process.argv[testUrlIndex + 1]).catch(async error => {
+    console.error('💥 Fatal error:', error);
+    process.exit(1);
+  });
+} else {
+  scrapeNews().catch(async error => {
+    console.error('💥 Fatal error:', error);
+    await notifyTelegram(
+      `💥 <b>Haber Scraper: Fatal Hata</b>\n\n` +
+      `<code>${error.message || 'Bilinmeyen hata'}</code>`
+    );
+    process.exit(1);
+  });
+}

@@ -336,11 +336,19 @@ export async function translateText(text, useOllama = false) {
     throw new Error('All translation models failed');
   }
 
-  const finalContent = restoreWidgets(translatedContent, widgets);
+  let finalContent = restoreWidgets(translatedContent, widgets);
 
   if (widgets.length > 0) {
     console.log(`    🔧 Preserved ${widgets.length} widgets during translation`);
   }
+
+  // Strip hallucinated embed tokens the LLM may have invented
+  const legitimateTokens = new Set(widgets.filter(w => w.type === 'embed_token').map(w => w.content));
+  finalContent = finalContent.replace(/\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):[^\]]+\]\]/gi, (match) => {
+    if (legitimateTokens.has(match)) return match;
+    console.warn(`    ⚠️  Removed hallucinated embed token: ${match.substring(0, 60)}`);
+    return '';
+  });
 
   const tokenCheck = validateTokenPreservation(text, finalContent);
   if (!tokenCheck.valid && tokenCheck.missingTokens?.length > 0) {
@@ -352,7 +360,7 @@ export async function translateText(text, useOllama = false) {
     return patched.replace(/\n{3,}/g, '\n\n').trim();
   }
 
-  return finalContent;
+  return finalContent.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 export function cleanTranslation(text) {

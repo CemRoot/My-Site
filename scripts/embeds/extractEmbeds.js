@@ -120,7 +120,9 @@ export function htmlToTokens(html) {
   // ==========================================
   // YouTube Embed Detection
   // ==========================================
-  $('iframe[src*="youtube.com/embed"], iframe[src*="youtube-nocookie.com/embed"]').each((_, el) => {
+
+  // Standard iframes + lazy-loaded divs (Nuvemmag converts iframes to divs via geo-lazy)
+  $('iframe[src*="youtube.com/embed"], iframe[src*="youtube-nocookie.com/embed"], div[src*="youtube.com/embed"], div[src*="youtube-nocookie.com/embed"]').each((_, el) => {
     const $el = $(el);
     const src = $el.attr('src') || '';
     
@@ -128,7 +130,23 @@ export function htmlToTokens(html) {
     const videoId = match?.[1];
     
     if (videoId) {
-      $el.replaceWith(`\n\n[[EMBED:YOUTUBE:${videoId}]]\n\n`);
+      const $wrapper = $el.closest('figure.wp-block-embed-youtube, figure.wp-block-embed');
+      if ($wrapper.length > 0) {
+        $wrapper.replaceWith(`\n\n[[EMBED:YOUTUBE:${videoId}]]\n\n`);
+      } else {
+        $el.replaceWith(`\n\n[[EMBED:YOUTUBE:${videoId}]]\n\n`);
+      }
+      counts.youtube++;
+    }
+  });
+
+  // WordPress oembed figures without matching iframe/div (fallback)
+  $('figure.wp-block-embed-youtube').each((_, el) => {
+    const $el = $(el);
+    const html = $el.html() || '';
+    const match = /youtube\.com\/embed\/([A-Za-z0-9_-]{11})/.exec(html);
+    if (match) {
+      $el.replaceWith(`\n\n[[EMBED:YOUTUBE:${match[1]}]]\n\n`);
       counts.youtube++;
     }
   });
