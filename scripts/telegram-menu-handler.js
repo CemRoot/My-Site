@@ -1374,7 +1374,7 @@ export async function handleDeleteUrlInput(url, userId) {
   try {
     const { deleteConversationState } = await import('../lib/conversation-state.js');
 
-    const siteMatch = url.match(/cemkoyluoglu\.codes\/tech-news\/([a-z0-9][a-z0-9-]*[a-z0-9])/i);
+    const siteMatch = url.match(/cemkoyluoglu\.codes\/tech-news\/([a-z0-9][a-z0-9-]*)/i);
     if (!siteMatch) {
       await sendTelegramMessage(
         '❌ <b>Geçersiz link!</b>\n\n' +
