@@ -181,13 +181,9 @@ export function validateContent(content, originalContent = null) {
   // Check for Turkish phrases (more reliable)
   const turkishPhrases = [
     'yapay zeka', 'teknoloji', 'haber', 'haberi', 'haberler',
-    'tarafından', 'olarak', 'şekilde', 'durumda', 'halde',
-    'için', 'göre', 'kadar', 'ile', 've', 'de', 'da', 'ki',
+    'tarafından', 'olarak', 'şekilde', 'durumda',
     'oldu', 'olduğu', 'yapıldı', 'yapılan', 'yapılacak',
     'açıkladı', 'duyurdu', 'söyledi', 'belirtti',
-    'hollywood', 'süregelen', 'kesin bir sınır',
-    'ailesi altındaki', 'en yeni', 'açık modellerini',
-    'duyurarak', 'performansında', 'hız artışı'
   ];
 
   const contentLower = content.toLowerCase();

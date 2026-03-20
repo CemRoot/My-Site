@@ -140,13 +140,15 @@ export async function saveArticle(article) {
 
     if (rejectionReason) {
       console.warn(`   ⚠️  ARTICLE REJECTED: ${rejectionReason}`);
-      await supabase.from('rejected_articles').insert([{
-        title: cleanTitle,
-        content: cleanContent,
-        source_url: article.sourceUrl,
-        original_source: article.originalSource,
-        reason: rejectionReason,
-      }]).catch(() => {});
+      try {
+        await supabase.from('rejected_articles').insert([{
+          title: cleanTitle,
+          content: cleanContent,
+          source_url: article.sourceUrl,
+          original_source: article.originalSource,
+          reason: rejectionReason,
+        }]);
+      } catch (_) {}
       return { success: false, reason: 'rejected_content', error: null, validation };
     }
 

@@ -5,7 +5,7 @@
 
 import Groq from 'groq-sdk';
 import { Ollama } from 'ollama';
-import { SCRAPER_CONFIG, GROQ_PRIMARY_MODEL, GROQ_FALLBACK_MODEL, GROQ_LAST_RESORT_MODEL, GROQ_ENHANCEMENT_MODEL, OLLAMA_PRIMARY_MODEL, OLLAMA_API_KEY } from './config.js';
+import { SCRAPER_CONFIG, GROQ_PRIMARY_MODEL, GROQ_FALLBACK_MODEL, GROQ_LAST_RESORT_MODEL, GROQ_ENHANCEMENT_MODEL, GROQ_FAST_MODEL, OLLAMA_PRIMARY_MODEL, OLLAMA_API_KEY } from './config.js';
 import {
   TRANSLATION_SYSTEM_PROMPT,
   createTranslationPrompt,
@@ -264,7 +264,7 @@ function validateTranslationQuality(result) {
   return { valid: true };
 }
 
-export async function translateText(text, useOllama = false) {
+export async function translateText(text, useOllama = false, fastMode = false) {
   if (!text || text.trim().length === 0) return text;
 
   const { content: cleanContent, widgets } = preserveWidgets(text);
@@ -287,7 +287,9 @@ export async function translateText(text, useOllama = false) {
     }
   }
 
-  const models = [GROQ_PRIMARY_MODEL, GROQ_FALLBACK_MODEL, GROQ_LAST_RESORT_MODEL];
+  const models = fastMode
+    ? [GROQ_FAST_MODEL, GROQ_PRIMARY_MODEL, GROQ_LAST_RESORT_MODEL]
+    : [GROQ_PRIMARY_MODEL, GROQ_FALLBACK_MODEL, GROQ_LAST_RESORT_MODEL];
 
   for (let i = 0; i < models.length && !translatedContent; i++) {
     const model = models[i];
@@ -426,16 +428,16 @@ export async function translateArticle(article) {
   console.log(`   Content length: ${article.content.length} chars`);
 
   try {
-    console.log(`   🔤 Translating title...`);
-    const translatedTitle = cleanTranslation(await translateText(article.title, false));
+    console.log(`   🔤 Translating title (fast)...`);
+    const translatedTitle = cleanTranslation(await translateText(article.title, false, true));
     await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.TRANSLATION_DELAY));
 
-    console.log(`   📝 Translating description...`);
-    const translatedDescription = cleanTranslation(await translateText(article.description, false));
+    console.log(`   📝 Translating description (fast)...`);
+    const translatedDescription = cleanTranslation(await translateText(article.description, false, true));
     await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.TRANSLATION_DELAY));
 
     console.log(`   📄 Translating full content...`);
-    let translatedContent = cleanTranslation(await translateText(article.content, true));
+    let translatedContent = cleanTranslation(await translateText(article.content, true, false));
 
     await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.TRANSLATION_DELAY));
     translatedContent = await enhanceArticleWithTLDR(translatedContent);

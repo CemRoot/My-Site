@@ -22,7 +22,7 @@ WRITING RULES:
 - Do not add your own opinions or speculation beyond what the source states
 
 EMBED TOKEN RULES (CRITICAL):
-- The text contains embed tokens like [[EMBED:YOUTUBE:abc123]], [[EMBED:TWEET:123456]], [[EMBED:TIKTOK:url]]
+- Embed tokens follow the format [[EMBED:TYPE:DATA]] where TYPE is YOUTUBE, TWEET, or TIKTOK. Preserve every token you encounter exactly.
 - You MUST keep every embed token exactly as-is in your output
 - Place embed tokens on their own line, between paragraphs
 - Do not translate, modify, remove, or move embed tokens
