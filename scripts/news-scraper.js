@@ -443,6 +443,8 @@ async function scrapeArticleDetails(url) {
     if (/^\[?\s*!\[[^\]]*\]\([^)]*nuvemmag[^)]*\)/i.test(trimmed)) return false;
     if (/^\[?\s*!\[[^\]]*nuvemmag[^\]]*\]/i.test(trimmed)) return false;
     if (/^\s*Share\s*$/i.test(trimmed)) return false;
+    if (/^(Tech News|Home|Back to Tech News|Latest News|Artificial Intelligence|Technology|Sustainability|Science|Agenda)$/i.test(trimmed)) return false;
+    if (/^Back to/i.test(trimmed)) return false;
     if (/^\s*\d+\s+min\s+read\s*$/i.test(trimmed)) return false;
     if (/^\s*\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\s*$/i.test(trimmed)) return false;
     if (/^\[?Nuvem\]?\s*\(.*nuvemmag\.com\/author/i.test(trimmed)) return false;

@@ -83,12 +83,24 @@ Rules:
  * @returns {string} Formatted prompt
  */
 export function createArticleEnhancementPrompt(content) {
-  return `Analyze this article and add a TL;DR summary and key highlights at the beginning.
+  return `Add a TL;DR summary and key highlights section at the TOP of this article.
 
-Article content:
-${content}
+CRITICAL: Do NOT repeat or rewrite the article.
+Only prepend the TL;DR and Key Highlights, then include the original article ONCE.
 
-Return the enhanced article with TL;DR and key highlights at the top, followed by the full article content.`;
+Format:
+TL;DR
+[2-3 sentence summary]
+
+Key Highlights
+• [point 1]
+• [point 2]
+• [point 3]
+
+[ORIGINAL ARTICLE HERE - unchanged, exactly as provided]
+
+Article:
+${content}`;
 }
 
 /**

@@ -338,11 +338,9 @@ export async function translateText(text, useOllama = false, fastMode = false) {
     throw new Error('All translation models failed');
   }
 
+  console.log(`    🔄 Restoring ${widgets.length} widgets...`);
   let finalContent = restoreWidgets(translatedContent, widgets);
-
-  if (widgets.length > 0) {
-    console.log(`    🔧 Preserved ${widgets.length} widgets during translation`);
-  }
+  console.log(`    ✅ After restore, __WIDGET remaining: ${(finalContent.match(/__WIDGET_\d+__/g)||[]).length}`);
 
   // Strip hallucinated embed tokens the LLM may have invented
   const legitimateTokens = new Set(widgets.filter(w => w.type === 'embed_token').map(w => w.content));
