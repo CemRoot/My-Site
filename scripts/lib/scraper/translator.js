@@ -434,11 +434,28 @@ export async function translateArticle(article) {
 
   try {
     console.log(`   🔤 Translating title (fast)...`);
-    const translatedTitle = cleanTranslation(await translateText(article.title, false, true));
+    let translatedTitle = cleanTranslation(await translateText(article.title, false, true));
+    // Strip markdown bold/italic that LLM may add to titles
+    translatedTitle = translatedTitle.replace(/^\*{1,3}(.+?)\*{1,3}$/s, '$1').replace(/\*{1,3}/g, '').trim();
+    // Trim title if too long after translation
+    if (translatedTitle.length > 150) {
+      const firstSentence = translatedTitle.split(/[.!?]/)[0].trim();
+      translatedTitle = (firstSentence.length > 20 && firstSentence.length <= 150)
+        ? firstSentence
+        : translatedTitle.substring(0, 120).replace(/\s+\S*$/, '').trim();
+      console.log(`   ✂️  Title trimmed to: "${translatedTitle}"`);
+    }
     await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.TRANSLATION_DELAY));
 
     console.log(`   📝 Translating description (fast)...`);
-    const translatedDescription = cleanTranslation(await translateText(article.description, false, true));
+    let translatedDescription = cleanTranslation(await translateText(article.description, false, true));
+    // Strip widget placeholders and markdown from description
+    translatedDescription = translatedDescription
+      .replace(/__WIDGET_\d+__/g, '')
+      .replace(/\[\[EMBED:[^\]]+\]\]/g, '')
+      .replace(/\*{1,3}/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
     await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.TRANSLATION_DELAY));
 
     console.log(`   📄 Translating full content...`);

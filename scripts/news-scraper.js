@@ -8,7 +8,7 @@
 
 import { notifyTelegram } from './lib/telegram.js';
 import { SCRAPER_CONFIG } from './lib/scraper/config.js';
-import { getExistingArticles, saveArticle, getArticleCount } from './lib/scraper/database.js';
+import { getExistingArticles, saveArticle, getArticleCount, isContentHashDuplicate } from './lib/scraper/database.js';
 import { translateArticle } from './lib/scraper/translator.js';
 import { ScraperRouter } from './lib/scraper/scrapers/ScraperRouter.js';
 
@@ -182,6 +182,13 @@ async function scrapeNews() {
         garbageNotifyCount++;
         notifyTelegram(`🚫 <b>Garbage reddedildi</b>\n${garbageReason.substring(0, 100)}`);
       }
+      continue;
+    }
+
+    // Layer 3: content_hash duplicate check — catches same article with different URL
+    const isHashDup = await isContentHashDuplicate(article.title);
+    if (isHashDup) {
+      console.log(`⏭️  [${category}] Skipping — same article already in DB (hash match): ${url.split('/').pop()}\n`);
       continue;
     }
 

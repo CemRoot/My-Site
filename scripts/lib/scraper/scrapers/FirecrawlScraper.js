@@ -248,7 +248,13 @@ Output JSON:
   _regexFallback(markdown, categoryTag) {
     const urlRegex = /https:\/\/nuvemmag\.com\/(?:post\/)?[a-z0-9-]+\/?/gi;
     const matches = [...new Set(markdown.match(urlRegex) || [])];
-    const filtered = matches.filter(u => !u.includes('/category/') && !isBlockedUrl(u));
+    const filtered = matches.filter(u =>
+      !u.includes('/category/') &&
+      !u.includes('/wp-content/') &&
+      !u.includes('/wp-includes/') &&
+      !u.includes('/wp-json/') &&
+      !isBlockedUrl(u)
+    );
 
     const today = new Date();
     const todayStr = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;

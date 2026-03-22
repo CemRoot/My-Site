@@ -1,0 +1,165 @@
+# Tech News Scraper — Architecture & Rules
+
+## Project Overview
+Portfolio site (cemkoyluoglu.codes) with an automated Turkish→English tech news pipeline.
+Source: nuvemmag.com (Turkish WordPress site)
+Stack: Node.js ESM, Vercel Edge Functions, Supabase PostgreSQL, GitHub Actions
+
+---
+
+## Scraper Architecture (OOP)
+
+### Class Hierarchy
+```
+BaseScraper (abstract)
+├── FirecrawlScraper   — Primary scraper via Firecrawl API v2
+└── CheerioScraper     — Fallback scraper via fetch + cheerio
+
+ScraperRouter          — Routes between scrapers, handles auto-fallback
+```
+
+### File Locations
+```
+scripts/
+├── news-scraper.js                          ← Entry point (orchestration ONLY)
+├── lib/scraper/
+│   ├── config.js                            ← All config constants & model names
+│   ├── database.js                          ← Supabase operations
+│   ├── dateUtils.js                         ← Turkish date parsing
+│   ├── translator.js                        ← Translation pipeline
+│   └── scrapers/
+│       ├── BaseScraper.js                   ← Abstract base class
+│       ├── FirecrawlScraper.js              ← Firecrawl API v2 implementation
+│       ├── CheerioScraper.js                ← fetch+cheerio implementation
+│       └── ScraperRouter.js                 ← Auto-routing + fallback logic
+├── embeds/
+│   ├── extractEmbeds.js                     ← HTML → embed tokens (cheerio)
+│   ├── extractMarkdownEmbeds.js             ← Markdown link → embed tokens
+│   └── cleanMarkdownEmbeds.js               ← Clean TikTok/Twitter blockquotes
+├── translate/
+│   └── prompt.js                            ← All LLM prompts
+└── validation/
+    ├── contentQualityCheck.js               ← Legacy quality checks
+    └── smartArticleProcessor.js             ← Smart validation pipeline
+```
+
+### CRITICAL: news-scraper.js is ORCHESTRATION ONLY
+- No scraping logic in news-scraper.js
+- No Firecrawl API calls in news-scraper.js
+- No cheerio parsing in news-scraper.js
+- All scraping goes through ScraperRouter
+
+---
+
+## Translation Pipeline
+
+```
+article.title       → Groq llama-3.1-8b-instant (fastMode, shortText, NO embed rules)
+article.description → Groq llama-3.1-8b-instant (fastMode, shortText, NO embed rules)
+article.content     → Ollama gemini-3-flash-preview:cloud (primary)
+                     → Groq llama-3.3-70b-versatile (fallback)
+                     → Groq openai/gpt-oss-20b (fallback)
+                     → Groq llama-3.1-8b-instant (last resort)
+TL;DR enhancement   → Groq llama-3.1-8b-instant
+```
+
+### translateText() Signature
+```js
+translateText(text, useOllama = false, fastMode = false, shortText = false)
+```
+- title: `translateText(title, false, true, true)`
+- description: `translateText(desc, false, true, true)`
+- content: `translateText(content, true, false, false)`
+
+### Widget Preservation
+- Embed tokens `[[EMBED:TYPE:DATA]]` → replaced with `__WIDGET_N__` before LLM
+- Restored after LLM with `restoreWidgets()`
+- Hallucinated tokens stripped after restore
+
+---
+
+## Embed Token System
+```
+[[EMBED:YOUTUBE:VIDEO_ID]]      ← 11-char YouTube video ID
+[[EMBED:TWEET:TWEET_ID]]        ← numeric tweet ID
+[[EMBED:TIKTOK:FULL_URL]]       ← full TikTok URL without query params
+```
+Frontend React components render these tokens as embedded players.
+
+---
+
+## Nuvemmag HTML Structure (IMPORTANT)
+- Article content: `.content__post--article` or `.geoit_entry-content`
+- Cookie banner: `.cky-consent-container`, `.cky-modal` (NOT `[class*="cookie"]`)
+- Reaction bar: `.geo-reaction-wrapper`, `.geo-reaction-bar`
+- Published time: `meta[property="article:published_time"]`
+- OG title can contain full article text if Nuvemmag sets it wrong — guard: if title > 150 chars, use H1 fallback
+
+---
+
+## AI Models Config (scripts/lib/scraper/config.js)
+```js
+GROQ_PRIMARY_MODEL = 'llama-3.3-70b-versatile'   // content fallback
+GROQ_FALLBACK_MODEL = 'openai/gpt-oss-20b'
+GROQ_LAST_RESORT_MODEL = 'llama-3.1-8b-instant'
+GROQ_FAST_MODEL = 'llama-3.1-8b-instant'          // title/desc
+GROQ_ENHANCEMENT_MODEL = 'llama-3.1-8b-instant'   // TL;DR
+OLLAMA_PRIMARY_MODEL = 'gemini-3-flash-preview:cloud'  // content primary
+```
+
+---
+
+## Known Bugs Fixed (DO NOT REINTRODUCE)
+
+| Bug | Fix |
+|-----|-----|
+| `replaceTikTokBlockquote(markdown, url)` called without url | Function extracts URL internally from block |
+| Category scraper used Firecrawl v1 | Now v2 |
+| `$.html()` returns full document | Use `$('body').html() \|\| $.html()` |
+| `[[EMBED:YOUTUBE:abc123]]` example in system prompt | Removed — causes hallucination |
+| `stale-while-revalidate=86400` | Changed to 120s |
+| `.catch()` on Supabase insert | Use try/catch instead |
+| `extractAllEmbedsFromMarkdown` return type not used | `markdownContent = extractAllEmbedsFromMarkdown(markdownContent)` |
+| og:title containing full article body | Guard: title.length > 150 → H1 fallback |
+| TL;DR duplication | createArticleEnhancementPrompt() uses `---\n${content}` not "return full article" |
+| Short Turkish words in validation | Removed: için, göre, kadar, ile, ve, de, da, ki |
+| Title has `**markdown**` bold | Strip `***` in translator.js translateArticle() after translation |
+| Truncated URLs bypass duplicate check | 3-layer: exact URL + slug prefix + content_hash |
+| `__WIDGET_N__` leaks into description | Strip placeholders after description translation in translateArticle() |
+| wp-content in regex fallback | Filter /wp-content/, /wp-includes/, /wp-json/ in _regexFallback() |
+| Same article, different URL = duplicate | content_hash (SHA256 of normalized original_title) stored in DB |
+
+## Duplicate Detection (3 Layers)
+
+```
+Layer 1: source_url exact match (fastest)
+Layer 2: slug prefix match (handles truncated URLs)
+Layer 3: content_hash match (handles same article, different URL)
+```
+
+- `content_hash` = SHA256(normalize(original_turkish_title))
+- Stored in `tech_news_articles.content_hash` column
+- `isContentHashDuplicate(title)` called after scraping, before translation
+- This saves Ollama/Groq API credits — no translation wasted on duplicates
+
+---
+
+## Rules for AI Agents
+
+1. **NEVER add scraping logic to news-scraper.js** — only orchestration
+2. **NEVER duplicate functions** — check if method exists in parent/sibling class first
+3. **NEVER use Firecrawl v1** — always v2 (`https://api.firecrawl.dev/v2/scrape`)
+4. **NEVER add embed examples to prompts** — causes hallucination
+5. **ALWAYS use OOP** — new scrapers extend BaseScraper, new features go in appropriate class
+6. **ALWAYS check ScraperRouter** before touching FirecrawlScraper or CheerioScraper
+7. **NEVER use `.catch()` on Supabase** — use try/catch
+8. **Title/desc prompts must use shortText=true** — no embed rules in title/desc translation
+9. **When adding content filters** — add to BOTH FirecrawlScraper._processScrapedContent() AND CheerioScraper._htmlToMarkdown()
+10. **Before any edit** — grep for the function name to confirm it doesn't already exist elsewhere
+
+---
+
+## Firecrawl Credit Monitoring
+- ScraperRouter auto-switches to CheerioScraper on HTTP 402 or credit exhaustion messages
+- Telegram notification sent on switch
+- CheerioScraper is fully functional — no degradation in article quality
