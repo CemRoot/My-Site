@@ -20,7 +20,7 @@ export function TechNewsArticleCard({ article, truncateText }: TechNewsArticleCa
         to={`/tech-news/${article.slug}`}
         className="group block h-full"
       >
-        <Card className="overflow-hidden h-full transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 border-border/50 hover:border-primary/50">
+        <Card className="overflow-hidden h-full transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 border-border/50 hover:border-primary/50 [transform:translateZ(0)]">
           {article.image && (
             <div className="relative overflow-hidden bg-muted" style={{ aspectRatio: '16/9', minHeight: '200px', maxHeight: '200px' }}>
               <img
