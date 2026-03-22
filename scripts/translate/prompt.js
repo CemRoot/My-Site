@@ -83,23 +83,19 @@ Rules:
  * @returns {string} Formatted prompt
  */
 export function createArticleEnhancementPrompt(content) {
-  return `Add a TL;DR summary and key highlights section at the TOP of this article.
-
-CRITICAL: Do NOT repeat or rewrite the article.
-Only prepend the TL;DR and Key Highlights, then include the original article ONCE.
+  return `Add a TL;DR and Key Highlights block at the top. Then copy the article below EXACTLY as-is — do NOT rewrite or summarize it.
 
 Format:
 TL;DR
 [2-3 sentence summary]
 
 Key Highlights
-• [point 1]
-• [point 2]
-• [point 3]
+• [point]
+• [point]
+• [point]
 
-[ORIGINAL ARTICLE HERE - unchanged, exactly as provided]
+---
 
-Article:
 ${content}`;
 }
 

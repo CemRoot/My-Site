@@ -436,6 +436,19 @@ Output JSON:
       if (h1Match) title = h1Match[1].trim();
     }
 
+    if (title.length > 150) {
+      const h1Match = markdownContent.match(/^#\s+(.+)$/m);
+      if (h1Match && h1Match[1].trim().length < 150) {
+        title = h1Match[1].trim();
+      } else {
+        const slugTitle = url.split('/').filter(Boolean).pop()
+          ?.replace(/-/g, ' ')
+          ?.replace(/\b\w/g, c => c.toUpperCase()) || '';
+        if (slugTitle.length < 150) title = slugTitle;
+      }
+      console.log(`   ✂️  Title was too long, using fallback: "${title.substring(0, 60)}"`);
+    }
+
     let description = metadata.description || metadata['og:description'] || '';
     description = description.replace(/\bNuvemMag\b/gi, '').trim();
     if (!description && markdownContent) {

@@ -128,8 +128,21 @@ export class CheerioScraper extends BaseScraper {
 
     const $ = cheerio.load(html, { decodeEntities: false });
 
-    const title = ($('meta[property="og:title"]').attr('content') || $('title').text() || '')
+    let title = ($('meta[property="og:title"]').attr('content') || $('title').text() || '')
       .replace(/\s*[–—\-]\s*NuvemMag\s*$/i, '').trim();
+
+    if (title.length > 150) {
+      const h1 = $('h1').first().text().trim();
+      if (h1 && h1.length < 150) {
+        title = h1;
+      } else {
+        const slugTitle = url.split('/').filter(Boolean).pop()
+          ?.replace(/-/g, ' ')
+          ?.replace(/\b\w/g, c => c.toUpperCase()) || '';
+        if (slugTitle.length < 150) title = slugTitle;
+      }
+      console.log(`   ✂️  Title was too long, using fallback: "${title.substring(0, 60)}"`);
+    }
 
     let description = ($('meta[property="og:description"]').attr('content') || '')
       .replace(/\bNuvemMag\b/gi, '').trim();

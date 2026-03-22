@@ -70,6 +70,10 @@ function preserveWidgets(content) {
 function restoreWidgets(translatedContent, widgets) {
   let result = translatedContent;
   widgets.forEach(widget => {
+    const found = result.includes(widget.placeholder);
+    if (!found) {
+      console.warn(`    ⚠️  Placeholder ${widget.placeholder} NOT FOUND in translated content`);
+    }
     result = result.replace(
       new RegExp(widget.placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
       widget.content
@@ -155,6 +159,7 @@ async function translateWithOllama(text) {
   });
 
   let translatedText = completion.message?.content || '';
+  console.log(`    🔍 Ollama raw output (300 chars): ${translatedText.substring(0, 300)}`);
 
   if (!translatedText || translatedText.trim().length === 0) {
     throw new Error('Ollama translation returned empty result');
