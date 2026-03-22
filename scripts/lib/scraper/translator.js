@@ -435,9 +435,13 @@ export async function translateArticle(article) {
   try {
     console.log(`   🔤 Translating title (fast)...`);
     let translatedTitle = cleanTranslation(await translateText(article.title, false, true));
-    // Strip markdown bold/italic that LLM may add to titles
     translatedTitle = translatedTitle.replace(/^\*{1,3}(.+?)\*{1,3}$/s, '$1').replace(/\*{1,3}/g, '').trim();
-    // Trim title if too long after translation
+    translatedTitle = translatedTitle
+      .replace(/__WIDGET_\d+__/g, '')
+      .replace(/\[\[EMBED:[^\]]+\]\]/g, '')
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
     if (translatedTitle.length > 150) {
       const firstSentence = translatedTitle.split(/[.!?]/)[0].trim();
       translatedTitle = (firstSentence.length > 20 && firstSentence.length <= 150)
