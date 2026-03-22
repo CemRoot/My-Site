@@ -1,8 +1,14 @@
 /**
  * Database operations for the news scraper.
  * Handles article storage, duplicate detection, and counting.
+ *
+ * Duplicate detection strategy (3 layers):
+ * 1. Exact source_url match
+ * 2. Slug prefix match (handles truncated URLs)
+ * 3. content_hash match (handles same article with different URL)
  */
 
+import crypto from 'crypto';
 import { supabase } from '../supabaseAdmin.js';
 import { validateArticle, autoFixArticle } from '../../validation/smartArticleProcessor.js';
 
@@ -26,13 +32,27 @@ function normalizeSlug(slug) {
   }
 }
 
+/**
+ * Generate a content hash from the original Turkish title.
+ * Used to detect duplicate articles regardless of URL differences.
+ */
+export function generateContentHash(originalTitle) {
+  if (!originalTitle) return null;
+  const normalized = originalTitle
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return crypto.createHash('sha256').update(normalized).digest('hex');
+}
+
 export async function getExistingArticles(urls) {
   try {
     if (urls.length === 0) return new Set();
 
     const existingUrls = new Set();
 
-    // 1) Direct source_url match — fastest, no row-limit issues
+    // Layer 1: Direct source_url match — fastest
     const batchSize = 200;
     for (let i = 0; i < urls.length; i += batchSize) {
       const batch = urls.slice(i, i + batchSize);
@@ -46,7 +66,7 @@ export async function getExistingArticles(urls) {
       }
     }
 
-    // 2) Slug-based fallback for URLs with encoding differences (%96 vs – etc.)
+    // Layer 2: Slug prefix match — handles truncated URLs like /article-slug- vs /article-slug-full-title
     const unchecked = urls.filter(u => !existingUrls.has(u));
     if (unchecked.length > 0) {
       const incomingSlugs = new Map();
@@ -68,9 +88,17 @@ export async function getExistingArticles(urls) {
 
         for (const article of data) {
           const dbSlug = normalizeSlug(extractSlugFromUrl(article.source_url));
-          if (dbSlug && incomingSlugs.has(dbSlug)) {
-            existingUrls.add(incomingSlugs.get(dbSlug));
-            incomingSlugs.delete(dbSlug);
+          if (!dbSlug) continue;
+          for (const [normSlug, origUrl] of incomingSlugs) {
+            if (
+              dbSlug === normSlug ||
+              dbSlug.startsWith(normSlug) ||
+              normSlug.startsWith(dbSlug)
+            ) {
+              existingUrls.add(origUrl);
+              incomingSlugs.delete(normSlug);
+              break;
+            }
           }
         }
 
@@ -84,6 +112,26 @@ export async function getExistingArticles(urls) {
   } catch (error) {
     console.error('Error in bulk check:', error);
     return new Set();
+  }
+}
+
+/**
+ * Check if an article with the same content_hash already exists.
+ * Called before translation to avoid wasting API credits.
+ */
+export async function isContentHashDuplicate(originalTitle) {
+  const hash = generateContentHash(originalTitle);
+  if (!hash) return false;
+  try {
+    const { data, error } = await supabase
+      .from('tech_news_articles')
+      .select('id')
+      .eq('content_hash', hash)
+      .limit(1)
+      .single();
+    return !error && !!data;
+  } catch {
+    return false;
   }
 }
 
@@ -148,8 +196,22 @@ export async function saveArticle(article) {
       isoDate = new Date().toISOString().split('T')[0];
     }
 
-    let cleanTitle = article.title.replace(/\s*[–—\-]\s*NuvemMag\s*$/i, '').replace(/\bNuvemMag\b/gi, '').trim();
-    let cleanDescription = article.description.replace(/\bNuvemMag\b/gi, '').replace(/https?:\/\/(?:www\.)?nuvemmag\.com[^\s]*/gi, '').trim();
+    // Clean title — strip markdown bold/italic and branding
+    let cleanTitle = article.title
+      .replace(/\*{1,3}/g, '')
+      .replace(/\s*[–—\-]\s*NuvemMag\s*$/i, '')
+      .replace(/\bNuvemMag\b/gi, '')
+      .trim();
+
+    let cleanDescription = article.description
+      .replace(/\*{1,3}/g, '')
+      .replace(/__WIDGET_\d+__/g, '')
+      .replace(/\[\[EMBED:[^\]]+\]\]/g, '')
+      .replace(/\bNuvemMag\b/gi, '')
+      .replace(/https?:\/\/(?:www\.)?nuvemmag\.com[^\s]*/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+
     let cleanContent = article.content
       .replace(/\bNuvemMag\b/gi, '')
       .replace(/https?:\/\/(?:www\.)?nuvemmag\.com[^\s\)>\]"']*/gi, '')
@@ -186,6 +248,9 @@ export async function saveArticle(article) {
       return { success: false, reason: 'rejected_content', error: null, validation };
     }
 
+    // Generate content hash from original Turkish title
+    const contentHash = generateContentHash(article.originalTitle || article.title);
+
     const { data, error } = await supabase
       .from('tech_news_articles')
       .insert([{
@@ -199,6 +264,7 @@ export async function saveArticle(article) {
         source_url: article.sourceUrl,
         original_source: article.originalSource,
         slug: article.slug,
+        content_hash: contentHash,
       }])
       .select()
       .single();
