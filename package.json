@@ -62,6 +62,8 @@
             "n8n:reset": "node scripts/n8n-trial-status.js reset",
             "health:check": "node scripts/system-health-check.js",
             "vercel:status": "node scripts/vercel-status-monitor.js",
-            "cleanup:db": "node scripts/cleanup-tech-news.js"
+            "cleanup:db": "node scripts/cleanup-tech-news.js",
+            "cleanup:duplicates": "node scripts/cleanup-duplicates.js",
+            "cleanup:duplicates:dry": "node scripts/cleanup-duplicates.js --dry-run"
       }
 }
