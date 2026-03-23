@@ -243,7 +243,7 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
         <Button
           onClick={handleToggleChat}
           size="icon"
-          className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-primary via-secondary to-accent hover:scale-110 transition-all duration-300 shadow-lg shadow-primary/20 group"
+          className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-primary via-secondary to-accent hover:scale-110 transition-all duration-300 shadow-lg shadow-primary/20 group overflow-hidden"
           aria-label={
             isChatBlocked
               ? 'Assistant temporarily disabled'
