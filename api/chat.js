@@ -11,6 +11,7 @@ import {
   sanitizeResponse,
   hasSuspiciousCharacters,
   formatPageContext,
+  isObviouslyOffTopic,
 } from '../lib/chatHelpers.js';
 import { CHAT_SYSTEM_PROMPT } from '../lib/chatSystemPrompt.js';
 
@@ -78,15 +79,25 @@ export default withSentry(async function handler(req, res) {
   }
 
   try {
-    const { message, pageContext } = req.body || {};
+    const { message, pageContext, history } = req.body || {};
     const userMessage = typeof message === 'string' ? message.trim() : '';
 
     if (!userMessage) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    const chatBackend = await getChatBackend();
     const sessionId = generateSessionId();
+
+    const offTopicRefusal = isObviouslyOffTopic(userMessage);
+    if (offTopicRefusal) {
+      console.log('🚫 Off-topic pre-filter triggered, skipping LLM call');
+      saveChatHistory(sessionId, userMessage, offTopicRefusal, 'vercel_prefilter').catch(err => {
+        console.error('Failed to save chat history:', err);
+      });
+      return res.status(200).json({ reply: offTopicRefusal, sessionId, source: 'vercel_prefilter' });
+    }
+
+    const chatBackend = await getChatBackend();
 
     if (chatBackend === 'n8n') {
       console.log('🔀 Routing chat request to n8n workflow');
@@ -142,21 +153,29 @@ export default withSentry(async function handler(req, res) {
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+    const conversationHistory = Array.isArray(history)
+      ? history
+          .slice(-8)
+          .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+          .map(m => ({ role: m.role, content: m.content.substring(0, 500) }))
+      : [];
+
     const messages = [
       { role: 'system', content: CHAT_SYSTEM_PROMPT },
       ...(pageContextSummary
         ? [{ role: 'system', content: `Current page context for reference:\n${pageContextSummary}` }]
         : []),
+      ...conversationHistory,
       { role: 'user', content: userMessage },
     ];
 
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages,
-      temperature: 0.4,
+      temperature: 0.2,
       max_tokens: 700,
-      top_p: 0.85,
-      frequency_penalty: 0.5,
+      top_p: 0.8,
+      frequency_penalty: 0.3,
       presence_penalty: 0.2,
     });
 

@@ -87,10 +87,15 @@ export function useChat(pageInfo: PageInfo | null) {
       setIsLoading(true);
 
       try {
+        const recentHistory = messages
+          .filter(m => m.id !== '1')
+          .slice(-8)
+          .map(m => ({ role: m.role, content: m.content }));
+
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: trimmedMessage, pageContext: pageInfo }),
+          body: JSON.stringify({ message: trimmedMessage, pageContext: pageInfo, history: recentHistory }),
         });
 
         const data = await response.json();
