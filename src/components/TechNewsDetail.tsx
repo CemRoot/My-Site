@@ -197,7 +197,7 @@ function TechNewsDetail() {
             </div>
 
             {article.description && (
-              <p className="text-xl text-muted-foreground leading-relaxed text-justify">
+              <p className="text-base text-muted-foreground leading-relaxed line-clamp-2">
                 {article.description}
               </p>
             )}

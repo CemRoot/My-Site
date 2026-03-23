@@ -14,6 +14,7 @@ import { supabase } from './lib/supabaseAdmin.js';
 import { env } from './lib/config.js';
 import { htmlToTokens } from './embeds/extractEmbeds.js';
 import { extractAllEmbedsFromMarkdown } from './embeds/extractMarkdownEmbeds.js';
+import { generateSlug } from './lib/scraper/database.js';
 
 const CONFIG = {
   FIRECRAWL_API_KEY: env.FIRECRAWL_API_KEY,
@@ -26,17 +27,6 @@ const CONFIG = {
  */
 function generateArticleId(url) {
   return crypto.createHash('md5').update(url).digest('hex');
-}
-
-/**
- * Generate URL-friendly slug from English title
- */
-export function generateSlug(title) {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .substring(0, 100);
 }
 
 /**

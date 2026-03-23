@@ -8,7 +8,7 @@
 
 import { notifyTelegram } from './lib/telegram.js';
 import { SCRAPER_CONFIG } from './lib/scraper/config.js';
-import { getExistingArticles, saveArticle, getArticleCount, isContentHashDuplicate } from './lib/scraper/database.js';
+import { getExistingArticles, saveArticle, getArticleCount, isContentHashDuplicate, generateSlug } from './lib/scraper/database.js';
 import { translateArticle } from './lib/scraper/translator.js';
 import { ScraperRouter } from './lib/scraper/scrapers/ScraperRouter.js';
 
@@ -52,16 +52,6 @@ function isGarbageContent(title, content) {
   }
   if (hits >= 2) return `Content matched ${hits} garbage patterns (cookie/login/form)`;
   return null;
-}
-
-function generateSlug(title) {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .substring(0, 100);
 }
 
 // ─── Category aggregation ───

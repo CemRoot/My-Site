@@ -91,12 +91,16 @@ function extractTLDRAndHighlights(content: string) {
   if (!tldrMatch) {
     tldrMatch = content.match(/^TL;DR:\s*(.+?)(?=\n\nKey Highlights:|$)/is);
   }
+  // Bare format: TL;DR\ntext (no ## or :)
+  if (!tldrMatch) {
+    tldrMatch = content.match(/^TL;DR\s*\n+(.+?)(?=\n\nKey Highlights|\n+---|\n\n\n|$)/is);
+  }
   
   if (tldrMatch) {
     tldr = tldrMatch[1].trim();
-    // Remove entire TL;DR section including header
     remainingContent = remainingContent.replace(/^##\s*TL[;:]?DR\s*\n+.+?(?=\n+###?\s*Key Highlights|\n+---|\n\n#|\n\n\n|$)/is, '').trim();
     remainingContent = remainingContent.replace(/^TL;DR:.*?(?=\n\nKey Highlights:|$)/is, '').trim();
+    remainingContent = remainingContent.replace(/^TL;DR\s*\n+.+?(?=\n\nKey Highlights|\n+---|\n\n\n|$)/is, '').trim();
   }
   
   // Try new markdown format: ### Key Highlights with - bullets
@@ -106,6 +110,10 @@ function extractTLDRAndHighlights(content: string) {
   if (!highlightsMatch) {
     highlightsMatch = content.match(/Key Highlights:\s*\n((?:•\s*.+\n?)+)/i);
   }
+  // Bare format: Key Highlights\n (no ### or :)
+  if (!highlightsMatch) {
+    highlightsMatch = content.match(/^Key Highlights\s*\n((?:[•\-*]\s*.+\n?)+)/im);
+  }
   
   if (highlightsMatch) {
     const highlightsText = highlightsMatch[1];
@@ -113,9 +121,9 @@ function extractTLDRAndHighlights(content: string) {
       .split(/\n/)
       .map(line => line.replace(/^[-•*]\s*/, '').trim())
       .filter(line => line.length > 0);
-    // Remove Key Highlights section including header
     remainingContent = remainingContent.replace(/###?\s*Key Highlights\s*\n+((?:[-•*]\s*.+\n?)+)/i, '').trim();
     remainingContent = remainingContent.replace(/Key Highlights:\s*\n((?:•\s*.+\n?)+)/i, '').trim();
+    remainingContent = remainingContent.replace(/^Key Highlights\s*\n((?:[•\-*]\s*.+\n?)+)/im, '').trim();
   }
   
   // Clean up any remaining --- separators at the start

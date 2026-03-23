@@ -9,7 +9,7 @@ import { SCRAPER_CONFIG } from '../config.js';
 import { htmlToTokens } from '../../../embeds/extractEmbeds.js';
 import { extractAllEmbedsFromMarkdown } from '../../../embeds/extractMarkdownEmbeds.js';
 import { replaceTikTokBlockquote, replaceTwitterBlockquote, cleanSocialEmbedRemnants } from '../../../embeds/cleanMarkdownEmbeds.js';
-import { extractSlugFromUrl } from '../database.js';
+import { extractSlugFromUrl, generateSlug } from '../database.js';
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
@@ -38,16 +38,6 @@ function isArticleUrl(href) {
   } catch {
     return false;
   }
-}
-
-function generateSlug(title) {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .substring(0, 100);
 }
 
 export class CheerioScraper extends BaseScraper {

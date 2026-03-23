@@ -10,7 +10,7 @@ import { htmlToTokens } from '../../../embeds/extractEmbeds.js';
 import { extractAllEmbedsFromMarkdown } from '../../../embeds/extractMarkdownEmbeds.js';
 import { replaceTikTokBlockquote, replaceTwitterBlockquote, cleanSocialEmbedRemnants } from '../../../embeds/cleanMarkdownEmbeds.js';
 import { parseTurkishDate, isRecent, getDatePriority } from '../dateUtils.js';
-import { extractSlugFromUrl } from '../database.js';
+import { extractSlugFromUrl, generateSlug } from '../database.js';
 
 const BLOCKED_URL_SLUGS = [
   'hesabim', 'my-account', 'giris', 'login', 'kayit', 'register',
@@ -42,16 +42,6 @@ function hasNuvemmagDomain(line) {
     } catch { /* skip */ }
   }
   return false;
-}
-
-function generateSlug(title) {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .substring(0, 100);
 }
 
 export class FirecrawlScraper extends BaseScraper {

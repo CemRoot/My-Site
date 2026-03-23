@@ -23,6 +23,16 @@ export function extractSlugFromUrl(url) {
   }
 }
 
+export function generateSlug(title) {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return slug.split('-').slice(0, 8).join('-').substring(0, 60).replace(/-$/, '');
+}
+
 function normalizeSlug(slug) {
   if (!slug) return null;
   try {
