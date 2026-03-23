@@ -253,7 +253,7 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
           }
         >
           {/* Pulse ring */}
-          <div className="absolute inset-0 rounded-full bg-primary/20 sm:bg-primary/30 animate-ping" />
+          <div className="absolute inset-0 rounded-full bg-primary/20 sm:bg-primary/30 animate-pulse" />
 
           {/* Icon */}
           <div className="relative">
