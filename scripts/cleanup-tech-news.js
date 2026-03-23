@@ -34,11 +34,11 @@ async function cleanupOldArticles() {
     totalDeletedTechNews = deletedTechNews?.length || 0;
     console.log(`Successfully deleted ${totalDeletedTechNews} old articles from tech_news_articles.`);
 
-    // 2. Delete from rejected_articles
+    // 2. Delete from rejected_articles (column is scraped_at, not created_at)
     const { data: deletedRejected, error: rejectedError } = await supabase
       .from('rejected_articles')
       .delete()
-      .lt('created_at', cutoffDate)
+      .lt('scraped_at', cutoffDate)
       .select('id');
 
     if (rejectedError) {

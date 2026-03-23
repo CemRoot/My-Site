@@ -3955,6 +3955,10 @@
 
   /* Mobile: Blur only when active (in viewport) and hovering */
   @media (max-width: 767px) {
+    .liquid-glow:after {
+      inset: -20px 0;
+    }
+
     .liquid-glow.blur-active:after {
       filter: blur(20px);
     }
