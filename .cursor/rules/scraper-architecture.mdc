@@ -67,9 +67,9 @@ TL;DR enhancement   → Groq llama-3.1-8b-instant
 ```js
 translateText(text, useOllama = false, fastMode = false, shortText = false)
 ```
-- title: `translateText(title, false, true, true)`
-- description: `translateText(desc, false, true, true)`
-- content: `translateText(content, true, false, false)`
+- title: `translateText(title, false, true, true)` — shortText uses dedicated headline prompt
+- description: `translateText(desc, false, true, true)` — shortText uses dedicated headline prompt
+- content: `translateText(content, true, false, false)` — full article rewrite prompt
 
 ### Widget Preservation
 - Embed tokens `[[EMBED:TYPE:DATA]]` → replaced with `__WIDGET_N__` before LLM
@@ -120,7 +120,8 @@ OLLAMA_PRIMARY_MODEL = 'gemini-3-flash-preview:cloud'  // content primary
 | `stale-while-revalidate=86400` | Changed to 120s |
 | `.catch()` on Supabase insert | Use try/catch instead |
 | `extractAllEmbedsFromMarkdown` return type not used | `markdownContent = extractAllEmbedsFromMarkdown(markdownContent)` |
-| og:title containing full article body | Guard: title.length > 150 → H1 fallback |
+| og:title containing full article body | Guard: title.length > 100 → H1 fallback |
+| LLM expands title with article content | shortText=true uses dedicated headline prompt |
 | TL;DR duplication | createArticleEnhancementPrompt() uses `---\n${content}` not "return full article" |
 | Short Turkish words in validation | Removed: için, göre, kadar, ile, ve, de, da, ki |
 | Title has `**markdown**` bold | Strip `***` in translator.js translateArticle() after translation |

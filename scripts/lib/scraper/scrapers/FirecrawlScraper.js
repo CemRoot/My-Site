@@ -432,15 +432,15 @@ Output JSON:
       if (h1Match) title = h1Match[1].trim();
     }
 
-    if (title.length > 150) {
+    if (title.length > 100) {
       const h1Match = markdownContent.match(/^#\s+(.+)$/m);
-      if (h1Match && h1Match[1].trim().length < 150) {
+      if (h1Match && h1Match[1].trim().length < 100) {
         title = h1Match[1].trim();
       } else {
         const slugTitle = url.split('/').filter(Boolean).pop()
           ?.replace(/-/g, ' ')
           ?.replace(/\b\w/g, c => c.toUpperCase()) || '';
-        if (slugTitle.length < 150) title = slugTitle;
+        if (slugTitle.length < 100) title = slugTitle;
       }
       console.log(`   ✂️  Title was too long, using fallback: "${title.substring(0, 60)}"`);
     }

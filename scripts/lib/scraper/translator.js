@@ -9,6 +9,7 @@ import { SCRAPER_CONFIG, GROQ_PRIMARY_MODEL, GROQ_FALLBACK_MODEL, GROQ_LAST_RESO
 import {
   TRANSLATION_SYSTEM_PROMPT,
   createTranslationPrompt,
+  createShortTextTranslationPrompt,
   ARTICLE_ENHANCEMENT_SYSTEM_PROMPT,
   createArticleEnhancementPrompt,
   validateTokenPreservation,
@@ -95,14 +96,16 @@ function calculateSimilarity(str1, str2) {
   return matches / longer.length;
 }
 
-async function translateWithModel(model, text, retry = false) {
+async function translateWithModel(model, text, retry = false, shortText = false) {
   const systemPrompt = retry
     ? 'Translate from Turkish to English. Output ONLY the English translation. Do NOT include any notes, explanations, or the original text.'
-    : TRANSLATION_SYSTEM_PROMPT;
+    : (shortText
+        ? 'Translate the following Turkish headline or short text to English. Output ONLY the translation. No notes, no explanations, no extra sentences.'
+        : TRANSLATION_SYSTEM_PROMPT);
 
   const userPrompt = retry
     ? `Translate this Turkish text to English.\n\nCRITICAL RULES:\n1. Output ONLY the English translation, nothing else.\n2. Keep ALL __WIDGET_0__, __WIDGET_1__, __WIDGET_N__ placeholders exactly as-is. Do not translate, remove, or modify them.\n3. No notes, no explanations.\n\nText:\n${text}`
-    : createTranslationPrompt(text);
+    : (shortText ? createShortTextTranslationPrompt(text) : createTranslationPrompt(text));
 
   const completion = await groq.chat.completions.create({
     model,
@@ -269,7 +272,7 @@ function validateTranslationQuality(result) {
   return { valid: true };
 }
 
-export async function translateText(text, useOllama = false, fastMode = false) {
+export async function translateText(text, useOllama = false, fastMode = false, shortText = false) {
   if (!text || text.trim().length === 0) return text;
 
   const { content: cleanContent, widgets } = preserveWidgets(text);
@@ -303,7 +306,7 @@ export async function translateText(text, useOllama = false, fastMode = false) {
       const isRetry = attempt > 0;
 
       try {
-        const result = await translateWithModel(model, cleanContent, isRetry);
+        const result = await translateWithModel(model, cleanContent, isRetry, shortText);
         const quality = validateTranslationQuality(result);
 
         if (quality.valid) {
@@ -433,8 +436,8 @@ export async function translateArticle(article) {
   console.log(`   Content length: ${article.content.length} chars`);
 
   try {
-    console.log(`   🔤 Translating title (fast)...`);
-    let translatedTitle = cleanTranslation(await translateText(article.title, false, true));
+    console.log(`   🔤 Translating title (fast, shortText)...`);
+    let translatedTitle = cleanTranslation(await translateText(article.title, false, true, true));
     translatedTitle = translatedTitle.replace(/^\*{1,3}(.+?)\*{1,3}$/s, '$1').replace(/\*{1,3}/g, '').trim();
     translatedTitle = translatedTitle
       .replace(/__WIDGET_\d+__/g, '')
@@ -442,17 +445,17 @@ export async function translateArticle(article) {
       .replace(/[\r\n]+/g, ' ')
       .replace(/\s{2,}/g, ' ')
       .trim();
-    if (translatedTitle.length > 150) {
+    if (translatedTitle.length > 100) {
       const firstSentence = translatedTitle.split(/[.!?]/)[0].trim();
-      translatedTitle = (firstSentence.length > 20 && firstSentence.length <= 150)
+      translatedTitle = (firstSentence.length > 20 && firstSentence.length <= 100)
         ? firstSentence
-        : translatedTitle.substring(0, 120).replace(/\s+\S*$/, '').trim();
+        : translatedTitle.substring(0, 90).replace(/\s+\S*$/, '').trim();
       console.log(`   ✂️  Title trimmed to: "${translatedTitle}"`);
     }
     await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.TRANSLATION_DELAY));
 
-    console.log(`   📝 Translating description (fast)...`);
-    let translatedDescription = cleanTranslation(await translateText(article.description, false, true));
+    console.log(`   📝 Translating description (fast, shortText)...`);
+    let translatedDescription = cleanTranslation(await translateText(article.description, false, true, true));
     // Strip widget placeholders and markdown from description
     translatedDescription = translatedDescription
       .replace(/__WIDGET_\d+__/g, '')

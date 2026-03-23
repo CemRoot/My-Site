@@ -100,12 +100,7 @@ ${content}`;
 }
 
 /**
- * User prompt template for translation
- * IMPORTANT: Only contains the content, no instructions (instructions are in system prompt)
- * @param {string} content - Content to translate
- * @param {string} sourceLang - Source language (default: Turkish)
- * @param {string} targetLang - Target language (default: English)
- * @returns {string} Just the content to translate
+ * User prompt template for full article translation
  */
 export function createTranslationPrompt(content) {
   return `Rewrite the following Turkish tech article as an original English news piece.
@@ -113,6 +108,16 @@ Follow all rules from your system instructions exactly.
 Preserve every [[EMBED:...]] and __WIDGET_N__ token without modification.
 
 Source article:
+
+${content}`;
+}
+
+/**
+ * User prompt for translating short text (titles, descriptions).
+ * Uses strict "translate only" instruction to prevent LLM from expanding content.
+ */
+export function createShortTextTranslationPrompt(content) {
+  return `Translate this Turkish headline to English. Output ONLY the translated headline — nothing else. Do not add explanations, descriptions, or extra sentences.
 
 ${content}`;
 }

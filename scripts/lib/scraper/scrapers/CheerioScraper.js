@@ -121,15 +121,15 @@ export class CheerioScraper extends BaseScraper {
     let title = ($('meta[property="og:title"]').attr('content') || $('title').text() || '')
       .replace(/\s*[–—\-]\s*NuvemMag\s*$/i, '').trim();
 
-    if (title.length > 150) {
+    if (title.length > 100) {
       const h1 = $('h1').first().text().trim();
-      if (h1 && h1.length < 150) {
+      if (h1 && h1.length < 100) {
         title = h1;
       } else {
         const slugTitle = url.split('/').filter(Boolean).pop()
           ?.replace(/-/g, ' ')
           ?.replace(/\b\w/g, c => c.toUpperCase()) || '';
-        if (slugTitle.length < 150) title = slugTitle;
+        if (slugTitle.length < 100) title = slugTitle;
       }
       console.log(`   ✂️  Title was too long, using fallback: "${title.substring(0, 60)}"`);
     }
