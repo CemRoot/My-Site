@@ -8,7 +8,14 @@
 
 import { notifyTelegram } from './lib/telegram.js';
 import { SCRAPER_CONFIG } from './lib/scraper/config.js';
-import { getExistingArticles, saveArticle, getArticleCount, isContentHashDuplicate, generateSlug } from './lib/scraper/database.js';
+import {
+  getExistingArticles,
+  saveArticle,
+  getArticleCount,
+  isContentHashDuplicate,
+  isSourceUrlDuplicate,
+  generateSlug,
+} from './lib/scraper/database.js';
 import { translateArticle } from './lib/scraper/translator.js';
 import { ScraperRouter } from './lib/scraper/scrapers/ScraperRouter.js';
 
@@ -54,20 +61,69 @@ function isGarbageContent(title, content) {
   return null;
 }
 
+function getArticleCandidateKey(url) {
+  try {
+    const normalizedUrl = new URL(url);
+    normalizedUrl.hash = '';
+    normalizedUrl.search = '';
+    normalizedUrl.pathname = normalizedUrl.pathname.replace(/\/+$/, '');
+    return normalizedUrl.toString();
+  } catch {
+    return (url || '').replace(/[?#].*$/, '').replace(/\/+$/, '');
+  }
+}
+
+function compareArticleCandidates(a, b) {
+  if (b.datePriority !== a.datePriority) {
+    return b.datePriority - a.datePriority;
+  }
+
+  const aIsGeneric = a.category === 'Latest News';
+  const bIsGeneric = b.category === 'Latest News';
+  if (aIsGeneric !== bIsGeneric) {
+    return aIsGeneric ? 1 : -1;
+  }
+
+  return getArticleCandidateKey(a.url).localeCompare(getArticleCandidateKey(b.url));
+}
+
+function selectPreferredCandidate(existing, incoming) {
+  if (!existing) return incoming;
+
+  if (incoming.datePriority !== existing.datePriority) {
+    return incoming.datePriority > existing.datePriority ? incoming : existing;
+  }
+
+  const existingIsGeneric = existing.category === 'Latest News';
+  const incomingIsGeneric = incoming.category === 'Latest News';
+  if (existingIsGeneric !== incomingIsGeneric) {
+    return existingIsGeneric ? incoming : existing;
+  }
+
+  return compareArticleCandidates(incoming, existing) < 0 ? incoming : existing;
+}
+
+function mergeArticleCandidates(articles) {
+  const bestByUrl = new Map();
+
+  for (const article of articles) {
+    const key = getArticleCandidateKey(article.url);
+    const existing = bestByUrl.get(key);
+    bestByUrl.set(key, selectPreferredCandidate(existing, article));
+  }
+
+  return [...bestByUrl.values()].sort(compareArticleCandidates);
+}
+
 // ─── Category aggregation ───
 
 async function scrapeAllCategories(router) {
-  const allArticles = [];
+  const collectedArticles = [];
 
   for (const category of CONFIG.CATEGORIES) {
     try {
       const articles = await router.scrapeArticleList(category.url, category.tag);
-      allArticles.push(...articles);
-
-      if (allArticles.length >= CONFIG.MAX_ARTICLES_PER_RUN) {
-        console.log(`\n⚡ Reached max articles limit (${CONFIG.MAX_ARTICLES_PER_RUN}). Stopping category scraping.`);
-        break;
-      }
+      collectedArticles.push(...articles);
 
       await new Promise(resolve => setTimeout(resolve, 2000));
     } catch (error) {
@@ -75,8 +131,15 @@ async function scrapeAllCategories(router) {
     }
   }
 
-  allArticles.sort((a, b) => b.datePriority - a.datePriority);
-  return allArticles;
+  const mergedArticles = mergeArticleCandidates(collectedArticles);
+  const dedupedCount = collectedArticles.length - mergedArticles.length;
+
+  if (dedupedCount > 0) {
+    console.log(`♻️  Deduplicated ${dedupedCount} repeated URL(s) across categories before DB checks.`);
+  }
+
+  console.log(`🗂️  Collected ${mergedArticles.length} unique article candidates from ${collectedArticles.length} raw links.`);
+  return mergedArticles;
 }
 
 // ─── Main orchestrator ───
@@ -100,24 +163,30 @@ async function scrapeNews() {
   const currentCount = await getArticleCount();
   console.log(`\n📊 Current database: ${currentCount} articles\n`);
 
-  const articlesWithCategories = await scrapeAllCategories(scraperRouter);
+  const articleCandidates = await scrapeAllCategories(scraperRouter);
 
-  if (articlesWithCategories.length === 0) {
+  if (articleCandidates.length === 0) {
     console.log('⚠️ No articles found in any category. Exiting.');
     return;
   }
 
-  console.log(`📝 Found ${articlesWithCategories.length} articles total...\n`);
+  console.log(`📝 Found ${articleCandidates.length} unique article candidates...\n`);
 
-  const allUrls = articlesWithCategories.map(a => a.url);
+  const allUrls = articleCandidates.map(a => a.url);
   console.log(`🔍 Checking which articles already exist in database...`);
   const existingUrls = await getExistingArticles(allUrls);
 
-  const newArticles = articlesWithCategories.filter(a => !existingUrls.has(a.url));
-  const duplicateCount = articlesWithCategories.length - newArticles.length;
+  const allNewArticles = articleCandidates.filter(a => !existingUrls.has(a.url));
+  const existingCount = articleCandidates.length - allNewArticles.length;
+  const newArticles = allNewArticles.slice(0, CONFIG.MAX_ARTICLES_PER_RUN);
+  const deferredCount = Math.max(0, allNewArticles.length - newArticles.length);
 
-  console.log(`✅ Found ${newArticles.length} new articles to process`);
-  console.log(`⏭️  Skipping ${duplicateCount} existing articles\n`);
+  console.log(`✅ Found ${allNewArticles.length} new articles after DB duplicate check`);
+  console.log(`⏭️  Skipping ${existingCount} existing articles`);
+  if (deferredCount > 0) {
+    console.log(`⏸️  Deferring ${deferredCount} new article(s) to later runs due to the per-run processing cap (${CONFIG.MAX_ARTICLES_PER_RUN}).`);
+  }
+  console.log('');
 
   if (newArticles.length === 0) {
     console.log('ℹ️  All articles already exist in database. Nothing to process.');
@@ -132,7 +201,9 @@ async function scrapeNews() {
   let garbageNotifyCount = 0;
 
   for (const { url, category } of newArticles) {
-    if (processedInThisRun.has(url)) {
+    const articleKey = getArticleCandidateKey(url);
+
+    if (processedInThisRun.has(articleKey)) {
       console.log(`⏭️  [${category}] Skipping (already processed in this run): ${url.split('/').pop()}`);
       continue;
     }
@@ -151,7 +222,13 @@ async function scrapeNews() {
     }
 
     console.log(`📰 [${category}] Processing: ${url}`);
-    processedInThisRun.add(url);
+    processedInThisRun.add(articleKey);
+
+    const sourceUrlAlreadyExists = await isSourceUrlDuplicate(url);
+    if (sourceUrlAlreadyExists) {
+      console.log(`⏭️  [${category}] Skipping — source_url already exists before scrape: ${url.split('/').pop()}\n`);
+      continue;
+    }
 
     const article = await scraperRouter.scrapeArticleDetails(url);
 
@@ -222,7 +299,7 @@ async function scrapeNews() {
 
   console.log('='.repeat(60));
   console.log(`🎉 Multi-Category Scraping Completed!`);
-  console.log(`📊 New: ${newArticlesCount} | Skipped: ${duplicateCount} | Failed: ${failedCount} | Total: ${finalCount}`);
+  console.log(`📊 New: ${newArticlesCount} | Existing: ${existingCount} | Deferred: ${deferredCount} | Failed: ${failedCount} | Total: ${finalCount}`);
   console.log(`🔧 Scraper used: ${scraperRouter.getActiveScraperName()}`);
   console.log('='.repeat(60));
 
@@ -236,7 +313,7 @@ async function scrapeNews() {
 
     await notifyTelegram(
       `${statusEmoji} <b>Haber Scraper</b>\n\n` +
-      `✅ Yeni: ${newArticlesCount} | ⏭️ Atlanan: ${duplicateCount} | ❌ Başarısız: ${failedCount}\n` +
+      `✅ Yeni: ${newArticlesCount} | ⏭️ Mevcut: ${existingCount} | ⏸️ Ertelenen: ${deferredCount} | ❌ Başarısız: ${failedCount}\n` +
       `📈 Başarı: ${successRate}% | 💾 Toplam: ${finalCount}\n` +
       `🔧 Scraper: ${scraperRouter.getActiveScraperName()}\n` +
       `⏰ ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`

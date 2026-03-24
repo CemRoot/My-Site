@@ -70,13 +70,34 @@ export default async function handler(request) {
 
     // If slug is provided, return single article (with full content)
     if (slug) {
-      const { data: article, error } = await supabase
+      const { data: exactArticle, error: exactError } = await supabase
         .from('tech_news_articles')
         .select('*')
         .eq('slug', slug)
-        .single();
+        .maybeSingle();
 
-      if (error || !article) {
+      let article = exactArticle;
+
+      if (!article && exactError) {
+        console.error('Exact slug lookup error:', exactError);
+      }
+
+      if (!article) {
+        const { data: legacyMatches, error: legacyError } = await supabase
+          .from('tech_news_articles')
+          .select('*')
+          .like('slug', `${slug}%`)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (legacyError) {
+          console.error('Legacy slug fallback error:', legacyError);
+        }
+
+        article = legacyMatches?.[0] || null;
+      }
+
+      if (!article) {
         return jsonResponse({ success: false, message: 'Article not found' }, 404, corsHeaders);
       }
 

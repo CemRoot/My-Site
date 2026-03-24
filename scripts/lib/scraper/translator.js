@@ -14,6 +14,7 @@ import {
   createArticleEnhancementPrompt,
   validateTokenPreservation,
 } from '../../translate/prompt.js';
+import { removeEmbedArtifactNoise, dedupeEmbedTokens } from '../../embeds/cleanMarkdownEmbeds.js';
 import { assertContentQuality } from '../../validation/contentQualityCheck.js';
 import { validateArticle } from '../../validation/smartArticleProcessor.js';
 import { notifyTelegram } from '../../lib/telegram.js';
@@ -81,6 +82,10 @@ function restoreWidgets(translatedContent, widgets) {
     );
   });
   return result;
+}
+
+function sanitizeTranslatedArtifacts(content) {
+  return dedupeEmbedTokens(removeEmbedArtifactNoise(content || ''));
 }
 
 function calculateSimilarity(str1, str2) {
@@ -349,6 +354,7 @@ export async function translateText(text, useOllama = false, fastMode = false, s
   console.log(`    🔄 Restoring ${widgets.length} widgets...`);
   let finalContent = restoreWidgets(translatedContent, widgets);
   console.log(`    ✅ After restore, __WIDGET remaining: ${(finalContent.match(/__WIDGET_\d+__/g)||[]).length}`);
+  finalContent = sanitizeTranslatedArtifacts(finalContent);
 
   // Strip hallucinated embed tokens the LLM may have invented
   const legitimateTokens = new Set(widgets.filter(w => w.type === 'embed_token').map(w => w.content));
@@ -365,10 +371,10 @@ export async function translateText(text, useOllama = false, fastMode = false, s
     for (const missing of tokenCheck.missingTokens) {
       patched = patched.trimEnd() + '\n\n' + missing + '\n\n';
     }
-    return patched.replace(/\n{3,}/g, '\n\n').trim();
+    return sanitizeTranslatedArtifacts(patched.replace(/\n{3,}/g, '\n\n').trim());
   }
 
-  return finalContent.replace(/\n{3,}/g, '\n\n').trim();
+  return sanitizeTranslatedArtifacts(finalContent.replace(/\n{3,}/g, '\n\n').trim());
 }
 
 export function cleanTranslation(text) {
@@ -441,7 +447,9 @@ export async function translateArticle(article) {
     translatedTitle = translatedTitle.replace(/^\*{1,3}(.+?)\*{1,3}$/s, '$1').replace(/\*{1,3}/g, '').trim();
     translatedTitle = translatedTitle
       .replace(/__WIDGET_\d+__/g, '')
+      .replace(/\bWIDGET_\d+\b/g, '')
       .replace(/\[\[EMBED:[^\]]+\]\]/g, '')
+      .replace(/\[\[EMBED:(?!TIKTOK|TWEET|YOUTUBE)[^\]]+\]\]/gi, '')
       .replace(/[\r\n]+/g, ' ')
       .replace(/\s{2,}/g, ' ')
       .trim();
@@ -459,17 +467,23 @@ export async function translateArticle(article) {
     // Strip widget placeholders and markdown from description
     translatedDescription = translatedDescription
       .replace(/__WIDGET_\d+__/g, '')
+      .replace(/\bWIDGET_\d+\b/g, '')
       .replace(/\[\[EMBED:[^\]]+\]\]/g, '')
+      .replace(/\[\[EMBED:(?!TIKTOK|TWEET|YOUTUBE)[^\]]+\]\]/gi, '')
       .replace(/\*{1,3}/g, '')
       .replace(/\s{2,}/g, ' ')
       .trim();
     await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.TRANSLATION_DELAY));
 
     console.log(`   📄 Translating full content...`);
-    let translatedContent = cleanTranslation(await translateText(article.content, true, false));
+    let translatedContent = sanitizeTranslatedArtifacts(
+      cleanTranslation(await translateText(article.content, true, false)),
+    );
 
     await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.TRANSLATION_DELAY));
-    translatedContent = await enhanceArticleWithTLDR(translatedContent);
+    translatedContent = sanitizeTranslatedArtifacts(
+      await enhanceArticleWithTLDR(translatedContent),
+    );
 
     if (translatedTitle.includes('REMINDER:') ||
         translatedTitle.includes('Note: I have') ||

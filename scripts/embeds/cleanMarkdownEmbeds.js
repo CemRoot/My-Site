@@ -140,6 +140,8 @@ export function cleanSocialEmbedRemnants(markdown) {
   
   // Remove Twitter-related text blocks
   cleaned = cleaned.replace(/>\s*Twitter Widget Iframe\s*/gi, '');
+  cleaned = cleaned.replace(/^\s*Twitter Widget Iframe\s*$/gim, '');
+  cleaned = cleaned.replace(/^\s*Twitter Embed\s*$/gim, '');
   cleaned = cleaned.replace(/>\s*Tweet\s*>/gi, '');
   cleaned = cleaned.replace(/Loading tweet\.\.\./gi, '');
   cleaned = cleaned.replace(/View on Twitter[:\s]*/gi, '');
@@ -166,5 +168,49 @@ export function cleanSocialEmbedRemnants(markdown) {
   cleaned = cleaned.replace(/(\r?\n){3,}/g, '\n\n');
   
   return cleaned.trim();
+}
+
+/**
+ * Removes leaked placeholder artifacts that should never reach the frontend.
+ * Keeps valid [[EMBED:TIKTOK|TWEET|YOUTUBE:...]] tokens intact.
+ */
+export function removeEmbedArtifactNoise(markdown) {
+  let cleaned = markdown || '';
+
+  cleaned = cleaned
+    .replace(/\[\[EMBED:(?!TIKTOK|TWEET|YOUTUBE)[^\]]+\]\]/gi, '')
+    .replace(/__WIDGET_\d+__/g, '')
+    .replace(/\bWIDGET_\d+\b/g, '')
+    .replace(/^\s*(?:Twitter|TikTok)\s+Embed\s*$/gim, '')
+    .replace(/^\s*(?:YouTube Widget|Twitter Widget Iframe|Widget Iframe)\s*$/gim, '')
+    .replace(/\n{3,}/g, '\n\n');
+
+  return cleaned.trim();
+}
+
+/**
+ * Deduplicates repeated valid embed tokens within a single article.
+ * If the exact same token appears multiple times, only the first one is kept.
+ */
+export function dedupeEmbedTokens(markdown) {
+  const seen = new Set();
+
+  const deduped = (markdown || '').replace(
+    /\[\[EMBED:(TIKTOK|TWEET|YOUTUBE):([^\]]+)\]\]/gi,
+    (match, type, payload) => {
+      const normalizedType = String(type).toUpperCase();
+      const normalizedPayload = String(payload).trim();
+      const key = `${normalizedType}:${normalizedPayload}`;
+
+      if (seen.has(key)) {
+        return '';
+      }
+
+      seen.add(key);
+      return `[[EMBED:${normalizedType}:${normalizedPayload}]]`;
+    },
+  );
+
+  return deduped.replace(/\n{3,}/g, '\n\n').trim();
 }
 

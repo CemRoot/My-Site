@@ -142,6 +142,8 @@ Layer 3: content_hash match (handles same article, different URL)
 - Stored in `tech_news_articles.content_hash` column
 - `isContentHashDuplicate(title)` called after scraping, before translation
 - This saves Ollama/Groq API credits — no translation wasted on duplicates
+- In-memory URL dedupe happens before DB duplicate filtering and before `MAX_ARTICLES_PER_RUN`
+- `MAX_ARTICLES_PER_RUN` must cap prioritized *new* articles, not raw discovered links
 
 ---
 

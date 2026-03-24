@@ -227,6 +227,16 @@ export function validateContent(content, originalContent = null) {
     }
   }
 
+  if (/__WIDGET_\d+__|\bWIDGET_\d+\b/.test(content)) {
+    result.addError('Content contains unresolved widget placeholders');
+    return result;
+  }
+
+  if (/\[\[EMBED:(?!TIKTOK|TWEET|YOUTUBE)[^\]]+\]\]/i.test(content)) {
+    result.addError('Content contains invalid embed placeholder tokens');
+    return result;
+  }
+
   // Check for NuvemMag branding (except in image URLs)
   const nuvemMagPattern = /nuvemmag\.com(?!\/wp-content)/gi;
   if (nuvemMagPattern.test(content)) {

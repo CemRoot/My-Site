@@ -8,8 +8,14 @@ import { BaseScraper } from './BaseScraper.js';
 import { SCRAPER_CONFIG } from '../config.js';
 import { htmlToTokens } from '../../../embeds/extractEmbeds.js';
 import { extractAllEmbedsFromMarkdown } from '../../../embeds/extractMarkdownEmbeds.js';
-import { replaceTikTokBlockquote, replaceTwitterBlockquote, cleanSocialEmbedRemnants } from '../../../embeds/cleanMarkdownEmbeds.js';
-import { parseTurkishDate, isRecent, getDatePriority } from '../dateUtils.js';
+import {
+  replaceTikTokBlockquote,
+  replaceTwitterBlockquote,
+  cleanSocialEmbedRemnants,
+  removeEmbedArtifactNoise,
+  dedupeEmbedTokens,
+} from '../../../embeds/cleanMarkdownEmbeds.js';
+import { parseTurkishDate, getDatePriority } from '../dateUtils.js';
 import { extractSlugFromUrl, generateSlug } from '../database.js';
 
 const BLOCKED_URL_SLUGS = [
@@ -153,6 +159,7 @@ export class FirecrawlScraper extends BaseScraper {
     console.log(`  🤖 Using AI to parse article list for ${categoryTag}...`);
 
     try {
+      const markdownForAi = markdown.length > 10000 ? markdown.substring(0, 10000) : markdown;
       const completion = await this.groqParser.chat.completions.create({
         model: 'llama-3.1-8b-instant',
         messages: [
@@ -182,7 +189,7 @@ Output JSON:
           },
           {
             role: 'user',
-            content: `Extract all article URLs and their dates from this Turkish tech news category page. Return ONLY a JSON array.\n\n${markdown.substring(0, 10000)}`,
+            content: `Extract all article URLs and their dates from this Turkish tech news category page. Return ONLY a JSON array.\n\n${markdownForAi}`,
           },
         ],
         temperature: 0.1,
@@ -216,8 +223,6 @@ Output JSON:
           });
           continue;
         }
-
-        if (!isRecent(parsedDate)) continue;
 
         processed.push({
           url: article.url,
@@ -362,6 +367,8 @@ Output JSON:
     markdownContent = replaceTwitterBlockquote(markdownContent);
     markdownContent = cleanSocialEmbedRemnants(markdownContent);
     markdownContent = extractAllEmbedsFromMarkdown(markdownContent);
+    markdownContent = removeEmbedArtifactNoise(markdownContent);
+    markdownContent = dedupeEmbedTokens(markdownContent);
 
     const mdTokens = markdownContent.match(/\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):[^\]]+\]\]/gi) || [];
     for (const t of mdTokens) {
@@ -376,6 +383,8 @@ Output JSON:
       }
     }
 
+    markdownContent = removeEmbedArtifactNoise(markdownContent);
+    markdownContent = dedupeEmbedTokens(markdownContent);
     markdownContent = markdownContent.replace(/\n{3,}/g, '\n\n').trim();
 
     let originalSource = '';

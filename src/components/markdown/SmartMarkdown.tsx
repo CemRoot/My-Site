@@ -23,6 +23,32 @@ interface MarkdownNode {
 const TOKEN_REGEX = /^\s*\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):.+\]\]\s*$/i;
 const GLOBAL_TOKEN_REGEX = /\[\[EMBED:(TIKTOK|TWEET|YOUTUBE):([^\]]+)\]\]/gi;
 
+function sanitizeContentArtifacts(content: string) {
+  const seenTokens = new Set<string>();
+
+  const withoutArtifacts = content
+    .replace(/`(\[\[EMBED:(?!TIKTOK|TWEET|YOUTUBE)[^\]]+\]\])`/gi, '')
+    .replace(/\[\[EMBED:(?!TIKTOK|TWEET|YOUTUBE)[^\]]+\]\]/gi, '')
+    .replace(/__WIDGET_\d+__/g, '')
+    .replace(/\bWIDGET_\d+\b/g, '')
+    .replace(/^\s*(?:Twitter|TikTok)\s+Embed\s*$/gim, '')
+    .replace(/^\s*(?:YouTube Widget|Twitter Widget Iframe|Widget Iframe)\s*$/gim, '');
+
+  const dedupedTokens = withoutArtifacts.replace(
+    /\[\[EMBED:(TIKTOK|TWEET|YOUTUBE):([^\]]+)\]\]/gi,
+    (match, type, payload) => {
+      const key = `${String(type).toUpperCase()}:${String(payload).trim()}`;
+      if (seenTokens.has(key)) {
+        return '';
+      }
+      seenTokens.add(key);
+      return `[[EMBED:${String(type).toUpperCase()}:${String(payload).trim()}]]`;
+    },
+  );
+
+  return dedupedTokens.replace(/\n{3,}/g, '\n\n').trim();
+}
+
 /**
  * Checks if a paragraph contains an embed token
  * Returns the token if found, null otherwise
@@ -139,6 +165,7 @@ interface SmartMarkdownProps {
 export default function SmartMarkdown({ content }: SmartMarkdownProps) {
   // PRE-PROCESS: Clean up tokens wrapped in backticks (e.g., `[[EMBED:...]]`)
   let cleanedContent = content.replace(/`(\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):[^\]]+\]\])`/gi, '$1');
+  cleanedContent = sanitizeContentArtifacts(cleanedContent);
 
   // Extract TL;DR and highlights FIRST globally before splitting
   const { tldr, highlights, remainingContent } = extractTLDRAndHighlights(cleanedContent);
