@@ -23,6 +23,62 @@ const ALLOWED_ORIGINS = [
   'https://www.cemkoyluoglu.codes',
 ];
 
+function normalizeSlugValue(value) {
+  if (!value) return '';
+  try {
+    return decodeURIComponent(String(value)).toLowerCase().replace(/\/+$/, '');
+  } catch {
+    return String(value).toLowerCase().replace(/\/+$/, '');
+  }
+}
+
+function generateLegacyTitleSlug(title) {
+  const normalizedWords = String(title || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (normalizedWords.length === 0) {
+    return '';
+  }
+
+  let slug = normalizedWords.join('-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+  if (slug.length > 60) {
+    const shortened = slug.substring(0, 60).replace(/-+$/g, '');
+    const lastDash = shortened.lastIndexOf('-');
+    slug = lastDash > 20 ? shortened.substring(0, lastDash) : shortened;
+  }
+
+  return slug;
+}
+
+async function findLegacyTitleSlugArticle(slug) {
+  const normalizedSlug = normalizeSlugValue(slug);
+  if (!normalizedSlug) return null;
+
+  const { data, error } = await supabase
+    .from('tech_news_articles')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(250);
+
+  if (error) {
+    console.error('Legacy title-slug fallback error:', error);
+    return null;
+  }
+
+  return (data || []).find(article => {
+    const legacyTitleSlug = generateLegacyTitleSlug(article.title);
+    return (
+      legacyTitleSlug === normalizedSlug ||
+      legacyTitleSlug.startsWith(`${normalizedSlug}-`) ||
+      normalizedSlug.startsWith(`${legacyTitleSlug}-`)
+    );
+  }) || null;
+}
+
 /**
  * Edge Function Handler (Web Standards API)
  */
@@ -95,6 +151,10 @@ export default async function handler(request) {
         }
 
         article = legacyMatches?.[0] || null;
+      }
+
+      if (!article) {
+        article = await findLegacyTitleSlugArticle(slug);
       }
 
       if (!article) {

@@ -192,6 +192,10 @@ function getSaveResultDisposition(result) {
   return 'failed';
 }
 
+function getPreferredArticleSlug(article) {
+  return article?.slug || generateSlug(article?.title || '');
+}
+
 function getProcessingDateDecision(candidate, article) {
   const detailAssessment = article?.dateAssessment?.dateStatus
     ? article.dateAssessment
@@ -690,7 +694,7 @@ async function processArticleQueue(articleQueue, scraperRouter, runReport) {
       const articleData = {
         ...translatedArticle,
         category,
-        slug: generateSlug(translatedArticle.title),
+        slug: getPreferredArticleSlug(translatedArticle),
         discoveryDateAssessment: candidate.dateAssessment || null,
       };
 
@@ -1129,7 +1133,7 @@ async function testSingleUrl(url) {
   const articleData = {
     ...translatedArticle,
     category,
-    slug: generateSlug(translatedArticle.title),
+    slug: getPreferredArticleSlug(translatedArticle),
     discoveryDateAssessment: article.dateAssessment || null,
   };
 
