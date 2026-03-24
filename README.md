@@ -22,6 +22,7 @@
 - [Overview](#-overview)
 - [Key Features](#-key-features)
 - [Architecture](#-architecture)
+- [Daily News Agent](#-daily-news-agent)
 - [Tech Stack](#-tech-stack)
 - [Quick Start](#-quick-start)
 - [Telegram Bot](#-telegram-bot-control-center)
@@ -61,11 +62,12 @@
 <td width="50%">
 
 #### Intelligent Scraping
-- Multi-category support (7+ categories)
+- Deterministic daily agent across 6 business categories
 - Smart rate limiting (respects API limits)
 - Duplicate detection & prevention
 - Source attribution & tracking
 - Original article link preservation
+- Replayable run artifacts for rejected/failed/deleted batches
 - **Manual article scraper via Telegram**
 
 </td>
@@ -151,7 +153,7 @@
 
 ### 🔄 Full Automation
 
-- **Scheduled Scraping**: 3x daily on weekdays (09:30, 13:00, 16:00 UTC)
+- **Scheduled Scraping**: 3x daily on weekdays (07:00, 13:00, 15:00 UTC)
 - **Manual Article Scraper**: On-demand article processing via Telegram
 - **LinkedIn Digest**: Daily automated post generation (via n8n)
 - **Vercel Status Monitor**: 30-min interval platform health checks
@@ -332,7 +334,7 @@ npm run telegram:setup-menu
 
 | Workflow | Schedule | Purpose |
 |----------|----------|---------|
-| **Scrape Tech News** | 09:30, 13:00, 16:00 UTC (M-F) | Collect & translate news |
+| **Scrape Tech News** | 07:00, 13:00, 15:00 UTC (M-F) | Deterministic today-only ingestion across 6 categories |
 | **Manual Article Scraper** | On-demand via Telegram | Process single articles |
 | **System Health Check** | 08:00 UTC (Daily) | Monitor system health |
 | **Vercel Status Monitor** | Every 30 minutes | Monitor Vercel platform status |
@@ -351,9 +353,63 @@ All workflows can be triggered manually:
 
 # Via npm scripts
 npm run scrape:news          # Manual scraping
+npm run scrape:news:replay -- --replay-file artifacts/tech-news-runs/<run>.json
+npm run cleanup:duplicates:dry
+npm run cleanup:duplicates
 npm run health:check         # Health check
 npm run vercel:status        # Check Vercel status
 ```
+
+---
+
+## 🧠 Daily News Agent
+
+The tech news pipeline now behaves as a deterministic daily agent, not an open-ended crawler.
+
+### Target Categories
+
+- `yapay-zeka`
+- `teknoloji`
+- `yapay-zeka-uygulamalari`
+- `gundem`
+- `surdurulebilirlik`
+- `bilim-ve-dunya`
+
+### Decision Flow
+
+1. Discover candidates from the 6 configured NuvemMag categories.
+2. Normalize each candidate date in Turkey time and classify it as `today`, `unknown`, `stale`, or `future`.
+3. Bulk-check normalized `source_url` values in Supabase before expensive work.
+4. Skip candidates that already exist in the database.
+5. Verify `unknown` candidates with detail metadata before translation or save.
+6. Translate, validate, and save only valid missing articles.
+7. Write a replayable JSON artifact for every run under `artifacts/tech-news-runs/`.
+
+### Operational Rules
+
+- `scripts/news-scraper.js` is orchestration only.
+- Scrapers discover candidates; orchestration decides whether they move forward.
+- Unknown dates must never silently become "today".
+- Source URL slug is the canonical slug for ingestion. Do not overwrite it with a translated English title slug.
+- Future or inconsistent dates are deferred or rejected, not normalized into production data.
+- Replay only helps after conflicting bad rows are deleted or repaired.
+
+### Run Output
+
+Each run records business-facing metrics including:
+
+- `rawFound`
+- `todayCandidates`
+- `unknownCandidates`
+- `alreadyInDb`
+- `verifiedUnknown`
+- `staleSkipped`
+- `futureRejected`
+- `saved`
+- `failed`
+- `deferred`
+
+This makes it easy to answer "what happened in this run?" without reading raw logs.
 
 ---
 
@@ -366,8 +422,10 @@ npm run vercel:status        # Check Vercel status
 ```env
 # AI Services
 GROQ_API_KEY=gsk_your_key_here                    # Groq AI for translation & chat
+GROQ_PARSER_API_KEY=gsk_your_parser_key_here     # Groq parser model for list extraction
 FIRECRAWL_API_KEY=fc-your_key_here                # Firecrawl for scraping
 GEMINI_API_KEY=your_gemini_key_here               # Google Gemini for content gen
+OLLAMA_API_KEY=your_ollama_cloud_key_here         # Ollama cloud API key for content translation
 
 # Database
 NEXT_PUBLIC_SUPABASE_URL=https://...              # Supabase project URL
@@ -405,9 +463,12 @@ Add these in: `Repository Settings → Secrets and variables → Actions`
 
 ```
 GROQ_API_KEY
+GROQ_PARSER_API_KEY
 FIRECRAWL_API_KEY
 GEMINI_API_KEY
+OLLAMA_API_KEY
 NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 TELEGRAM_BOT_TOKEN
 TELEGRAM_CHAT_ID
@@ -570,6 +631,9 @@ npm run build                   # Production build
 ### Tech News System
 ```bash
 npm run scrape:news             # Manual news scraping
+npm run scrape:news:replay -- --replay-file artifacts/tech-news-runs/<run>.json
+npm run cleanup:duplicates:dry  # Preview cleanup of bad legacy rows
+npm run cleanup:duplicates      # Remove bad legacy rows and snapshot them
 npm run cleanup:db              # Clean up old/invalid articles
 ```
 
