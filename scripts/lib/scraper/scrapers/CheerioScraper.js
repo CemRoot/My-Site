@@ -16,7 +16,7 @@ import {
   dedupeEmbedTokens,
 } from '../../../embeds/cleanMarkdownEmbeds.js';
 import { extractSlugFromUrl, generateSlug } from '../database.js';
-import { getDatePriority } from '../dateUtils.js';
+import { normalizeSourceDate } from '../dateUtils.js';
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
@@ -45,6 +45,26 @@ function isArticleUrl(href) {
   } catch {
     return false;
   }
+}
+
+function buildDiscoveryCandidate({ url, title = '', rawDate = '', category, source, confidence }) {
+  const dateAssessment = normalizeSourceDate(rawDate, {
+    source,
+    confidence,
+  });
+
+  return {
+    url,
+    title: String(title || '').trim(),
+    category,
+    rawDate: rawDate || '',
+    normalizedDate: dateAssessment.normalizedDate,
+    dateSource: dateAssessment.dateSource,
+    dateConfidence: dateAssessment.dateConfidence,
+    datePriority: dateAssessment.datePriority,
+    dateStatus: dateAssessment.dateStatus,
+    dateAssessment,
+  };
 }
 
 export class CheerioScraper extends BaseScraper {
@@ -83,24 +103,21 @@ export class CheerioScraper extends BaseScraper {
         dateStr = $time.attr('datetime') || $time.text().trim();
       }
 
-      let date = '';
-      if (dateStr) {
-        try {
-          const d = new Date(dateStr);
-          if (!isNaN(d.getTime())) date = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
-        } catch { /* skip */ }
-      }
-      if (!date) {
-        const today = new Date();
-        date = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
-      }
+      const candidateTitle = (
+        $(el).attr('title') ||
+        $(el).text() ||
+        $parent.find('h2, h3, h4, .entry-title, .post-title').first().text() ||
+        ''
+      ).trim();
 
-      articles.push({
+      articles.push(buildDiscoveryCandidate({
         url: href,
+        title: candidateTitle,
         category: categoryTag,
-        scrapedDate: date,
-        datePriority: getDatePriority(date),
-      });
+        rawDate: dateStr,
+        source: $time.length ? 'category_dom_time' : 'category_dom_link',
+        confidence: $time.length && dateStr ? 'medium' : 'low',
+      }));
     });
 
     articles.sort((a, b) => b.datePriority - a.datePriority || a.url.localeCompare(b.url));
@@ -148,18 +165,12 @@ export class CheerioScraper extends BaseScraper {
 
     const image = $('meta[property="og:image"]').attr('content') || '';
 
-    let date = '';
     const publishedTime = $('meta[property="article:published_time"]').attr('content') || '';
-    if (publishedTime) {
-      try {
-        const d = new Date(publishedTime);
-        if (!isNaN(d.getTime())) date = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
-      } catch { /* skip */ }
-    }
-    if (!date) {
-      const today = new Date();
-      date = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
-    }
+    const dateAssessment = normalizeSourceDate(publishedTime, {
+      source: 'detail_metadata',
+      confidence: publishedTime ? 'high' : 'low',
+    });
+    const date = dateAssessment.normalizedDate;
 
     let embedTokens = [];
     try {
@@ -241,6 +252,11 @@ export class CheerioScraper extends BaseScraper {
       content: markdownContent,
       image,
       date,
+      rawDate: publishedTime,
+      normalizedDate: dateAssessment.normalizedDate,
+      dateSource: dateAssessment.dateSource,
+      dateConfidence: dateAssessment.dateConfidence,
+      dateAssessment,
       sourceUrl: url,
       originalSource: originalSource || url,
       slug: extractSlugFromUrl(url) || generateSlug(title),

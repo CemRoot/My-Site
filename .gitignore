@@ -32,6 +32,7 @@ yarn-error.log*
 
 # Temporary files
 scripts/test-translation.js
+artifacts/tech-news-runs/
 
 # Private data
 data/newsletter-subscribers.json

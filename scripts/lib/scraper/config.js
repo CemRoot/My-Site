@@ -6,13 +6,12 @@ import { env } from '../config.js';
 
 export const SCRAPER_CONFIG = {
   CATEGORIES: [
-    { name: 'AI Applications', url: 'https://nuvemmag.com/category/yapay-zeka-uygulamalari', tag: 'AI Applications' },
-    { name: 'Latest News', url: 'https://nuvemmag.com/category/en-son-haberler', tag: 'Latest News' },
-    { name: 'Artificial Intelligence', url: 'https://nuvemmag.com/category/yapay-zeka', tag: 'AI' },
-    { name: 'Technology', url: 'https://nuvemmag.com/category/teknoloji', tag: 'Tech' },
-    { name: 'Sustainability', url: 'https://nuvemmag.com/category/surdurulebilirlik', tag: 'Sustainability' },
-    { name: 'Science & World', url: 'https://nuvemmag.com/category/bilim-ve-dunya', tag: 'Science' },
-    { name: 'Agenda', url: 'https://nuvemmag.com/category/gundem', tag: 'News' },
+    { name: 'AI Applications', slug: 'yapay-zeka-uygulamalari', url: 'https://nuvemmag.com/category/yapay-zeka-uygulamalari', tag: 'AI Applications' },
+    { name: 'Artificial Intelligence', slug: 'yapay-zeka', url: 'https://nuvemmag.com/category/yapay-zeka', tag: 'AI' },
+    { name: 'Technology', slug: 'teknoloji', url: 'https://nuvemmag.com/category/teknoloji', tag: 'Tech' },
+    { name: 'Agenda', slug: 'gundem', url: 'https://nuvemmag.com/category/gundem', tag: 'News' },
+    { name: 'Sustainability', slug: 'surdurulebilirlik', url: 'https://nuvemmag.com/category/surdurulebilirlik', tag: 'Sustainability' },
+    { name: 'Science & World', slug: 'bilim-ve-dunya', url: 'https://nuvemmag.com/category/bilim-ve-dunya', tag: 'Science' },
   ],
   FIRECRAWL_API_KEY: env.FIRECRAWL_API_KEY,
   GROQ_API_KEY: env.GROQ_API_KEY,

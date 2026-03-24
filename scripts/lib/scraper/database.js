@@ -11,6 +11,7 @@
 import crypto from 'crypto';
 import { supabase } from '../supabaseAdmin.js';
 import { validateArticle, autoFixArticle } from '../../validation/smartArticleProcessor.js';
+import { getTurkeyIsoDate, normalizeSourceDate } from './dateUtils.js';
 
 export function extractSlugFromUrl(url) {
   if (!url) return null;
@@ -20,6 +21,20 @@ export function extractSlugFromUrl(url) {
     return p || null;
   } catch {
     return null;
+  }
+}
+
+export function normalizeSourceUrl(url) {
+  if (!url) return '';
+
+  try {
+    const normalized = new URL(url);
+    normalized.hash = '';
+    normalized.search = '';
+    normalized.pathname = normalized.pathname.replace(/\/+$/, '');
+    return normalized.toString();
+  } catch {
+    return String(url).replace(/[?#].*$/, '').replace(/\/+$/, '');
   }
 }
 
@@ -87,25 +102,67 @@ function normalizeSlug(slug) {
 }
 
 function buildSourceUrlVariants(url) {
-  if (!url) return [];
+  const normalizedUrl = normalizeSourceUrl(url);
+  if (!normalizedUrl) return [];
 
-  const variants = new Set([url]);
-  try {
-    const normalized = new URL(url);
-    normalized.hash = '';
-    normalized.search = '';
-
-    const withoutTrailingSlash = normalized.toString().replace(/\/$/, '');
-    const withTrailingSlash = `${withoutTrailingSlash}/`;
-
-    variants.add(withoutTrailingSlash);
-    variants.add(withTrailingSlash);
-  } catch {
-    variants.add(url.replace(/\/$/, ''));
-    variants.add(`${url.replace(/\/$/, '')}/`);
-  }
+  const variants = new Set([url, normalizedUrl]);
+  const withoutTrailingSlash = normalizedUrl.replace(/\/$/, '');
+  const withTrailingSlash = `${withoutTrailingSlash}/`;
+  variants.add(withoutTrailingSlash);
+  variants.add(withTrailingSlash);
 
   return [...variants].filter(Boolean);
+}
+
+function resolveSaveDateIntegrity(article) {
+  const detailAssessment = article.dateAssessment?.dateStatus
+    ? article.dateAssessment
+    : normalizeSourceDate(article.date || article.rawDate || '', {
+        source: article.dateSource || 'save_input',
+        confidence: article.dateConfidence || 'medium',
+      });
+
+  const discoveryAssessment = article.discoveryDateAssessment?.dateStatus
+    ? article.discoveryDateAssessment
+    : null;
+
+  if (!detailAssessment.isoDate || detailAssessment.dateStatus === 'unknown') {
+    return {
+      accepted: false,
+      action: 'defer',
+      reason: 'Detail publish date is unknown',
+      assessment: detailAssessment,
+    };
+  }
+
+  if (detailAssessment.dateStatus === 'future') {
+    return {
+      accepted: false,
+      action: 'reject',
+      reason: `Detail publish date is in the future (${detailAssessment.isoDate})`,
+      assessment: detailAssessment,
+    };
+  }
+
+  if (
+    discoveryAssessment?.isoDate &&
+    detailAssessment.isoDate &&
+    discoveryAssessment.isoDate !== detailAssessment.isoDate
+  ) {
+    return {
+      accepted: false,
+      action: 'defer',
+      reason: `Discovery date ${discoveryAssessment.isoDate} does not match detail date ${detailAssessment.isoDate}`,
+      assessment: detailAssessment,
+    };
+  }
+
+  return {
+    accepted: true,
+    action: 'accept',
+    assessment: detailAssessment,
+    isoDate: detailAssessment.isoDate,
+  };
 }
 
 /**
@@ -138,18 +195,34 @@ export async function getExistingArticles(urls) {
     if (urls.length === 0) return new Set();
 
     const existingUrls = new Set();
+    const incomingVariantLookup = new Map();
+    const exactLookupValues = [];
+
+    for (const originalUrl of urls) {
+      for (const variant of buildSourceUrlVariants(originalUrl)) {
+        if (!incomingVariantLookup.has(variant)) {
+          incomingVariantLookup.set(variant, new Set());
+          exactLookupValues.push(variant);
+        }
+        incomingVariantLookup.get(variant).add(originalUrl);
+      }
+    }
 
     // Layer 1: Direct source_url match — fastest
     const batchSize = 200;
-    for (let i = 0; i < urls.length; i += batchSize) {
-      const batch = urls.slice(i, i + batchSize);
+    for (let i = 0; i < exactLookupValues.length; i += batchSize) {
+      const batch = exactLookupValues.slice(i, i + batchSize);
       const { data, error } = await supabase
         .from('tech_news_articles')
         .select('source_url')
         .in('source_url', batch);
 
       if (!error && data) {
-        data.forEach(a => existingUrls.add(a.source_url));
+        data.forEach(({ source_url: sourceUrl }) => {
+          const matches = incomingVariantLookup.get(sourceUrl);
+          if (!matches) return;
+          matches.forEach(originalUrl => existingUrls.add(originalUrl));
+        });
       }
     }
 
@@ -158,7 +231,7 @@ export async function getExistingArticles(urls) {
     if (unchecked.length > 0) {
       const incomingSlugs = new Map();
       for (const u of unchecked) {
-        const raw = extractSlugFromUrl(u);
+        const raw = extractSlugFromUrl(normalizeSourceUrl(u));
         const norm = normalizeSlug(raw);
         if (norm) incomingSlugs.set(norm, u);
       }
@@ -174,7 +247,7 @@ export async function getExistingArticles(urls) {
         if (error || !data || data.length === 0) break;
 
         for (const article of data) {
-          const dbSlug = normalizeSlug(extractSlugFromUrl(article.source_url));
+          const dbSlug = normalizeSlug(extractSlugFromUrl(normalizeSourceUrl(article.source_url)));
           if (!dbSlug) continue;
           for (const [normSlug, origUrl] of incomingSlugs) {
             if (
@@ -313,6 +386,7 @@ export async function saveArticle(article) {
       title: cleanTitle,
       description: cleanDescription,
       content: cleanContent,
+      date: article.date || article.normalizedDate || article.dateAssessment?.normalizedDate || '',
       originalContent: article.originalContent || article.content,
     };
 
@@ -356,26 +430,34 @@ export async function saveArticle(article) {
 
     console.log(`   ✅ Validation passed (Score: ${validation.score.toFixed(1)}/100)`);
 
-    let isoDate;
-    try {
-      const [day, month, year] = articleForValidation.date.split('/');
-      const parsedYear = parseInt(year, 10);
-      const parsedMonth = parseInt(month, 10);
-      const parsedDay = parseInt(day, 10);
-      const today = new Date();
-      const currentYear = today.getFullYear();
-      const parsedDate = new Date(parsedYear, parsedMonth - 1, parsedDay);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateIntegrity = resolveSaveDateIntegrity(articleForValidation);
+    if (!dateIntegrity.accepted) {
+      console.warn(`   ⚠️  DATE INTEGRITY ${dateIntegrity.action.toUpperCase()}: ${dateIntegrity.reason}`);
 
-      if (parsedYear < 2020 || parsedYear > currentYear || parsedDate > tomorrow) {
-        isoDate = `${currentYear}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      } else {
-        isoDate = `${parsedYear}-${String(parsedMonth).padStart(2, '0')}-${String(parsedDay).padStart(2, '0')}`;
+      if (dateIntegrity.action === 'reject') {
+        try {
+          await supabase.from('rejected_articles').insert([{
+            title: cleanTitle,
+            content: cleanContent,
+            source_url: article.sourceUrl,
+            original_source: article.originalSource,
+            reason: dateIntegrity.reason,
+          }]);
+        } catch (rejectedError) {
+          console.error('   ❌ Failed to record rejected date-integrity article:', rejectedError);
+        }
       }
-    } catch {
-      isoDate = new Date().toISOString().split('T')[0];
+
+      return {
+        success: false,
+        reason: dateIntegrity.action === 'reject' ? 'date_integrity_rejected' : 'date_integrity_deferred',
+        error: new Error(dateIntegrity.reason),
+        validation,
+        dateAssessment: dateIntegrity.assessment,
+      };
     }
+
+    const isoDate = dateIntegrity.isoDate || getTurkeyIsoDate();
 
     const refusalWindow = cleanContent.slice(0, 500);
     const rejectionPatterns = [

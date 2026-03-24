@@ -15,7 +15,7 @@ import {
   removeEmbedArtifactNoise,
   dedupeEmbedTokens,
 } from '../../../embeds/cleanMarkdownEmbeds.js';
-import { parseTurkishDate, getDatePriority } from '../dateUtils.js';
+import { normalizeSourceDate } from '../dateUtils.js';
 import { extractSlugFromUrl, generateSlug } from '../database.js';
 
 const BLOCKED_URL_SLUGS = [
@@ -48,6 +48,26 @@ function hasNuvemmagDomain(line) {
     } catch { /* skip */ }
   }
   return false;
+}
+
+function buildDiscoveryCandidate({ url, title = '', rawDate = '', category, source, confidence }) {
+  const dateAssessment = normalizeSourceDate(rawDate, {
+    source,
+    confidence,
+  });
+
+  return {
+    url,
+    title: String(title || '').trim(),
+    category,
+    rawDate: rawDate || '',
+    normalizedDate: dateAssessment.normalizedDate,
+    dateSource: dateAssessment.dateSource,
+    dateConfidence: dateAssessment.dateConfidence,
+    datePriority: dateAssessment.datePriority,
+    dateStatus: dateAssessment.dateStatus,
+    dateAssessment,
+  };
 }
 
 export class FirecrawlScraper extends BaseScraper {
@@ -185,11 +205,11 @@ RULES:
 4. If no articles found, return: []
 
 Output JSON:
-[{"url": "https://nuvemmag.com/article-slug/", "date": "3 gün önce"}]`,
+[{"url": "https://nuvemmag.com/article-slug/", "title": "Article title", "date": "3 gün önce"}]`,
           },
           {
             role: 'user',
-            content: `Extract all article URLs and their dates from this Turkish tech news category page. Return ONLY a JSON array.\n\n${markdownForAi}`,
+            content: `Extract all article URLs, titles, and dates from this Turkish tech news category page. Return ONLY a JSON array.\n\n${markdownForAi}`,
           },
         ],
         temperature: 0.1,
@@ -212,24 +232,14 @@ Output JSON:
         if (article.url.includes('/category/')) continue;
         if (isBlockedUrl(article.url)) continue;
 
-        const parsedDate = parseTurkishDate(article.date);
-        if (!parsedDate) {
-          const today = new Date();
-          processed.push({
-            url: article.url,
-            category: categoryTag,
-            scrapedDate: `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`,
-            datePriority: 50,
-          });
-          continue;
-        }
-
-        processed.push({
+        processed.push(buildDiscoveryCandidate({
           url: article.url,
+          title: article.title,
+          rawDate: article.date || '',
           category: categoryTag,
-          scrapedDate: parsedDate,
-          datePriority: getDatePriority(parsedDate),
-        });
+          source: 'category_ai',
+          confidence: article.date ? 'medium' : 'low',
+        }));
       }
 
       processed.sort((a, b) => b.datePriority - a.datePriority);
@@ -251,14 +261,13 @@ Output JSON:
       !isBlockedUrl(u)
     );
 
-    const today = new Date();
-    const todayStr = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
-
-    const articles = filtered.slice(0, SCRAPER_CONFIG.MAX_ARTICLES_PER_CATEGORY).map(url => ({
+    const articles = filtered.slice(0, SCRAPER_CONFIG.MAX_ARTICLES_PER_CATEGORY).map(url => buildDiscoveryCandidate({
       url,
+      title: '',
+      rawDate: '',
       category: categoryTag,
-      scrapedDate: todayStr,
-      datePriority: 50,
+      source: 'category_regex',
+      confidence: 'low',
     }));
 
     console.log(`  📊 Regex fallback found ${articles.length} articles`);
@@ -463,18 +472,12 @@ Output JSON:
 
     const image = metadata['og:image'] || metadata.image || '';
 
-    let date = '';
-    if (metadata.date || metadata.publishDate || metadata['article:published_time']) {
-      const raw = metadata.date || metadata.publishDate || metadata['article:published_time'];
-      try {
-        const d = new Date(raw);
-        if (!isNaN(d.getTime())) date = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
-      } catch { /* skip */ }
-    }
-    if (!date) {
-      const today = new Date();
-      date = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
-    }
+    const rawDate = metadata.date || metadata.publishDate || metadata['article:published_time'] || '';
+    const dateAssessment = normalizeSourceDate(rawDate, {
+      source: 'detail_metadata',
+      confidence: rawDate ? 'high' : 'low',
+    });
+    const date = dateAssessment.normalizedDate;
 
     if (!title || !markdownContent) {
       console.error(`   ❌ Missing required fields (title or content)`);
@@ -489,6 +492,11 @@ Output JSON:
       content: markdownContent,
       image,
       date,
+      rawDate,
+      normalizedDate: dateAssessment.normalizedDate,
+      dateSource: dateAssessment.dateSource,
+      dateConfidence: dateAssessment.dateConfidence,
+      dateAssessment,
       sourceUrl: url,
       originalSource: originalSource || url,
       slug: extractSlugFromUrl(url) || generateSlug(title),

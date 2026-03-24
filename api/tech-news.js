@@ -101,8 +101,14 @@ export default async function handler(request) {
         return jsonResponse({ success: false, message: 'Article not found' }, 404, corsHeaders);
       }
 
-      // Increment view count (fire and forget - don't wait)
-      supabase.rpc('increment_article_views', { article_id: article.id }).catch(() => {});
+      // Fire and forget without chaining `.catch()` on the Supabase builder.
+      void (async () => {
+        try {
+          await supabase.rpc('increment_article_views', { article_id: article.id });
+        } catch {
+          // Ignore view-count errors so article delivery never fails.
+        }
+      })();
 
       return jsonResponse({ 
         success: true, 

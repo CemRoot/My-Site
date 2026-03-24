@@ -3,105 +3,106 @@
  * Handles Turkish date formats and Europe/Istanbul timezone.
  */
 
+const TURKEY_TIME_ZONE = 'Europe/Istanbul';
+const DISPLAY_DATE_RE = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 const TURKISH_MONTHS = {
   'ocak': 1, 'şubat': 2, 'mart': 3, 'nisan': 4,
   'mayıs': 5, 'haziran': 6, 'temmuz': 7, 'ağustos': 8,
   'eylül': 9, 'ekim': 10, 'kasım': 11, 'aralık': 12,
 };
 
-export function getTurkeyDate() {
-  const now = new Date();
-  const turkeyDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
-  const [year, month, day] = turkeyDateStr.split('-').map(n => parseInt(n, 10));
-  return new Date(year, month - 1, day);
+function pad2(value) {
+  return String(value).padStart(2, '0');
 }
 
-export function isFromToday(dateString) {
-  try {
-    const [day, month, year] = dateString.split('/').map(n => parseInt(n, 10));
-    const articleDate = new Date(year, month - 1, day);
-    articleDate.setHours(0, 0, 0, 0);
+function getDatePartsInTimeZone(date, timeZone = TURKEY_TIME_ZONE) {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
 
-    const today = getTurkeyDate();
-    today.setHours(0, 0, 0, 0);
-
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    return articleDate >= yesterday && articleDate <= today;
-  } catch {
-    return true;
-  }
-}
-
-export function isRecent(dateString) {
-  try {
-    const [day, month, year] = dateString.split('/').map(n => parseInt(n, 10));
-    const articleDate = new Date(year, month - 1, day);
-    articleDate.setHours(0, 0, 0, 0);
-
-    const today = getTurkeyDate();
-    today.setHours(0, 0, 0, 0);
-
-    const threeDaysAgo = new Date(today);
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-
-    return articleDate >= threeDaysAgo;
-  } catch {
-    return true;
-  }
-}
-
-export function getDatePriority(dateString) {
-  try {
-    const [day, month, year] = dateString.split('/').map(n => parseInt(n, 10));
-    const articleDate = new Date(year, month - 1, day);
-    articleDate.setHours(0, 0, 0, 0);
-
-    const today = getTurkeyDate();
-    today.setHours(0, 0, 0, 0);
-
-    const diffTime = today.getTime() - articleDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-    return Math.max(0, 100 - (diffDays * 10));
-  } catch {
-    return 0;
-  }
-}
-
-/**
- * Parse Turkish date formats to DD/MM/YYYY.
- * Handles absolute ("16 Aralık 2025") and relative ("3 gün önce") formats.
- */
-export function parseTurkishDate(dateStr) {
-  if (!dateStr) return null;
-
-  const str = dateStr.trim().toLowerCase();
-  const now = new Date();
-  const currentYear = now.getFullYear();
-
-  const validateNotFuture = (day, month, year) => {
-    if (year < 2020 || year > currentYear) return false;
-    const parsed = new Date(year, month - 1, day);
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return parsed <= tomorrow;
+  const parts = formatter.formatToParts(date);
+  return {
+    year: parseInt(parts.find(part => part.type === 'year')?.value || '0', 10),
+    month: parseInt(parts.find(part => part.type === 'month')?.value || '0', 10),
+    day: parseInt(parts.find(part => part.type === 'day')?.value || '0', 10),
   };
+}
 
-  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
-    const [day, month, year] = str.split('/').map(Number);
-    return validateNotFuture(day, month, year) ? str : null;
+function buildDateOnly(parts) {
+  return new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+}
+
+function formatDisplayDate(parts) {
+  return `${parts.day}/${parts.month}/${parts.year}`;
+}
+
+function formatIsoDate(parts) {
+  return `${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}`;
+}
+
+function isValidParts(parts) {
+  if (!parts) return false;
+  const { year, month, day } = parts;
+  if (!year || !month || !day) return false;
+  const candidate = buildDateOnly(parts);
+  return (
+    candidate.getUTCFullYear() === year &&
+    candidate.getUTCMonth() + 1 === month &&
+    candidate.getUTCDate() === day
+  );
+}
+
+function getDiffDaysFromTurkeyToday(parts) {
+  const today = getTurkeyDate();
+  const candidate = buildDateOnly(parts);
+  return Math.round((candidate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function parseDisplayDateParts(raw) {
+  if (!DISPLAY_DATE_RE.test(raw)) return null;
+  const [day, month, year] = raw.split('/').map(Number);
+  const parts = { day, month, year };
+  return isValidParts(parts) ? parts : null;
+}
+
+function parseIsoDateParts(raw) {
+  if (!ISO_DATE_RE.test(raw)) return null;
+  const [year, month, day] = raw.split('-').map(Number);
+  const parts = { day, month, year };
+  return isValidParts(parts) ? parts : null;
+}
+
+function parseTurkishAbsoluteDateParts(raw) {
+  const match = raw.match(/(\d{1,2})\s+([a-zA-ZğüşıöçĞÜŞİÖÇ]+)\s+(\d{4})/i);
+  if (!match) return null;
+
+  const day = parseInt(match[1], 10);
+  const monthName = match[2].toLowerCase();
+  const year = parseInt(match[3], 10);
+  const month = TURKISH_MONTHS[monthName];
+  if (!month) return null;
+
+  const parts = { day, month, year };
+  return isValidParts(parts) ? parts : null;
+}
+
+function parseRelativeDateParts(raw) {
+  const normalized = raw.toLowerCase();
+  const now = new Date();
+
+  if (normalized === 'bugün' || normalized.includes('bugün')) {
+    return getTurkeyDateParts(now);
   }
 
-  if (str === 'bugün' || str.includes('bugün')) {
-    return `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
-  }
-
-  if (str === 'dün' || str.includes('dün')) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - 1);
-    return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+  if (normalized === 'dün' || normalized.includes('dün')) {
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    return getTurkeyDateParts(yesterday);
   }
 
   const relativePatterns = [
@@ -113,31 +114,153 @@ export function parseTurkishDate(dateStr) {
   ];
 
   for (const { regex, unit } of relativePatterns) {
-    const match = str.match(regex);
-    if (match) {
-      const val = parseInt(match[1], 10);
-      const d = new Date(now);
-      switch (unit) {
-        case 'minutes': d.setMinutes(d.getMinutes() - val); break;
-        case 'hours': d.setHours(d.getHours() - val); break;
-        case 'days': d.setDate(d.getDate() - val); break;
-        case 'weeks': d.setDate(d.getDate() - val * 7); break;
-        case 'months': d.setMonth(d.getMonth() - val); break;
-      }
-      return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
-    }
-  }
+    const match = normalized.match(regex);
+    if (!match) continue;
 
-  const absoluteMatch = dateStr.trim().match(/(\d{1,2})\s+([a-zA-ZğüşıöçĞÜŞİÖÇ]+)\s+(\d{4})/i);
-  if (absoluteMatch) {
-    const day = parseInt(absoluteMatch[1], 10);
-    const monthName = absoluteMatch[2].toLowerCase();
-    const year = parseInt(absoluteMatch[3], 10);
-    const month = TURKISH_MONTHS[monthName];
-    if (month && validateNotFuture(day, month, year)) {
-      return `${day}/${month}/${year}`;
+    const value = parseInt(match[1], 10);
+    const adjusted = new Date(now);
+
+    switch (unit) {
+      case 'minutes':
+        adjusted.setMinutes(adjusted.getMinutes() - value);
+        break;
+      case 'hours':
+        adjusted.setHours(adjusted.getHours() - value);
+        break;
+      case 'days':
+        adjusted.setDate(adjusted.getDate() - value);
+        break;
+      case 'weeks':
+        adjusted.setDate(adjusted.getDate() - value * 7);
+        break;
+      case 'months':
+        adjusted.setMonth(adjusted.getMonth() - value);
+        break;
     }
+
+    return getTurkeyDateParts(adjusted);
   }
 
   return null;
+}
+
+function parseNativeDateParts(raw) {
+  const candidate = new Date(raw);
+  if (Number.isNaN(candidate.getTime())) return null;
+  return getTurkeyDateParts(candidate);
+}
+
+function createUnknownDateAssessment(rawDate = '', source = 'unknown', confidence = 'low') {
+  return {
+    rawDate: rawDate || '',
+    normalizedDate: null,
+    isoDate: null,
+    dateStatus: 'unknown',
+    dateSource: source,
+    dateConfidence: confidence,
+    datePriority: 0,
+    ageDays: null,
+    isToday: false,
+    isFuture: false,
+  };
+}
+
+function createDateAssessment(parts, rawDate = '', source = 'unknown', confidence = 'medium') {
+  if (!isValidParts(parts)) {
+    return createUnknownDateAssessment(rawDate, source, confidence);
+  }
+
+  const diffDays = getDiffDaysFromTurkeyToday(parts);
+  const dateStatus = diffDays === 0 ? 'today' : diffDays > 0 ? 'future' : 'stale';
+  const datePriority = dateStatus === 'future'
+    ? -100
+    : dateStatus === 'today'
+      ? 100
+      : Math.max(0, 100 - (Math.abs(diffDays) * 10));
+
+  return {
+    rawDate: rawDate || '',
+    normalizedDate: formatDisplayDate(parts),
+    isoDate: formatIsoDate(parts),
+    dateStatus,
+    dateSource: source,
+    dateConfidence: confidence,
+    datePriority,
+    ageDays: Math.abs(diffDays),
+    isToday: dateStatus === 'today',
+    isFuture: dateStatus === 'future',
+  };
+}
+
+export function getTurkeyDateParts(date = new Date()) {
+  return getDatePartsInTimeZone(date, TURKEY_TIME_ZONE);
+}
+
+export function getTurkeyDate() {
+  return buildDateOnly(getTurkeyDateParts());
+}
+
+export function getTurkeyDisplayDate(date = new Date()) {
+  return formatDisplayDate(getTurkeyDateParts(date));
+}
+
+export function getTurkeyIsoDate(date = new Date()) {
+  return formatIsoDate(getTurkeyDateParts(date));
+}
+
+export function normalizeSourceDate(rawDate, options = {}) {
+  const { source = 'unknown', confidence = 'medium' } = options;
+
+  if (!rawDate) {
+    return createUnknownDateAssessment('', source, 'low');
+  }
+
+  if (rawDate instanceof Date) {
+    return createDateAssessment(getTurkeyDateParts(rawDate), rawDate.toISOString(), source, confidence);
+  }
+
+  const text = String(rawDate).trim();
+  if (!text) {
+    return createUnknownDateAssessment('', source, 'low');
+  }
+
+  const parts =
+    parseDisplayDateParts(text) ||
+    parseIsoDateParts(text) ||
+    parseRelativeDateParts(text) ||
+    parseTurkishAbsoluteDateParts(text) ||
+    parseNativeDateParts(text);
+
+  return parts
+    ? createDateAssessment(parts, text, source, confidence)
+    : createUnknownDateAssessment(text, source, 'low');
+}
+
+export function isFromToday(dateInput) {
+  return normalizeSourceDate(dateInput, { source: 'today-check', confidence: 'low' }).isToday;
+}
+
+export function isRecent(dateInput, windowDays = 3) {
+  const assessment = normalizeSourceDate(dateInput, { source: 'recent-check', confidence: 'low' });
+  return assessment.isToday || (
+    assessment.dateStatus === 'stale' &&
+    typeof assessment.ageDays === 'number' &&
+    assessment.ageDays <= windowDays
+  );
+}
+
+export function getDatePriority(dateInput) {
+  const assessment = dateInput?.dateStatus
+    ? dateInput
+    : normalizeSourceDate(dateInput, { source: 'priority', confidence: 'low' });
+
+  return assessment.datePriority ?? 0;
+}
+
+/**
+ * Parse Turkish or metadata date formats to DD/MM/YYYY.
+ * Returns null when the date is unknown or invalid.
+ */
+export function parseTurkishDate(dateStr) {
+  return normalizeSourceDate(dateStr, { source: 'parse', confidence: 'low' }).normalizedDate;
 }

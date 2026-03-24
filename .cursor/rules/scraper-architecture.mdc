@@ -147,6 +147,17 @@ Layer 3: content_hash match (handles same article, different URL)
 
 ---
 
+## Observability & Replay
+
+- Every scraper run writes a JSON artifact under `artifacts/tech-news-runs/`
+- Core metrics tracked per run: raw found, unique candidates, new-after-DB-check, skipped, deferred, rejected, saved, failed
+- Batch details are grouped into `saved`, `skipped`, `rejected`, `failed`, and `deferred`
+- Replay command: `npm run scrape:news:replay -- --replay-file <artifact-path>`
+- Supported replay batches: `rejected`, `failed`, `deleted`, `deferred`, `skipped`
+- Cleanup scripts also snapshot deleted rows into the same artifact directory so bad/deleted batches can be replayed later
+
+---
+
 ## Rules for AI Agents
 
 1. **NEVER add scraping logic to news-scraper.js** — only orchestration

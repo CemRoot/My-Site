@@ -1,5 +1,6 @@
 import { supabase } from './lib/supabaseAdmin.js';
 import { notifyTelegram } from './lib/telegram.js';
+import { writeJsonArtifact } from './lib/config.js';
 
 /**
  * Main cleanup function
@@ -18,6 +19,64 @@ async function cleanupOldArticles() {
   let totalDeletedRejected = 0;
 
   try {
+    const { data: oldTechNewsRows, error: oldTechNewsError } = await supabase
+      .from('tech_news_articles')
+      .select('id, slug, title, source_url, category, created_at')
+      .lt('created_at', cutoffDate);
+
+    if (oldTechNewsError) {
+      throw new Error(`Failed to load deletable tech_news_articles: ${oldTechNewsError.message}`);
+    }
+
+    const { data: oldRejectedRows, error: oldRejectedLoadError } = await supabase
+      .from('rejected_articles')
+      .select('id, title, source_url, original_source, reason, scraped_at')
+      .lt('scraped_at', cutoffDate);
+
+    if (oldRejectedLoadError) {
+      throw new Error(`Failed to load deletable rejected_articles: ${oldRejectedLoadError.message}`);
+    }
+
+    if ((oldTechNewsRows?.length || 0) + (oldRejectedRows?.length || 0) > 0) {
+      const snapshotPath = await writeJsonArtifact('tech-news-retention-cleanup-batch', {
+        version: 1,
+        type: 'tech-news-cleanup-batch',
+        cleanupKind: 'retention',
+        startedAt: new Date().toISOString(),
+        dryRun: false,
+        cutoffDate,
+        metrics: {
+          techNewsMarkedForDeletion: oldTechNewsRows?.length || 0,
+          rejectedMarkedForDeletion: oldRejectedRows?.length || 0,
+        },
+        batches: {
+          deleted: [
+            ...(oldTechNewsRows || []).map(row => ({
+              table: 'tech_news_articles',
+              id: row.id,
+              slug: row.slug,
+              title: row.title,
+              source_url: row.source_url,
+              category: row.category,
+              created_at: row.created_at,
+              reason: `Older than retention cutoff ${cutoffDate}`,
+            })),
+            ...(oldRejectedRows || []).map(row => ({
+              table: 'rejected_articles',
+              id: row.id,
+              title: row.title,
+              source_url: row.source_url,
+              original_source: row.original_source,
+              scraped_at: row.scraped_at,
+              reason: row.reason || `Older than retention cutoff ${cutoffDate}`,
+            })),
+          ],
+        },
+      });
+
+      console.log(`🧾 Cleanup snapshot saved: ${snapshotPath}`);
+    }
+
     // 1. Delete from tech_news_articles
     // Note: Supabase free tier might have limits on how many rows can be deleted at once,
     // but typically a simple delete with a filter works well.

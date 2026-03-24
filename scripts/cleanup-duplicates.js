@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
+import { writeJsonArtifact } from './lib/config.js';
 
 config({ path: '.env' });
 config({ path: '.env.local' });
@@ -30,11 +31,39 @@ function normalizeTitle(t) {
   return (t || '').toLowerCase().replace(/\*{1,3}/g, '').replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
 }
 
+async function writeCleanupSnapshot(totalCount, entries) {
+  const payload = {
+    version: 1,
+    type: 'tech-news-cleanup-batch',
+    cleanupKind: 'duplicates',
+    startedAt: new Date().toISOString(),
+    dryRun: DRY_RUN,
+    metrics: {
+      totalFetched: totalCount,
+      markedForDeletion: entries.length,
+    },
+    batches: {
+      deleted: entries.map(({ article, reason }) => ({
+        id: article.id,
+        slug: article.slug,
+        title: article.title,
+        original_title: article.original_title || null,
+        source_url: article.source_url || null,
+        category: article.category || null,
+        created_at: article.created_at,
+        reason,
+      })),
+    },
+  };
+
+  return writeJsonArtifact('tech-news-duplicate-cleanup-batch', payload);
+}
+
 async function main() {
   console.log('\n🔍 Fetching articles...');
   const { data, error } = await supabase
     .from('tech_news_articles')
-    .select('id, title, content, slug, created_at')
+    .select('id, title, original_title, content, slug, created_at, source_url, category')
     .order('created_at', { ascending: true });
 
   if (error) { console.error('DB error:', error.message); process.exit(1); }
@@ -47,16 +76,16 @@ async function main() {
   for (const a of data) {
     for (const p of BAD_TITLE_PATTERNS) {
       if (p.test(a.title || '')) {
-        toDelete.set(a.id, `Bad title: "${(a.title||'').substring(0,80)}"`);
+        toDelete.set(a.id, { article: a, reason: `Bad title: "${(a.title||'').substring(0,80)}"` });
         console.log(`  🚫 ${a.slug}`);
-        console.log(`     → ${toDelete.get(a.id)}`);
+        console.log(`     → ${toDelete.get(a.id).reason}`);
         break;
       }
     }
     if (toDelete.has(a.id)) continue;
     for (const { pattern, label } of BAD_CONTENT_PATTERNS) {
       if (pattern.test(a.content || '')) {
-        toDelete.set(a.id, `Content: ${label}`);
+        toDelete.set(a.id, { article: a, reason: `Content: ${label}` });
         console.log(`  🚫 ${a.slug}`);
         console.log(`     → ${label}`);
         break;
@@ -72,7 +101,7 @@ async function main() {
     const hash = crypto.createHash('sha256').update(normalizeTitle(a.title)).digest('hex');
     if (seen.has(hash)) {
       const first = seen.get(hash);
-      toDelete.set(a.id, `Duplicate of "${first.slug}"`);
+      toDelete.set(a.id, { article: a, reason: `Duplicate of "${first.slug}"` });
       console.log(`  🔁 "${(a.title||'').substring(0,60)}"`);
       console.log(`     keep: ${first.slug} | remove: ${a.slug}`);
     } else {
@@ -84,6 +113,10 @@ async function main() {
   console.log(`📋 To remove: ${toDelete.size} | To keep: ${data.length - toDelete.size}`);
 
   if (toDelete.size === 0) { console.log('\n✅ DB temiz!\n'); return; }
+
+  const snapshotEntries = [...toDelete.values()];
+  const snapshotPath = await writeCleanupSnapshot(data.length, snapshotEntries);
+  console.log(`🧾 Snapshot saved: ${snapshotPath}`);
 
   if (DRY_RUN) {
     console.log('\n⚠️  DRY RUN — silme yapılmadı.');

@@ -46,6 +46,7 @@
             "build": "vite build",
             "postbuild": "node scripts/sitemap-generator.js && node scripts/post-build-telegram.js || true",
             "scrape:news": "node --max-old-space-size=4096 scripts/news-scraper.js",
+            "scrape:news:replay": "node --max-old-space-size=4096 scripts/news-scraper.js --replay-status rejected,failed,deleted",
             "linkedin:analyze": "node scripts/daily-linkedin-automation.js analyze",
             "linkedin:post": "node scripts/daily-linkedin-automation.js post",
             "linkedin:test": "node scripts/daily-linkedin-automation.js test",

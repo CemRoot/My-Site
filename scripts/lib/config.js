@@ -7,9 +7,16 @@
  */
 
 import dotenv from 'dotenv';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
 dotenv.config({ path: '.env.local', override: true });
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 
 export const env = {
   SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '',
@@ -26,3 +33,32 @@ export const env = {
   VERCEL_PROJECT_ID: process.env.VERCEL_PROJECT_ID || '',
   SITE_URL: process.env.SITE_URL || process.env.VERCEL_URL || 'https://cemkoyluoglu.codes',
 };
+
+export const paths = {
+  PROJECT_ROOT,
+  TECH_NEWS_ARTIFACTS_DIR: path.join(PROJECT_ROOT, 'artifacts', 'tech-news-runs'),
+};
+
+export function resolveProjectPath(...segments) {
+  return path.join(PROJECT_ROOT, ...segments);
+}
+
+export function resolveArtifactPath(filePath) {
+  return path.isAbsolute(filePath) ? filePath : resolveProjectPath(filePath);
+}
+
+export async function writeJsonArtifact(prefix, payload, directory = paths.TECH_NEWS_ARTIFACTS_DIR) {
+  await fs.mkdir(directory, { recursive: true });
+
+  const safePrefix = String(prefix || 'artifact')
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const outputPath = path.join(directory, `${safePrefix}-${timestamp}.json`);
+
+  await fs.writeFile(outputPath, JSON.stringify(payload, null, 2), 'utf8');
+  return outputPath;
+}
