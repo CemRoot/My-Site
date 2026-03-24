@@ -23,14 +23,58 @@ export function extractSlugFromUrl(url) {
   }
 }
 
+const SLUG_STOP_WORDS = new Set([
+  'a', 'an', 'and', 'as', 'at', 'be', 'by', 'for', 'from',
+  'in', 'into', 'is', 'of', 'on', 'or', 'that', 'the',
+  'this', 'to', 'with',
+]);
+
+function trimTrailingStopWords(words) {
+  while (words.length > 4 && SLUG_STOP_WORDS.has(words[words.length - 1])) {
+    words.pop();
+  }
+}
+
 export function generateSlug(title) {
-  const slug = title
+  const normalizedWords = title
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  return slug.split('-').slice(0, 8).join('-').substring(0, 60).replace(/-$/, '');
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (normalizedWords.length === 0) {
+    return 'article';
+  }
+
+  const slugWords = [];
+  for (const word of normalizedWords) {
+    const candidate = [...slugWords, word].join('-').replace(/-+/g, '-');
+    if (candidate.length > 72 && slugWords.length >= 6) {
+      break;
+    }
+
+    slugWords.push(word);
+
+    if (slugWords.length >= 10) {
+      break;
+    }
+  }
+
+  trimTrailingStopWords(slugWords);
+
+  let slug = slugWords.join('-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+  if (slug.length > 60) {
+    const shortened = slug.substring(0, 60).replace(/-+$/g, '');
+    const lastDash = shortened.lastIndexOf('-');
+    slug = lastDash > 20 ? shortened.substring(0, lastDash) : shortened;
+  }
+
+  const finalWords = slug.split('-').filter(Boolean);
+  trimTrailingStopWords(finalWords);
+  slug = finalWords.join('-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+  return slug || normalizedWords.slice(0, 4).join('-');
 }
 
 function normalizeSlug(slug) {
@@ -42,17 +86,50 @@ function normalizeSlug(slug) {
   }
 }
 
+function buildSourceUrlVariants(url) {
+  if (!url) return [];
+
+  const variants = new Set([url]);
+  try {
+    const normalized = new URL(url);
+    normalized.hash = '';
+    normalized.search = '';
+
+    const withoutTrailingSlash = normalized.toString().replace(/\/$/, '');
+    const withTrailingSlash = `${withoutTrailingSlash}/`;
+
+    variants.add(withoutTrailingSlash);
+    variants.add(withTrailingSlash);
+  } catch {
+    variants.add(url.replace(/\/$/, ''));
+    variants.add(`${url.replace(/\/$/, '')}/`);
+  }
+
+  return [...variants].filter(Boolean);
+}
+
 /**
  * Generate a content hash from the original Turkish title.
  * Used to detect duplicate articles regardless of URL differences.
  */
-export function generateContentHash(originalTitle) {
-  if (!originalTitle) return null;
-  const normalized = originalTitle
+function normalizeTitleForHash(originalTitle) {
+  return (originalTitle || '')
     .toLowerCase()
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ı/g, 'i')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
+    .normalize('NFKD')
     .replace(/[^a-z0-9\s]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+export function generateContentHash(originalTitle) {
+  if (!originalTitle) return null;
+  const normalized = normalizeTitleForHash(originalTitle);
   return crypto.createHash('sha256').update(normalized).digest('hex');
 }
 
@@ -137,29 +214,120 @@ export async function isContentHashDuplicate(originalTitle) {
       .from('tech_news_articles')
       .select('id')
       .eq('content_hash', hash)
-      .limit(1)
-      .single();
-    return !error && !!data;
-  } catch {
+      .limit(1);
+
+    if (error) {
+      console.error('Error checking content hash duplicate:', error);
+      return false;
+    }
+
+    return Array.isArray(data) && data.length > 0;
+  } catch (error) {
+    console.error('Unexpected content hash duplicate check failure:', error);
     return false;
   }
+}
+
+export async function isSourceUrlDuplicate(url) {
+  const variants = buildSourceUrlVariants(url);
+  if (variants.length === 0) return false;
+
+  try {
+    const { data, error } = await supabase
+      .from('tech_news_articles')
+      .select('id, source_url')
+      .in('source_url', variants)
+      .limit(1);
+
+    if (error) {
+      console.error('Error checking source_url duplicate:', error);
+      return false;
+    }
+
+    return Array.isArray(data) && data.length > 0;
+  } catch (error) {
+    console.error('Unexpected source_url duplicate check failure:', error);
+    return false;
+  }
+}
+
+async function ensureUniqueSlug(baseSlug) {
+  if (!baseSlug) return baseSlug;
+
+  let candidateSlug = baseSlug;
+  let suffix = 2;
+
+  while (suffix <= 25) {
+    const { data, error } = await supabase
+      .from('tech_news_articles')
+      .select('id')
+      .eq('slug', candidateSlug)
+      .limit(1);
+
+    if (error) {
+      console.error('Error checking slug uniqueness:', error);
+      return candidateSlug;
+    }
+
+    if (!data || data.length === 0) {
+      return candidateSlug;
+    }
+
+    const suffixText = `-${suffix}`;
+    candidateSlug = `${baseSlug.substring(0, Math.max(1, 60 - suffixText.length))}${suffixText}`
+      .replace(/-+$/g, '');
+    suffix++;
+  }
+
+  return `${baseSlug.substring(0, 56)}-alt`.replace(/-+$/g, '');
 }
 
 export async function saveArticle(article) {
   try {
     console.log(`   🔍 Running smart validation pipeline...`);
 
-    const validation = validateArticle({
+    let cleanTitle = (article.title || '')
+      .replace(/\*{1,3}/g, '')
+      .replace(/\s*[–—\-]\s*NuvemMag\s*$/i, '')
+      .replace(/\bNuvemMag\b/gi, '')
+      .trim();
+
+    let cleanDescription = (article.description || '')
+      .replace(/\*{1,3}/g, '')
+      .replace(/__WIDGET_\d+__/g, '')
+      .replace(/\[\[EMBED:[^\]]+\]\]/g, '')
+      .replace(/\bNuvemMag\b/gi, '')
+      .replace(/https?:\/\/(?:www\.)?nuvemmag\.com[^\s]*/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+
+    let cleanContent = (article.content || '')
+      .replace(/\bNuvemMag\b/gi, '')
+      .replace(/https?:\/\/(?:www\.)?nuvemmag\.com[^\s\)>\]"']*/gi, '')
+      .replace(/\[[^\]]*\]\([^)]*nuvemmag\.com[^)]*\)/gi, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    const articleForValidation = {
       ...article,
+      title: cleanTitle,
+      description: cleanDescription,
+      content: cleanContent,
       originalContent: article.originalContent || article.content,
-    });
+    };
+
+    let validation = validateArticle(articleForValidation);
 
     if (!validation.isValid && validation.fixes.length > 0) {
       console.log(`   🔧 Auto-fixing ${validation.fixes.length} issues...`);
-      const { fixed, fixedCount } = autoFixArticle(article, validation.results);
+      const { fixed, fixedCount } = autoFixArticle(articleForValidation, validation.results);
       if (fixedCount > 0) {
-        Object.assign(article, fixed);
+        Object.assign(articleForValidation, fixed);
+        cleanTitle = articleForValidation.title;
+        cleanDescription = articleForValidation.description;
+        cleanContent = articleForValidation.content;
         console.log(`   ✅ Fixed ${fixedCount} issues`);
+        validation = validateArticle(articleForValidation);
       }
     }
 
@@ -168,7 +336,10 @@ export async function saveArticle(article) {
         e.includes('Turkish') ||
         e.includes('year') ||
         e.includes('instruction leakage') ||
-        e.includes('translation error')
+        e.includes('translation error') ||
+        e.includes('Title is empty') ||
+        e.includes('Content is empty') ||
+        e.includes('NuvemMag branding/URLs')
       );
 
       if (criticalErrors.length > 0) {
@@ -187,7 +358,7 @@ export async function saveArticle(article) {
 
     let isoDate;
     try {
-      const [day, month, year] = article.date.split('/');
+      const [day, month, year] = articleForValidation.date.split('/');
       const parsedYear = parseInt(year, 10);
       const parsedMonth = parseInt(month, 10);
       const parsedDay = parseInt(day, 10);
@@ -206,39 +377,21 @@ export async function saveArticle(article) {
       isoDate = new Date().toISOString().split('T')[0];
     }
 
-    // Clean title — strip markdown bold/italic and branding
-    let cleanTitle = article.title
-      .replace(/\*{1,3}/g, '')
-      .replace(/\s*[–—\-]\s*NuvemMag\s*$/i, '')
-      .replace(/\bNuvemMag\b/gi, '')
-      .trim();
-
-    let cleanDescription = article.description
-      .replace(/\*{1,3}/g, '')
-      .replace(/__WIDGET_\d+__/g, '')
-      .replace(/\[\[EMBED:[^\]]+\]\]/g, '')
-      .replace(/\bNuvemMag\b/gi, '')
-      .replace(/https?:\/\/(?:www\.)?nuvemmag\.com[^\s]*/gi, '')
-      .replace(/\s{2,}/g, ' ')
-      .trim();
-
-    let cleanContent = article.content
-      .replace(/\bNuvemMag\b/gi, '')
-      .replace(/https?:\/\/(?:www\.)?nuvemmag\.com[^\s\)>\]"']*/gi, '')
-      .replace(/\[[^\]]*\]\([^)]*nuvemmag\.com[^)]*\)/gi, '')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
-
-    const lowerContent = cleanContent.toLowerCase();
-    const rejectionKeywords = ["i'm unable", "i cannot", "i'm sorry", "fulfill this request"];
+    const refusalWindow = cleanContent.slice(0, 500);
+    const rejectionPatterns = [
+      { pattern: /^(?:i'm unable|i am unable)\b/im, label: "I'm unable" },
+      { pattern: /^(?:i cannot|i can't|i cant)\b/im, label: 'I cannot' },
+      { pattern: /^(?:i'm sorry|i am sorry)\b/im, label: "I'm sorry" },
+      { pattern: /\bfulfill this request\b/im, label: 'fulfill this request' },
+    ];
     let rejectionReason = null;
 
     if (cleanContent.length < 100) {
       rejectionReason = 'Content is under 100 characters';
     } else {
-      for (const keyword of rejectionKeywords) {
-        if (lowerContent.includes(keyword)) {
-          rejectionReason = `Content contains refusal phrase: "${keyword}"`;
+      for (const { pattern, label } of rejectionPatterns) {
+        if (pattern.test(refusalWindow)) {
+          rejectionReason = `Content starts with LLM refusal pattern: "${label}"`;
           break;
         }
       }
@@ -254,12 +407,19 @@ export async function saveArticle(article) {
           original_source: article.originalSource,
           reason: rejectionReason,
         }]);
-      } catch (_) {}
+      } catch (rejectedError) {
+        console.error('   ❌ Failed to record rejected article:', rejectedError);
+      }
       return { success: false, reason: 'rejected_content', error: null, validation };
     }
 
     // Generate content hash from original Turkish title
     const contentHash = generateContentHash(article.originalTitle || article.title);
+    const uniqueSlug = await ensureUniqueSlug(article.slug);
+
+    if (uniqueSlug !== article.slug) {
+      console.log(`   🔁 Adjusted duplicate slug: "${article.slug}" -> "${uniqueSlug}"`);
+    }
 
     const { data, error } = await supabase
       .from('tech_news_articles')
@@ -273,7 +433,7 @@ export async function saveArticle(article) {
         category: article.category,
         source_url: article.sourceUrl,
         original_source: article.originalSource,
-        slug: article.slug,
+        slug: uniqueSlug,
         content_hash: contentHash,
       }])
       .select()

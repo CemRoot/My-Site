@@ -1,37 +1,19 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../../../lib/supabase.js';
+import { TECH_NEWS_API_BASE } from '../constants/urls';
 import type { Article } from '../types';
 
-interface SupabaseArticleRow {
-  id: number;
-  title: string;
-  description: string;
-  content: string;
-  original_title: string;
-  image_url: string;
-  date: string;
-  category: string;
-  source_url: string;
-  original_source: string;
-  slug: string;
-  created_at: string;
+interface ArticleDetailResponse {
+  success: boolean;
+  article?: Article;
+  message?: string;
 }
 
-function formatArticleRow(row: SupabaseArticleRow): Article {
-  return {
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    content: row.content,
-    originalTitle: row.original_title,
-    image: row.image_url,
-    date: row.date,
-    category: row.category,
-    sourceUrl: row.source_url,
-    originalSource: row.original_source,
-    slug: row.slug,
-    createdAt: row.created_at,
+interface ArticleListResponse {
+  success: boolean;
+  data?: {
+    articles: Article[];
   };
+  message?: string;
 }
 
 export function useArticle(slug: string | undefined) {
@@ -43,52 +25,73 @@ export function useArticle(slug: string | undefined) {
   useEffect(() => {
     if (!slug) return;
 
-    let cancelled = false;
+    const controller = new AbortController();
 
     const fetchArticle = async () => {
       try {
         setLoading(true);
         setError(null);
+        setArticle(null);
+        setRelatedArticles([]);
 
-        const { data: articleData, error: articleError } = await supabase
-          .from('tech_news_articles')
-          .select('*')
-          .eq('slug', slug)
-          .single();
+        const articleResponse = await fetch(
+          `${TECH_NEWS_API_BASE}?slug=${encodeURIComponent(slug)}`,
+          {
+            cache: 'no-store',
+            signal: controller.signal,
+          },
+        );
 
-        if (cancelled) return;
-
-        if (articleError || !articleData) {
+        if (!articleResponse.ok) {
           throw new Error('Article not found');
         }
 
-        const formattedArticle = formatArticleRow(articleData as SupabaseArticleRow);
-        setArticle(formattedArticle);
+        const articlePayload =
+          (await articleResponse.json()) as ArticleDetailResponse;
 
-        await supabase.rpc('increment_article_views', {
-          article_id: articleData.id,
-        });
+        if (!articlePayload.success || !articlePayload.article) {
+          throw new Error(articlePayload.message || 'Article not found');
+        }
 
-        const category = formattedArticle.category;
-        const { data: relatedData } = await supabase
-          .from('tech_news_articles')
-          .select('*')
-          .eq('category', category || 'AI')
-          .neq('id', articleData.id)
-          .order('date', { ascending: false })
-          .limit(3);
+        if (controller.signal.aborted) return;
 
-        if (!cancelled && relatedData) {
+        const loadedArticle = articlePayload.article;
+        setArticle(loadedArticle);
+
+        if (!loadedArticle.category) {
+          return;
+        }
+
+        const relatedResponse = await fetch(
+          `${TECH_NEWS_API_BASE}?page=1&limit=4&category=${encodeURIComponent(loadedArticle.category)}`,
+          {
+            cache: 'no-store',
+            signal: controller.signal,
+          },
+        );
+
+        if (!relatedResponse.ok) {
+          return;
+        }
+
+        const relatedPayload = (await relatedResponse.json()) as ArticleListResponse;
+        if (
+          !controller.signal.aborted &&
+          relatedPayload.success &&
+          relatedPayload.data?.articles
+        ) {
           setRelatedArticles(
-            (relatedData as SupabaseArticleRow[]).map(formatArticleRow),
+            relatedPayload.data.articles
+              .filter((article) => article.slug !== loadedArticle.slug)
+              .slice(0, 3),
           );
         }
       } catch (err) {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setError(err instanceof Error ? err.message : 'Unknown error');
         }
       } finally {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setLoading(false);
         }
       }
@@ -97,7 +100,7 @@ export function useArticle(slug: string | undefined) {
     fetchArticle();
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [slug]);
 

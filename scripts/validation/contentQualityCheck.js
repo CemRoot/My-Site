@@ -167,6 +167,14 @@ export function validateArticleContent(article, autoFix = false) {
       break;
     }
   }
+
+  if (/__WIDGET_\d+__|\bWIDGET_\d+\b/.test(content)) {
+    errors.push('❌ CRITICAL: Contains unresolved widget placeholders');
+  }
+
+  if (/\[\[EMBED:(?!TIKTOK|TWEET|YOUTUBE)[^\]]+\]\]/i.test(content)) {
+    errors.push('❌ CRITICAL: Contains invalid embed placeholder tokens');
+  }
   
   // 8. Check for non-English characters (Chinese, Japanese, Korean, Arabic, etc.)
   const cjkChars = /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/;

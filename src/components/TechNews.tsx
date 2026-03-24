@@ -189,7 +189,6 @@ function TechNews() {
                   onClick={() => {
                     if (selectedCategory !== c.value) {
                       setSelectedCategory(c.value);
-                      setCurrentPage(1);
                     }
                   }}
                   className={`h-9 px-4 ${selectedCategory === c.value ? '' : 'bg-background'}`}

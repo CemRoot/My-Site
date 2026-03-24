@@ -8,8 +8,15 @@ import { BaseScraper } from './BaseScraper.js';
 import { SCRAPER_CONFIG } from '../config.js';
 import { htmlToTokens } from '../../../embeds/extractEmbeds.js';
 import { extractAllEmbedsFromMarkdown } from '../../../embeds/extractMarkdownEmbeds.js';
-import { replaceTikTokBlockquote, replaceTwitterBlockquote, cleanSocialEmbedRemnants } from '../../../embeds/cleanMarkdownEmbeds.js';
+import {
+  replaceTikTokBlockquote,
+  replaceTwitterBlockquote,
+  cleanSocialEmbedRemnants,
+  removeEmbedArtifactNoise,
+  dedupeEmbedTokens,
+} from '../../../embeds/cleanMarkdownEmbeds.js';
 import { extractSlugFromUrl, generateSlug } from '../database.js';
+import { getDatePriority } from '../dateUtils.js';
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
@@ -92,9 +99,11 @@ export class CheerioScraper extends BaseScraper {
         url: href,
         category: categoryTag,
         scrapedDate: date,
-        datePriority: 50,
+        datePriority: getDatePriority(date),
       });
     });
+
+    articles.sort((a, b) => b.datePriority - a.datePriority || a.url.localeCompare(b.url));
 
     const limited = articles.slice(0, SCRAPER_CONFIG.MAX_ARTICLES_PER_CATEGORY);
     console.log(`  📊 [Cheerio] Found ${limited.length} articles (from ${articles.length} total links)`);
@@ -176,6 +185,8 @@ export class CheerioScraper extends BaseScraper {
     markdownContent = replaceTwitterBlockquote(markdownContent);
     markdownContent = cleanSocialEmbedRemnants(markdownContent);
     markdownContent = extractAllEmbedsFromMarkdown(markdownContent);
+    markdownContent = removeEmbedArtifactNoise(markdownContent);
+    markdownContent = dedupeEmbedTokens(markdownContent);
 
     const mdTokens = markdownContent.match(/\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):[^\]]+\]\]/gi) || [];
     for (const t of mdTokens) {
@@ -190,6 +201,8 @@ export class CheerioScraper extends BaseScraper {
       }
     }
 
+    markdownContent = removeEmbedArtifactNoise(markdownContent);
+    markdownContent = dedupeEmbedTokens(markdownContent);
     let originalSource = '';
     const sourcePatterns = [
       /(?:kaynak|source)[:\s]+(https?:\/\/[^\s\)\]>\n"']+)/i,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ARTICLES_PER_PAGE, NEWS_CACHE_MAX_AGE_MS, NEWS_CACHE_STALE_MS } from '../constants/animation';
+import { ARTICLES_PER_PAGE, NEWS_CACHE_MAX_AGE_MS } from '../constants/animation';
 import { TECH_NEWS_API_BASE } from '../constants/urls';
 import type { NewsDatabase } from '../types';
 
@@ -13,6 +13,29 @@ interface TechNewsState {
   loading: boolean;
   loadingMore: boolean;
   error: string | null;
+}
+
+function mergePaginatedArticles(
+  existingArticles: NewsDatabase['articles'],
+  incomingArticles: NewsDatabase['articles'],
+) {
+  const mergedArticles = [...existingArticles];
+  const articleIndexById = new Map(
+    mergedArticles.map((article, index) => [article.id, index]),
+  );
+
+  for (const article of incomingArticles) {
+    const existingIndex = articleIndexById.get(article.id);
+    if (existingIndex === undefined) {
+      articleIndexById.set(article.id, mergedArticles.length);
+      mergedArticles.push(article);
+      continue;
+    }
+
+    mergedArticles[existingIndex] = article;
+  }
+
+  return mergedArticles;
 }
 
 export function useTechNews(selectedCategory: string) {
@@ -29,7 +52,7 @@ export function useTechNews(selectedCategory: string) {
       setState((prev) => {
         const newArticles = isNewSearch
           ? data.articles
-          : [...(prev.newsData?.articles || []), ...data.articles];
+          : mergePaginatedArticles(prev.newsData?.articles || [], data.articles);
 
         return {
           ...prev,
@@ -48,20 +71,27 @@ export function useTechNews(selectedCategory: string) {
   );
 
   const fetchFreshData = useCallback(
-    async (page: number, cacheKey: string, isNewSearch: boolean) => {
+    async (
+      page: number,
+      cacheKey: string,
+      isNewSearch: boolean,
+      backgroundRefresh: boolean = false,
+    ) => {
       try {
-        setState((prev) => ({
-          ...prev,
-          loading: isNewSearch ? true : prev.loading,
-          loadingMore: !isNewSearch,
-        }));
+        if (!backgroundRefresh) {
+          setState((prev) => ({
+            ...prev,
+            loading: isNewSearch ? true : prev.loading,
+            loadingMore: !isNewSearch,
+          }));
+        }
 
         const categoryQuery =
           selectedCategory && selectedCategory !== 'all'
             ? `&category=${encodeURIComponent(selectedCategory)}`
             : '';
         const apiUrl = `${TECH_NEWS_API_BASE}?page=${page}&limit=${ARTICLES_PER_PAGE}${categoryQuery}`;
-        const response = await fetch(apiUrl);
+        const response = await fetch(apiUrl, { cache: 'no-store' });
 
         if (!response.ok) {
           throw new Error(`Failed to fetch news (status ${response.status})`);
@@ -86,9 +116,14 @@ export function useTechNews(selectedCategory: string) {
       } catch (err) {
         setState((prev) => ({
           ...prev,
-          error: err instanceof Error ? err.message : 'Unknown error',
-          loading: false,
-          loadingMore: false,
+          error:
+            backgroundRefresh && prev.newsData
+              ? prev.error
+              : err instanceof Error
+                ? err.message
+                : 'Unknown error',
+          loading: backgroundRefresh ? prev.loading : false,
+          loadingMore: backgroundRefresh ? prev.loadingMore : false,
         }));
       }
     },
@@ -107,10 +142,7 @@ export function useTechNews(selectedCategory: string) {
 
           if (ageMs < NEWS_CACHE_MAX_AGE_MS) {
             updateStateWithNewData(data, isNewSearch);
-
-            if (ageMs > NEWS_CACHE_STALE_MS) {
-              fetchFreshData(page, cacheKey, isNewSearch);
-            }
+            void fetchFreshData(page, cacheKey, isNewSearch, true);
             return;
           }
         }
@@ -155,6 +187,11 @@ export function useTechNews(selectedCategory: string) {
     currentArticles: state.newsData?.articles || [],
     totalArticles: state.newsData?.totalArticles || 0,
     handleLoadMore,
-    refetch: () => fetchNews(currentPage),
+    refetch: () =>
+      fetchFreshData(
+        currentPage,
+        `tech-news-p${currentPage}-c${selectedCategory}`,
+        currentPage === 1,
+      ),
   };
 }
