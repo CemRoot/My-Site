@@ -44,6 +44,9 @@ export function getSystemManagementKeyboard() {
         { text: '🔀 Chat Backend', callback_data: 'action_chat_backend' },
       ],
       [
+        { text: '🔔 n8n Bildirimleri', callback_data: 'action_n8n_notifications' },
+      ],
+      [
         { text: '🏥 Sağlık Kontrolü', callback_data: 'action_health' },
         { text: '🔧 GitHub Actions', callback_data: 'action_github' },
       ],
