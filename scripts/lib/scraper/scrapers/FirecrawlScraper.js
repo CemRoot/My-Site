@@ -16,7 +16,7 @@ import {
   dedupeEmbedTokens,
 } from '../../../embeds/cleanMarkdownEmbeds.js';
 import { normalizeSourceDate } from '../dateUtils.js';
-import { extractSlugFromUrl, generateSlug } from '../database.js';
+import { extractSlugFromUrl, generateSlug, normalizeSourceUrl } from '../database.js';
 
 const BLOCKED_URL_SLUGS = [
   'hesabim', 'my-account', 'giris', 'login', 'kayit', 'register',
@@ -68,6 +68,69 @@ function buildDiscoveryCandidate({ url, title = '', rawDate = '', category, sour
     dateStatus: dateAssessment.dateStatus,
     dateAssessment,
   };
+}
+
+function getCandidateCompletenessScore(candidate) {
+  return (candidate?.title ? 2 : 0) + (candidate?.rawDate ? 1 : 0);
+}
+
+function sortDiscoveryCandidates(a, b) {
+  return (
+    (b.datePriority - a.datePriority) ||
+    (getCandidateCompletenessScore(b) - getCandidateCompletenessScore(a)) ||
+    a.url.localeCompare(b.url)
+  );
+}
+
+function mergeDiscoveryCandidates(...candidateSets) {
+  const merged = new Map();
+
+  for (const set of candidateSets) {
+    for (const candidate of set || []) {
+      if (!candidate?.url) continue;
+      const key = normalizeSourceUrl(candidate.url) || candidate.url;
+      const existing = merged.get(key);
+      if (!existing || getCandidateCompletenessScore(candidate) > getCandidateCompletenessScore(existing)) {
+        merged.set(key, candidate);
+      }
+    }
+  }
+
+  return [...merged.values()].sort(sortDiscoveryCandidates);
+}
+
+function splitMarkdownIntoChunks(markdown, maxChars = 7000) {
+  if (markdown.length <= maxChars) return [markdown];
+
+  const lines = markdown.split('\n');
+  const chunks = [];
+  let current = '';
+
+  for (const line of lines) {
+    const next = current ? `${current}\n${line}` : line;
+    if (next.length > maxChars && current) {
+      chunks.push(current);
+      current = line;
+      continue;
+    }
+
+    if (line.length > maxChars) {
+      if (current) {
+        chunks.push(current);
+        current = '';
+      }
+
+      for (let index = 0; index < line.length; index += maxChars) {
+        chunks.push(line.slice(index, index + maxChars));
+      }
+      continue;
+    }
+
+    current = next;
+  }
+
+  if (current) chunks.push(current);
+  return chunks;
 }
 
 export class FirecrawlScraper extends BaseScraper {
@@ -164,28 +227,69 @@ export class FirecrawlScraper extends BaseScraper {
     console.log(`  📄 Got ${markdown.length} chars of markdown`);
 
     const aiArticles = await this._parseArticlesWithAI(markdown, categoryTag);
+    const regexArticles = this._regexFallback(markdown, categoryTag);
+    const mergedArticles = mergeDiscoveryCandidates(aiArticles, regexArticles);
 
-    if (aiArticles && aiArticles.length > 0) {
-      const limited = aiArticles.slice(0, SCRAPER_CONFIG.MAX_ARTICLES_PER_CATEGORY);
-      console.log(`  📊 Using ${limited.length} articles from AI parsing (limited from ${aiArticles.length})`);
-      return limited;
+    if (mergedArticles.length === 0) {
+      console.log(`  ⚠️ No articles extracted from AI or regex parsing.`);
+      return [];
     }
 
-    console.log(`  ⚠️ AI parsing returned no results, trying regex fallback...`);
-    return this._regexFallback(markdown, categoryTag);
+    const limited = mergedArticles.slice(0, SCRAPER_CONFIG.MAX_ARTICLES_PER_CATEGORY);
+    const aiCount = aiArticles?.length || 0;
+    const regexSupplementCount = Math.max(0, mergedArticles.length - aiCount);
+
+    console.log(
+      `  📊 Using ${limited.length} merged articles ` +
+      `(AI: ${aiCount}, regex supplement: ${regexSupplementCount}, total unique: ${mergedArticles.length})`
+    );
+    return limited;
   }
 
   async _parseArticlesWithAI(markdown, categoryTag) {
     console.log(`  🤖 Using AI to parse article list for ${categoryTag}...`);
 
     try {
-      const markdownForAi = markdown.length > 10000 ? markdown.substring(0, 10000) : markdown;
-      const completion = await this.groqParser.chat.completions.create({
-        model: 'llama-3.1-8b-instant',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a web scraping assistant. Extract article information from Turkish tech news markdown.
+      const markdownChunks = splitMarkdownIntoChunks(markdown, 7000);
+      const extractedCandidates = [];
+
+      for (const [index, markdownChunk] of markdownChunks.entries()) {
+        const chunkCandidates = await this._parseArticlesWithAIChunk(
+          markdownChunk,
+          categoryTag,
+          index + 1,
+          markdownChunks.length
+        );
+
+        if (chunkCandidates?.length) {
+          extractedCandidates.push(...chunkCandidates);
+        }
+      }
+
+      const processed = mergeDiscoveryCandidates(extractedCandidates);
+      if (processed.length === 0) {
+        throw new Error('AI response did not contain any valid article candidates');
+      }
+
+      console.log(`  ✅ AI extracted ${processed.length} unique articles across ${markdownChunks.length} chunk(s)`);
+      return processed;
+    } catch (error) {
+      console.error(`  ❌ AI parsing failed: ${error.message}`);
+      return null;
+    }
+  }
+
+  async _parseArticlesWithAIChunk(markdownForAi, categoryTag, chunkIndex, chunkCount) {
+    const maxAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const completion = await this.groqParser.chat.completions.create({
+          model: 'llama-3.1-8b-instant',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a web scraping assistant. Extract article information from Turkish tech news markdown.
 
 CRITICAL URL PATTERNS (updated December 2025):
 - NEW format: https://nuvemmag.com/article-slug-here/
@@ -205,53 +309,70 @@ RULES:
 4. If no articles found, return: []
 
 Output JSON:
-[{"url": "https://nuvemmag.com/article-slug/", "title": "Article title", "date": "3 gün önce"}]`,
-          },
-          {
-            role: 'user',
-            content: `Extract all article URLs, titles, and dates from this Turkish tech news category page. Return ONLY a JSON array.\n\n${markdownForAi}`,
-          },
-        ],
-        temperature: 0.1,
-        max_tokens: 3000,
-      });
+[{"url": "https://nuvemmag.com/article-slug/", "title": "Article title", "date": "3 gün önce"}]
 
-      const response = completion.choices[0]?.message?.content || '[]';
-      let jsonStr = response;
-      const jsonMatch = response.match(/\[[\s\S]*\]/);
-      if (jsonMatch) jsonStr = jsonMatch[0];
+IMPORTANT:
+- Extract every visible article in this markdown chunk.
+- Keep URLs unique.`,
+            },
+            {
+              role: 'user',
+              content: `Extract all article URLs, titles, and dates from chunk ${chunkIndex}/${chunkCount} of this Turkish tech news category page. Return ONLY a JSON array.\n\n${markdownForAi}`,
+            },
+          ],
+          temperature: 0.1,
+          max_tokens: 3000,
+        });
 
-      const articles = JSON.parse(jsonStr);
-      if (!Array.isArray(articles)) throw new Error('AI response is not an array');
+        const response = completion.choices[0]?.message?.content || '[]';
+        let jsonStr = response;
+        const jsonMatch = response.match(/\[[\s\S]*\]/);
+        if (jsonMatch) jsonStr = jsonMatch[0];
 
-      console.log(`  ✅ AI extracted ${articles.length} articles`);
+        const articles = JSON.parse(jsonStr);
+        if (!Array.isArray(articles)) throw new Error('AI response is not an array');
 
-      const processed = [];
-      for (const article of articles) {
-        if (!article.url || !article.url.includes('nuvemmag.com/')) continue;
-        if (article.url.includes('/category/')) continue;
-        if (isBlockedUrl(article.url)) continue;
+        const processed = [];
+        for (const article of articles) {
+          if (!article.url || !article.url.includes('nuvemmag.com/')) continue;
+          if (article.url.includes('/category/')) continue;
+          if (isBlockedUrl(article.url)) continue;
 
-        processed.push(buildDiscoveryCandidate({
-          url: article.url,
-          title: article.title,
-          rawDate: article.date || '',
-          category: categoryTag,
-          source: 'category_ai',
-          confidence: article.date ? 'medium' : 'low',
-        }));
+          processed.push(buildDiscoveryCandidate({
+            url: article.url,
+            title: article.title,
+            rawDate: article.date || '',
+            category: categoryTag,
+            source: 'category_ai',
+            confidence: article.date ? 'medium' : 'low',
+          }));
+        }
+
+        processed.sort(sortDiscoveryCandidates);
+        return processed;
+      } catch (error) {
+        const message = String(error?.message || error);
+        const isRateLimited = /rate limit|rate_limit_exceeded|please try again in/i.test(message);
+
+        if (isRateLimited && attempt < maxAttempts) {
+          const retryMatch = message.match(/Please try again in\s+([\d.]+)s/i);
+          const retryDelayMs = Math.max(2000, Math.ceil((Number.parseFloat(retryMatch?.[1] || '3') + 1) * 1000));
+          console.log(
+            `  ⏳ AI chunk ${chunkIndex}/${chunkCount} rate-limited; retrying in ${(retryDelayMs / 1000).toFixed(0)}s ` +
+            `(attempt ${attempt + 1}/${maxAttempts})`
+          );
+          await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+          continue;
+        }
+
+        console.error(`  ⚠️ AI chunk ${chunkIndex}/${chunkCount} failed: ${message}`);
+        return [];
       }
-
-      processed.sort((a, b) => b.datePriority - a.datePriority);
-      return processed;
-    } catch (error) {
-      console.error(`  ❌ AI parsing failed: ${error.message}`);
-      return null;
     }
   }
 
   _regexFallback(markdown, categoryTag) {
-    const urlRegex = /https:\/\/nuvemmag\.com\/(?:post\/)?[a-z0-9-]+\/?/gi;
+    const urlRegex = /https:\/\/nuvemmag\.com\/(?:post\/)?[a-z0-9%._~-]+\/?/gi;
     const matches = [...new Set(markdown.match(urlRegex) || [])];
     const filtered = matches.filter(u =>
       !u.includes('/category/') &&

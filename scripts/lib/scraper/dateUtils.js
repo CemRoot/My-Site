@@ -92,25 +92,34 @@ function parseTurkishAbsoluteDateParts(raw) {
 }
 
 function parseRelativeDateParts(raw) {
-  const normalized = raw.toLowerCase();
+  const normalized = raw.toLowerCase().trim();
   const now = new Date();
+  const subtractByMs = (ms) => getTurkeyDateParts(new Date(now.getTime() - ms));
 
-  if (normalized === 'bugün' || normalized.includes('bugün')) {
+  if (
+    normalized === 'bugün' ||
+    normalized.includes('bugün') ||
+    normalized === 'today' ||
+    normalized.includes('today')
+  ) {
     return getTurkeyDateParts(now);
   }
 
-  if (normalized === 'dün' || normalized.includes('dün')) {
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    return getTurkeyDateParts(yesterday);
+  if (
+    normalized === 'dün' ||
+    normalized.includes('dün') ||
+    normalized === 'yesterday' ||
+    normalized.includes('yesterday')
+  ) {
+    return subtractByMs(24 * 60 * 60 * 1000);
   }
 
   const relativePatterns = [
-    { regex: /(\d+)\s*dakika\s*önce/i, unit: 'minutes' },
-    { regex: /(\d+)\s*saat\s*önce/i, unit: 'hours' },
-    { regex: /(\d+)\s*gün\s*önce/i, unit: 'days' },
-    { regex: /(\d+)\s*hafta\s*önce/i, unit: 'weeks' },
-    { regex: /(\d+)\s*ay\s*önce/i, unit: 'months' },
+    { regex: /(\d+)\s*(?:dakika|minutes?)\s*(?:önce|ago)/i, unit: 'minutes' },
+    { regex: /(\d+)\s*(?:saat|hours?)\s*(?:önce|ago)/i, unit: 'hours' },
+    { regex: /(\d+)\s*(?:gün|days?)\s*(?:önce|ago)/i, unit: 'days' },
+    { regex: /(\d+)\s*(?:hafta|weeks?)\s*(?:önce|ago)/i, unit: 'weeks' },
+    { regex: /(\d+)\s*(?:ay|months?)\s*(?:önce|ago)/i, unit: 'months' },
   ];
 
   for (const { regex, unit } of relativePatterns) {
@@ -122,19 +131,15 @@ function parseRelativeDateParts(raw) {
 
     switch (unit) {
       case 'minutes':
-        adjusted.setMinutes(adjusted.getMinutes() - value);
-        break;
+        return subtractByMs(value * 60 * 1000);
       case 'hours':
-        adjusted.setHours(adjusted.getHours() - value);
-        break;
+        return subtractByMs(value * 60 * 60 * 1000);
       case 'days':
-        adjusted.setDate(adjusted.getDate() - value);
-        break;
+        return subtractByMs(value * 24 * 60 * 60 * 1000);
       case 'weeks':
-        adjusted.setDate(adjusted.getDate() - value * 7);
-        break;
+        return subtractByMs(value * 7 * 24 * 60 * 60 * 1000);
       case 'months':
-        adjusted.setMonth(adjusted.getMonth() - value);
+        adjusted.setUTCMonth(adjusted.getUTCMonth() - value);
         break;
     }
 
