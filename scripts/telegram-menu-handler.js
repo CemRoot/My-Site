@@ -688,6 +688,149 @@ async function setChatBackendSetting(backend, updatedBy = 'telegram') {
 }
 
 /**
+ * Get n8n trial notification setting from Supabase
+ */
+async function getN8nTrialNotificationsSetting() {
+  try {
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('setting_value')
+      .eq('setting_key', 'n8n_trial_notifications_enabled')
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+
+    if (!data?.setting_value) return true; // Default: enabled
+    return String(data.setting_value).toLowerCase() !== 'false';
+  } catch (error) {
+    console.error('Error getting n8n trial notification setting:', error);
+    return true; // Default fallback
+  }
+}
+
+/**
+ * Set n8n trial notification setting in Supabase
+ */
+async function setN8nTrialNotificationsSetting(enabled, updatedBy = 'telegram') {
+  try {
+    const { data, error } = await supabase
+      .from('system_settings')
+      .upsert({
+        setting_key: 'n8n_trial_notifications_enabled',
+        setting_value: enabled ? 'true' : 'false',
+        updated_at: new Date().toISOString(),
+        updated_by: updatedBy
+      }, {
+        onConflict: 'setting_key'
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error setting n8n trial notification setting:', error);
+    throw error;
+  }
+}
+
+/**
+ * Handle action_n8n_notifications - Show n8n notification toggle menu
+ */
+export async function handleN8nNotificationsMenu() {
+  try {
+    await sendTelegramMessage('🔍 <b>n8n Bildirim Ayarı Kontrol Ediliyor...</b>');
+
+    const enabled = await getN8nTrialNotificationsSetting();
+
+    const statusText = `
+🔔 <b>n8n BİLDİRİM AYARLARI</b>
+
+<b>📊 Günlük Trial Bildirimleri:</b>
+${enabled ? '✅ Açık' : '🔕 Kapalı'}
+
+<b>📝 Açıklama:</b>
+• Açık: n8n trial günlük kontrol mesajı Telegram'a gönderilir
+• Kapalı: günlük n8n trial mesajı gönderilmez
+• Manuel "🤖 n8n Durumu" kontrolü her zaman çalışır
+
+<i>Durumu değiştirmek için aşağıdan seçin:</i>`;
+
+    await sendTelegramMessage(statusText, {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: enabled ? '🟢 Bildirimler Açık (Aktif)' : '⚪ Bildirimleri Aç',
+              callback_data: 'n8n_notifications_on'
+            },
+            {
+              text: enabled ? '⚪ Bildirimleri Kapat' : '🔕 Bildirimler Kapalı (Aktif)',
+              callback_data: 'n8n_notifications_off'
+            }
+          ],
+          [
+            { text: '🔄 Durumu Yenile', callback_data: 'action_n8n_notifications' }
+          ],
+          [
+            { text: '🔙 Sistem Yönetimi', callback_data: 'action_system_management' }
+          ]
+        ]
+      }
+    });
+
+  } catch (error) {
+    console.error('n8n notifications menu error:', error);
+    await sendTelegramMessage(
+      `❌ <b>n8n Bildirim Menüsü Yüklenemedi!</b>\n\n` +
+      `<code>${error.message}</code>\n\n` +
+      `Supabase system_settings tablosunu kontrol edin.`,
+      { reply_markup: getSystemManagementKeyboard() }
+    );
+  }
+}
+
+/**
+ * Handle n8n notification toggle
+ */
+export async function handleN8nNotificationsToggle(enabled) {
+  try {
+    const currentEnabled = await getN8nTrialNotificationsSetting();
+
+    if (currentEnabled === enabled) {
+      await sendTelegramMessage(
+        `ℹ️ <b>n8n Trial Bildirimleri zaten ${enabled ? 'Açık' : 'Kapalı'} durumda!</b>\n\n` +
+        `Değişiklik yapılmadı.`,
+        { reply_markup: getSystemManagementKeyboard() }
+      );
+      return;
+    }
+
+    await setN8nTrialNotificationsSetting(enabled, 'telegram-user');
+
+    await sendTelegramMessage(
+      `${enabled ? '✅' : '🔕'} <b>n8n Trial Bildirimleri ${enabled ? 'Açıldı' : 'Kapatıldı'}!</b>\n\n` +
+      `Yeni durum: <b>${enabled ? 'Açık' : 'Kapalı'}</b>\n\n` +
+      `${enabled
+        ? '⏰ Günlük n8n trial kontrol bildirimleri tekrar gönderilecek.'
+        : '🔇 Günlük n8n trial kontrol bildirimleri artık gönderilmeyecek.'}\n` +
+      `📊 Manuel kontrol için "🤖 n8n Durumu" menüsü kullanılabilir.`,
+      { reply_markup: getSystemManagementKeyboard() }
+    );
+  } catch (error) {
+    console.error('n8n notifications toggle error:', error);
+    await sendTelegramMessage(
+      `❌ <b>n8n Bildirim Ayarı Değiştirilemedi!</b>\n\n` +
+      `<code>${error.message}</code>\n\n` +
+      `Supabase bağlantısını kontrol edin.`,
+      { reply_markup: getSystemManagementKeyboard() }
+    );
+  }
+}
+
+/**
  * Handle action_chat_backend - Show Chat Backend menu
  */
 export async function handleChatBackendMenu() {
@@ -2024,8 +2167,9 @@ export default {
   handleGitHubAction,
   handleGitHubWorkflowToggle,
   handleHelpAction,
+  handleN8nNotificationsMenu,
+  handleN8nNotificationsToggle,
   handleChatBackendMenu,
   handleChatBackendToggle,
   setBotCommands,
 };
-

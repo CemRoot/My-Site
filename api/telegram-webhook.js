@@ -242,6 +242,9 @@ export default async function handler(req, res) {
             case 'chat_backend':
               await menuHandler.handleChatBackendMenu();
               break;
+            case 'n8n_notifications':
+              await menuHandler.handleN8nNotificationsMenu();
+              break;
             case 'delete_article':
               await menuHandler.handleDeleteArticleAction(fromId);
               break;
@@ -276,6 +279,31 @@ export default async function handler(req, res) {
           await menuHandler.handleChatBackendToggle(backend);
           
           return res.status(200).json({ success: true, message: 'Chat backend toggle processed' });
+        }
+
+        // Handle n8n trial notifications toggle callbacks
+        if (data.startsWith('n8n_notifications_')) {
+          const mode = data.replace('n8n_notifications_', '');
+          if (mode !== 'on' && mode !== 'off') {
+            await callTelegramApi('answerCallbackQuery', {
+              callback_query_id: callback_query.id,
+              text: 'Geçersiz bildirim ayarı',
+              show_alert: false,
+            });
+            return res.status(200).json({ success: false, message: 'Invalid n8n notifications mode' });
+          }
+
+          const enabled = mode === 'on';
+          
+          await callTelegramApi('answerCallbackQuery', {
+            callback_query_id: callback_query.id,
+            text: 'Bildirim ayarı güncelleniyor...',
+          });
+
+          const menuHandler = await import('../scripts/telegram-menu-handler.js');
+          await menuHandler.handleN8nNotificationsToggle(enabled);
+          
+          return res.status(200).json({ success: true, message: 'n8n notifications toggle processed' });
         }
 
         // Handle GitHub workflow toggle callbacks (github_enable_workflowname or github_disable_workflowname)

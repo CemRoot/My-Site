@@ -42,7 +42,7 @@ jobs:
         run: npm ci
       
       - name: 🔍 Check n8n trial status
-        if: github.event.inputs.action == 'check' || github.event.inputs.action == '' || github.event_name == 'schedule'
+        if: github.event_name == 'schedule'
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -52,6 +52,17 @@ jobs:
           echo "🔍 Checking n8n trial period..."
           echo "📅 Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
           node scripts/n8n-trial-status.js
+
+      - name: 🔍 Check n8n trial status (manual without notification)
+        if: github.event.inputs.action == 'check'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "📊 Manual check requested, showing status without notification..."
+          node scripts/n8n-trial-status.js status
       
       - name: 📊 Show trial status (no notification)
         if: github.event.inputs.action == 'status'
@@ -101,4 +112,3 @@ jobs:
             -d "disable_web_page_preview=false" > /dev/null || true
           
           echo "📱 Error notification sent to Telegram"
-

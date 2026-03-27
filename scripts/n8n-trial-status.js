@@ -46,6 +46,22 @@ async function getSetting(key) {
 }
 
 /**
+ * Check whether trial notifications are enabled
+ */
+async function isTrialNotificationEnabled() {
+  try {
+    const value = await getSetting('n8n_trial_notifications_enabled');
+    if (value === undefined || value === null || value === '') {
+      return true; // Default enabled
+    }
+    return String(value).toLowerCase() !== 'false';
+  } catch (error) {
+    // Keep notifications enabled by default on read errors
+    return true;
+  }
+}
+
+/**
  * Update setting in Supabase
  */
 async function updateSetting(key, value, updatedBy = 'system') {
@@ -294,7 +310,14 @@ async function main() {
     } else {
       // Default: Check and send notification
       const status = await calculateRemainingDays();
-      await sendTrialNotification(status);
+      const notificationsEnabled = await isTrialNotificationEnabled();
+
+      if (!notificationsEnabled) {
+        log('🔕 n8n trial notifications are disabled. Skipping Telegram send.', 'yellow');
+        log(`📊 Remaining days: ${status.daysRemaining}`, status.daysRemaining <= 3 ? 'yellow' : 'green');
+      } else {
+        await sendTrialNotification(status);
+      }
     }
 
   } catch (error) {
@@ -329,4 +352,3 @@ export {
   getSetting,
   updateSetting
 };
-
