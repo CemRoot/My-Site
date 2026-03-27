@@ -14,6 +14,7 @@ export interface SkillCategory {
   icon: LucideIcon;
   color: 'primary' | 'secondary' | 'accent';
   priority: number;
+  summary: string;
   skills: SkillEntry[];
 }
 
@@ -38,6 +39,7 @@ export const SKILL_CATEGORIES: SkillCategory[] = [
     icon: Code,
     color: 'primary',
     priority: 1,
+    summary: 'Production-oriented languages and scripting tools used across backend delivery, automation, and data-heavy workflows.',
     skills: [
       { name: 'Python', level: 95, years: '3+' },
       { name: 'JavaScript', level: 80, years: '2+' },
@@ -53,6 +55,7 @@ export const SKILL_CATEGORIES: SkillCategory[] = [
     icon: Brain,
     color: 'accent',
     priority: 2,
+    summary: 'Applied machine learning and generative AI tooling for experimentation, model evaluation, and agent-driven systems.',
     skills: [
       { name: 'TensorFlow', level: 90, years: '2+' },
       { name: 'Scikit-learn', level: 85, years: '2+' },
@@ -68,6 +71,7 @@ export const SKILL_CATEGORIES: SkillCategory[] = [
     icon: Workflow,
     color: 'secondary',
     priority: 3,
+    summary: 'Python-first service development across REST APIs, automation backends, and scalable application layers.',
     skills: [
       { name: 'Django', level: 90, years: '2+' },
       { name: 'Flask', level: 95, years: '3+' },
@@ -82,6 +86,7 @@ export const SKILL_CATEGORIES: SkillCategory[] = [
     icon: Cloud,
     color: 'accent',
     priority: 4,
+    summary: 'Cloud administration, identity, infrastructure delivery, and CI/CD workflows across Azure and Microsoft 365.',
     skills: [
       { name: 'Microsoft Azure', level: 90, years: '3+' },
       { name: 'Entra ID (Azure AD)', level: 95, years: '3+' },
@@ -97,6 +102,7 @@ export const SKILL_CATEGORIES: SkillCategory[] = [
     icon: Database,
     color: 'secondary',
     priority: 5,
+    summary: 'Relational database design, querying, and operational support for transactional and reporting workloads.',
     skills: [
       { name: 'PostgreSQL', level: 90, years: '2+' },
       { name: 'Oracle DB', level: 85, years: '1+' },
@@ -109,6 +115,7 @@ export const SKILL_CATEGORIES: SkillCategory[] = [
     icon: BarChart,
     color: 'primary',
     priority: 6,
+    summary: 'Practical analysis stack for ETL, scraping, visualization, statistical reasoning, and operational reporting.',
     skills: [
       { name: 'Pandas', level: 95, years: '3+' },
       { name: 'NumPy', level: 90, years: '3+' },
@@ -124,6 +131,7 @@ export const SKILL_CATEGORIES: SkillCategory[] = [
     icon: Settings,
     color: 'primary',
     priority: 7,
+    summary: 'Enterprise Microsoft tooling for endpoint management, identity, automation, and workplace operations.',
     skills: [
       { name: 'Intune (Endpoint Manager)', level: 95, years: '3+' },
       { name: 'Windows 365 Cloud PC', level: 90, years: '2+' },
@@ -138,6 +146,7 @@ export const SKILL_CATEGORIES: SkillCategory[] = [
     icon: Shield,
     color: 'secondary',
     priority: 8,
+    summary: 'Operational reliability, device security, monitoring, and runbook-driven support for production environments.',
     skills: [
       { name: 'Security Baselines', level: 90, years: '3+' },
       { name: 'VDI Operations', level: 85, years: '2+' },

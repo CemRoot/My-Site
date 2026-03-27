@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Award, Code2, Puzzle, ShieldCheck } from 'lucide-react';
+import { Award, Code2, Puzzle, ShieldCheck, ChevronDown } from 'lucide-react';
 import {
   SKILL_CATEGORIES,
   METHODOLOGIES,
@@ -8,97 +8,202 @@ import {
 } from '../lib/constants/skills';
 import type { SkillCategory } from '../lib/constants/skills';
 
-/* ─── Types ─── */
-type TabId = 'skills' | 'methods' | 'certs';
-type CategoryKey = 'all' | string;
 type ThemeColor = 'primary' | 'secondary' | 'accent';
+type IconComponent = SkillCategory['icon'];
 
-/* ─── Constants ─── */
-const COLOR_CLASSES = {
-  primary: {
-    border: 'border-primary/20',
-    borderStrong: 'border-primary/30',
-    text: 'text-primary',
-    chipBg: 'bg-primary/10',
-    dotBg: 'bg-primary',
-    gradientBg: 'from-primary/10 to-primary/5',
-  },
-  secondary: {
-    border: 'border-secondary/20',
-    borderStrong: 'border-secondary/30',
-    text: 'text-secondary',
-    chipBg: 'bg-secondary/10',
-    dotBg: 'bg-secondary',
-    gradientBg: 'from-secondary/10 to-secondary/5',
-  },
-  accent: {
-    border: 'border-accent/20',
-    borderStrong: 'border-accent/30',
-    text: 'text-accent',
-    chipBg: 'bg-accent/10',
-    dotBg: 'bg-accent',
-    gradientBg: 'from-accent/10 to-accent/5',
-  },
-} as const;
+// ─── Static color maps (Tailwind needs static strings, no interpolation) ──────
 
-const MARQUEE_SPEEDS = [
-  'animate-marquee-fast',
-  'animate-marquee-med',
-  'animate-marquee-slow',
-  'animate-marquee-fast',
-  'animate-marquee-med',
-  'animate-marquee-slow',
-  'animate-marquee-fast',
-  'animate-marquee-med',
-] as const;
+const BORDER: Record<ThemeColor, string> = {
+  primary:   'border-primary/20',
+  secondary: 'border-secondary/20',
+  accent:    'border-accent/20',
+};
+
+const TEXT: Record<ThemeColor, string> = {
+  primary:   'text-primary',
+  secondary: 'text-secondary',
+  accent:    'text-accent',
+};
+
+const BADGE: Record<ThemeColor, string> = {
+  primary:   'border-primary/20 bg-primary/10 text-primary',
+  secondary: 'border-secondary/20 bg-secondary/10 text-secondary',
+  accent:    'border-accent/20 bg-accent/10 text-accent',
+};
+
+const DOT_BG: Record<ThemeColor, string> = {
+  primary:   'bg-primary',
+  secondary: 'bg-secondary',
+  accent:    'bg-accent',
+};
+
+const ICON_BG: Record<ThemeColor, string> = {
+  primary:   'from-primary/20 to-primary/5',
+  secondary: 'from-secondary/20 to-secondary/5',
+  accent:    'from-accent/20 to-accent/5',
+};
+
+// Static group-hover text per color (must be complete strings for Tailwind scanning)
+const HOVER_TEXT: Record<ThemeColor, string> = {
+  primary:   'group-hover:text-primary',
+  secondary: 'group-hover:text-secondary',
+  accent:    'group-hover:text-accent',
+};
+
+// Static year text color per color
+const YEAR_TEXT: Record<ThemeColor, string> = {
+  primary:   'text-primary',
+  secondary: 'text-secondary',
+  accent:    'text-accent',
+};
+
+// ─── Derived data ─────────────────────────────────────────────────────────────
 
 const SORTED_CATEGORIES = [...SKILL_CATEGORIES].sort((a, b) => a.priority - b.priority);
-
 const TOTAL_SKILL_COUNT = SKILL_CATEGORIES.reduce((sum, c) => sum + c.skills.length, 0);
 
-const CATEGORY_FILTERS: { key: string; label: string }[] = [
-  { key: 'all', label: `All (${TOTAL_SKILL_COUNT})` },
-  ...SORTED_CATEGORIES.map((c) => ({
-    key: c.title,
-    label: c.title.replace(' & ', '/'),
-  })),
+const OVERVIEW_METRICS: {
+  label: string;
+  value: string;
+  icon: IconComponent;
+  color: ThemeColor;
+}[] = [
+  { label: 'Capability Domains', value: String(SORTED_CATEGORIES.length), icon: Code2,      color: 'primary'   },
+  { label: 'Tools & Frameworks', value: `${TOTAL_SKILL_COUNT}+`,          icon: ShieldCheck, color: 'secondary' },
+  { label: 'Methods & Practices', value: String(METHODOLOGIES.length),    icon: Puzzle,      color: 'accent'    },
+  { label: 'Credentials',         value: String(CERTIFICATIONS.length),   icon: Award,       color: 'primary'   },
 ];
 
-function getColumnColor(index: number): ThemeColor {
-  const cycle = index % 3;
-  return cycle === 0 ? 'primary' : cycle === 1 ? 'secondary' : 'accent';
+// ─── Overview metric card ─────────────────────────────────────────────────────
+
+function OverviewMetricCard({
+  label,
+  value,
+  icon: Icon,
+  color,
+}: {
+  label: string;
+  value: string;
+  icon: IconComponent;
+  color: ThemeColor;
+}) {
+  return (
+    <div className={`rounded-2xl border ${BORDER[color]} bg-white/5 p-4`}>
+      <div className={`flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.16em] ${TEXT[color]} mb-2`}>
+        <Icon className="h-3 w-3" />
+        <span className="leading-tight">{label}</span>
+      </div>
+      <div className="text-2xl sm:text-3xl text-foreground font-semibold">{value}</div>
+    </div>
+  );
 }
 
-/* ═══════════════════════════════════════════
-   MOBILE COMPONENTS (< 768px)
-   ═══════════════════════════════════════════ */
+// ─── Accordion row for each skill category ────────────────────────────────────
 
-function MarqueeRow({ category, index }: { category: SkillCategory; index: number }) {
-  const color = getColumnColor(index);
-  const classes = COLOR_CLASSES[color];
-  const speed = MARQUEE_SPEEDS[index] || 'animate-marquee-med';
-  const Icon = category.icon;
-  const items = category.skills;
+function CategoryRow({
+  category,
+  index,
+  defaultOpen = false,
+}: {
+  category: SkillCategory;
+  index: number;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="mb-4">
-      <div className="flex items-center gap-2 mb-2 px-4">
-        <Icon className={`w-3.5 h-3.5 ${classes.text}`} />
-        <span className={`text-[11px] font-semibold ${classes.text} tracking-wide uppercase`}>
-          {category.title}
-        </span>
-        <span className="text-[10px] text-muted-foreground font-mono">({items.length})</span>
-      </div>
-      <div className="marquee-mask overflow-hidden">
-        <div className={`flex gap-2.5 w-max ${speed} hover:paused`}>
-          {[...items, ...items].map((skill, idx) => (
-            <div
-              key={idx}
-              aria-hidden={idx >= items.length}
-              className={`flex shrink-0 items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r ${classes.gradientBg} border ${classes.border} backdrop-blur-sm`}
+    <div className="border-b border-white/10 last:border-b-0">
+      {/* Header trigger */}
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="group w-full flex items-center justify-between gap-6 py-7 sm:py-8 text-left"
+      >
+        {/* Index + title */}
+        <div className="flex items-baseline gap-5 min-w-0">
+          <span className="shrink-0 font-mono text-[11px] tracking-[0.2em] text-muted-foreground/50 tabular-nums">
+            {String(index + 1).padStart(2, '0')}
+          </span>
+          <span
+            className={`text-xl sm:text-2xl lg:text-3xl font-semibold text-foreground tracking-tight transition-colors duration-200 ${HOVER_TEXT[category.color]}`}
+          >
+            {category.title}
+          </span>
+        </div>
+
+        {/* Right: count badge + chevron */}
+        <div className="flex shrink-0 items-center gap-3 sm:gap-4">
+          <span className="hidden sm:inline-flex font-mono text-[11px] tracking-[0.16em] text-muted-foreground/50 border border-white/10 rounded-full px-3 py-1">
+            {category.skills.length} skills
+          </span>
+          <ChevronDown
+            className={`h-4 w-4 text-muted-foreground/40 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
+          />
+        </div>
+      </button>
+
+      {/* Expandable body */}
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          open ? 'max-h-[700px] opacity-100 mb-6' : 'max-h-0 opacity-0'
+        }`}
+      >
+        {/* Summary text */}
+        <p className="mb-5 text-sm leading-relaxed text-muted-foreground max-w-2xl pl-9 sm:pl-12">
+          {category.summary}
+        </p>
+
+        {/* Skill pills */}
+        <div className="flex flex-wrap gap-2 sm:gap-2.5 pl-9 sm:pl-12 pb-2">
+          {category.skills.map((skill) => (
+            <span
+              key={skill.name}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-2 text-sm text-foreground/80 hover:border-white/20 hover:bg-white/10 transition-colors duration-150"
             >
-              <span className="text-[11px] font-medium text-foreground">{skill.name}</span>
-              <span className={`text-[9px] font-mono ${classes.text} opacity-80`}>{skill.years}</span>
+              {skill.name}
+              <span className={`font-mono text-[10px] ${YEAR_TEXT[category.color]} opacity-75`}>
+                {skill.years}yr
+              </span>
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Methodologies ────────────────────────────────────────────────────────────
+
+function MethodologiesBoard() {
+  return (
+    <div className="grid gap-8 lg:grid-cols-[0.82fr_1.18fr] items-start">
+      <div className="space-y-4">
+        <div className="inline-flex items-center gap-2 rounded-full border border-secondary/20 bg-secondary/10 px-4 py-2">
+          <Puzzle className="h-4 w-4 text-secondary" />
+          <span className="text-xs font-mono uppercase tracking-[0.24em] text-secondary">
+            Delivery Approach
+          </span>
+        </div>
+
+        <h3 className="text-2xl sm:text-3xl text-foreground leading-tight">
+          Execution style built around clarity, iteration, and reliable delivery.
+        </h3>
+
+        <p className="max-w-2xl text-sm sm:text-base leading-relaxed text-muted-foreground">
+          The work is not just about knowing tools. It is shaped by engineering habits that keep
+          solutions maintainable, measurable, and easy to evolve after launch.
+        </p>
+      </div>
+
+      <div className="rounded-[2rem] border border-secondary/15 p-5 sm:p-6 liquid-glass-strong">
+        <div className="flex flex-wrap gap-3">
+          {METHODOLOGIES.map((m) => (
+            <div
+              key={m.name}
+              className={`inline-flex items-center gap-2 rounded-full border ${BORDER[m.color]} bg-white/5 px-4 py-2.5 text-sm`}
+            >
+              <span className={`h-2 w-2 rounded-full ${DOT_BG[m.color]}`} />
+              <span className="text-foreground">{m.name}</span>
             </div>
           ))}
         </div>
@@ -107,73 +212,61 @@ function MarqueeRow({ category, index }: { category: SkillCategory; index: numbe
   );
 }
 
-function MethodologyMarquee() {
-  const items = METHODOLOGIES;
+// ─── Certifications ───────────────────────────────────────────────────────────
 
+function CertificationsBoard() {
   return (
-    <div className="mt-6 mb-6">
-      <div className="flex items-center gap-2 mb-2 px-4">
-        <div className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center">
-          <div className="w-1.5 h-1.5 rounded-full bg-background" />
+    <div>
+      <div className="mb-6 space-y-4">
+        <div className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-4 py-2">
+          <ShieldCheck className="h-4 w-4 text-accent" />
+          <span className="text-xs font-mono uppercase tracking-[0.24em] text-accent">
+            Credentials
+          </span>
         </div>
-        <span className="text-[11px] font-semibold text-secondary tracking-wide uppercase">
-          Methodologies
-        </span>
-        <span className="text-[10px] text-muted-foreground font-mono">({items.length})</span>
-      </div>
-      <div className="marquee-mask overflow-hidden">
-        <div className="flex gap-2.5 w-max animate-marquee-med hover:paused">
-          {[...items, ...items].map((m, idx) => {
-            const classes = COLOR_CLASSES[m.color];
-            return (
-              <div
-                key={idx}
-                aria-hidden={idx >= items.length}
-                className={`flex shrink-0 items-center px-3 py-1.5 rounded-full bg-gradient-to-r ${classes.gradientBg} border ${classes.border} backdrop-blur-sm`}
-              >
-                <span className={`text-[11px] font-semibold ${classes.text}`}>{m.name}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
 
-function CertCarousel() {
-  return (
-    <div className="mt-4">
-      <div className="flex items-center gap-2 mb-3 px-4">
-        <Award className="w-3.5 h-3.5 text-accent" />
-        <span className="text-[11px] font-semibold text-accent tracking-wide uppercase">
-          Certifications & Licenses
-        </span>
-        <span className="text-[10px] text-muted-foreground font-mono">({CERTIFICATIONS.length})</span>
+        <h3 className="text-2xl sm:text-3xl text-foreground leading-tight">
+          Certifications and licenses that reinforce hands-on delivery.
+        </h3>
+
+        <p className="max-w-3xl text-sm sm:text-base leading-relaxed text-muted-foreground">
+          A mix of AI, software engineering, security, and operations credentials that support both
+          technical depth and production responsibility.
+        </p>
       </div>
-      <div className="flex gap-3 overflow-x-auto scrollbar-hide px-4 pb-4 snap-x">
+
+      <div className="grid gap-4 md:grid-cols-2">
         {CERTIFICATIONS.map((cert) => {
           const theme = CERTIFICATION_THEMES[cert.color];
           return (
-            <div
+            <article
               key={`${cert.title}-${cert.year}`}
-              className={`flex-shrink-0 w-[240px] snap-start rounded-2xl frosted-glass border ${theme.border} bg-background/60 p-4`}
+              className={`rounded-3xl border ${theme.border} bg-background/60 p-5 frosted-glass`}
             >
-              <div className="flex items-center justify-between mb-2">
-                <Award className={`w-4 h-4 ${theme.text}`} />
-                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${theme.badge}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div
+                  className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl border ${theme.border} bg-gradient-to-br ${theme.iconBg}`}
+                >
+                  <Award className={`h-5 w-5 ${theme.text}`} />
+                </div>
+                <span
+                  className={`rounded-full px-3 py-1 text-[10px] font-mono uppercase tracking-wider ${theme.badge}`}
+                >
                   {cert.type}
                 </span>
               </div>
-              <h4 className="text-xs font-semibold text-foreground leading-snug mb-1.5 line-clamp-2">
+
+              <h4 className="mt-4 text-base sm:text-lg leading-snug text-foreground">
                 {cert.title}
               </h4>
-              <p className={`text-[10px] ${theme.text} font-medium`}>{cert.issuer}</p>
-              <div className="flex justify-between mt-2 pt-2 border-t border-current/10">
-                <span className="text-[9px] font-mono text-muted-foreground">{cert.platform}</span>
-                <span className="text-[9px] font-mono text-muted-foreground">{cert.year}</span>
+              <div className={`mt-2 text-sm font-medium ${theme.text}`}>{cert.issuer}</div>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{cert.focus}</p>
+
+              <div className="mt-4 flex items-center justify-between gap-4 border-t border-white/10 pt-4 text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+                <span>{cert.platform}</span>
+                <span>{cert.year}</span>
               </div>
-            </div>
+            </article>
           );
         })}
       </div>
@@ -181,227 +274,87 @@ function CertCarousel() {
   );
 }
 
-/* ═══════════════════════════════════════════
-   DESKTOP COMPONENTS (>= 768px)
-   ═══════════════════════════════════════════ */
-
-const TAB_CONFIG: { id: TabId; label: string; count: number; icon: typeof Code2; color: ThemeColor }[] = [
-  { id: 'skills', label: 'Skills', count: TOTAL_SKILL_COUNT, icon: Code2, color: 'primary' },
-  { id: 'methods', label: 'Methodologies', count: METHODOLOGIES.length, icon: Puzzle, color: 'secondary' },
-  { id: 'certs', label: 'Certifications', count: CERTIFICATIONS.length, icon: ShieldCheck, color: 'accent' },
-];
-
-function TabBar({ activeTab, onTabChange }: { activeTab: TabId; onTabChange: (t: TabId) => void }) {
-  return (
-    <div className="flex justify-center mb-8">
-      <div className="inline-flex gap-2 p-2 rounded-2xl liquid-glass-strong border border-primary/15">
-        {TAB_CONFIG.map((tab) => {
-          const isActive = activeTab === tab.id;
-          const Icon = tab.icon;
-          const classes = COLOR_CLASSES[tab.color];
-
-          return (
-            <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              className={`group relative flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 ${
-                isActive
-                  ? `bg-gradient-to-r ${classes.gradientBg} border ${classes.borderStrong} ${classes.text} shadow-lg shadow-${tab.color}/10`
-                  : 'border border-transparent text-muted-foreground hover:text-foreground hover:bg-white/5'
-              }`}
-            >
-              <Icon className={`w-4 h-4 transition-colors duration-300 ${
-                isActive ? classes.text : 'text-muted-foreground group-hover:text-foreground'
-              }`} />
-              <span>{tab.label}</span>
-              <span className={`inline-flex items-center justify-center min-w-[26px] px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold leading-none transition-all duration-300 border ${
-                isActive
-                  ? `${classes.chipBg} ${classes.text} ${classes.border}`
-                  : 'bg-white/5 text-muted-foreground/60 border-white/5 group-hover:bg-white/10 group-hover:border-white/10'
-              }`}>
-                {tab.count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function CategoryFilters({
-  activeCategory,
-  onCategoryChange,
-}: {
-  activeCategory: CategoryKey;
-  onCategoryChange: (c: CategoryKey) => void;
-}) {
-  return (
-    <div className="flex flex-wrap justify-center gap-2 mt-8 mb-8">
-      {CATEGORY_FILTERS.map((f) => {
-        const isActive = activeCategory === f.key;
-        return (
-          <button
-            key={f.key}
-            onClick={() => onCategoryChange(f.key)}
-            className={`px-4 py-1.5 rounded-full text-xs font-mono transition-all duration-200 border ${
-              isActive
-                ? 'border-primary/40 bg-primary/10 text-primary'
-                : 'border-primary/10 text-muted-foreground hover:border-primary/25 hover:text-foreground'
-            }`}
-          >
-            {f.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function SkillChipsGrid({ activeCategory }: { activeCategory: CategoryKey }) {
-  const filteredCategories =
-    activeCategory === 'all'
-      ? SORTED_CATEGORIES
-      : SORTED_CATEGORIES.filter((c) => c.title === activeCategory);
-
-  return (
-    <div className="flex flex-wrap justify-center gap-4">
-      {filteredCategories.map((category, catIdx) => {
-        const color = getColumnColor(SORTED_CATEGORIES.indexOf(category));
-        const classes = COLOR_CLASSES[color];
-        return category.skills.map((skill, skillIdx) => (
-          <div
-            key={`${category.title}-${skill.name}`}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl frosted-glass border ${classes.border} bg-background/60 text-sm font-medium animate-chip-in`}
-            style={{ animationDelay: `${(catIdx * 7 + skillIdx) * 25}ms` }}
-          >
-            <span className="text-foreground">{skill.name}</span>
-            <span className={`font-mono text-[11px] px-2 py-0.5 rounded-md ${classes.chipBg} ${classes.text}`}>
-              {skill.years}
-            </span>
-          </div>
-        ));
-      })}
-    </div>
-  );
-}
-
-function MethodologyPills() {
-  return (
-    <div className="flex flex-wrap justify-center gap-4 mt-8 mb-8">
-      {METHODOLOGIES.map((m, idx) => {
-        const classes = COLOR_CLASSES[m.color];
-        return (
-          <div
-            key={idx}
-            className={`px-6 py-3 rounded-2xl frosted-glass border ${classes.border} text-sm font-semibold ${classes.text} bg-gradient-to-r ${classes.gradientBg}`}
-          >
-            {m.name}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function CertCompactList() {
-  return (
-    <div className="max-w-4xl mx-auto flex flex-col mt-8 mb-8 rounded-xl overflow-hidden frosted-glass border border-primary/20 bg-background/60">
-      {CERTIFICATIONS.map((cert, idx) => {
-        const theme = CERTIFICATION_THEMES[cert.color];
-        const isLast = idx === CERTIFICATIONS.length - 1;
-        return (
-          <div
-            key={`${cert.title}-${cert.year}`}
-            className={`flex items-center gap-4 px-5 py-3.5 transition-all duration-200 hover:bg-primary/5 ${!isLast ? 'border-b border-primary/10' : ''}`}
-          >
-            <span
-              className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider flex-shrink-0 ${
-                cert.type === 'License'
-                  ? 'bg-accent/10 text-accent border border-accent/20'
-                  : 'bg-primary/10 text-primary border border-primary/20'
-              }`}
-            >
-              {cert.type === 'License' ? 'License' : 'Cert'}
-            </span>
-            <span className="text-sm font-medium text-foreground flex-1 truncate">{cert.title}</span>
-            <span className={`text-xs ${theme.text} font-medium w-[140px] text-right truncate hidden lg:block`}>
-              {cert.issuer}
-            </span>
-            <span className="text-xs font-mono text-muted-foreground px-3 py-1 rounded-lg bg-primary/5 flex-shrink-0 w-[80px] text-center">
-              {cert.year}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════
-   MAIN COMPONENT
-   ═══════════════════════════════════════════ */
+// ─── Main export ──────────────────────────────────────────────────────────────
 
 export function Skills() {
-  const [activeTab, setActiveTab] = useState<TabId>('skills');
-  const [activeCategory, setActiveCategory] = useState<CategoryKey>('all');
-
   return (
-    <section id="skills" className="relative py-12 sm:py-20 overflow-hidden px-4 sm:px-6 lg:px-8">
+    <section
+      id="skills"
+      className="relative overflow-hidden scroll-mt-40 px-4 py-16 sm:scroll-mt-48 sm:px-6 sm:py-20 lg:px-8 lg:py-28"
+    >
+      {/* Ambient background blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl liquid-morph" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl liquid-morph" style={{ animationDelay: '1s' }} />
+        <div className="absolute left-0 top-0 h-96 w-96 rounded-full bg-primary/8 blur-3xl liquid-morph" />
+        <div
+          className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-secondary/8 blur-3xl liquid-morph"
+          style={{ animationDelay: '1s' }}
+        />
+        <div className="absolute left-1/2 top-1/3 h-72 w-72 -translate-x-1/2 rounded-full bg-accent/6 blur-3xl liquid-pulse" />
       </div>
 
-      <div className="max-w-6xl mx-auto relative z-10">
-        {/* Header */}
-        <div className="text-center mb-10 sm:mb-16 space-y-4 sm:space-y-6">
-          <div className="inline-flex items-center justify-center">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary via-secondary to-primary rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500" />
-              <div className="relative px-6 py-2 rounded-full liquid-glass-strong border border-primary/30 liquid-shimmer">
-                <span className="text-sm font-mono text-primary tracking-wider">TECHNICAL SKILLS</span>
-              </div>
+      <div className="relative z-10 mx-auto max-w-7xl">
+
+        {/* ── Big editorial header ─────────────────────────────────────── */}
+        <div className="border-b border-white/10 pb-10 sm:pb-14">
+          <div className="text-[11px] font-medium uppercase tracking-[0.28em] text-primary/80 mb-5">
+            Technical Capabilities
+          </div>
+
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            {/* Giant title */}
+            <h2 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-semibold tracking-tight leading-none text-foreground">
+              Core Skills,<br />
+              <span className="text-primary">Tools</span>{' '}&amp; Platforms
+            </h2>
+
+            {/* Metric cards 2×2 */}
+            <div className="grid grid-cols-2 gap-2.5 lg:w-72 xl:w-80 shrink-0">
+              {OVERVIEW_METRICS.map((metric) => (
+                <OverviewMetricCard key={metric.label} {...metric} />
+              ))}
             </div>
           </div>
 
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl">
-            <span className="block bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-2">
-              Expertise & Tools
-            </span>
-          </h2>
-
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            Specializing in <span className="text-primary font-medium">Cloud Operations</span>,
-            <span className="text-secondary font-medium"> Python Development</span>,
-            <span className="text-accent font-medium"> AI/ML</span>, and
-            <span className="text-primary font-medium"> Microsoft 365 Ecosystem</span>
+          {/* Subtitle */}
+          <p className="mt-8 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+            A calmer view of the stack behind my work across AI systems, backend engineering,
+            cloud operations, and enterprise Microsoft environments.
           </p>
         </div>
 
-        {/* ═══ MOBILE VIEW ═══ */}
-        <div className="mobile-only">
-          {SORTED_CATEGORIES.map((category, idx) => (
-            <MarqueeRow key={category.title} category={category} index={idx} />
-          ))}
-          <MethodologyMarquee />
-          <CertCarousel />
+        {/* ── Accordion skill matrix ───────────────────────────────────── */}
+        <div className="pt-10">
+          <div className="mb-8 flex items-center justify-between gap-4">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5">
+              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
+                Skill Matrix
+              </span>
+            </div>
+            <span className="hidden sm:block text-[11px] font-mono text-muted-foreground/40 tracking-wider">
+              Click any category to expand
+            </span>
+          </div>
+
+          <div>
+            {SORTED_CATEGORIES.map((category, i) => (
+              <CategoryRow
+                key={category.title}
+                category={category}
+                index={i}
+                defaultOpen={i === 0}
+              />
+            ))}
+          </div>
         </div>
 
-        {/* ═══ DESKTOP VIEW ═══ */}
-        <div className="desktop-only">
-          <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+        {/* ── Methodologies ────────────────────────────────────────────── */}
+        <div className="mt-14 sm:mt-16">
+          <MethodologiesBoard />
+        </div>
 
-          {activeTab === 'skills' && (
-            <div>
-              <CategoryFilters activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
-              <SkillChipsGrid activeCategory={activeCategory} />
-            </div>
-          )}
-
-          {activeTab === 'methods' && <MethodologyPills />}
-
-          {activeTab === 'certs' && <CertCompactList />}
+        {/* ── Certifications ───────────────────────────────────────────── */}
+        <div className="mt-14 sm:mt-16">
+          <CertificationsBoard />
         </div>
       </div>
     </section>
