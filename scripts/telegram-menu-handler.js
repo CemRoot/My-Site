@@ -752,7 +752,7 @@ export async function handleN8nNotificationsMenu() {
 ${enabled ? '✅ Açık' : '🔕 Kapalı'}
 
 <b>📝 Açıklama:</b>
-• Açık: n8n trial günlük kontrol mesajı Telegram'a gelir
+• Açık: n8n trial günlük kontrol mesajı Telegram'a gönderilir
 • Kapalı: günlük n8n trial mesajı gönderilmez
 • Manuel "🤖 n8n Durumu" kontrolü her zaman çalışır
 
@@ -801,7 +801,7 @@ export async function handleN8nNotificationsToggle(enabled) {
 
     if (currentEnabled === enabled) {
       await sendTelegramMessage(
-        `ℹ️ <b>n8n trial bildirimleri zaten ${enabled ? 'Açık' : 'Kapalı'} durumda!</b>\n\n` +
+        `ℹ️ <b>n8n Trial Bildirimleri zaten ${enabled ? 'Açık' : 'Kapalı'} durumda!</b>\n\n` +
         `Değişiklik yapılmadı.`,
         { reply_markup: getSystemManagementKeyboard() }
       );
