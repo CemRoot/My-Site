@@ -521,7 +521,8 @@ async function verifyUnknownCandidates(candidates, scraperRouter, runReport) {
   return verifiedCandidates;
 }
 
-async function processArticleQueue(articleQueue, scraperRouter, runReport) {
+async function processArticleQueue(articleQueue, scraperRouter, runReport, options = {}) {
+  const { dryRun = false, shouldNotify = true } = options;
   let consecutiveFailures = 0;
   let circuitBreakerTriggered = false;
   const processedInThisRun = new Set();
@@ -594,7 +595,7 @@ async function processArticleQueue(articleQueue, scraperRouter, runReport) {
         replayReason,
       });
       console.log(`❌ Failed (${consecutiveFailures} consecutive failures)\n`);
-      if (consecutiveFailures >= 2) {
+      if (shouldNotify && consecutiveFailures >= 2) {
         notifyTelegram(`❌ <b>Makale scrape başarısız</b> (${consecutiveFailures} ardışık)\n${url}`);
       }
       continue;
@@ -657,7 +658,7 @@ async function processArticleQueue(articleQueue, scraperRouter, runReport) {
         replayReason,
       });
       console.log(`🚫 [${category}] Rejected garbage page: ${garbageReason}\n`);
-      if (garbageNotifyCount < 3) {
+      if (shouldNotify && garbageNotifyCount < 3) {
         garbageNotifyCount++;
         notifyTelegram(`🚫 <b>Garbage reddedildi</b>\n${garbageReason.substring(0, 100)}`);
       }
@@ -697,6 +698,21 @@ async function processArticleQueue(articleQueue, scraperRouter, runReport) {
         slug: getPreferredArticleSlug(translatedArticle),
         discoveryDateAssessment: candidate.dateAssessment || null,
       };
+
+      if (dryRun) {
+        recordRunBatch(runReport, 'skipped', {
+          url,
+          category,
+          title: articleData.title,
+          slug: articleData.slug,
+          stage: 'dry_run',
+          reason: 'Dry run skipped database save',
+          replayBatch,
+          replayReason,
+        });
+        console.log(`🧪 [${category}] Dry run — skipped database save\n`);
+        continue;
+      }
 
       const result = await saveArticle(articleData);
       const disposition = getSaveResultDisposition(result);
@@ -775,7 +791,9 @@ async function processArticleQueue(articleQueue, scraperRouter, runReport) {
         replayReason,
       });
       console.log(`❌ [${category}] Translation failed: ${translationError.message}\n`);
-      notifyTelegram(`❌ <b>Çeviri hatası</b> [${category}]\n<code>${translationError.message.substring(0, 120)}</code>`);
+      if (shouldNotify) {
+        notifyTelegram(`❌ <b>Çeviri hatası</b> [${category}]\n<code>${translationError.message.substring(0, 120)}</code>`);
+      }
       continue;
     }
 
@@ -791,6 +809,7 @@ async function scrapeNews() {
   const scraperRouter = new ScraperRouter(CONFIG.FIRECRAWL_API_KEY);
   const runLabel = getRequestedRunLabel();
   const runDate = getRequestedRunDate();
+  const dryRun = process.argv.includes('--dry-run');
   const runReport = createRunReport({
     mode: 'scrape',
     scraperName: scraperRouter.getActiveScraperName(),
@@ -808,12 +827,16 @@ async function scrapeNews() {
   CONFIG.CATEGORIES.forEach(cat => console.log(`   • ${cat.tag}: ${cat.name}`));
   console.log('='.repeat(60));
 
-  await notifyTelegram(
-    `🚀 <b>Scraper Başladı</b>\n` +
-    `📂 ${CONFIG.CATEGORIES.length} kategori | 🔧 ${scraperRouter.getActiveScraperName()}\n` +
-    `${runLabel ? `🏷️ ${runLabel}\n` : ''}` +
-    `🕐 ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`
-  );
+  if (dryRun) {
+    console.log('🔍 DRY RUN — database saves and Telegram notifications are disabled\n');
+  } else {
+    await notifyTelegram(
+      `🚀 <b>Scraper Başladı</b>\n` +
+      `📂 ${CONFIG.CATEGORIES.length} kategori | 🔧 ${scraperRouter.getActiveScraperName()}\n` +
+      `${runLabel ? `🏷️ ${runLabel}\n` : ''}` +
+      `🕐 ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`
+    );
+  }
 
   currentCount = await getArticleCount();
   console.log(`\n📊 Current database: ${currentCount} articles\n`);
@@ -956,10 +979,13 @@ async function scrapeNews() {
     return;
   }
 
-  const processResult = await processArticleQueue(newArticles, scraperRouter, runReport);
+  const processResult = await processArticleQueue(newArticles, scraperRouter, runReport, {
+    dryRun,
+    shouldNotify: !dryRun,
+  });
   circuitBreakerTriggered = processResult.circuitBreakerTriggered;
 
-  if (circuitBreakerTriggered) {
+  if (!dryRun && circuitBreakerTriggered) {
     const rejectedCount = runReport.metrics.rejectedGarbage + runReport.metrics.rejectedSave + runReport.metrics.futureRejected;
     const failedCount = runReport.metrics.scrapeFailed + runReport.metrics.translationFailed + runReport.metrics.saveFailed;
     const remaining = Math.max(0, newArticles.length - (
@@ -997,12 +1023,16 @@ async function scrapeNews() {
   console.log('='.repeat(60));
   await persistRunReport(runReport, runLabel ? `tech-news-scrape-run-${runLabel}` : 'tech-news-scrape-run');
 
-  if (!circuitBreakerTriggered) {
+  if (!dryRun && !circuitBreakerTriggered) {
     const totalProcessed = runReport.metrics.saved + runReport.metrics.rejected + runReport.metrics.failed;
     const successRate = totalProcessed > 0 ? Math.round((runReport.metrics.saved / totalProcessed) * 100) : 0;
+    const hasUnsavedActionableCandidates =
+      runReport.metrics.saved === 0 &&
+      (runReport.metrics.newAfterDbCheck > 0 || runReport.metrics.todayCandidates > 0 || runReport.metrics.verifiedUnknown > 0);
 
-    let statusEmoji = '✅';
+    let statusEmoji = runReport.metrics.saved > 0 ? '✅' : 'ℹ️';
     if (runReport.metrics.failed > 0 && runReport.metrics.saved === 0) statusEmoji = '❌';
+    else if (hasUnsavedActionableCandidates) statusEmoji = '⚠️';
     else if (runReport.metrics.failed > runReport.metrics.saved) statusEmoji = '⚠️';
 
     await notifyTelegram(
