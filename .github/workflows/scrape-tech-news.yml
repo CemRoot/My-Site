@@ -274,7 +274,7 @@ jobs:
               ];
 
               process.stdout.write(lines.join('\n'));
-              EOF
+          EOF
               )
             else
               CURRENT_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')

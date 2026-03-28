@@ -115,6 +115,8 @@ function buildSourceUrlVariants(url) {
 }
 
 function resolveSaveDateIntegrity(article) {
+  const MAX_DATE_MISMATCH_DAYS = 7;
+
   const detailAssessment = article.dateAssessment?.dateStatus
     ? article.dateAssessment
     : normalizeSourceDate(article.date || article.rawDate || '', {
@@ -149,10 +151,18 @@ function resolveSaveDateIntegrity(article) {
     detailAssessment.isoDate &&
     discoveryAssessment.isoDate !== detailAssessment.isoDate
   ) {
+    if (typeof detailAssessment.ageDays === 'number' && detailAssessment.ageDays <= MAX_DATE_MISMATCH_DAYS) {
+      return {
+        accepted: true,
+        action: 'accept',
+        assessment: detailAssessment,
+        isoDate: detailAssessment.isoDate,
+      };
+    }
     return {
       accepted: false,
       action: 'defer',
-      reason: `Discovery date ${discoveryAssessment.isoDate} does not match detail date ${detailAssessment.isoDate}`,
+      reason: `Discovery date ${discoveryAssessment.isoDate} does not match detail date ${detailAssessment.isoDate} (${detailAssessment.ageDays ?? '?'}d old, exceeds ${MAX_DATE_MISMATCH_DAYS}d window)`,
       assessment: detailAssessment,
     };
   }

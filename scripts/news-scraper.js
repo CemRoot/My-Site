@@ -197,6 +197,8 @@ function getPreferredArticleSlug(article) {
 }
 
 function getProcessingDateDecision(candidate, article) {
+  const MAX_DATE_MISMATCH_DAYS = 7;
+
   const detailAssessment = article?.dateAssessment?.dateStatus
     ? article.dateAssessment
     : normalizeSourceDate(article?.date || article?.rawDate || '', {
@@ -233,10 +235,17 @@ function getProcessingDateDecision(candidate, article) {
     detailAssessment.isoDate &&
     discoveryAssessment.isoDate !== detailAssessment.isoDate
   ) {
+    if (typeof detailAssessment.ageDays === 'number' && detailAssessment.ageDays <= MAX_DATE_MISMATCH_DAYS) {
+      return {
+        action: 'process',
+        assessment: detailAssessment,
+      };
+    }
+
     return {
       action: 'defer',
       stage: 'detail_date_mismatch',
-      reason: `Discovery date ${discoveryAssessment.isoDate} does not match detail date ${detailAssessment.isoDate}`,
+      reason: `Discovery date ${discoveryAssessment.isoDate} does not match detail date ${detailAssessment.isoDate} (${detailAssessment.ageDays ?? '?'}d old, exceeds ${MAX_DATE_MISMATCH_DAYS}d window)`,
       assessment: detailAssessment,
     };
   }
@@ -455,7 +464,13 @@ async function verifyUnknownCandidates(candidates, scraperRouter, runReport) {
     article.discoveryDateAssessment = candidate.dateAssessment;
     const decision = getProcessingDateDecision(candidate, article);
 
-    if (decision.action === 'process' && decision.assessment.dateStatus === 'today') {
+    const MAX_RECENT_DAYS = 7;
+    const isRecentEnough = decision.assessment.dateStatus === 'today' ||
+      (decision.assessment.dateStatus === 'stale' &&
+       typeof decision.assessment.ageDays === 'number' &&
+       decision.assessment.ageDays <= MAX_RECENT_DAYS);
+
+    if (decision.action === 'process' && isRecentEnough) {
       runReport.metrics.verifiedUnknown++;
       incrementCategoryStat(runReport.categories, candidate.category, 'verifiedUnknown');
       verifiedCandidates.push({
@@ -471,7 +486,8 @@ async function verifyUnknownCandidates(candidates, scraperRouter, runReport) {
           discoveryDateAssessment: candidate.dateAssessment,
         },
       });
-      console.log(`✅ [${candidate.category}] Unknown candidate verified as today\n`);
+      const label = decision.assessment.dateStatus === 'today' ? 'today' : `recent (${decision.assessment.ageDays}d old)`;
+      console.log(`✅ [${candidate.category}] Unknown candidate verified as ${label}\n`);
       continue;
     }
 
@@ -490,18 +506,19 @@ async function verifyUnknownCandidates(candidates, scraperRouter, runReport) {
       continue;
     }
 
-    if (decision.assessment.dateStatus === 'stale') {
+    if (decision.assessment.dateStatus === 'stale' &&
+        (typeof decision.assessment.ageDays !== 'number' || decision.assessment.ageDays > MAX_RECENT_DAYS)) {
       runReport.metrics.staleSkipped++;
       incrementCategoryStat(runReport.categories, candidate.category, 'staleSkipped');
       recordRunBatch(runReport, 'skipped', {
         url: candidate.url,
         category: candidate.category,
         stage: 'unknown_candidate_stale',
-        reason: `Detail publish date is stale (${decision.assessment.isoDate})`,
+        reason: `Detail publish date is stale (${decision.assessment.isoDate}, ${decision.assessment.ageDays ?? '?'}d old, exceeds ${MAX_RECENT_DAYS}d window)`,
         rawDate: article.rawDate || candidate.rawDate,
         normalizedDate: decision.assessment.normalizedDate,
       });
-      console.log(`⏭️  [${candidate.category}] Unknown candidate resolved as stale\n`);
+      console.log(`⏭️  [${candidate.category}] Unknown candidate resolved as stale (${decision.assessment.ageDays ?? '?'}d old)\n`);
       continue;
     }
 
@@ -865,18 +882,26 @@ async function scrapeNews() {
   runReport.metrics.todayCandidates = partitionedCandidates.today.length;
   runReport.metrics.unknownCandidates = partitionedCandidates.unknown.length;
 
+  const MAX_RECENT_DAYS = 7;
+  const recentStaleCandidates = [];
+
   for (const candidate of partitionedCandidates.stale) {
-    runReport.metrics.staleSkipped++;
-    incrementCategoryStat(runReport.categories, candidate.category, 'staleSkipped');
-    recordRunBatch(runReport, 'skipped', {
-      url: candidate.url,
-      category: candidate.category,
-      title: candidate.title,
-      stage: 'stale_candidate',
-      reason: `Discovery date is stale (${candidate.dateAssessment.isoDate || candidate.rawDate || 'unknown'})`,
-      rawDate: candidate.rawDate,
-      normalizedDate: candidate.normalizedDate,
-    });
+    const ageDays = candidate.dateAssessment?.ageDays;
+    if (typeof ageDays === 'number' && ageDays <= MAX_RECENT_DAYS) {
+      recentStaleCandidates.push(candidate);
+    } else {
+      runReport.metrics.staleSkipped++;
+      incrementCategoryStat(runReport.categories, candidate.category, 'staleSkipped');
+      recordRunBatch(runReport, 'skipped', {
+        url: candidate.url,
+        category: candidate.category,
+        title: candidate.title,
+        stage: 'stale_candidate',
+        reason: `Discovery date is stale (${candidate.dateAssessment.isoDate || candidate.rawDate || 'unknown'}, ${ageDays ?? '?'}d old, exceeds ${MAX_RECENT_DAYS}d window)`,
+        rawDate: candidate.rawDate,
+        normalizedDate: candidate.normalizedDate,
+      });
+    }
   }
 
   for (const candidate of partitionedCandidates.future) {
@@ -895,12 +920,14 @@ async function scrapeNews() {
 
   console.log(
     `📅 Candidate partition: today=${partitionedCandidates.today.length} | ` +
+    `recent=${recentStaleCandidates.length} | ` +
     `unknown=${partitionedCandidates.unknown.length} | ` +
-    `stale=${partitionedCandidates.stale.length} | future=${partitionedCandidates.future.length}`
+    `stale=${partitionedCandidates.stale.length - recentStaleCandidates.length} | future=${partitionedCandidates.future.length}`
   );
 
   const actionableCandidates = [
     ...partitionedCandidates.today,
+    ...recentStaleCandidates,
     ...partitionedCandidates.unknown,
   ];
 
@@ -942,9 +969,14 @@ async function scrapeNews() {
   console.log(`⏭️  Already in DB: ${existingCandidates.length}`);
 
   const todayMissingCandidates = missingCandidates.filter(candidate => candidate.dateStatus === 'today');
+  const recentStaleMissing = missingCandidates.filter(candidate =>
+    candidate.dateStatus === 'stale' &&
+    typeof candidate.dateAssessment?.ageDays === 'number' &&
+    candidate.dateAssessment.ageDays <= MAX_RECENT_DAYS
+  );
   const unknownMissingCandidates = missingCandidates.filter(candidate => candidate.dateStatus === 'unknown');
   const verifiedUnknownCandidates = await verifyUnknownCandidates(unknownMissingCandidates, scraperRouter, runReport);
-  const promotableCandidates = [...todayMissingCandidates, ...verifiedUnknownCandidates];
+  const promotableCandidates = [...todayMissingCandidates, ...recentStaleMissing, ...verifiedUnknownCandidates];
   const newArticles = promotableCandidates.slice(0, CONFIG.MAX_ARTICLES_PER_RUN);
   const deferredByCap = promotableCandidates.slice(CONFIG.MAX_ARTICLES_PER_RUN);
 
