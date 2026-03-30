@@ -5,6 +5,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { formatTechNewsArticle } from './lib/formatTechNewsArticle.js';
 
 export const config = {
   runtime: 'edge',
@@ -172,7 +173,7 @@ export default async function handler(request) {
 
       return jsonResponse({ 
         success: true, 
-        article: formatArticle(article, true) 
+        article: formatTechNewsArticle(article, true) 
       }, 200, {
         ...corsHeaders,
         'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=10',
@@ -180,7 +181,7 @@ export default async function handler(request) {
     }
 
     // Listing query - Only select needed columns (NOT content - saves bandwidth)
-    const listColumns = 'id,title,description,original_title,image_url,date,category,source_url,original_source,slug,views,created_at';
+    const listColumns = 'id,title,description,original_title,image_url,date,category,slug,views,created_at';
     
     let query = supabase
       .from('tech_news_articles')
@@ -213,7 +214,7 @@ export default async function handler(request) {
     return jsonResponse({
       success: true,
       data: {
-        articles: articles.map(a => formatArticle(a, false)),
+        articles: articles.map(a => formatTechNewsArticle(a, false)),
         pagination: {
           page,
           limit,
@@ -251,31 +252,3 @@ function jsonResponse(data, status = 200, headers = {}) {
   });
 }
 
-/**
- * Format article for frontend consumption
- * @param {Object} article - Raw article from database
- * @param {boolean} includeContent - Whether to include full content
- */
-function formatArticle(article, includeContent = false) {
-  const formatted = {
-    id: article.id,
-    title: article.title,
-    description: article.description,
-    originalTitle: article.original_title,
-    image: article.image_url,
-    date: article.date,
-    category: article.category,
-    sourceUrl: article.source_url,
-    originalSource: article.original_source,
-    slug: article.slug,
-    views: article.views,
-    createdAt: article.created_at,
-  };
-  
-  // Only include content for single article requests
-  if (includeContent && article.content) {
-    formatted.content = article.content;
-  }
-  
-  return formatted;
-}
