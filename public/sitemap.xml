@@ -2,25 +2,25 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://cemkoyluoglu.codes/</loc>
-    <lastmod>2026-03-24</lastmod>
+    <lastmod>2026-03-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://cemkoyluoglu.codes/tech-news</loc>
-    <lastmod>2026-03-24</lastmod>
+    <lastmod>2026-03-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://cemkoyluoglu.codes/privacy-policy</loc>
-    <lastmod>2026-03-24</lastmod>
+    <lastmod>2026-03-29</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://cemkoyluoglu.codes/terms</loc>
-    <lastmod>2026-03-24</lastmod>
+    <lastmod>2026-03-29</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
@@ -49,6 +49,36 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/cin-deniz-altinda-1-000-metrelik-geziler-icin-ilk-turistik-denizaltisini-gelistiriyor</loc>
+    <lastmod>2026-03-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/cin-openclawi-robotlarda-kullanmaya-basladi</loc>
+    <lastmod>2026-03-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/claude-ile-gelistirildi-bir-babanin-kizi-icin-yaptigi-piyano-uygulamasi-internette-gundem-oldu</loc>
+    <lastmod>2026-03-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/duvarlarin-arkasini-gormek-artik-mumkun-mitten-kablosuz-gorus-teknolojisi</loc>
+    <lastmod>2026-03-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/jeff-bezosun-uzay-sirketi-asteroit-savunma-silahlari-icin-planlarini-acikladi</loc>
+    <lastmod>2026-03-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://cemkoyluoglu.codes/tech-news/first-time-monthly-download-rankings-instagram-and-tiktok-dominate</loc>
     <lastmod>2026-03-16</lastmod>
     <changefreq>monthly</changefreq>
@@ -57,6 +87,18 @@
   <url>
     <loc>https://cemkoyluoglu.codes/tech-news/elon-musks-popularity-plummets-as-criticism-grows-his-political-interference-sparks-debate</loc>
     <lastmod>2026-03-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/marsta-bahce-bilim-insanlari-mars-tozundan-uretilen-gubreyle-yenilebilir-bitkiler-yetistirdi</loc>
+    <lastmod>2026-03-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/rus-havacilik-sirketi-starlink-rakibi-uydularin-ilk-grubunu-firlatti</loc>
+    <lastmod>2026-03-24</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -73,8 +115,20 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/openai-sorayi-kapatma-karari-aldi</loc>
+    <lastmod>2026-03-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://cemkoyluoglu.codes/tech-news/china-develops-worlds-first-cloned-hybrid-rice</loc>
     <lastmod>2026-03-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/volkswagen-demir-kubbeye-parca-uretimi-icin-israilli-sirketle-masada</loc>
+    <lastmod>2026-03-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -97,14 +151,116 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/amazon-sempatik-insansi-robotlar-gelistiren-sirketi-satin-aldi</loc>
+    <lastmod>2026-03-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/avrupa-ve-turkiyede-evcil-kopeklere-ait-en-eski-genetik-kanitlar-bulundu</loc>
+    <lastmod>2026-03-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://cemkoyluoglu.codes/tech-news/a-philosopher-working-on-artificial-intelligence-consciousness-received-an-email-from-a-ai-agent</loc>
     <lastmod>2026-03-16</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/bir-yapay-zeka-ajani-irlandadaki-3-000-pubi-aradi-bira-fiyatlarini-topladi</loc>
+    <lastmod>2026-03-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/korsan-batman-arkham-knight-indirdi-175-gb-verisini-kaybetti</loc>
+    <lastmod>2026-03-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/openai-erotik-sohbet-botunu-suresiz-olarak-rafa-kaldirdi</loc>
+    <lastmod>2026-03-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/united-airlines-ekonomi-sinifinda-yataga-donusen-koltuklar-sunacak</loc>
+    <lastmod>2026-03-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/musktan-ezber-bozan-halka-arz-hamlesi-spacex-hisselerinin-%30u-bireysel-yatirimciya</loc>
+    <lastmod>2026-03-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/wikipedia-yapay-zeka-tarafindan-olusturulan-makaleleri-yasakladi</loc>
+    <lastmod>2026-03-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/cinden-yeni-insansi-robot-insan-gibi-gulumseyip-tepki-veriyor</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/neuralink-cipiyle-100-gun-bilim-kurgu-gibi-hissettiriyor</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/sam-altman-destekli-fuzyon-girisimi-helion-openaia-enerji-satmak-icin-gorusmeler-yurutuyor</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/samsung-exynos-1680-cipini-tanitti-daha-hizli-performans-ve-yapay-zeka</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://cemkoyluoglu.codes/tech-news/india-plans-to-develop-the-worlds-most-powerful-3100-horsepower-hydrogen-powered-freight-locomotive</loc>
     <lastmod>2026-03-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/tulga-4x4-sahada-turkiyenin-ilk-yerli-zirhli-suvu-goreve-basladi</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/yeni-911-droneu-tanitildi-acil-mudahalede-helikopterlere-alternatif-olabilir</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/apple-mac-pro-uretimini-durdurdu-yeni-model-gelmeyecek</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/apple-siriyi-chatgpt-disindaki-yapay-zeka-sohbet-botlarina-da-acmayi-planliyor</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/beyaz-sarayda-bir-ilk-melania-trump-insansi-robotla-sahnedeydi</loc>
+    <lastmod>2026-03-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -121,6 +277,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/chatgptyi-kullanarak-cnayet-plani-hazirladi-bir-kadin-iki-kisiyi-ldurmekle-suclaniyor</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://cemkoyluoglu.codes/tech-news/honor-from-double-body-display-robotic-phone-and-humanoid-robot</loc>
     <lastmod>2026-03-03</lastmod>
     <changefreq>monthly</changefreq>
@@ -129,6 +291,24 @@
   <url>
     <loc>https://cemkoyluoglu.codes/tech-news/resident-evil-requiem-ran-at-70-fps-on-mac</loc>
     <lastmod>2026-03-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/googledan-yeni-yapay-zeka-algoritmasi-llmlerde-bellek-kullanimi-6-kat-azaldi</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/kulaklikla-gercek-zamanli-ceviri-artik-iosta-google-translate-genisliyor</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/manusun-meta-tarafindan-satin-alinmasi-inceleniyor-kuruculara-cinden-cikis-yasagi</loc>
+    <lastmod>2026-03-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -145,8 +325,74 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/meta-insan-beynini-taklit-eden-yapay-zeka-modelini-tanitti</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/meta-ve-google-cocuklara-zarar-vermekten-suclu-bulundu</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/ps5-fiyatlarina-buyuk-zam-yolda-yeni-fiyatlar-sizdirildi</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/anthropicin-claude-code-ve-cowork-araclari-artik-bilgisayarinizi-kontrol-edebiliyor</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/apple-mapse-reklam-geliyor</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/luma-uni-1-yayinda-nano-bananaya-rakip-geldi</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/yapay-zeka-destekli-yuz-tanima-sistemi-hata-yapti-tutuklanan-buyukanne-her-seyini-kaybetti</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://cemkoyluoglu.codes/tech-news/nvidia-claims-ray-tracing-performance-will-increase-by-1-million-in-the-future</loc>
     <lastmod>2026-03-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/z-kusagi-chatgptye-guveniyor-iste-ona-sormamaniz-gereken-5-soru</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/dondurulan-fare-beyinleri-yeniden-canlandirildi</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/yapay-zeka-veri-merkezlerinde-guvenlik-robotlara-emanet</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://cemkoyluoglu.codes/tech-news/yeni-bir-bebek-dinozor-turu-kesfedildi-adini-bir-cizgi-film-karakterinden-aldi</loc>
+    <lastmod>2026-03-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -205,13 +451,13 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://cemkoyluoglu.codes/tech-news/israel-is-the-country-that-uses-claude-the-most</loc>
+    <loc>https://cemkoyluoglu.codes/tech-news/super-micro-co-founder-arrested-on-allegation-of-stealing-nvidia-ai-servers-to-china</loc>
     <lastmod>2026-03-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://cemkoyluoglu.codes/tech-news/super-micro-co-founder-arrested-on-allegation-of-stealing</loc>
+    <loc>https://cemkoyluoglu.codes/tech-news/israel-is-the-country-that-uses-claude-the-most-per-capita</loc>
     <lastmod>2026-03-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
