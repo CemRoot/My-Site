@@ -27,6 +27,7 @@
 - [Quick Start](#-quick-start)
 - [Telegram Bot](#-telegram-bot-control-center)
 - [Automation](#-automation-workflows)
+- [Scrape Tech News Architecture](#-scrape-tech-news-architecture-and-data-flow)
 - [Configuration](#-configuration)
 - [Deployment](#-deployment)
 - [Monitoring](#-monitoring--observability)
@@ -359,6 +360,140 @@ npm run cleanup:duplicates
 npm run health:check         # Health check
 npm run vercel:status        # Check Vercel status
 ```
+
+---
+
+## 📐 Scrape Tech News — Architecture & Data Flow
+
+End-to-end view of the **Scrape Tech News** GitHub Actions workflow (`.github/workflows/scrape-tech-news.yml`) and the Node orchestrator (`scripts/news-scraper.js`). Diagrams use [Mermaid](https://mermaid.js.org/) and render on GitHub; for local editing, use a preview that supports fenced `mermaid` blocks.
+
+### Workflow (CI/CD)
+
+```mermaid
+flowchart TB
+  subgraph triggers["Triggers"]
+    CRON["Cron — weekdays 07:00 / 13:00 / 15:00 UTC"]
+    WD["workflow_dispatch — manual"]
+  end
+
+  subgraph job["Job: scrape-and-translate · ubuntu-latest"]
+    S1["Checkout repository"]
+    S2["Setup Node.js 22 + npm cache"]
+    S3["npm ci"]
+    S4["Export run env + npm run scrape:news"]
+    S5["Upload artifacts — always"]
+    S6["Success banner"]
+    S7["Telegram success via CI helper script"]
+    S8["Telegram failure alert"]
+    S1 --> S2 --> S3 --> S4 --> S5
+    S4 --> S6 --> S7
+    S4 -.->|any prior step fails| S8
+  end
+
+  subgraph secrets["Secrets injected into step 4"]
+    SEC["GROQ_API_KEY · GROQ_PARSER_API_KEY · FIRECRAWL_API_KEY\nNEXT_PUBLIC_SUPABASE_* · SUPABASE_SERVICE_ROLE_KEY\nTELEGRAM_BOT_TOKEN · TELEGRAM_CHAT_ID · OLLAMA_API_KEY"]
+  end
+
+  triggers --> job
+  secrets -.-> S4
+```
+
+**Concurrency:** `group: tech-news-daily-agent-${{ github.ref }}` with `cancel-in-progress: false` so overlapping runs are not cancelled mid-flight.
+
+### Orchestration pipeline (application)
+
+```mermaid
+flowchart TB
+  subgraph entry["Entry"]
+    A["scrapeNews() — ScraperRouter, run report, run label"]
+    A --> B["Telegram: run started"]
+    B --> C["getArticleCount()"]
+  end
+
+  subgraph list["Category discovery — 6 NuvemMag categories"]
+    D["scrapeAllCategories()"]
+    D --> D1["scrapeArticleList per category\nFirecrawl page · Groq list parse · regex merge"]
+    D1 --> D2["mergeArticleCandidates — dedupe URLs across categories"]
+    D2 --> E["Unique candidates + metrics"]
+  end
+
+  C --> D
+
+  subgraph dates["Date partitioning"]
+    F["partitionCandidatesByDate"]
+    F --> P1["today"]
+    F --> P2["recent stale window"]
+    F --> P3["unknown"]
+    F --> P4["stale"]
+    F --> P5["future — rejected"]
+  end
+
+  E --> F
+
+  subgraph unk["Unknown candidates"]
+    VU["verifyUnknownCandidates — optional detail scrape"]
+  end
+
+  P3 --> VU
+
+  subgraph db["Database gate"]
+    G["actionable = today + recent + unknown"]
+    G --> H["getExistingArticles()"]
+    H --> I["missing only — cap at MAX_ARTICLES_PER_RUN"]
+  end
+
+  P1 --> G
+  P2 --> G
+  VU --> G
+
+  subgraph queue["processArticleQueue"]
+    J["Per article: scrapeArticleDetails"]
+    J --> K["Clean content · embed tokens · garbage checks"]
+    K --> L{"Valid for save?"}
+    L -->|no| M["skip / reject / defer"]
+    L -->|yes| N["translateArticle — Groq"]
+    N --> O["saveArticle — Supabase"]
+    O --> P["Circuit breaker on consecutive failures"]
+  end
+
+  I --> J
+
+  subgraph out["Outputs"]
+    R1["JSON artifact under artifacts/tech-news-runs/"]
+    R2["Telegram summary"]
+    R1 --> R2
+  end
+
+  J --> R1
+
+  subgraph ext["External APIs"]
+    FC["Firecrawl"]
+    GQ["Groq"]
+    SB["Supabase"]
+    TG["Telegram"]
+  end
+
+  D1 -.-> FC
+  D1 -.-> GQ
+  J -.-> FC
+  N -.-> GQ
+  O -.-> SB
+  B -.-> TG
+  R2 -.-> TG
+```
+
+### Pipeline reference
+
+| Stage | Responsibility |
+|--------|----------------|
+| **Triggers** | Weekday cron (3×) or manual `workflow_dispatch`. |
+| **Environment** | `TECH_NEWS_RUN_DATE` (Europe/Istanbul) and `TECH_NEWS_RUN_LABEL` tie logs, artifacts, and Telegram to a single run. |
+| **Discovery** | `ScraperRouter` → Firecrawl for HTML/markdown; Groq extracts structured article rows; regex supplements; URL merge removes cross-category duplicates. |
+| **Dates** | Candidates classified; future dates rejected; mismatches between list and detail dates can **defer** work. |
+| **Deduplication** | Bulk Supabase lookup before expensive translation; `source_url` / slug rules apply. |
+| **Processing** | Detail scrape → cleaning & embed preservation → Groq translation with quality gates → `tech_news_articles` insert. |
+| **Artifacts** | Each run writes a replayable JSON report (uploaded even if a later step fails, `if: always()`). |
+| **Notifications** | In-run Telegram messages from the script; workflow success step formats the final summary via `scripts/ci/telegram-tech-news-success-message.cjs`. |
 
 ---
 
@@ -802,7 +937,7 @@ copies or substantial portions of the Software.
 
 ---
 
-**Last Updated**: March 16, 2026 | **Version**: 3.0.0
+**Last Updated**: March 30, 2026 | **Version**: 3.0.0
 
 [![Built with Love](https://img.shields.io/badge/Built%20with-❤️-red?style=flat-square)](https://github.com/CemRoot/My-Site)
 [![Maintained](https://img.shields.io/badge/Maintained-Yes-green?style=flat-square)](https://github.com/CemRoot/My-Site)
