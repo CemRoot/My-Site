@@ -127,7 +127,6 @@ function parseRelativeDateParts(raw) {
     if (!match) continue;
 
     const value = parseInt(match[1], 10);
-    const adjusted = new Date(now);
 
     switch (unit) {
       case 'minutes':
@@ -138,12 +137,15 @@ function parseRelativeDateParts(raw) {
         return subtractByMs(value * 24 * 60 * 60 * 1000);
       case 'weeks':
         return subtractByMs(value * 7 * 24 * 60 * 60 * 1000);
-      case 'months':
-        adjusted.setUTCMonth(adjusted.getUTCMonth() - value);
-        break;
+      case 'months': {
+        const tp = getTurkeyDateParts(now);
+        let m = tp.month - value;
+        let y = tp.year;
+        while (m <= 0) { m += 12; y -= 1; }
+        const maxDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+        return { year: y, month: m, day: Math.min(tp.day, maxDay) };
+      }
     }
-
-    return getTurkeyDateParts(adjusted);
   }
 
   return null;

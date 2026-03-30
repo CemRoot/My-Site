@@ -190,9 +190,14 @@ export class FirecrawlScraper extends BaseScraper {
 
   // ─── Category list scraping ───
 
-  async scrapeArticleList(categoryUrl, categoryTag) {
-    console.log(`\n📂 [Firecrawl] Scraping category: ${categoryTag} from ${categoryUrl}`);
+  _categoryArchiveUrl(categoryUrl, pageNum) {
+    const base = String(categoryUrl || '').trim().replace(/\/+$/, '');
+    if (!base) return categoryUrl;
+    if (pageNum <= 1) return `${base}/`;
+    return `${base}/page/${pageNum}/`;
+  }
 
+  async _fetchCategoryMarkdown(categoryUrl, categoryTag, pageLabel) {
     const result = await this._fetchWithRetry(
       'https://api.firecrawl.dev/v2/scrape',
       {
@@ -208,40 +213,85 @@ export class FirecrawlScraper extends BaseScraper {
           waitFor: 2000,
         }),
       },
-      `category ${categoryTag}`
+      `category ${categoryTag} ${pageLabel}`
     );
 
     if (!result.success) {
-      console.error(`  ❌ Failed to scrape category: ${result.status || result.error}`);
-      return [];
+      return { ok: false, markdown: null, error: result.status || result.error };
     }
 
     const data = await result.response.json();
-    const markdown = data?.data?.markdown;
+    const markdown = data?.data?.markdown || '';
+    return { ok: true, markdown, error: null };
+  }
 
-    if (!markdown) {
-      console.error(`  ❌ No markdown content in response for ${categoryTag}`);
-      return [];
+  async scrapeArticleList(categoryUrl, categoryTag) {
+    const maxPages = Math.max(1, SCRAPER_CONFIG.CATEGORY_ARCHIVE_MAX_PAGES || 1);
+    const cap = SCRAPER_CONFIG.MAX_ARTICLES_PER_CATEGORY;
+
+    console.log(`\n📂 [Firecrawl] Scraping category: ${categoryTag} from ${categoryUrl} (up to ${maxPages} archive page(s))`);
+
+    let accumulated = [];
+
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+      const pageUrl = this._categoryArchiveUrl(categoryUrl, pageNum);
+      const pageLabel = pageNum === 1 ? 'p1' : `p${pageNum}`;
+
+      const { ok, markdown, error } = await this._fetchCategoryMarkdown(pageUrl, categoryTag, pageLabel);
+
+      if (!ok) {
+        if (pageNum === 1) {
+          console.error(`  ❌ Failed to scrape category: ${error}`);
+          return [];
+        }
+        console.log(`  ⏹️  Archive page ${pageNum} unavailable (${error}); stopping pagination.`);
+        break;
+      }
+
+      if (!markdown || markdown.length < 200) {
+        if (pageNum === 1) {
+          console.error(`  ❌ No markdown content in response for ${categoryTag}`);
+          return [];
+        }
+        console.log(`  ⏹️  Archive page ${pageNum} empty; stopping pagination.`);
+        break;
+      }
+
+      console.log(`  📄 Page ${pageNum}: ${markdown.length} chars of markdown`);
+
+      const aiArticles = await this._parseArticlesWithAI(markdown, categoryTag);
+      const regexArticles = this._regexFallback(markdown, categoryTag);
+      const pageMerged = mergeDiscoveryCandidates(aiArticles, regexArticles);
+
+      const beforeSize = accumulated.length;
+      accumulated = mergeDiscoveryCandidates(accumulated, pageMerged);
+      const added = accumulated.length - beforeSize;
+
+      console.log(`  📎 Page ${pageNum}: +${added} new candidate(s) → ${accumulated.length} unique total`);
+
+      if (accumulated.length >= cap) {
+        break;
+      }
+
+      if (pageNum > 1 && added === 0) {
+        console.log(`  ⏹️  No new URLs on page ${pageNum}; stopping pagination.`);
+        break;
+      }
+
+      if (pageNum < maxPages) {
+        await new Promise(r => setTimeout(r, 1500));
+      }
     }
 
-    console.log(`  📄 Got ${markdown.length} chars of markdown`);
-
-    const aiArticles = await this._parseArticlesWithAI(markdown, categoryTag);
-    const regexArticles = this._regexFallback(markdown, categoryTag);
-    const mergedArticles = mergeDiscoveryCandidates(aiArticles, regexArticles);
-
-    if (mergedArticles.length === 0) {
+    if (accumulated.length === 0) {
       console.log(`  ⚠️ No articles extracted from AI or regex parsing.`);
       return [];
     }
 
-    const limited = mergedArticles.slice(0, SCRAPER_CONFIG.MAX_ARTICLES_PER_CATEGORY);
-    const aiCount = aiArticles?.length || 0;
-    const regexSupplementCount = Math.max(0, mergedArticles.length - aiCount);
+    const limited = accumulated.slice(0, cap);
 
     console.log(
-      `  📊 Using ${limited.length} merged articles ` +
-      `(AI: ${aiCount}, regex supplement: ${regexSupplementCount}, total unique: ${mergedArticles.length})`
+      `  📊 Using ${limited.length} merged articles (unique discovered across pages: ${accumulated.length})`
     );
     return limited;
   }

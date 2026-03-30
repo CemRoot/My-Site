@@ -4,7 +4,7 @@ name: Scrape Tech News
 # TECH NEWS SCRAPER - MULTI-CATEGORY AI-POWERED WORKFLOW
 # ============================================================================
 # 
-# Bu workflow NuvemMag'dan (Türkçe) haber çeker, İngilizce'ye çevirir ve
+# Bu workflow yapılandırılmış kaynaklardan haber adaylarını çeker, İngilizce'ye çevirir ve
 # Supabase PostgreSQL veritabanına kaydeder.
 #
 # ============================================================================
@@ -52,9 +52,9 @@ name: Scrape Tech News
 #    - "Log in" (kısa) → ✂️ Sil
 #    - "View on Twitter" → ✂️ Sil
 #
-# 7. NUVEMMAG BRANDING TEMİZLİK:
-#    - "– NuvemMag" başlıktan → ✂️ Sil
-#    - nuvemmag.com URL'leri → ✂️ Sil
+# 7. KAYNAK SİTESİ BRANDING TEMİZLİK:
+#    - Kaynak sitesi adı sonekleri başlıktan → ✂️ Sil
+#    - Kaynak sitesi URL'leri içerikten → ✂️ Sil
 #    - Logo ve navigasyon → ✂️ Sil
 #
 # 8. DUPLICATE TESPİTİ:
@@ -75,10 +75,27 @@ name: Scrape Tech News
 #     - Retry with simplified prompt on failure
 #
 # ============================================================================
+# GITHUB ACTIONS YAPISI (kalıcı mimari)
+# ============================================================================
+#
+# - permissions: contents:read — GITHUB_TOKEN ile minimum yetki (GitHub önerisi).
+# - timeout-minutes — uzun Firecrawl+Groq koşularında askıda kalan runner kesilir.
+# - concurrency — aynı dalda üst üste tam scraper; cancel-in-progress false = yarım kalan
+#   koşuyu bilinçli olarak iptal etmez (veri tutarlılığı / rapor için).
+# - Preflight (scripts/ci/tech-news-preflight.mjs): yalnızca schedule tetiklerinde
+#   çalışır; sadece fetch + Supabase REST (Firecrawl/Groq yok). Örneklenen başlık
+#   URL’leri DB’de varsa npm ci + tam scrape atlanır → maliyet düşer.
+# - workflow_dispatch: preflight zorla "proceed" (tam koşu); manuel müdahale her zaman
+#   tam pipeline ister.
+#
+# İleride: tek işi taşıyan .github/workflows/reusable-*.yml + workflow_call ile
+# aynı job’u başka workflow’lardan çağırmak (Context7: reuse-workflows, secrets:inherit).
+#
+# ============================================================================
 # SCHEDULING (Hafta içi, Türkiye saatine göre)
 # ============================================================================
 #
-# TIMEZONE NOTE: Nuvemmag is a Turkish news site (Europe/Istanbul timezone)
+# TIMEZONE NOTE: Liste tarihleri Europe/Istanbul (Türkiye saati) ile yorumlanır
 # The script automatically handles timezone using JavaScript Intl API,
 # including any DST (Daylight Saving Time) changes - no manual updates needed!
 #
@@ -93,34 +110,51 @@ on:
     - cron: '0 13 * * 1-5'   # 13:00 UTC = 16:00 Turkey - Afternoon check
     - cron: '0 15 * * 1-5'   # 15:00 UTC = 18:00 Turkey - Evening check
   
-  # Manual trigger
   workflow_dispatch:
+    inputs:
+      skip_preflight:
+        description: 'Bypass preflight (always run full scrape; no headline-vs-DB gate)'
+        type: boolean
+        default: false
 
-# Keep runs deterministic and auditable
+# Keep runs deterministic and auditable (see header: cancel-in-progress false by design)
 concurrency:
   group: tech-news-daily-agent-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   scrape-and-translate:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 180
+
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'npm'
-      
+
+      - name: 🚦 Preflight (headline sample vs DB; no Firecrawl/Groq)
+        id: gate
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TECH_NEWS_SKIP_PREFLIGHT: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_preflight == 'true' && '1' || '0' }}
+          TECH_NEWS_PREFLIGHT_FORCE_PROCEED: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_preflight == 'false' && '1' || '0' }}
+        run: node scripts/ci/tech-news-preflight.mjs
+
       - name: 📦 Install dependencies
+        if: steps.gate.outputs.proceed == 'true'
         run: npm ci
-      
+
       - name: 🔍 Scrape and translate tech news
+        if: steps.gate.outputs.proceed == 'true'
         env:
           # GitHub Secrets - These will be available at runtime
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -140,7 +174,7 @@ jobs:
 
           echo "🚀 Starting multi-category tech news scraper..."
           echo "📂 Categories: 6 (requested business categories only)"
-          echo "📊 Articles per category: 20 (MAX_ARTICLES_PER_CATEGORY)"
+          echo "📊 Recent-only: see SCRAPER_CONFIG (MAX_RECENT_PUBLISH_DAYS, first archive page only)"
           echo "📊 Max articles per run: 50 (safety limit)"
           echo ""
           echo "📅 Time Info:"
@@ -174,7 +208,7 @@ jobs:
           echo "   ✓ Non-Latin character detection (Arabic/Cyrillic)"
           echo "   ✓ Latin ratio check (>80% English)"
           echo "   ✓ Instruction leakage detection (prompt text in output)"
-          echo "   ✓ Title cleaning (removes NuvemMag branding)"
+          echo "   ✓ Title cleaning (removes source-site branding)"
           echo "   ✓ YouTube garbage text removal (pattern-based skip)"
           echo "   ✓ Twitter widget text removal"
           echo "   ✓ Content quality checks with auto-fix"
@@ -190,16 +224,22 @@ jobs:
           echo ""
           npm run scrape:news
 
+      - name: ⏭️ Skipped full scrape (preflight)
+        if: success() && steps.gate.outputs.proceed != 'true'
+        run: |
+          echo "Preflight skipped Firecrawl/Groq/npm ci: reason=${{ steps.gate.outputs.reason }}"
+          echo "   (scheduled run when sampled headline URLs were already in DB)"
+
       - name: 🧾 Upload tech news run artifacts
-        if: always()
+        if: always() && steps.gate.outputs.proceed == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: tech-news-run-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/tech-news-runs/
           if-no-files-found: warn
-      
+
       - name: ✅ Success summary
-        if: success()
+        if: success() && steps.gate.outputs.proceed == 'true'
         run: |
           echo ""
           echo "═══════════════════════════════════════════════════════════"
@@ -217,7 +257,7 @@ jobs:
           echo "   ✓ Çince/Japonca/Korece karakter kontrolü"
           echo "   ✓ Non-Latin karakter kontrolü (Arapça/Kiril)"
           echo "   ✓ Instruction leakage tespiti"
-          echo "   ✓ NuvemMag branding temizleme (auto-fix)"
+          echo "   ✓ Kaynak branding temizleme (auto-fix)"
           echo "   ✓ YouTube garbage text temizleme (pattern-based)"
           echo "   ✓ Embed token koruma (placeholder swap + doğrulama)"
           echo "   ✓ Inline URL tespiti (Twitter/TikTok mid-paragraph)"
@@ -230,7 +270,7 @@ jobs:
           echo "═══════════════════════════════════════════════════════════"
       
       - name: 📱 Send success notification to Telegram
-        if: success()
+        if: success() && steps.gate.outputs.proceed == 'true'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -280,7 +320,7 @@ jobs:
           echo "   • API anahtarı hatası (Firecrawl/Groq)"
           echo "   • Veritabanı bağlantı sorunu (Supabase)"
           echo "   • Rate limit aşımı (Groq/Firecrawl)"
-          echo "   • Kaynak site erişim sorunu (nuvemmag.com)"
+          echo "   • Kaynak site erişim sorunu (ağ / engelleme)"
           echo "   • Tarih parsing hatası (gelecek tarih)"
           echo "   • Çeviri kalite kontrolü başarısız (Türkçe/CJK chars)"
           echo "   • Instruction leakage tespit edildi"
@@ -288,12 +328,14 @@ jobs:
           echo "🔗 Log kayıtları: ${LOG_URL}"
           echo ""
           echo "═══════════════════════════════════════════════════════════"
-          
-          MESSAGE="🚨 <b>TECH NEWS SCRAPER - HATA!</b>%0A%0A❌ Haber toplama işlemi başarısız oldu%0A⏰ Zaman: ${CURRENT_TIME}%0A🔧 Workflow: Scrape Tech News%0A📊 Durum: Başarısız%0A%0A🔍 <b>Olası Sorunlar:</b>%0A• API anahtarı hatası (Firecrawl/Groq)%0A• Veritabanı bağlantı sorunu (Supabase)%0A• Rate limit aşımı (Groq/Firecrawl)%0A• Kaynak site erişim sorunu%0A• Tarih/Çeviri kalite kontrolü%0A%0A🔗 <a href='${LOG_URL}'>Log kayıtlarını incele</a>%0A%0A<i>⚠️ Sistem otomatik olarak tekrar deneyecek</i>"
-          
+
+          export FAILURE_LOG_URL="${LOG_URL}"
+          export FAILURE_TIME_UTC="${CURRENT_TIME}"
+          MESSAGE=$(node scripts/ci/telegram-tech-news-failure-message.cjs)
+
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            -d "text=${MESSAGE}" \
+            --data-urlencode "text=${MESSAGE}" \
             -d "parse_mode=HTML" \
             -d "disable_web_page_preview=false" > /dev/null
           

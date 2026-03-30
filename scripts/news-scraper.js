@@ -25,6 +25,8 @@ import { ScraperRouter } from './lib/scraper/scrapers/ScraperRouter.js';
 import { normalizeSourceDate } from './lib/scraper/dateUtils.js';
 
 const CONFIG = SCRAPER_CONFIG;
+/** Recent window for stale-but-ok articles (days). Single source: SCRAPER_CONFIG.MAX_RECENT_PUBLISH_DAYS */
+const MAX_RECENT_PUBLISH_DAYS = CONFIG.MAX_RECENT_PUBLISH_DAYS ?? 3;
 const REPLAYABLE_BATCHES = new Set(['rejected', 'failed', 'deleted', 'deferred', 'skipped']);
 
 // ─── Content validation helpers ───
@@ -197,8 +199,6 @@ function getPreferredArticleSlug(article) {
 }
 
 function getProcessingDateDecision(candidate, article) {
-  const MAX_DATE_MISMATCH_DAYS = 7;
-
   const detailAssessment = article?.dateAssessment?.dateStatus
     ? article.dateAssessment
     : normalizeSourceDate(article?.date || article?.rawDate || '', {
@@ -235,17 +235,28 @@ function getProcessingDateDecision(candidate, article) {
     detailAssessment.isoDate &&
     discoveryAssessment.isoDate !== detailAssessment.isoDate
   ) {
-    if (typeof detailAssessment.ageDays === 'number' && detailAssessment.ageDays <= MAX_DATE_MISMATCH_DAYS) {
+    // Trust detail metadata over list hints, but only if detail is within MAX_RECENT_PUBLISH_DAYS.
+    const maxDays = CONFIG.MAX_RECENT_PUBLISH_DAYS ?? 3;
+    const detailRecentEnough =
+      detailAssessment.dateStatus === 'today' ||
+      (detailAssessment.dateStatus === 'stale' &&
+        typeof detailAssessment.ageDays === 'number' &&
+        detailAssessment.ageDays <= maxDays);
+
+    if (!detailRecentEnough) {
       return {
-        action: 'process',
+        action: 'reject',
+        stage: 'detail_mismatch_outside_recent_window',
+        reason:
+          `List vs detail date mismatch; detail publish date outside ${maxDays}d window ` +
+          `(${detailAssessment.isoDate || detailAssessment.rawDate || 'unknown'}, ` +
+          `${detailAssessment.ageDays ?? '?'}d old)`,
         assessment: detailAssessment,
       };
     }
 
     return {
-      action: 'defer',
-      stage: 'detail_date_mismatch',
-      reason: `Discovery date ${discoveryAssessment.isoDate} does not match detail date ${detailAssessment.isoDate} (${detailAssessment.ageDays ?? '?'}d old, exceeds ${MAX_DATE_MISMATCH_DAYS}d window)`,
+      action: 'process',
       assessment: detailAssessment,
     };
   }
@@ -285,10 +296,12 @@ function createRunMetrics() {
     rawFound: 0,
     uniqueCandidates: 0,
     todayCandidates: 0,
+    recentStaleCandidates: 0,
     unknownCandidates: 0,
     verifiedUnknown: 0,
     staleSkipped: 0,
     futureRejected: 0,
+    rejectedDateMismatch: 0,
     alreadyInDb: 0,
     newAfterDbCheck: 0,
     replayCandidates: 0,
@@ -322,6 +335,9 @@ function createRunReport({ mode, scraperName, sourceArtifact = null, replayStatu
     config: {
       maxArticlesPerRun: CONFIG.MAX_ARTICLES_PER_RUN,
       maxConsecutiveFailures: CONFIG.MAX_CONSECUTIVE_FAILURES,
+      maxRecentPublishDays: CONFIG.MAX_RECENT_PUBLISH_DAYS,
+      maxArticlesPerCategory: CONFIG.MAX_ARTICLES_PER_CATEGORY,
+      categoryArchiveMaxPages: CONFIG.CATEGORY_ARCHIVE_MAX_PAGES,
       categories: CONFIG.CATEGORIES.map(({ tag, name, slug, url }) => ({ tag, name, slug, url })),
     },
     metrics: createRunMetrics(),
@@ -363,7 +379,7 @@ function finalizeRunReport(report, { databaseCountBefore = null, databaseCountAf
     metrics.skippedSourceUrl +
     metrics.skippedHashDuplicate +
     metrics.staleSkipped;
-  metrics.rejected += metrics.futureRejected;
+  metrics.rejected += metrics.futureRejected + metrics.rejectedDateMismatch;
   metrics.failed = metrics.scrapeFailed + metrics.translationFailed + metrics.saveFailed;
 }
 
@@ -464,7 +480,7 @@ async function verifyUnknownCandidates(candidates, scraperRouter, runReport) {
     article.discoveryDateAssessment = candidate.dateAssessment;
     const decision = getProcessingDateDecision(candidate, article);
 
-    const MAX_RECENT_DAYS = 7;
+    const MAX_RECENT_DAYS = MAX_RECENT_PUBLISH_DAYS;
     const isRecentEnough = decision.assessment.dateStatus === 'today' ||
       (decision.assessment.dateStatus === 'stale' &&
        typeof decision.assessment.ageDays === 'number' &&
@@ -492,8 +508,13 @@ async function verifyUnknownCandidates(candidates, scraperRouter, runReport) {
     }
 
     if (decision.action === 'reject') {
-      runReport.metrics.futureRejected++;
-      incrementCategoryStat(runReport.categories, candidate.category, 'futureRejected');
+      if (decision.stage === 'detail_future_date') {
+        runReport.metrics.futureRejected++;
+        incrementCategoryStat(runReport.categories, candidate.category, 'futureRejected');
+      } else {
+        runReport.metrics.rejectedDateMismatch++;
+        incrementCategoryStat(runReport.categories, candidate.category, 'rejectedDateMismatch');
+      }
       recordRunBatch(runReport, 'rejected', {
         url: candidate.url,
         category: candidate.category,
@@ -622,8 +643,13 @@ async function processArticleQueue(articleQueue, scraperRouter, runReport, optio
 
     const dateDecision = getProcessingDateDecision(candidate, article);
     if (dateDecision.action === 'reject') {
-      runReport.metrics.futureRejected++;
-      incrementCategoryStat(runReport.categories, category, 'futureRejected');
+      if (dateDecision.stage === 'detail_future_date') {
+        runReport.metrics.futureRejected++;
+        incrementCategoryStat(runReport.categories, category, 'futureRejected');
+      } else {
+        runReport.metrics.rejectedDateMismatch++;
+        incrementCategoryStat(runReport.categories, category, 'rejectedDateMismatch');
+      }
       recordRunBatch(runReport, 'rejected', {
         url,
         category,
@@ -882,7 +908,7 @@ async function scrapeNews() {
   runReport.metrics.todayCandidates = partitionedCandidates.today.length;
   runReport.metrics.unknownCandidates = partitionedCandidates.unknown.length;
 
-  const MAX_RECENT_DAYS = 7;
+  const MAX_RECENT_DAYS = MAX_RECENT_PUBLISH_DAYS;
   const recentStaleCandidates = [];
 
   for (const candidate of partitionedCandidates.stale) {
@@ -903,6 +929,8 @@ async function scrapeNews() {
       });
     }
   }
+
+  runReport.metrics.recentStaleCandidates = recentStaleCandidates.length;
 
   for (const candidate of partitionedCandidates.future) {
     runReport.metrics.futureRejected++;
@@ -1018,13 +1046,14 @@ async function scrapeNews() {
   circuitBreakerTriggered = processResult.circuitBreakerTriggered;
 
   if (!dryRun && circuitBreakerTriggered) {
-    const rejectedCount = runReport.metrics.rejectedGarbage + runReport.metrics.rejectedSave + runReport.metrics.futureRejected;
+    const rejectedCount = runReport.metrics.rejectedGarbage + runReport.metrics.rejectedSave + runReport.metrics.futureRejected + runReport.metrics.rejectedDateMismatch;
     const failedCount = runReport.metrics.scrapeFailed + runReport.metrics.translationFailed + runReport.metrics.saveFailed;
     const remaining = Math.max(0, newArticles.length - (
       runReport.metrics.saved +
       runReport.metrics.rejectedGarbage +
       runReport.metrics.rejectedSave +
       runReport.metrics.futureRejected +
+      runReport.metrics.rejectedDateMismatch +
       runReport.metrics.scrapeFailed +
       runReport.metrics.translationFailed +
       runReport.metrics.saveFailed +
@@ -1060,7 +1089,10 @@ async function scrapeNews() {
     const successRate = totalProcessed > 0 ? Math.round((runReport.metrics.saved / totalProcessed) * 100) : 0;
     const hasUnsavedActionableCandidates =
       runReport.metrics.saved === 0 &&
-      (runReport.metrics.newAfterDbCheck > 0 || runReport.metrics.todayCandidates > 0 || runReport.metrics.verifiedUnknown > 0);
+      (runReport.metrics.newAfterDbCheck > 0 ||
+        runReport.metrics.todayCandidates > 0 ||
+        runReport.metrics.recentStaleCandidates > 0 ||
+        runReport.metrics.verifiedUnknown > 0);
 
     let statusEmoji = runReport.metrics.saved > 0 ? '✅' : 'ℹ️';
     if (runReport.metrics.failed > 0 && runReport.metrics.saved === 0) statusEmoji = '❌';
@@ -1069,8 +1101,8 @@ async function scrapeNews() {
 
     await notifyTelegram(
       `${statusEmoji} <b>Haber Scraper</b>\n\n` +
-      `📰 Bulundu: ${runReport.metrics.rawFound} ham | ${runReport.metrics.uniqueCandidates} tekil | bugün ${runReport.metrics.todayCandidates} | bilinmeyen ${runReport.metrics.unknownCandidates}\n` +
-      `🗂️  DB'de vardı: ${runReport.metrics.alreadyInDb} | doğrulanan bilinmeyen: ${runReport.metrics.verifiedUnknown} | bayat atlandı: ${runReport.metrics.staleSkipped} | gelecek reddedildi: ${runReport.metrics.futureRejected}\n` +
+      `📰 Bulundu: ${runReport.metrics.rawFound} ham | ${runReport.metrics.uniqueCandidates} tekil | bugün ${runReport.metrics.todayCandidates} | yakın bayat ${runReport.metrics.recentStaleCandidates} | bilinmeyen ${runReport.metrics.unknownCandidates}\n` +
+      `🗂️  DB'de vardı: ${runReport.metrics.alreadyInDb} | doğrulanan bilinmeyen: ${runReport.metrics.verifiedUnknown} | bayat atlandı: ${runReport.metrics.staleSkipped} | gelecek: ${runReport.metrics.futureRejected} | tarih uyumsuz: ${runReport.metrics.rejectedDateMismatch}\n` +
       `✅ Kaydedildi: ${runReport.metrics.saved} | 🚫 Reddedildi: ${runReport.metrics.rejected} | ⏭️ Atlandı: ${runReport.metrics.skipped} | ⏸️ Ertelendi: ${runReport.metrics.deferred} | ❌ Başarısız: ${runReport.metrics.failed}\n` +
       `📈 Başarı: ${successRate}% | 💾 Toplam: ${finalCount}\n` +
       `🔧 Scraper: ${scraperRouter.getActiveScraperName()}${runLabel ? ` | 🏷️ ${runLabel}` : ''}\n` +

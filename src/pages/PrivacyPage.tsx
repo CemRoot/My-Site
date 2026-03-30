@@ -24,7 +24,7 @@ function PrivacyPage() {
         'Details legal bases, retention periods, and GDPR rights',
         'Lists third-party processors, security measures, and contact information',
       ],
-      lastUpdated: 'December 21, 2024',
+      lastUpdated: 'March 30, 2026',
     });
 
     return () => setPageInfo(null);
@@ -62,7 +62,7 @@ function PrivacyPage() {
               </div>
               <h1 className="text-3xl sm:text-4xl font-[Hobo_BT]">Privacy Policy</h1>
             </div>
-            <p className="text-muted-foreground">Last updated: December 21, 2024</p>
+            <p className="text-muted-foreground">Last updated: March 30, 2026</p>
             <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
               <Shield className="w-4 h-4 text-primary" />
               <span className="text-sm text-primary">GDPR Compliant</span>
@@ -113,6 +113,17 @@ function PrivacyPage() {
                   <li>Referring website addresses</li>
                 </ul>
               </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-border/50">
+              <h3 className="text-lg text-foreground mb-2">2.3 Tech news articles</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Some pages may show technology news articles that are produced with automated tooling (including AI-assisted
+                translation) and stored on our infrastructure. For operational and legal clarity, we do{' '}
+                <strong>not</strong> display third-party publisher names or outbound source URLs for that material on the
+                public website. Internal records may exist for deduplication and quality control and are covered by our
+                security and retention practices above.
+              </p>
             </div>
           </section>
 

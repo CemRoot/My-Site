@@ -5,6 +5,7 @@
 'use strict';
 
 const fs = require('fs');
+const { escapeTelegramHtml } = require('./telegram-html-escape.cjs');
 
 const reportPath = process.env.REPORT_PATH;
 if (!reportPath) {
@@ -24,6 +25,7 @@ const hasUnsavedActionable =
   saved === 0 &&
   ((metrics.newAfterDbCheck || 0) > 0 ||
     (metrics.todayCandidates || 0) > 0 ||
+    (metrics.recentStaleCandidates || 0) > 0 ||
     (metrics.verifiedUnknown || 0) > 0);
 
 let statusEmoji = saved > 0 ? '✅' : 'ℹ️';
@@ -32,20 +34,41 @@ else if (hasUnsavedActionable) statusEmoji = '⚠️';
 
 const headline =
   saved > 0
-    ? 'TECH NEWS SCRAPER - KAYITLAR TAMAMLANDI'
+    ? 'Tech news scraper — saves complete'
     : hasUnsavedActionable
-      ? 'TECH NEWS SCRAPER - YENI ADAYLAR KAYDEDILMEDI'
-      : 'TECH NEWS SCRAPER - TAMAMLANDI';
+      ? 'Tech news scraper — new candidates not saved'
+      : 'Tech news scraper — run complete';
 
-const lines = [
-  `${statusEmoji} <b>${headline}</b>`,
-  '',
-  `📰 Kaydedildi: ${saved}`,
-  `🆕 DB sonrasi yeni aday: ${metrics.newAfterDbCheck || 0}`,
-  `📅 Bugun aday: ${metrics.todayCandidates || 0} | Bilinmeyen: ${metrics.unknownCandidates || 0}`,
-  `🗂️ DB'de vardi: ${metrics.alreadyInDb || 0} | Bayat: ${metrics.staleSkipped || 0} | Ertelendi: ${metrics.deferred || 0}`,
-  `❌ Basarisiz: ${failed}`,
-  `🔧 Scraper: ${report.scraper || 'unknown'}${report.runLabel ? ` | 🏷️ ${report.runLabel}` : ''}`,
+const scraper = escapeTelegramHtml(report.scraper || 'unknown');
+const runLabel = report.runLabel ? escapeTelegramHtml(report.runLabel) : '';
+
+const line = (label, value) =>
+  `${escapeTelegramHtml(label)} <code>${escapeTelegramHtml(String(value))}</code>`;
+
+const blocks = [
+  `${statusEmoji} <b>${escapeTelegramHtml(headline)}</b>`,
+  '———————————————',
+  line('Saved', saved),
+  line('New after DB check', metrics.newAfterDbCheck || 0),
+  line('Today candidates', metrics.todayCandidates || 0),
+  line('Recent stale', metrics.recentStaleCandidates || 0),
+  line('Unknown candidates', metrics.unknownCandidates || 0),
 ];
 
-process.stdout.write(lines.join('\n'));
+blocks.push(
+  line('Already in DB', metrics.alreadyInDb || 0),
+  line('Future rejected', metrics.futureRejected || 0),
+  line('Date mismatch rejected', metrics.rejectedDateMismatch || 0),
+  line('Stale skipped', metrics.staleSkipped || 0),
+  line('Deferred', metrics.deferred || 0),
+  line('Failed', failed),
+  '———————————————',
+  `<b>Scraper</b> ${scraper}`,
+);
+
+if (runLabel) {
+  blocks.push(`<b>Run label</b> <code>${runLabel}</code>`);
+}
+
+const message = blocks.join('\n');
+process.stdout.write(message);

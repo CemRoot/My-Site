@@ -353,7 +353,8 @@ All workflows can be triggered manually:
 /linkedin  # Manage LinkedIn digests
 
 # Via npm scripts
-npm run scrape:news          # Manual scraping
+npm run scrape:news          # Full scrape (no preflight — unlike scheduled CI)
+npm run scrape:news:parity   # Preflight then scrape only if gate says proceed (matches scheduled Actions)
 npm run scrape:news:replay -- --replay-file artifacts/tech-news-runs/<run>.json
 npm run cleanup:duplicates:dry
 npm run cleanup:duplicates
@@ -379,15 +380,16 @@ flowchart TB
   subgraph job["Job: scrape-and-translate · ubuntu-latest"]
     S1["Checkout repository"]
     S2["Setup Node.js 22 + npm cache"]
+    PF["Preflight gate — may skip npm ci + scrape on schedule"]
     S3["npm ci"]
     S4["Export run env + npm run scrape:news"]
-    S5["Upload artifacts — always"]
+    S5["Upload artifacts"]
     S6["Success banner"]
     S7["Telegram success via CI helper script"]
     S8["Telegram failure alert"]
-    S1 --> S2 --> S3 --> S4 --> S5
+    S1 --> S2 --> PF --> S3 --> S4 --> S5
     S4 --> S6 --> S7
-    S4 -.->|any prior step fails| S8
+    S4 -.->|failure| S8
   end
 
   subgraph secrets["Secrets injected into step 4"]
@@ -400,6 +402,8 @@ flowchart TB
 
 **Concurrency:** `group: tech-news-daily-agent-${{ github.ref }}` with `cancel-in-progress: false` so overlapping runs are not cancelled mid-flight.
 
+**Scheduled CI vs local `npm run scrape:news`:** On a schedule, Actions runs a **preflight** step (cheap headline URLs vs Supabase) and may skip `npm ci` and the full scraper when nothing new is expected. Locally, `npm run scrape:news` always runs the full pipeline. Use `npm run scrape:news:parity` to mirror scheduled behavior, or trigger **workflow_dispatch** in GitHub (option **skip_preflight** bypasses the gate entirely for debugging).
+
 ### Orchestration pipeline (application)
 
 ```mermaid
@@ -410,7 +414,7 @@ flowchart TB
     B --> C["getArticleCount()"]
   end
 
-  subgraph list["Category discovery — 6 NuvemMag categories"]
+  subgraph list["Category discovery — 6 configured feeds"]
     D["scrapeAllCategories()"]
     D --> D1["scrapeArticleList per category\nFirecrawl page · Groq list parse · regex merge"]
     D1 --> D2["mergeArticleCandidates — dedupe URLs across categories"]
@@ -512,7 +516,7 @@ The tech news pipeline now behaves as a deterministic daily agent, not an open-e
 
 ### Decision Flow
 
-1. Discover candidates from the 6 configured NuvemMag categories.
+1. Discover candidates from the six configured category endpoints (newest-first listings).
 2. Normalize each candidate date in Turkey time and classify it as `today`, `unknown`, `stale`, or `future`.
 3. Bulk-check normalized `source_url` values in Supabase before expensive work.
 4. Skip candidates that already exist in the database.
@@ -765,7 +769,8 @@ npm run build                   # Production build
 
 ### Tech News System
 ```bash
-npm run scrape:news             # Manual news scraping
+npm run scrape:news             # Full scrape (no preflight)
+npm run scrape:news:parity      # Preflight + conditional scrape (like scheduled CI)
 npm run scrape:news:replay -- --replay-file artifacts/tech-news-runs/<run>.json
 npm run cleanup:duplicates:dry  # Preview cleanup of bad legacy rows
 npm run cleanup:duplicates      # Remove bad legacy rows and snapshot them

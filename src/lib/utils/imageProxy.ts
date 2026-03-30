@@ -25,7 +25,7 @@ const DEFAULT_OPTIONS: ImageProxyOptions = {
 
 /**
  * Generate optimized image URL via wsrv.nl CDN
- * @param originalUrl - Original image URL (from nuvemmag.com, etc.)
+ * @param originalUrl - Original remote image URL stored with the article
  * @param options - Optimization options
  * @returns Proxied/optimized image URL
  */

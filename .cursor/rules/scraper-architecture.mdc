@@ -8,11 +8,11 @@ Stack: Node.js ESM, Vercel Edge Functions, Supabase PostgreSQL, GitHub Actions
 ### Daily Agent Contract
 - Scan only these 6 business categories: `yapay-zeka`, `teknoloji`, `yapay-zeka-uygulamalari`, `gundem`, `surdurulebilirlik`, `bilim-ve-dunya`
 - Scrapers discover candidates only
-- `news-scraper.js` decides which candidates are `today`, `unknown`, `stale` (recent ≤7d / truly stale), or `future`
+- `news-scraper.js` decides which candidates are `today`, `unknown`, `stale` (recent ≤MAX_RECENT_PUBLISH_DAYS / truly stale), or `future`
 - Database-first gate must happen before expensive translation/save work
 - `unknown` date candidates require detail verification before they can move forward
-- `stale` candidates within 7 days are treated as recent and included alongside today candidates
-- Future dates must be rejected; date mismatches >7 days must be deferred, never normalized into production
+- `stale` candidates within `SCRAPER_CONFIG.MAX_RECENT_PUBLISH_DAYS` (default 3) are treated as recent and included alongside today candidates
+- Future dates must be rejected; when list and detail dates disagree, **detail metadata is canonical only if** it is `today` or `stale` with `ageDays ≤ MAX_RECENT_PUBLISH_DAYS`; otherwise **reject** (avoids saving old articles from mis-tagged list rows). Same rule in `resolveSaveDateIntegrity`.
 - Every run must produce a replayable JSON artifact with decision batches
 
 ---
@@ -65,7 +65,7 @@ scripts/
 discover candidates
 → normalize source dates in Turkey time
 → partition into today / unknown / stale / future
-→ split stale into recent (≤7 days) and truly stale (>7 days)
+→ split stale into recent (≤MAX_RECENT_PUBLISH_DAYS) and truly stale (older)
 → bulk DB check on today + recent + unknown candidates
 → skip existing
 → verify unknown-date candidates with detail metadata
@@ -134,13 +134,12 @@ Frontend React components render these tokens as embedded players.
 - Save-time date integrity check in `database.js` must compare discovery vs detail date when both exist
 - Turkey timezone is `Europe/Istanbul` for all candidate/date decisions
 
-### Recent Article Window (MAX_RECENT_DAYS = 7)
-- Stale candidates within 7 days are treated as "recent" and included in the actionable queue
-- Discovery vs detail date mismatch is accepted when detail date is ≤7 days old (detail date is authoritative)
-- `verifyUnknownCandidates()` accepts recent articles (not just today) via `isRecentEnough` check
-- `resolveSaveDateIntegrity()` in database.js applies the same 7-day tolerance
-- Articles older than 7 days remain fully skipped at partition level
-- The 7-day constant is defined inline as `MAX_DATE_MISMATCH_DAYS` / `MAX_RECENT_DAYS` in the relevant functions
+### Recent Article Window (`MAX_RECENT_PUBLISH_DAYS` in `scripts/lib/scraper/config.js`, default 3)
+- NuvemMag lists newest first; list scraping uses the first archive page only (`CATEGORY_ARCHIVE_MAX_PAGES: 1`) and a modest per-category cap
+- Stale candidates within that window are treated as "recent" and included in the actionable queue
+- Discovery vs detail date mismatch: detail page metadata is canonical (see `getProcessingDateDecision`); recent window applies to stale/recent classification
+- `verifyUnknownCandidates()` accepts recent articles (not just today) via `isRecentEnough`
+- Articles older than the window are skipped at partition level
 
 ---
 
@@ -176,9 +175,9 @@ OLLAMA_PRIMARY_MODEL = 'gemini-3-flash-preview:cloud'  // content primary
 | `__WIDGET_N__` leaks into description | Strip placeholders after description translation in translateArticle() |
 | wp-content in regex fallback | Filter /wp-content/, /wp-includes/, /wp-json/ in _regexFallback() |
 | Same article, different URL = duplicate | content_hash (SHA256 of normalized original_title) stored in DB |
-| Discovery vs detail date mismatch defers all articles | 7-day tolerance window: trust detail date when `ageDays ≤ 7` |
-| Stale partition skips all non-today candidates | Split stale into recent (≤7d, actionable) and truly stale (>7d, skipped) |
-| `verifyUnknownCandidates` only accepts `dateStatus === 'today'` | `isRecentEnough` also accepts stale within 7 days |
+| Discovery vs detail date mismatch defers all articles | Trust detail metadata; recent window from `MAX_RECENT_PUBLISH_DAYS` |
+| Stale partition skips all non-today candidates | Split stale into recent (within `MAX_RECENT_PUBLISH_DAYS`) vs older (skipped) |
+| `verifyUnknownCandidates` only accepts `dateStatus === 'today'` | `isRecentEnough` also accepts stale within `MAX_RECENT_PUBLISH_DAYS` |
 | GitHub Actions heredoc EOF indented with spaces | Move EOF to base indentation (10 spaces in YAML → column 0 in script) |
 
 ## Duplicate Detection (3 Layers)
@@ -204,7 +203,7 @@ Layer 3: content_hash match (handles same article, different URL)
 ## Observability & Replay
 
 - Every scraper run writes a JSON artifact under `artifacts/tech-news-runs/`
-- Core metrics tracked per run: `rawFound`, `todayCandidates`, `recentStaleCandidates`, `unknownCandidates`, `alreadyInDb`, `verifiedUnknown`, `staleSkipped`, `futureRejected`, `saved`, `failed`, `deferred`
+- Core metrics tracked per run: `rawFound`, `todayCandidates`, `recentStaleCandidates`, `unknownCandidates`, `alreadyInDb`, `verifiedUnknown`, `staleSkipped`, `futureRejected`, `rejectedDateMismatch`, `saved`, `failed`, `deferred`
 - Batch details are grouped into `saved`, `skipped`, `rejected`, `failed`, and `deferred`
 - Replay command: `npm run scrape:news:replay -- --replay-file <artifact-path>`
 - Supported replay batches: `rejected`, `failed`, `deleted`, `deferred`, `skipped`

@@ -54,12 +54,10 @@ export interface Article {
   content: string;
   image: string;
   date: string;
-  sourceUrl: string;
   slug: string;
   createdAt: string;
   originalTitle?: string;
   category?: string;
-  originalSource?: string;
 }
 
 /** Response shape from /api/tech-news */

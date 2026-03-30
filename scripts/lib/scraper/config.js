@@ -16,7 +16,18 @@ export const SCRAPER_CONFIG = {
   FIRECRAWL_API_KEY: env.FIRECRAWL_API_KEY,
   GROQ_API_KEY: env.GROQ_API_KEY,
   GROQ_PARSER_API_KEY: env.GROQ_PARSER_API_KEY,
-  MAX_ARTICLES_PER_CATEGORY: 20,
+  /**
+   * Rows taken from each category list (newest first on NuvemMag). No need to walk old pages
+   * when we only care about very recent news.
+   */
+  MAX_ARTICLES_PER_CATEGORY: 12,
+  /** Only first page per category unless you explicitly need older archive pages. */
+  CATEGORY_ARCHIVE_MAX_PAGES: 1,
+  /**
+   * Publish/discovery dates older than this (calendar days) are skipped — aligns with
+   * “top of feed only” scraping.
+   */
+  MAX_RECENT_PUBLISH_DAYS: 3,
   TRANSLATION_DELAY: 1000,
   RATE_LIMIT_DELAY: 10000,
   MAX_ARTICLES_PER_RUN: 50,

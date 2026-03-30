@@ -74,56 +74,103 @@ export class CheerioScraper extends BaseScraper {
 
   // ─── Category list scraping ───
 
+  _categoryArchiveUrl(categoryUrl, pageNum) {
+    const base = String(categoryUrl || '').trim().replace(/\/+$/, '');
+    if (!base) return categoryUrl;
+    if (pageNum <= 1) return `${base}/`;
+    return `${base}/page/${pageNum}/`;
+  }
+
   async scrapeArticleList(categoryUrl, categoryTag) {
-    console.log(`\n📂 [Cheerio] Scraping category: ${categoryTag} from ${categoryUrl}`);
+    const maxPages = Math.max(1, SCRAPER_CONFIG.CATEGORY_ARCHIVE_MAX_PAGES || 1);
+    const cap = SCRAPER_CONFIG.MAX_ARTICLES_PER_CATEGORY;
 
-    let html;
-    try {
-      const res = await fetch(categoryUrl, { headers: { 'User-Agent': UA } });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      html = await res.text();
-    } catch (error) {
-      console.error(`  ❌ Failed to fetch category page: ${error.message}`);
-      return [];
-    }
+    console.log(`\n📂 [Cheerio] Scraping category: ${categoryTag} from ${categoryUrl} (up to ${maxPages} archive page(s))`);
 
-    const $ = cheerio.load(html);
-    const seen = new Set();
     const articles = [];
+    const seen = new Set();
 
-    $('a[href*="nuvemmag.com/"]').each((_, el) => {
-      const href = $(el).attr('href');
-      if (!href || seen.has(href) || !isArticleUrl(href)) return;
-      seen.add(href);
-
-      let dateStr = '';
-      const $parent = $(el).closest('article, .post, .entry, li, div');
-      const $time = $parent.find('time').first();
-      if ($time.length) {
-        dateStr = $time.attr('datetime') || $time.text().trim();
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+      const pageUrl = this._categoryArchiveUrl(categoryUrl, pageNum);
+      let html;
+      try {
+        const res = await fetch(pageUrl, { headers: { 'User-Agent': UA } });
+        if (!res.ok) {
+          if (pageNum === 1) throw new Error(`HTTP ${res.status}`);
+          console.log(`  ⏹️  [Cheerio] Archive page ${pageNum} HTTP ${res.status}; stopping.`);
+          break;
+        }
+        html = await res.text();
+      } catch (error) {
+        if (pageNum === 1) {
+          console.error(`  ❌ Failed to fetch category page: ${error.message}`);
+          return [];
+        }
+        console.log(`  ⏹️  [Cheerio] Archive page ${pageNum} fetch failed: ${error.message}`);
+        break;
       }
 
-      const candidateTitle = (
-        $(el).attr('title') ||
-        $(el).text() ||
-        $parent.find('h2, h3, h4, .entry-title, .post-title').first().text() ||
-        ''
-      ).trim();
+      if (!html || html.length < 500) {
+        if (pageNum === 1) {
+          console.error(`  ❌ Empty category HTML for ${categoryTag}`);
+          return [];
+        }
+        break;
+      }
 
-      articles.push(buildDiscoveryCandidate({
-        url: href,
-        title: candidateTitle,
-        category: categoryTag,
-        rawDate: dateStr,
-        source: $time.length ? 'category_dom_time' : 'category_dom_link',
-        confidence: $time.length && dateStr ? 'medium' : 'low',
-      }));
-    });
+      const $ = cheerio.load(html);
+      let pageAdded = 0;
+
+      $('a[href*="nuvemmag.com/"]').each((_, el) => {
+        const href = $(el).attr('href');
+        if (!href || seen.has(href) || !isArticleUrl(href)) return;
+        seen.add(href);
+
+        let dateStr = '';
+        const $parent = $(el).closest('article, .post, .entry, li, div');
+        const $time = $parent.find('time').first();
+        if ($time.length) {
+          dateStr = $time.attr('datetime') || $time.text().trim();
+        }
+
+        const candidateTitle = (
+          $(el).attr('title') ||
+          $(el).text() ||
+          $parent.find('h2, h3, h4, .entry-title, .post-title').first().text() ||
+          ''
+        ).trim();
+
+        articles.push(buildDiscoveryCandidate({
+          url: href,
+          title: candidateTitle,
+          category: categoryTag,
+          rawDate: dateStr,
+          source: $time.length ? 'category_dom_time' : 'category_dom_link',
+          confidence: $time.length && dateStr ? 'medium' : 'low',
+        }));
+        pageAdded++;
+      });
+
+      console.log(`  📄 [Cheerio] Page ${pageNum}: ${pageAdded} link row(s), ${articles.length} unique total`);
+
+      if (articles.length >= cap) {
+        break;
+      }
+
+      if (pageNum > 1 && pageAdded === 0) {
+        console.log(`  ⏹️  [Cheerio] No new links on page ${pageNum}; stopping.`);
+        break;
+      }
+
+      if (pageNum < maxPages) {
+        await new Promise(r => setTimeout(r, 800));
+      }
+    }
 
     articles.sort((a, b) => b.datePriority - a.datePriority || a.url.localeCompare(b.url));
 
-    const limited = articles.slice(0, SCRAPER_CONFIG.MAX_ARTICLES_PER_CATEGORY);
-    console.log(`  📊 [Cheerio] Found ${limited.length} articles (from ${articles.length} total links)`);
+    const limited = articles.slice(0, cap);
+    console.log(`  📊 [Cheerio] Using ${limited.length} articles (${articles.length} unique before cap)`);
     return limited;
   }
 

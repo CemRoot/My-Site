@@ -10,6 +10,7 @@
 
 import crypto from 'crypto';
 import { supabase } from '../supabaseAdmin.js';
+import { SCRAPER_CONFIG } from './config.js';
 import { validateArticle, autoFixArticle } from '../../validation/smartArticleProcessor.js';
 import { getTurkeyIsoDate, normalizeSourceDate } from './dateUtils.js';
 
@@ -115,8 +116,6 @@ function buildSourceUrlVariants(url) {
 }
 
 function resolveSaveDateIntegrity(article) {
-  const MAX_DATE_MISMATCH_DAYS = 7;
-
   const detailAssessment = article.dateAssessment?.dateStatus
     ? article.dateAssessment
     : normalizeSourceDate(article.date || article.rawDate || '', {
@@ -151,19 +150,29 @@ function resolveSaveDateIntegrity(article) {
     detailAssessment.isoDate &&
     discoveryAssessment.isoDate !== detailAssessment.isoDate
   ) {
-    if (typeof detailAssessment.ageDays === 'number' && detailAssessment.ageDays <= MAX_DATE_MISMATCH_DAYS) {
+    const maxDays = SCRAPER_CONFIG.MAX_RECENT_PUBLISH_DAYS ?? 3;
+    const detailRecentEnough =
+      detailAssessment.dateStatus === 'today' ||
+      (detailAssessment.dateStatus === 'stale' &&
+        typeof detailAssessment.ageDays === 'number' &&
+        detailAssessment.ageDays <= maxDays);
+
+    if (!detailRecentEnough) {
       return {
-        accepted: true,
-        action: 'accept',
+        accepted: false,
+        action: 'reject',
+        reason:
+          `List vs detail date mismatch; detail outside ${maxDays}d window ` +
+          `(${detailAssessment.isoDate}, ${detailAssessment.ageDays ?? '?'}d old)`,
         assessment: detailAssessment,
-        isoDate: detailAssessment.isoDate,
       };
     }
+
     return {
-      accepted: false,
-      action: 'defer',
-      reason: `Discovery date ${discoveryAssessment.isoDate} does not match detail date ${detailAssessment.isoDate} (${detailAssessment.ageDays ?? '?'}d old, exceeds ${MAX_DATE_MISMATCH_DAYS}d window)`,
+      accepted: true,
+      action: 'accept',
       assessment: detailAssessment,
+      isoDate: detailAssessment.isoDate,
     };
   }
 
