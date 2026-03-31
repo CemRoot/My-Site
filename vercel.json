@@ -19,7 +19,7 @@
       ]
     },
     {
-      "source": "/:path((?!robots\\.txt|sitemap\\.xml|favicon\\.ico|favicon\\.webp|og-image\\.png|og-image\\.webp|portrait\\.webp|assets|fonts).*)",
+      "source": "/:path((?!robots\\.txt|sitemap\\.xml|favicon\\.ico|favicon\\.webp|og-image\\.png|og-image\\.webp|portrait\\.webp|assets|fonts|yt-ai-summarizer\\/).*)",
       "destination": "/index.html"
     }
   ],
