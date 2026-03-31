@@ -527,10 +527,10 @@
       var mx = -1e4;
       var my = -1e4;
 
-      var NODE_COUNT = 40;
-      var LINK_DIST = 118;
+      var NODE_COUNT = 68;
+      var LINK_DIST = 132;
       var LINK_DIST_SQ = LINK_DIST * LINK_DIST;
-      var REPULSE_R = 155;
+      var REPULSE_R = 172;
       var REPULSE_RSQ = REPULSE_R * REPULSE_R;
 
       function resize() {
@@ -611,9 +611,9 @@
           dsq = dx * dx + dy * dy;
           if (dsq > 0 && dsq < REPULSE_RSQ) {
             d = Math.sqrt(dsq);
-            f = ((REPULSE_R - d) / REPULSE_R) * 3.2;
-            n.vx += (dx / d) * f * 0.12;
-            n.vy += (dy / d) * f * 0.12;
+            f = ((REPULSE_R - d) / REPULSE_R) * 3.6;
+            n.vx += (dx / d) * f * 0.14;
+            n.vy += (dy / d) * f * 0.14;
           }
 
           n.x += n.vx;
@@ -636,7 +636,7 @@
 
         ctx.clearRect(0, 0, w, h);
 
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1.35;
         for (i = 0; i < nodes.length; i++) {
           var a = nodes[i];
           for (j = i + 1; j < nodes.length; j++) {
@@ -651,9 +651,9 @@
             var midy = (a.y + b.y) * 0.5;
             var mdx = mx - midx;
             var mdy = my - midy;
-            var nearMouse = mdx * mdx + mdy * mdy < 220 * 220;
-            var alpha = t * (nearMouse ? 0.2 : 0.09);
-            ctx.strokeStyle = 'rgba(255,72,72,' + alpha + ')';
+            var nearMouse = mdx * mdx + mdy * mdy < 280 * 280;
+            var alpha = t * (nearMouse ? 0.36 : 0.16);
+            ctx.strokeStyle = 'rgba(255,88,88,' + alpha + ')';
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
@@ -661,11 +661,15 @@
           }
         }
 
-        ctx.fillStyle = 'rgba(255,255,255,0.22)';
         for (i = 0; i < nodes.length; i++) {
           n = nodes[i];
+          ctx.fillStyle = 'rgba(255,255,255,0.38)';
           ctx.beginPath();
-          ctx.arc(n.x, n.y, 1.4, 0, Math.PI * 2);
+          ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255,200,200,0.55)';
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, 0.9, 0, Math.PI * 2);
           ctx.fill();
         }
 
