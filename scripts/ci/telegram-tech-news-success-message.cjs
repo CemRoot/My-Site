@@ -22,22 +22,25 @@ const failed =
     (metrics.translationFailed || 0) +
     (metrics.saveFailed || 0);
 const hasUnsavedActionable =
-  saved === 0 &&
-  ((metrics.newAfterDbCheck || 0) > 0 ||
-    (metrics.todayCandidates || 0) > 0 ||
-    (metrics.recentStaleCandidates || 0) > 0 ||
-    (metrics.verifiedUnknown || 0) > 0);
+  saved === 0 && (metrics.newAfterDbCheck || 0) > 0;
 
 let statusEmoji = saved > 0 ? '✅' : 'ℹ️';
 if (failed > 0 && saved === 0) statusEmoji = '❌';
 else if (hasUnsavedActionable) statusEmoji = '⚠️';
+
+const allInDb =
+  saved === 0 &&
+  (metrics.newAfterDbCheck || 0) === 0 &&
+  (metrics.alreadyInDb || 0) > 0;
 
 const headline =
   saved > 0
     ? 'Tech news scraper — saves complete'
     : hasUnsavedActionable
       ? 'Tech news scraper — new candidates not saved'
-      : 'Tech news scraper — run complete';
+      : allInDb
+        ? 'Tech news scraper — all candidates already in DB'
+        : 'Tech news scraper — run complete';
 
 const scraper = escapeTelegramHtml(report.scraper || 'unknown');
 const runLabel = report.runLabel ? escapeTelegramHtml(report.runLabel) : '';

@@ -1088,11 +1088,7 @@ async function scrapeNews() {
     const totalProcessed = runReport.metrics.saved + runReport.metrics.rejected + runReport.metrics.failed;
     const successRate = totalProcessed > 0 ? Math.round((runReport.metrics.saved / totalProcessed) * 100) : 0;
     const hasUnsavedActionableCandidates =
-      runReport.metrics.saved === 0 &&
-      (runReport.metrics.newAfterDbCheck > 0 ||
-        runReport.metrics.todayCandidates > 0 ||
-        runReport.metrics.recentStaleCandidates > 0 ||
-        runReport.metrics.verifiedUnknown > 0);
+      runReport.metrics.saved === 0 && runReport.metrics.newAfterDbCheck > 0;
 
     let statusEmoji = runReport.metrics.saved > 0 ? '✅' : 'ℹ️';
     if (runReport.metrics.failed > 0 && runReport.metrics.saved === 0) statusEmoji = '❌';

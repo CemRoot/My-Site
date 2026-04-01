@@ -170,7 +170,7 @@ export class FirecrawlScraper extends BaseScraper {
           throw err;
         }
 
-        if (![408, 502, 503].includes(status) || attempt === maxRetries) {
+        if (![408, 500, 502, 503].includes(status) || attempt === maxRetries) {
           return { success: false, status, response: { text: () => Promise.resolve(body) } };
         }
 

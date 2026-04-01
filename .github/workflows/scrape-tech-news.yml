@@ -145,8 +145,8 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          TECH_NEWS_SKIP_PREFLIGHT: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_preflight == 'true' && '1' || '0' }}
-          TECH_NEWS_PREFLIGHT_FORCE_PROCEED: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_preflight == 'false' && '1' || '0' }}
+          TECH_NEWS_SKIP_PREFLIGHT: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_preflight == true && '1' || '0' }}
+          TECH_NEWS_PREFLIGHT_FORCE_PROCEED: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_preflight == false && '1' || '0' }}
         run: node scripts/ci/tech-news-preflight.mjs
 
       - name: 📦 Install dependencies

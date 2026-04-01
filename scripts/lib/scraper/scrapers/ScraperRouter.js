@@ -25,12 +25,26 @@ export class ScraperRouter {
   async scrapeArticleList(categoryUrl, categoryTag) {
     const scraper = this.getActiveScraper();
     try {
-      return await scraper.scrapeArticleList(categoryUrl, categoryTag);
+      const result = await scraper.scrapeArticleList(categoryUrl, categoryTag);
+      if (result.length === 0 && scraper === this.firecrawl) {
+        console.log(`  🔄 Firecrawl returned 0 articles for ${categoryTag}, trying cheerio fallback...`);
+        return await this.cheerio.scrapeArticleList(categoryUrl, categoryTag);
+      }
+      return result;
     } catch (error) {
       if (!this.firecrawlExhausted && scraper === this.firecrawl &&
           this.firecrawl.isFirecrawlExhausted(error, error.statusCode)) {
         await this._handleFirecrawlExhaustion();
         return await this.cheerio.scrapeArticleList(categoryUrl, categoryTag);
+      }
+      if (scraper === this.firecrawl) {
+        console.warn(`  ⚠️ Firecrawl error for ${categoryTag}, trying cheerio fallback: ${error.message}`);
+        try {
+          return await this.cheerio.scrapeArticleList(categoryUrl, categoryTag);
+        } catch (fallbackError) {
+          console.error(`  ❌ Cheerio fallback also failed for ${categoryTag}: ${fallbackError.message}`);
+          error.message = `Firecrawl: ${error.message} | Cheerio fallback: ${fallbackError.message}`;
+        }
       }
       throw error;
     }
@@ -39,12 +53,26 @@ export class ScraperRouter {
   async scrapeArticleDetails(url) {
     const scraper = this.getActiveScraper();
     try {
-      return await scraper.scrapeArticleDetails(url);
+      const result = await scraper.scrapeArticleDetails(url);
+      if (result == null && scraper === this.firecrawl) {
+        console.log(`  🔄 Firecrawl returned null for article details, trying cheerio fallback...`);
+        return await this.cheerio.scrapeArticleDetails(url);
+      }
+      return result;
     } catch (error) {
       if (!this.firecrawlExhausted && scraper === this.firecrawl &&
           this.firecrawl.isFirecrawlExhausted(error, error.statusCode)) {
         await this._handleFirecrawlExhaustion();
         return await this.cheerio.scrapeArticleDetails(url);
+      }
+      if (scraper === this.firecrawl) {
+        console.warn(`  ⚠️ Firecrawl error for article details, trying cheerio fallback: ${error.message}`);
+        try {
+          return await this.cheerio.scrapeArticleDetails(url);
+        } catch (fallbackError) {
+          console.error(`  ❌ Cheerio fallback also failed: ${fallbackError.message}`);
+          error.message = `Firecrawl: ${error.message} | Cheerio fallback: ${fallbackError.message}`;
+        }
       }
       throw error;
     }

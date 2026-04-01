@@ -40,6 +40,17 @@
             "terser": "^5.44.0",
             "vite": "^6.4.1"
       },
+      "overrides": {
+            "picomatch": "4.0.4",
+            "anymatch": {
+                  "picomatch": "2.3.2"
+            },
+            "readdirp": {
+                  "picomatch": "2.3.2"
+            },
+            "brace-expansion": "2.0.3",
+            "next": "16.2.2"
+      },
       "scripts": {
             "test": "node --test tests/rate-limit.test.js tests/format-tech-news-article.test.mjs tests/preflight-url-utils.test.mjs tests/telegram-html-escape.test.mjs tests/telegram-tech-news-success-message.test.mjs",
             "dev": "vite",
