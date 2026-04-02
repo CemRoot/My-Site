@@ -8,7 +8,7 @@ globs: scripts/embeds/**, scripts/news-scraper.js, scripts/manual-article-scrape
 
 ## End-to-End Pipeline
 
-### Scraping Phase (scripts/news-scraper.js)
+### Scraping Phase (scripts/lib/scraper/ScrapeOrchestrator.js via scripts/news-scraper.js)
 1. Firecrawl scrapes article → returns `markdown`, `html`, `rawHtml`
 2. **Stage 1**: `extractAllEmbedsFromMarkdown(content)` — converts markdown links to tokens
 3. **Stage 2**: `htmlToTokens(rawHtml)` — uses cheerio to find embeds in HTML
@@ -42,7 +42,8 @@ Frontend regex: `/\[\[EMBED:(TIKTOK|TWEET|YOUTUBE):([^\]]+)\]\]/g`
 | `scripts/embeds/extractMarkdownEmbeds.js` | Markdown links/URLs→tokens |
 | `scripts/embeds/cleanMarkdownEmbeds.js` | Replace blockquotes with tokens, clean remnants |
 | `scripts/translate/prompt.js` | LLM prompts with token preservation instructions |
-| `scripts/news-scraper.js` | Main scraper orchestrating all stages |
+| `scripts/news-scraper.js` | CLI entrypoint for scraper runs |
+| `scripts/lib/scraper/ScrapeOrchestrator.js` | Main scraper orchestration and stage flow |
 | `scripts/manual-article-scraper.js` | Manual Telegram scraper (NO embed support) |
 | `src/components/markdown/SmartMarkdown.tsx` | Token detection + content splitting |
 | `src/components/embeds/EmbedFromURL.tsx` | Token→component router |

@@ -735,7 +735,7 @@ My-Site/
 │   │   │   └── translator.js     # AI translation pipeline
 │   │   └── menu/                 # Telegram bot menu modules
 │   │       └── keyboards.js      # Keyboard layouts
-│   ├── news-scraper.js           # News scraping orchestrator
+│   ├── news-scraper.js           # News scraping CLI entrypoint
 │   ├── telegram-menu-handler.js  # Telegram bot menu handler
 │   ├── manual-article-scraper.js # Manual article processing
 │   ├── system-health-check.js    # Health monitoring

@@ -363,7 +363,7 @@ node scripts/scrape-single-article.js
 ## Maintenance Checklist
 
 When updating the pipeline:
-1. ✅ Update code in news-scraper.js
+1. ✅ Update code in `scripts/lib/scraper/ScrapeOrchestrator.js` (or the called scraper/agent module)
 2. ✅ Add test case to test-content-validation.js
 3. ✅ Run validation tests
 4. ✅ Update this guide
