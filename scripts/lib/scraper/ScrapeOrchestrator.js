@@ -209,8 +209,7 @@ function isTldrOnlyContent(content) {
   return withoutTldrBlock.length < 400;
 }
 
-function mapReasonCode(stage, explicitReasonCode) {
-  if (explicitReasonCode) return explicitReasonCode;
+function mapReasonCode(stage) {
   const codes = {
     unknown_date_verification: 'UNKNOWN_DATE_VERIFICATION_FAILED',
     detail_future_date: 'DETAIL_DATE_FUTURE',
@@ -310,17 +309,17 @@ function getProcessingDateDecision(candidate, article) {
   };
 }
 
-function getCliArg(flag) {
-  const index = process.argv.indexOf(flag);
-  return index !== -1 ? process.argv[index + 1] : null;
+function getCliArg(flag, argv = process.argv) {
+  const index = argv.indexOf(flag);
+  return index !== -1 ? argv[index + 1] : null;
 }
 
-function getRequestedRunLabel() {
-  return getCliArg('--run-label') || process.env.TECH_NEWS_RUN_LABEL || null;
+function getRequestedRunLabel(argv = process.argv) {
+  return getCliArg('--run-label', argv) || process.env.TECH_NEWS_RUN_LABEL || null;
 }
 
-function getRequestedRunDate() {
-  return getCliArg('--run-date') || process.env.TECH_NEWS_RUN_DATE || null;
+function getRequestedRunDate(argv = process.argv) {
+  return getCliArg('--run-date', argv) || process.env.TECH_NEWS_RUN_DATE || null;
 }
 
 function normalizeReplayStatuses(value) {
@@ -400,10 +399,12 @@ function recordRunBatch(report, batch, payload) {
     report.batches[batch] = [];
   }
 
+  const resolvedReasonCode = payload.reasonCode || mapReasonCode(payload.stage);
+
   report.batches[batch].push({
     timestamp: new Date().toISOString(),
-    reasonCode: mapReasonCode(payload.stage, payload.reasonCode),
     ...payload,
+    reasonCode: resolvedReasonCode,
   });
 }
 
@@ -991,12 +992,12 @@ async function processArticleQueue(articleQueue, agents, runReport, options = {}
 
 // ─── Main orchestrator ───
 
-async function scrapeNews() {
+async function scrapeNews(argv = process.argv) {
   const scraperRouter = new ScraperRouter(CONFIG.FIRECRAWL_API_KEY);
   const agents = createAgents(scraperRouter);
-  const runLabel = getRequestedRunLabel();
-  const runDate = getRequestedRunDate();
-  const dryRun = process.argv.includes('--dry-run');
+  const runLabel = getRequestedRunLabel(argv);
+  const runDate = getRequestedRunDate(argv);
+  const dryRun = argv.includes('--dry-run');
   const runReport = createRunReport({
     mode: 'scrape',
     scraperName: scraperRouter.getActiveScraperName(),
@@ -1251,11 +1252,11 @@ async function scrapeNews() {
   }
 }
 
-async function replayBatch(filePath) {
+async function replayBatch(filePath, argv = process.argv) {
   const resolvedPath = resolveArtifactPath(filePath);
-  const replayStatuses = normalizeReplayStatuses(getCliArg('--replay-status') || getCliArg('--replay-statuses'));
-  const runLabel = getRequestedRunLabel();
-  const runDate = getRequestedRunDate();
+  const replayStatuses = normalizeReplayStatuses(getCliArg('--replay-status', argv) || getCliArg('--replay-statuses', argv));
+  const runLabel = getRequestedRunLabel(argv);
+  const runDate = getRequestedRunDate(argv);
   const raw = await fs.readFile(resolvedPath, 'utf8');
   const payload = JSON.parse(raw);
   const replayCandidates = buildReplayCandidates(payload, replayStatuses);
@@ -1403,12 +1404,12 @@ export async function runScraperCli(argv = process.argv) {
   const replayFile = getCliArg('--replay-file', argv);
   const testUrlIndex = argv.indexOf('--test-url');
   if (replayFile) {
-    return replayBatch(replayFile);
+    return replayBatch(replayFile, argv);
   }
 
   if (testUrlIndex !== -1 && argv[testUrlIndex + 1]) {
     return testSingleUrl(argv[testUrlIndex + 1]);
   }
 
-  return scrapeNews();
+  return scrapeNews(argv);
 }
