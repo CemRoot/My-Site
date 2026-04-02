@@ -194,6 +194,49 @@ function getSaveResultDisposition(result) {
   return 'failed';
 }
 
+function isTldrOnlyContent(content) {
+  const text = String(content || '').trim();
+  if (!text) return true;
+  const hasTldrMarker = /\bTL;?DR\b/i.test(text);
+  if (!hasTldrMarker) return false;
+
+  const compact = text.replace(/\s+/g, ' ');
+  const withoutTldrBlock = compact
+    .replace(/\bTL;?DR\b[:\-\s]*/gi, '')
+    .replace(/\bKey Highlights?\b[:\-\s]*/gi, '')
+    .trim();
+
+  return withoutTldrBlock.length < 400;
+}
+
+function mapReasonCode(stage, explicitReasonCode) {
+  if (explicitReasonCode) return explicitReasonCode;
+  const codes = {
+    unknown_date_verification: 'UNKNOWN_DATE_VERIFICATION_FAILED',
+    detail_future_date: 'DETAIL_DATE_FUTURE',
+    detail_mismatch_outside_recent_window: 'DETAIL_DATE_MISMATCH',
+    unknown_candidate_stale: 'STALE_DETAIL_DATE',
+    unknown_candidate_unresolved: 'DETAIL_DATE_UNKNOWN',
+    scrape: 'SCRAPE_FAILED',
+    detail_unknown_date: 'DETAIL_DATE_UNKNOWN',
+    garbage_content: 'GARBAGE_CONTENT',
+    content_hash_duplicate: 'DUPLICATE_CONTENT_HASH',
+    translation: 'TRANSLATION_FAILED',
+    save_rejected: 'SAVE_REJECTED',
+    save_deferred: 'SAVE_DEFERRED',
+    save: 'SAVE_FAILED',
+    stale_candidate: 'STALE_DISCOVERY_DATE',
+    future_candidate: 'FUTURE_DISCOVERY_DATE',
+    already_in_db: 'DUPLICATE_SOURCE_URL',
+    source_url_duplicate: 'DUPLICATE_SOURCE_URL',
+    dry_run: 'DRY_RUN',
+    already_processed: 'ALREADY_PROCESSED',
+    per_run_cap: 'PER_RUN_CAP',
+    tldr_only_content: 'TLDR_ONLY_CONTENT',
+  };
+  return codes[stage] || 'UNSPECIFIED';
+}
+
 function getPreferredArticleSlug(article) {
   return article?.slug || generateSlug(article?.title || '');
 }
@@ -359,8 +402,90 @@ function recordRunBatch(report, batch, payload) {
 
   report.batches[batch].push({
     timestamp: new Date().toISOString(),
+    reasonCode: mapReasonCode(payload.stage, payload.reasonCode),
     ...payload,
   });
+}
+
+class DiscoveryAgent {
+  constructor(scraperRouter) {
+    this.scraperRouter = scraperRouter;
+  }
+
+  async discover() {
+    return scrapeAllCategories(this.scraperRouter);
+  }
+
+  partition(candidates, categoryStats) {
+    return partitionCandidatesByDate(candidates, categoryStats);
+  }
+}
+
+class DetailExtractionAgent {
+  constructor(scraperRouter) {
+    this.scraperRouter = scraperRouter;
+  }
+
+  async extract(url, prefetchedArticle = null) {
+    return prefetchedArticle || await this.scraperRouter.scrapeArticleDetails(url);
+  }
+}
+
+class TranslationAgent {
+  async run(article) {
+    return translateArticle(article);
+  }
+}
+
+class EnhancementAgent {
+  ensureFullContent(article) {
+    if (!article || !article.content) {
+      return { ok: false, reason: 'Translated content is empty', stage: 'tldr_only_content' };
+    }
+    if (isTldrOnlyContent(article.content)) {
+      return { ok: false, reason: 'TL;DR-only content detected', stage: 'tldr_only_content' };
+    }
+    return { ok: true };
+  }
+}
+
+class QualityGateAgent {
+  getDateDecision(candidate, article) {
+    return getProcessingDateDecision(candidate, article);
+  }
+
+  getGarbageReason(title, content) {
+    return isGarbageContent(title, content);
+  }
+
+  getSaveDisposition(result) {
+    return getSaveResultDisposition(result);
+  }
+}
+
+class PersistenceAgent {
+  async isSourceDuplicate(url) {
+    return isSourceUrlDuplicate(url);
+  }
+
+  async isHashDuplicate(title) {
+    return isContentHashDuplicate(title);
+  }
+
+  async save(articleData) {
+    return saveArticle(articleData);
+  }
+}
+
+function createAgents(scraperRouter) {
+  return {
+    discovery: new DiscoveryAgent(scraperRouter),
+    detail: new DetailExtractionAgent(scraperRouter),
+    translation: new TranslationAgent(),
+    enhancement: new EnhancementAgent(),
+    quality: new QualityGateAgent(),
+    persistence: new PersistenceAgent(),
+  };
 }
 
 function finalizeRunReport(report, { databaseCountBefore = null, databaseCountAfter = null, circuitBreakerTriggered = false }) {
@@ -457,14 +582,14 @@ async function scrapeAllCategories(router) {
   };
 }
 
-async function verifyUnknownCandidates(candidates, scraperRouter, runReport) {
+async function verifyUnknownCandidates(candidates, agents, runReport) {
   const verifiedCandidates = [];
 
   for (const candidate of candidates) {
     const urlLabel = candidate.url.split('/').filter(Boolean).pop() || candidate.url;
     console.log(`🕵️  [${candidate.category}] Verifying unknown-date candidate: ${urlLabel}`);
 
-    const article = await scraperRouter.scrapeArticleDetails(candidate.url);
+    const article = await agents.detail.extract(candidate.url);
     if (!article) {
       runReport.metrics.scrapeFailed++;
       incrementCategoryStat(runReport.categories, candidate.category, 'failed');
@@ -478,7 +603,7 @@ async function verifyUnknownCandidates(candidates, scraperRouter, runReport) {
     }
 
     article.discoveryDateAssessment = candidate.dateAssessment;
-    const decision = getProcessingDateDecision(candidate, article);
+    const decision = agents.quality.getDateDecision(candidate, article);
 
     const MAX_RECENT_DAYS = MAX_RECENT_PUBLISH_DAYS;
     const isRecentEnough = decision.assessment.dateStatus === 'today' ||
@@ -559,7 +684,7 @@ async function verifyUnknownCandidates(candidates, scraperRouter, runReport) {
   return verifiedCandidates;
 }
 
-async function processArticleQueue(articleQueue, scraperRouter, runReport, options = {}) {
+async function processArticleQueue(articleQueue, agents, runReport, options = {}) {
   const { dryRun = false, shouldNotify = true } = options;
   let consecutiveFailures = 0;
   let circuitBreakerTriggered = false;
@@ -602,7 +727,7 @@ async function processArticleQueue(articleQueue, scraperRouter, runReport, optio
     console.log(`📰 [${category}] Processing: ${url}`);
     processedInThisRun.add(articleKey);
 
-    const sourceUrlAlreadyExists = await isSourceUrlDuplicate(url);
+    const sourceUrlAlreadyExists = await agents.persistence.isSourceDuplicate(url);
     if (sourceUrlAlreadyExists) {
       runReport.metrics.skippedSourceUrl++;
       recordRunBatch(runReport, 'skipped', {
@@ -617,7 +742,7 @@ async function processArticleQueue(articleQueue, scraperRouter, runReport, optio
       continue;
     }
 
-    const article = prefetchedArticle || await scraperRouter.scrapeArticleDetails(url);
+    const article = await agents.detail.extract(url, prefetchedArticle);
 
     if (!article) {
       runReport.metrics.scrapeFailed++;
@@ -641,7 +766,7 @@ async function processArticleQueue(articleQueue, scraperRouter, runReport, optio
 
     article.discoveryDateAssessment = candidate.dateAssessment || article.discoveryDateAssessment || null;
 
-    const dateDecision = getProcessingDateDecision(candidate, article);
+    const dateDecision = agents.quality.getDateDecision(candidate, article);
     if (dateDecision.action === 'reject') {
       if (dateDecision.stage === 'detail_future_date') {
         runReport.metrics.futureRejected++;
@@ -687,7 +812,7 @@ async function processArticleQueue(articleQueue, scraperRouter, runReport, optio
     article.dateSource = dateDecision.assessment.dateSource;
     article.dateConfidence = dateDecision.assessment.dateConfidence;
 
-    const garbageReason = isGarbageContent(article.title, article.content);
+    const garbageReason = agents.quality.getGarbageReason(article.title, article.content);
     if (garbageReason) {
       runReport.metrics.rejectedGarbage++;
       incrementCategoryStat(runReport.categories, category, 'rejected');
@@ -708,7 +833,7 @@ async function processArticleQueue(articleQueue, scraperRouter, runReport, optio
       continue;
     }
 
-    const isHashDup = await isContentHashDuplicate(article.title);
+    const isHashDup = await agents.persistence.isHashDuplicate(article.title);
     if (isHashDup) {
       runReport.metrics.skippedHashDuplicate++;
       recordRunBatch(runReport, 'skipped', {
@@ -727,12 +852,30 @@ async function processArticleQueue(articleQueue, scraperRouter, runReport, optio
     consecutiveFailures = 0;
 
     try {
-      const translatedArticle = await translateArticle(article);
+      const translatedArticle = await agents.translation.run(article);
 
       if (!translatedArticle || translatedArticle.title === article.title ||
           translatedArticle.title.includes('**Translation**') ||
           translatedArticle.content.includes('**Translation**')) {
         throw new Error('Translation failed or returned original/garbage text');
+      }
+
+      const enhancementGate = agents.enhancement.ensureFullContent(translatedArticle);
+      if (!enhancementGate.ok) {
+        runReport.metrics.rejectedSave++;
+        incrementCategoryStat(runReport.categories, category, 'rejected');
+        recordRunBatch(runReport, 'rejected', {
+          url,
+          category,
+          title: translatedArticle?.title || article.title,
+          stage: enhancementGate.stage,
+          reasonCode: 'TLDR_ONLY_CONTENT',
+          reason: enhancementGate.reason,
+          replayBatch,
+          replayReason,
+        });
+        console.log(`🚫 [${category}] Article rejected by enhancement gate: ${enhancementGate.reason}\n`);
+        continue;
       }
 
       const articleData = {
@@ -757,8 +900,8 @@ async function processArticleQueue(articleQueue, scraperRouter, runReport, optio
         continue;
       }
 
-      const result = await saveArticle(articleData);
-      const disposition = getSaveResultDisposition(result);
+      const result = await agents.persistence.save(articleData);
+      const disposition = agents.quality.getSaveDisposition(result);
 
       if (disposition === 'saved') {
         runReport.metrics.saved++;
@@ -850,6 +993,7 @@ async function processArticleQueue(articleQueue, scraperRouter, runReport, optio
 
 async function scrapeNews() {
   const scraperRouter = new ScraperRouter(CONFIG.FIRECRAWL_API_KEY);
+  const agents = createAgents(scraperRouter);
   const runLabel = getRequestedRunLabel();
   const runDate = getRequestedRunDate();
   const dryRun = process.argv.includes('--dry-run');
@@ -884,7 +1028,7 @@ async function scrapeNews() {
   currentCount = await getArticleCount();
   console.log(`\n📊 Current database: ${currentCount} articles\n`);
 
-  const scrapeSummary = await scrapeAllCategories(scraperRouter);
+  const scrapeSummary = await agents.discovery.discover();
   const articleCandidates = scrapeSummary.articles.map(ensureCandidateDateAssessment);
   runReport.metrics.rawDiscovered = scrapeSummary.rawCount;
   runReport.metrics.uniqueCandidates = articleCandidates.length;
@@ -904,7 +1048,7 @@ async function scrapeNews() {
 
   console.log(`📝 Found ${articleCandidates.length} unique article candidates...\n`);
 
-  const partitionedCandidates = partitionCandidatesByDate(articleCandidates, runReport.categories);
+  const partitionedCandidates = agents.discovery.partition(articleCandidates, runReport.categories);
   runReport.metrics.todayCandidates = partitionedCandidates.today.length;
   runReport.metrics.unknownCandidates = partitionedCandidates.unknown.length;
 
@@ -1003,7 +1147,7 @@ async function scrapeNews() {
     candidate.dateAssessment.ageDays <= MAX_RECENT_DAYS
   );
   const unknownMissingCandidates = missingCandidates.filter(candidate => candidate.dateStatus === 'unknown');
-  const verifiedUnknownCandidates = await verifyUnknownCandidates(unknownMissingCandidates, scraperRouter, runReport);
+  const verifiedUnknownCandidates = await verifyUnknownCandidates(unknownMissingCandidates, agents, runReport);
   const promotableCandidates = [...todayMissingCandidates, ...recentStaleMissing, ...verifiedUnknownCandidates];
   const newArticles = promotableCandidates.slice(0, CONFIG.MAX_ARTICLES_PER_RUN);
   const deferredByCap = promotableCandidates.slice(CONFIG.MAX_ARTICLES_PER_RUN);
@@ -1039,7 +1183,7 @@ async function scrapeNews() {
     return;
   }
 
-  const processResult = await processArticleQueue(newArticles, scraperRouter, runReport, {
+  const processResult = await processArticleQueue(newArticles, agents, runReport, {
     dryRun,
     shouldNotify: !dryRun,
   });
@@ -1116,6 +1260,7 @@ async function replayBatch(filePath) {
   const payload = JSON.parse(raw);
   const replayCandidates = buildReplayCandidates(payload, replayStatuses);
   const scraperRouter = new ScraperRouter(CONFIG.FIRECRAWL_API_KEY);
+  const agents = createAgents(scraperRouter);
   const runReport = createRunReport({
     mode: 'replay',
     scraperName: scraperRouter.getActiveScraperName(),
@@ -1154,7 +1299,7 @@ async function replayBatch(filePath) {
     return;
   }
 
-  const processResult = await processArticleQueue(replayCandidates, scraperRouter, runReport);
+  const processResult = await processArticleQueue(replayCandidates, agents, runReport);
   finalCount = await getArticleCount();
   finalizeRunReport(runReport, {
     databaseCountBefore: currentCount,
@@ -1173,6 +1318,7 @@ async function replayBatch(filePath) {
 
 async function testSingleUrl(url) {
   const scraperRouter = new ScraperRouter(CONFIG.FIRECRAWL_API_KEY);
+  const agents = createAgents(scraperRouter);
 
   console.log(`\n🧪 TEST MODE — Single article pipeline`);
   console.log(`📰 URL: ${url}`);
@@ -1183,7 +1329,7 @@ async function testSingleUrl(url) {
   if (dryRun) console.log('🔍 DRY RUN — will not save to database\n');
 
   console.log('\n1️⃣  scrapeArticleDetails()...');
-  const article = await scraperRouter.scrapeArticleDetails(url);
+  const article = await agents.detail.extract(url);
 
   if (!article) {
     console.error('❌ scrapeArticleDetails returned null — scraping failed');
@@ -1196,7 +1342,7 @@ async function testSingleUrl(url) {
   console.log(`   ✅ Slug: ${article.slug}`);
 
   console.log('\n2️⃣  isGarbageContent()...');
-  const garbageReason = isGarbageContent(article.title, article.content);
+  const garbageReason = agents.quality.getGarbageReason(article.title, article.content);
   if (garbageReason) {
     console.error(`   ❌ GARBAGE REJECTED: ${garbageReason}`);
     process.exit(1);
@@ -1204,10 +1350,16 @@ async function testSingleUrl(url) {
   console.log('   ✅ Passed — no garbage detected');
 
   console.log('\n3️⃣  translateArticle()...');
-  const translatedArticle = await translateArticle(article);
+  const translatedArticle = await agents.translation.run(article);
 
   if (!translatedArticle || translatedArticle.title === article.title) {
     console.error('   ❌ Translation failed or returned original text');
+    process.exit(1);
+  }
+
+  const enhancementGate = agents.enhancement.ensureFullContent(translatedArticle);
+  if (!enhancementGate.ok) {
+    console.error(`   ❌ ${enhancementGate.reason}`);
     process.exit(1);
   }
 
@@ -1235,7 +1387,7 @@ async function testSingleUrl(url) {
   }
 
   console.log('4️⃣  saveArticle()...');
-  const result = await saveArticle(articleData);
+  const result = await agents.persistence.save(articleData);
 
   if (result.success) {
     console.log(`   ✅ Saved! (ID: ${result.data?.id})`);
@@ -1248,7 +1400,7 @@ async function testSingleUrl(url) {
 }
 
 export async function runScraperCli(argv = process.argv) {
-  const replayFile = getCliArg('--replay-file');
+  const replayFile = getCliArg('--replay-file', argv);
   const testUrlIndex = argv.indexOf('--test-url');
   if (replayFile) {
     return replayBatch(replayFile);
