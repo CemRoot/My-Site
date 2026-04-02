@@ -96,7 +96,7 @@ Scrape HTML → Tokenize Embeds → Translate → Quality Check → Save to DB
 
 ### Issue: Articles with header links
 **Detection:** `line.includes('Ana Sayfa')`
-**Prevention:** Step 0 in news-scraper.js removes all lines up to date
+**Prevention:** Step 0 in `scripts/lib/scraper/ScrapeOrchestrator.js` removes all lines up to date
 **Fix:** If still appearing, check date pattern regex
 
 ### Issue: YouTube UI text
@@ -149,4 +149,3 @@ If validation fails in the news scraper:
 - **Validation time:** < 10ms per article
 - **Memory usage:** Negligible (string operations only)
 - **No external dependencies:** Pure JavaScript validation
-

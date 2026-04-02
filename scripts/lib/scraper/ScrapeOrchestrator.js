@@ -465,6 +465,14 @@ class QualityGateAgent {
 }
 
 class PersistenceAgent {
+  async getArticleCount() {
+    return getArticleCount();
+  }
+
+  async getExistingArticles(urls) {
+    return getExistingArticles(urls);
+  }
+
   async isSourceDuplicate(url) {
     return isSourceUrlDuplicate(url);
   }
@@ -1026,7 +1034,7 @@ async function scrapeNews(argv = process.argv) {
     );
   }
 
-  currentCount = await getArticleCount();
+  currentCount = await agents.persistence.getArticleCount();
   console.log(`\n📊 Current database: ${currentCount} articles\n`);
 
   const scrapeSummary = await agents.discovery.discover();
@@ -1117,7 +1125,7 @@ async function scrapeNews(argv = process.argv) {
   }
 
   console.log(`🔍 Checking which actionable articles already exist in database...`);
-  const existingUrls = await getExistingArticles(actionableCandidates.map(a => a.url));
+  const existingUrls = await agents.persistence.getExistingArticles(actionableCandidates.map(a => a.url));
   const existingCandidates = actionableCandidates.filter(candidate => existingUrls.has(candidate.url));
   const missingCandidates = actionableCandidates.filter(candidate => !existingUrls.has(candidate.url));
 
@@ -1215,7 +1223,7 @@ async function scrapeNews(argv = process.argv) {
     );
   }
 
-  finalCount = await getArticleCount();
+  finalCount = await agents.persistence.getArticleCount();
   finalizeRunReport(runReport, {
     databaseCountBefore: currentCount,
     databaseCountAfter: finalCount,
@@ -1271,7 +1279,7 @@ async function replayBatch(filePath, argv = process.argv) {
     runDate,
   });
 
-  let currentCount = await getArticleCount();
+  let currentCount = await agents.persistence.getArticleCount();
   let finalCount = currentCount;
   runReport.metrics.replayCandidates = replayCandidates.length;
 
@@ -1301,7 +1309,7 @@ async function replayBatch(filePath, argv = process.argv) {
   }
 
   const processResult = await processArticleQueue(replayCandidates, agents, runReport);
-  finalCount = await getArticleCount();
+  finalCount = await agents.persistence.getArticleCount();
   finalizeRunReport(runReport, {
     databaseCountBefore: currentCount,
     databaseCountAfter: finalCount,
