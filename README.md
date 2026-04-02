@@ -366,7 +366,7 @@ npm run vercel:status        # Check Vercel status
 
 ## 📐 Scrape Tech News — Architecture & Data Flow
 
-End-to-end view of the **Scrape Tech News** GitHub Actions workflow (`.github/workflows/scrape-tech-news.yml`) and the Node orchestrator (`scripts/news-scraper.js`). Diagrams use [Mermaid](https://mermaid.js.org/) and render on GitHub; for local editing, use a preview that supports fenced `mermaid` blocks.
+End-to-end view of the **Scrape Tech News** GitHub Actions workflow (`.github/workflows/scrape-tech-news.yml`) and the Node orchestrator (`scripts/lib/scraper/ScrapeOrchestrator.js`, CLI entry: `scripts/news-scraper.js`). Diagrams use [Mermaid](https://mermaid.js.org/) and render on GitHub; for local editing, use a preview that supports fenced `mermaid` blocks.
 
 ### Workflow (CI/CD)
 
@@ -526,7 +526,8 @@ The tech news pipeline now behaves as a deterministic daily agent, not an open-e
 
 ### Operational Rules
 
-- `scripts/news-scraper.js` is orchestration only.
+- `scripts/news-scraper.js` is CLI entrypoint only.
+- `scripts/lib/scraper/ScrapeOrchestrator.js` is the active orchestration and decision engine.
 - Scrapers discover candidates; orchestration decides whether they move forward.
 - Unknown dates must never silently become "today".
 - Source URL slug is the canonical slug for ingestion. Do not overwrite it with a translated English title slug.
@@ -734,7 +735,7 @@ My-Site/
 │   │   │   └── translator.js     # AI translation pipeline
 │   │   └── menu/                 # Telegram bot menu modules
 │   │       └── keyboards.js      # Keyboard layouts
-│   ├── news-scraper.js           # News scraping orchestrator
+│   ├── news-scraper.js           # News scraping CLI entrypoint
 │   ├── telegram-menu-handler.js  # Telegram bot menu handler
 │   ├── manual-article-scraper.js # Manual article processing
 │   ├── system-health-check.js    # Health monitoring
