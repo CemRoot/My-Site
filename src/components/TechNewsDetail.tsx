@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, ArrowLeft, Clock, Share2 } from 'lucide-react';
+import { Calendar, ArrowLeft, ExternalLink, Clock, Share2 } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Skeleton } from './ui/skeleton';
@@ -15,6 +15,7 @@ import ErrorBoundary from './ErrorBoundary';
 import { formatDate } from '../lib/utils/formatDate';
 import {
   getCategoryColor,
+  getSourceDomain,
   estimateReadTime,
   sanitizeArticleContent,
 } from '../lib/utils/articleHelpers';
@@ -225,6 +226,29 @@ function TechNewsDetail() {
           <div className="prose prose-lg dark:prose-invert max-w-none">
             <SmartMarkdown content={sanitizedContent} />
           </div>
+
+          {article.originalSource && (
+            <>
+              <Separator />
+              <div className="bg-primary/5 p-6 rounded-lg border border-primary/10">
+                <p className="text-sm text-muted-foreground mb-3">Original Article Source</p>
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                >
+                  <a
+                    href={article.originalSource}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2"
+                  >
+                    Read on {getSourceDomain(article.originalSource)}
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </Button>
+              </div>
+            </>
+          )}
 
         </article>
 

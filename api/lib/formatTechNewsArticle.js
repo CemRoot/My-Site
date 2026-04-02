@@ -1,5 +1,7 @@
 /**
- * Public API shape for tech news articles — excludes internal/source URL fields.
+ * Public API shape for tech news articles.
+ * Detail view (includeContent=true) also exposes original_source so the
+ * frontend can link back to the primary news outlet.
  */
 
 /**
@@ -22,6 +24,9 @@ export function formatTechNewsArticle(article, includeContent = false) {
 
   if (includeContent && article.content) {
     formatted.content = article.content;
+    if (article.original_source) {
+      formatted.originalSource = article.original_source;
+    }
   }
 
   return formatted;

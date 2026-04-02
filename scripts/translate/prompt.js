@@ -114,11 +114,14 @@ ${content}`;
 
 /**
  * User prompt for translating short text (titles, descriptions).
- * Uses strict "translate only" instruction to prevent LLM from expanding content.
+ * Accepts optional article context to improve accuracy.
  */
-export function createShortTextTranslationPrompt(content) {
-  return `Translate this Turkish headline to English. Output ONLY the translated headline — nothing else. Do not add explanations, descriptions, or extra sentences.
+export function createShortTextTranslationPrompt(content, context = '') {
+  const contextBlock = context
+    ? `\nArticle context (first 300 chars, for reference only — do NOT include this in your output):\n${context.substring(0, 300)}\n`
+    : '';
 
+  return `Translate this Turkish headline to English. Output ONLY the translated headline — nothing else. Do not add explanations, descriptions, or extra sentences.${contextBlock}
 ${content}`;
 }
 

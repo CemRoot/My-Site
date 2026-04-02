@@ -101,7 +101,7 @@ function calculateSimilarity(str1, str2) {
   return matches / longer.length;
 }
 
-async function translateWithModel(model, text, retry = false, shortText = false) {
+async function translateWithModel(model, text, retry = false, shortText = false, context = '') {
   const systemPrompt = retry
     ? 'Translate from Turkish to English. Output ONLY the English translation. Do NOT include any notes, explanations, or the original text.'
     : (shortText
@@ -110,7 +110,7 @@ async function translateWithModel(model, text, retry = false, shortText = false)
 
   const userPrompt = retry
     ? `Translate this Turkish text to English.\n\nCRITICAL RULES:\n1. Output ONLY the English translation, nothing else.\n2. Keep ALL __WIDGET_0__, __WIDGET_1__, __WIDGET_N__ placeholders exactly as-is. Do not translate, remove, or modify them.\n3. No notes, no explanations.\n\nText:\n${text}`
-    : (shortText ? createShortTextTranslationPrompt(text) : createTranslationPrompt(text));
+    : (shortText ? createShortTextTranslationPrompt(text, context) : createTranslationPrompt(text));
 
   const completion = await groq.chat.completions.create({
     model,
@@ -277,7 +277,7 @@ function validateTranslationQuality(result) {
   return { valid: true };
 }
 
-export async function translateText(text, useOllama = false, fastMode = false, shortText = false) {
+export async function translateText(text, useOllama = false, fastMode = false, shortText = false, context = '') {
   if (!text || text.trim().length === 0) return text;
 
   const { content: cleanContent, widgets } = preserveWidgets(text);
@@ -311,7 +311,7 @@ export async function translateText(text, useOllama = false, fastMode = false, s
       const isRetry = attempt > 0;
 
       try {
-        const result = await translateWithModel(model, cleanContent, isRetry, shortText);
+        const result = await translateWithModel(model, cleanContent, isRetry, shortText, context);
         const quality = validateTranslationQuality(result);
 
         if (quality.valid) {
@@ -442,8 +442,9 @@ export async function translateArticle(article) {
   console.log(`   Content length: ${article.content.length} chars`);
 
   try {
-    console.log(`   🔤 Translating title (fast, shortText)...`);
-    let translatedTitle = cleanTranslation(await translateText(article.title, false, true, true));
+    const contentExcerpt = (article.content || '').substring(0, 300);
+    console.log(`   🔤 Translating title (primary model, with context)...`);
+    let translatedTitle = cleanTranslation(await translateText(article.title, false, false, true, contentExcerpt));
     translatedTitle = translatedTitle.replace(/^\*{1,3}(.+?)\*{1,3}$/s, '$1').replace(/\*{1,3}/g, '').trim();
     translatedTitle = translatedTitle
       .replace(/__WIDGET_\d+__/g, '')
@@ -462,8 +463,8 @@ export async function translateArticle(article) {
     }
     await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.TRANSLATION_DELAY));
 
-    console.log(`   📝 Translating description (fast, shortText)...`);
-    let translatedDescription = cleanTranslation(await translateText(article.description, false, true, true));
+    console.log(`   📝 Translating description (primary model, with context)...`);
+    let translatedDescription = cleanTranslation(await translateText(article.description, false, false, true, contentExcerpt));
     // Strip widget placeholders and markdown from description
     translatedDescription = translatedDescription
       .replace(/__WIDGET_\d+__/g, '')

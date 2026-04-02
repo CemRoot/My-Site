@@ -58,6 +58,7 @@ export interface Article {
   createdAt: string;
   originalTitle?: string;
   category?: string;
+  originalSource?: string;
 }
 
 /** Response shape from /api/tech-news */
