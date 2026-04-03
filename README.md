@@ -362,6 +362,24 @@ npm run health:check         # Health check
 npm run vercel:status        # Check Vercel status
 ```
 
+#### Manual / Forced URL Ingest
+
+When specific articles are missed by scheduled discovery, trigger `workflow_dispatch` and fill in the **force_urls** input:
+
+```
+force_urls:  https://nuvemmag.com/article-1/,https://nuvemmag.com/article-2/
+```
+
+The pipeline will bypass category discovery and process those URLs directly through the full pipeline (detail scrape → quality → translation → persistence). Normal duplicate and quality checks remain active.
+
+Locally:
+
+```bash
+npm run scrape:news -- --force-urls "https://nuvemmag.com/some-article/"
+# or via env var
+TECH_NEWS_FORCE_URLS="https://nuvemmag.com/a/,https://nuvemmag.com/b/" npm run scrape:news
+```
+
 ---
 
 ## 📐 Scrape Tech News — Architecture & Data Flow
@@ -402,7 +420,45 @@ flowchart TB
 
 **Concurrency:** `group: tech-news-daily-agent-${{ github.ref }}` with `cancel-in-progress: false` so overlapping runs are not cancelled mid-flight.
 
-**Scheduled CI vs local `npm run scrape:news`:** On a schedule, Actions runs a **preflight** step (cheap headline URLs vs Supabase) and may skip `npm ci` and the full scraper when nothing new is expected. Locally, `npm run scrape:news` always runs the full pipeline. Use `npm run scrape:news:parity` to mirror scheduled behavior, or trigger **workflow_dispatch** in GitHub (option **skip_preflight** bypasses the gate entirely for debugging).
+**Scheduled CI vs local `npm run scrape:news`:** On a schedule, Actions runs a **preflight** step (cheap headline URLs vs Supabase) and may skip `npm ci` and the full scraper when nothing new is expected. Locally, `npm run scrape:news` always runs the full pipeline. Use `npm run scrape:news:parity` to mirror scheduled behavior, or trigger **workflow_dispatch** in GitHub.
+
+**`workflow_dispatch` inputs:**
+- `skip_preflight` (boolean) — bypass the preflight headline gate and always run the full scraper.
+- `force_urls` (string) — comma-separated source URLs to force-ingest directly, skipping discovery (useful when specific articles are missed by the scheduled run).
+
+### Agent Architecture
+
+The pipeline in `scripts/lib/scraper/ScrapeOrchestrator.js` consists of **6 agents**:
+
+| # | Agent | Responsibility |
+|---|-------|----------------|
+| 1 | **DiscoveryAgent** | Fetches category pages via `ScraperRouter` (Firecrawl → Cheerio fallback), runs AI list parsing + regex fallback, deduplicates candidates across categories. |
+| 2 | **DetailExtractionAgent** | Fetches the full article page, extracts title/description/content/date/embeds. |
+| 3 | **TranslationAgent** | Translates Turkish content to English via Groq, with placeholder swap to protect embed tokens. |
+| 4 | **EnhancementAgent** | Quality gate: rejects TL;DR-only content, validates English completeness. |
+| 5 | **QualityGateAgent** | Date integrity checks, garbage content detection, save disposition routing. |
+| 6 | **PersistenceAgent** | Duplicate detection (source URL, slug prefix, content hash) and Supabase insert. |
+
+### LLM Models
+
+| Role | Model | Provider |
+|------|-------|----------|
+| Translation (primary) | `llama-3.3-70b-versatile` | Groq |
+| Translation (fallback) | `openai/gpt-oss-20b` | Groq |
+| Translation (last resort) | `llama-3.1-8b-instant` | Groq |
+| List extraction / parser | `llama-3.1-8b-instant` | Groq |
+| Enhancement checks | `llama-3.1-8b-instant` | Groq |
+| Optional (content translation) | `gemini-3-flash-preview:cloud` | Ollama cloud |
+
+Required secrets: `GROQ_API_KEY`, `GROQ_PARSER_API_KEY`, `OLLAMA_API_KEY` (optional fallback).
+
+### Slug Generation
+
+All new articles use an **English-safe ASCII slug** generated from the translated English title:
+
+- Turkish and Latin-extended characters are transliterated before slug generation (e.g. `ğ→g`, `ü→u`, `ş→s`, `ı→i`, `ö→o`, `ç→c`).
+- Slugs are derived from the post-translation English title, not the Turkish source URL.
+- Existing Turkish slugs can be migrated using the guidance in `scripts/migrate/update-turkish-slugs.sql`.
 
 ### Orchestration pipeline (application)
 
@@ -530,7 +586,7 @@ The tech news pipeline now behaves as a deterministic daily agent, not an open-e
 - `scripts/lib/scraper/ScrapeOrchestrator.js` is the active orchestration and decision engine.
 - Scrapers discover candidates; orchestration decides whether they move forward.
 - Unknown dates must never silently become "today".
-- Source URL slug is the canonical slug for ingestion. Do not overwrite it with a translated English title slug.
+- **Slugs are always generated from the translated English title** (via `generateSlug` in `scripts/lib/scraper/slugUtils.js`). The Turkish source URL slug is intentionally ignored for new records.
 - Future or inconsistent dates are deferred or rejected, not normalized into production data.
 - Replay only helps after conflicting bad rows are deleted or repaired.
 

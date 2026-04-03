@@ -13,6 +13,9 @@ import { supabase } from '../supabaseAdmin.js';
 import { SCRAPER_CONFIG } from './config.js';
 import { validateArticle, autoFixArticle } from '../../validation/smartArticleProcessor.js';
 import { getTurkeyIsoDate, normalizeSourceDate } from './dateUtils.js';
+import { generateSlug, transliterateToAscii } from './slugUtils.js';
+
+export { generateSlug, transliterateToAscii };
 
 export function extractSlugFromUrl(url) {
   if (!url) return null;
@@ -39,59 +42,6 @@ export function normalizeSourceUrl(url) {
   }
 }
 
-const SLUG_STOP_WORDS = new Set([
-  'a', 'an', 'and', 'as', 'at', 'be', 'by', 'for', 'from',
-  'in', 'into', 'is', 'of', 'on', 'or', 'that', 'the',
-  'this', 'to', 'with',
-]);
-
-function trimTrailingStopWords(words) {
-  while (words.length > 4 && SLUG_STOP_WORDS.has(words[words.length - 1])) {
-    words.pop();
-  }
-}
-
-export function generateSlug(title) {
-  const normalizedWords = title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, ' ')
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (normalizedWords.length === 0) {
-    return 'article';
-  }
-
-  const slugWords = [];
-  for (const word of normalizedWords) {
-    const candidate = [...slugWords, word].join('-').replace(/-+/g, '-');
-    if (candidate.length > 72 && slugWords.length >= 6) {
-      break;
-    }
-
-    slugWords.push(word);
-
-    if (slugWords.length >= 10) {
-      break;
-    }
-  }
-
-  trimTrailingStopWords(slugWords);
-
-  let slug = slugWords.join('-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-
-  if (slug.length > 60) {
-    const shortened = slug.substring(0, 60).replace(/-+$/g, '');
-    const lastDash = shortened.lastIndexOf('-');
-    slug = lastDash > 20 ? shortened.substring(0, lastDash) : shortened;
-  }
-
-  const finalWords = slug.split('-').filter(Boolean);
-  trimTrailingStopWords(finalWords);
-  slug = finalWords.join('-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-
-  return slug || normalizedWords.slice(0, 4).join('-');
-}
 
 function normalizeSlug(slug) {
   if (!slug) return null;

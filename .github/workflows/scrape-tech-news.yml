@@ -57,6 +57,10 @@ on:
         description: 'Bypass preflight (always run full scrape; no headline-vs-DB gate)'
         type: boolean
         default: false
+      force_urls:
+        description: 'Comma-separated source URLs to force-ingest (skips discovery; bypasses date gate)'
+        type: string
+        default: ''
 
 # Keep runs deterministic and auditable (see header: cancel-in-progress false by design)
 concurrency:
@@ -88,6 +92,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TECH_NEWS_SKIP_PREFLIGHT: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_preflight == true && '1' || '0' }}
           TECH_NEWS_PREFLIGHT_FORCE_PROCEED: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_preflight == false && '1' || '0' }}
+          TECH_NEWS_FORCE_URLS: ${{ inputs.force_urls }}
         run: node scripts/ci/tech-news-preflight.mjs
 
       - name: 📦 Install dependencies
@@ -107,6 +112,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
+          TECH_NEWS_FORCE_URLS: ${{ inputs.force_urls }}
           NODE_OPTIONS: '--max-old-space-size=4096'
           TZ: UTC
         run: |

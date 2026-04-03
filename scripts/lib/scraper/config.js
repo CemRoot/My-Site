@@ -17,10 +17,11 @@ export const SCRAPER_CONFIG = {
   GROQ_API_KEY: env.GROQ_API_KEY,
   GROQ_PARSER_API_KEY: env.GROQ_PARSER_API_KEY,
   /**
-   * Rows taken from each category list (newest first on NuvemMag). No need to walk old pages
-   * when we only care about very recent news.
+   * Rows taken from each category list (newest first on NuvemMag). Increased to
+   * 20 to reduce the chance of missing recent articles when a category has many
+   * same-day posts.
    */
-  MAX_ARTICLES_PER_CATEGORY: 12,
+  MAX_ARTICLES_PER_CATEGORY: 20,
   /** Only first page per category unless you explicitly need older archive pages. */
   CATEGORY_ARCHIVE_MAX_PAGES: 1,
   /**
