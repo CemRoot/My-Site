@@ -237,7 +237,9 @@ function mapReasonCode(stage) {
 }
 
 function getPreferredArticleSlug(article) {
-  return article?.slug || generateSlug(article?.title || '');
+  // Always generate slug from the (translated) English title.
+  // Intentionally ignore article.slug which is derived from the Turkish source URL.
+  return generateSlug(article?.title || '');
 }
 
 function getProcessingDateDecision(candidate, article) {
@@ -1408,15 +1410,301 @@ async function testSingleUrl(url) {
   }
 }
 
+// ─── Force URL ingest mode ───
+//
+// Directly processes one or more source URLs without running discovery.
+// Applies the full pipeline: detail extract → quality → translate → enhance → persist.
+// The date gate is relaxed for forced URLs: any article date is accepted as long as
+// it is not future-dated. This allows ingesting recent articles missed by discovery.
+
+async function forceIngestUrls(urls, argv = process.argv) {
+  const scraperRouter = new ScraperRouter(CONFIG.FIRECRAWL_API_KEY);
+  const agents = createAgents(scraperRouter);
+  const runLabel = getRequestedRunLabel(argv);
+  const runDate = getRequestedRunDate(argv);
+  const dryRun = argv.includes('--dry-run');
+
+  console.log(`\n🎯 FORCE-INGEST MODE — ${urls.length} URL(s) provided`);
+  console.log(`🔧 Scraper: ${scraperRouter.getActiveScraperName()}`);
+  console.log('='.repeat(60));
+  urls.forEach((u, i) => console.log(`  ${i + 1}. ${u}`));
+  console.log('='.repeat(60));
+
+  if (dryRun) {
+    console.log('🔍 DRY RUN — database saves and Telegram notifications are disabled\n');
+  }
+
+  const runReport = createRunReport({
+    mode: 'force_ingest',
+    scraperName: scraperRouter.getActiveScraperName(),
+    runLabel,
+    runDate,
+  });
+
+  const currentCount = await agents.persistence.getArticleCount();
+  console.log(`\n📊 Current database: ${currentCount} articles\n`);
+
+  // Build candidates with a forced category; duplicate handling still applies.
+  const forcedCandidates = urls.map(url => ({
+    url,
+    category: 'News',
+    replayBatch: 'force_ingest',
+    replayReason: 'Manually forced via workflow_dispatch force_urls input',
+    prefetchedArticle: null,
+    dateStatus: 'unknown', // relaxed gate — let detail scrape resolve
+    dateAssessment: { dateStatus: 'unknown', datePriority: 50 },
+    datePriority: 50,
+  }));
+
+  runReport.categories = [{
+    tag: 'ForcedIngest',
+    name: 'Forced Ingest',
+    slug: null,
+    url: '',
+    discovered: forcedCandidates.length,
+    todayCandidates: 0,
+    unknownCandidates: forcedCandidates.length,
+    alreadyInDb: 0,
+    verifiedUnknown: 0,
+    staleSkipped: 0,
+    futureRejected: 0,
+    saved: 0,
+    rejected: 0,
+    deferred: 0,
+    failed: 0,
+  }];
+
+  runReport.metrics.rawDiscovered = forcedCandidates.length;
+  runReport.metrics.uniqueCandidates = forcedCandidates.length;
+
+  // Check which are already in DB (force mode still respects duplicate detection).
+  console.log('🔍 Checking which URLs already exist in database...');
+  const existingUrls = await agents.persistence.getExistingArticles(forcedCandidates.map(c => c.url));
+  const alreadyInDb = forcedCandidates.filter(c => existingUrls.has(c.url));
+  const toProcess = forcedCandidates.filter(c => !existingUrls.has(c.url));
+
+  runReport.metrics.alreadyInDb = alreadyInDb.length;
+  runReport.metrics.skippedExisting = alreadyInDb.length;
+  runReport.metrics.newAfterDbCheck = toProcess.length;
+
+  for (const c of alreadyInDb) {
+    recordRunBatch(runReport, 'skipped', {
+      url: c.url,
+      category: c.category,
+      stage: 'already_in_db',
+      reason: 'Force-ingest: source_url already exists in DB',
+    });
+    console.log(`⏭️  Already in DB — skipping: ${c.url}`);
+  }
+
+  if (toProcess.length === 0) {
+    console.log('\nℹ️  All provided URLs already exist in the database.\n');
+    const finalCount = await agents.persistence.getArticleCount();
+    finalizeRunReport(runReport, { databaseCountBefore: currentCount, databaseCountAfter: finalCount });
+    await persistRunReport(runReport, runLabel ? `tech-news-force-ingest-run-${runLabel}` : 'tech-news-force-ingest-run');
+    return;
+  }
+
+  console.log(`\n✅ URLs to process: ${toProcess.length}\n`);
+
+  if (!dryRun) {
+    await notifyTelegram(
+      `🎯 <b>Force Ingest Başladı</b>\n` +
+      `📋 ${toProcess.length} URL | 🔧 ${scraperRouter.getActiveScraperName()}\n` +
+      `${runLabel ? `🏷️ ${runLabel}\n` : ''}` +
+      `🕐 ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`
+    );
+  }
+
+  let consecutiveFailures = 0;
+
+  for (const candidate of toProcess) {
+    const { url } = candidate;
+    const urlLabel = url.split('/').filter(Boolean).pop() || url;
+
+    if (consecutiveFailures >= CONFIG.MAX_CONSECUTIVE_FAILURES) {
+      console.log(`\n🚨 Circuit breaker activated: ${consecutiveFailures} consecutive failures`);
+      runReport.metrics.circuitBreakerTrips = (runReport.metrics.circuitBreakerTrips || 0) + 1;
+      break;
+    }
+
+    console.log(`📰 [Force] Processing: ${url}`);
+
+    const article = await agents.detail.extract(url);
+    if (!article) {
+      runReport.metrics.scrapeFailed++;
+      recordRunBatch(runReport, 'failed', {
+        url, category: candidate.category,
+        stage: 'detail_extraction',
+        reason: 'scrapeArticleDetails returned null',
+        replayBatch: candidate.replayBatch,
+      });
+      console.log(`❌ [Force] Failed to scrape: ${urlLabel}\n`);
+      consecutiveFailures++;
+      continue;
+    }
+
+    // Date check: reject future-dated articles but accept today/stale/unknown.
+    const dateDecision = getProcessingDateDecision(candidate, article);
+    if (dateDecision.action === 'reject' && dateDecision.stage === 'detail_future_date') {
+      runReport.metrics.futureRejected++;
+      recordRunBatch(runReport, 'rejected', {
+        url, category: candidate.category,
+        stage: dateDecision.stage,
+        reason: dateDecision.reason,
+        replayBatch: candidate.replayBatch,
+      });
+      console.log(`🚫 [Force] Rejected — future date: ${urlLabel}\n`);
+      consecutiveFailures = 0;
+      continue;
+    }
+
+    const garbageReason = agents.quality.getGarbageReason(article.title, article.content);
+    if (garbageReason) {
+      runReport.metrics.rejectedGarbage++;
+      recordRunBatch(runReport, 'rejected', {
+        url, category: candidate.category,
+        stage: 'garbage_content',
+        reason: garbageReason,
+        replayBatch: candidate.replayBatch,
+      });
+      console.log(`🚫 [Force] Rejected garbage: ${garbageReason.substring(0, 80)}\n`);
+      consecutiveFailures = 0;
+      continue;
+    }
+
+    const isHashDup = await agents.persistence.isHashDuplicate(article.title);
+    if (isHashDup) {
+      runReport.metrics.skippedHashDuplicate++;
+      recordRunBatch(runReport, 'skipped', {
+        url, category: candidate.category,
+        stage: 'content_hash_duplicate',
+        reason: 'same article already exists in DB (hash match)',
+        title: article.title,
+        replayBatch: candidate.replayBatch,
+      });
+      console.log(`⏭️  [Force] Skipping — content hash duplicate: ${urlLabel}\n`);
+      consecutiveFailures = 0;
+      continue;
+    }
+
+    consecutiveFailures = 0;
+
+    try {
+      const translatedArticle = await agents.translation.run(article);
+
+      if (!translatedArticle || translatedArticle.title === article.title ||
+          translatedArticle.title.includes('**Translation**') ||
+          translatedArticle.content.includes('**Translation**')) {
+        throw new Error('Translation failed or returned original/garbage text');
+      }
+
+      const enhancementGate = agents.enhancement.ensureFullContent(translatedArticle);
+      if (!enhancementGate.ok) {
+        runReport.metrics.rejectedSave++;
+        recordRunBatch(runReport, 'rejected', {
+          url, category: candidate.category,
+          title: translatedArticle?.title || article.title,
+          stage: enhancementGate.stage,
+          reasonCode: 'TLDR_ONLY_CONTENT',
+          reason: enhancementGate.reason,
+          replayBatch: candidate.replayBatch,
+        });
+        console.log(`🚫 [Force] Rejected by enhancement gate: ${enhancementGate.reason}\n`);
+        continue;
+      }
+
+      const articleData = {
+        ...translatedArticle,
+        category: candidate.category,
+        slug: getPreferredArticleSlug(translatedArticle),
+        discoveryDateAssessment: article.dateAssessment || null,
+      };
+
+      if (dryRun) {
+        recordRunBatch(runReport, 'skipped', {
+          url, category: candidate.category,
+          title: articleData.title,
+          slug: articleData.slug,
+          stage: 'dry_run',
+          reason: 'Dry run skipped database save',
+          replayBatch: candidate.replayBatch,
+        });
+        console.log(`🧪 [Force] Dry run — slug would be: ${articleData.slug}\n`);
+        continue;
+      }
+
+      const result = await agents.persistence.save(articleData);
+      const disposition = agents.quality.getSaveDisposition(result);
+
+      if (disposition === 'saved') {
+        runReport.metrics.saved++;
+        recordRunBatch(runReport, 'saved', {
+          url, category: candidate.category,
+          title: articleData.title,
+          slug: result.data?.slug || articleData.slug,
+          articleId: result.data?.id || null,
+          replayBatch: candidate.replayBatch,
+        });
+        console.log(`✅ [Force] Saved: "${articleData.title.substring(0, 60)}"\n`);
+      } else {
+        runReport.metrics.rejectedSave++;
+        recordRunBatch(runReport, disposition === 'deferred' ? 'deferred' : 'rejected', {
+          url, category: candidate.category,
+          title: articleData.title,
+          slug: articleData.slug,
+          stage: 'save',
+          reason: result.error?.message || result.reason || 'Failed to save',
+          replayBatch: candidate.replayBatch,
+        });
+        console.log(`🚫 [Force] Not saved (${disposition}): ${result.error?.message || result.reason}\n`);
+      }
+    } catch (translationError) {
+      runReport.metrics.translationFailed++;
+      recordRunBatch(runReport, 'failed', {
+        url, category: candidate.category,
+        stage: 'translation',
+        reason: translationError.message,
+        replayBatch: candidate.replayBatch,
+      });
+      console.log(`❌ [Force] Translation failed: ${translationError.message}\n`);
+    }
+
+    await new Promise(resolve => setTimeout(resolve, CONFIG.RATE_LIMIT_DELAY));
+  }
+
+  const finalCount = await agents.persistence.getArticleCount();
+  finalizeRunReport(runReport, {
+    databaseCountBefore: currentCount,
+    databaseCountAfter: finalCount,
+  });
+
+  console.log('='.repeat(60));
+  console.log(`🎉 Force Ingest Completed!`);
+  console.log(`📊 Saved: ${runReport.metrics.saved} | Rejected: ${runReport.metrics.rejected} | Skipped: ${runReport.metrics.skipped} | Failed: ${runReport.metrics.failed}`);
+  console.log('='.repeat(60));
+
+  await persistRunReport(runReport, runLabel ? `tech-news-force-ingest-run-${runLabel}` : 'tech-news-force-ingest-run');
+}
+
 export async function runScraperCli(argv = process.argv) {
   const replayFile = getCliArg('--replay-file', argv);
   const testUrlIndex = argv.indexOf('--test-url');
+  const forceUrlsArg = getCliArg('--force-urls', argv) || process.env.TECH_NEWS_FORCE_URLS || '';
+
   if (replayFile) {
     return replayBatch(replayFile, argv);
   }
 
   if (testUrlIndex !== -1 && argv[testUrlIndex + 1]) {
     return testSingleUrl(argv[testUrlIndex + 1]);
+  }
+
+  if (forceUrlsArg) {
+    const urls = forceUrlsArg.split(',').map(u => u.trim()).filter(Boolean);
+    if (urls.length > 0) {
+      return forceIngestUrls(urls, argv);
+    }
   }
 
   return scrapeNews(argv);
