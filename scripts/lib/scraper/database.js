@@ -343,18 +343,26 @@ export async function isSourceUrlDuplicate(url) {
   }
 }
 
-async function ensureUniqueSlug(baseSlug) {
+/**
+ * @param {string} baseSlug
+ * @param {string | null} [excludeArticleId] When updating an existing row, ignore that row's current slug when checking collisions.
+ */
+export async function ensureUniqueSlug(baseSlug, excludeArticleId = null) {
   if (!baseSlug) return baseSlug;
 
   let candidateSlug = baseSlug;
   let suffix = 2;
 
   while (suffix <= 25) {
-    const { data, error } = await supabase
+    let q = supabase
       .from('tech_news_articles')
       .select('id')
       .eq('slug', candidateSlug)
       .limit(1);
+    if (excludeArticleId) {
+      q = q.neq('id', excludeArticleId);
+    }
+    const { data, error } = await q;
 
     if (error) {
       console.error('Error checking slug uniqueness:', error);
