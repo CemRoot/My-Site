@@ -48,6 +48,10 @@ const runLabel = report.runLabel ? escapeTelegramHtml(report.runLabel) : '';
 const line = (label, value) =>
   `${escapeTelegramHtml(label)} <code>${escapeTelegramHtml(String(value))}</code>`;
 
+/**
+ * Summarize batch reasons as "REASON (count)" strings.
+ * Uses reasonCode first, then stage, then reason text; sorts by count desc then reason asc.
+ */
 function summarizeBatchReasons(items, limit = 3) {
   const counts = new Map();
   for (const item of Array.isArray(items) ? items : []) {
