@@ -60,11 +60,20 @@
 
     <!-- Hero image loaded eagerly in Hero.tsx with fetchPriority="high" -->
 
-    <!-- Preload critical fonts for faster FCP -->
-    <link rel="preload" href="/fonts/geist-sans/Geist-Regular.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/hobo-bt.woff" as="font" type="font/woff" crossorigin />
-
-    <!-- Geist Font - Loaded locally via npm package -->
+    <!-- Geist Regular: early @font-face + html/body font (replaces font preload; avoids unused-preload warnings). -->
+    <style>
+      @font-face {
+        font-family: 'Geist Sans';
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+        src: url('/fonts/geist-sans/Geist-Regular.woff2') format('woff2');
+      }
+      html,
+      body {
+        font-family: 'Geist Sans', ui-sans-serif, system-ui, sans-serif;
+      }
+    </style>
 
     <!-- Preconnect to Sentry for faster error reporting -->
     <link rel="dns-prefetch" href="https://o4508211887607104.ingest.de.sentry.io" />
