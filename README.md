@@ -548,7 +548,7 @@ flowchart TB
 |--------|----------------|
 | **Triggers** | Weekday cron (3×) or manual `workflow_dispatch`. |
 | **Environment** | `TECH_NEWS_RUN_DATE` (Europe/Istanbul) and `TECH_NEWS_RUN_LABEL` tie logs, artifacts, and Telegram to a single run. |
-| **Discovery** | `ScraperRouter` → Firecrawl for HTML/markdown; Groq extracts structured article rows; regex supplements; URL merge removes cross-category duplicates. |
+| **Discovery** | `ScraperRouter` → Firecrawl for HTML/markdown (up to 2 archive pages per category, 25 articles/page); Groq extracts structured article rows; regex supplements; URL merge removes cross-category duplicates. Legacy `/post/` URL 404s trigger an automatic canonical-URL retry. |
 | **Dates** | Candidates classified; future dates rejected; mismatches between list and detail dates can **defer** work. |
 | **Deduplication** | Bulk Supabase lookup before expensive translation; `source_url` / slug rules apply. |
 | **Processing** | Detail scrape → cleaning & embed preservation → Groq translation with quality gates → `tech_news_articles` insert. |
@@ -572,13 +572,14 @@ The tech news pipeline now behaves as a deterministic daily agent, not an open-e
 
 ### Decision Flow
 
-1. Discover candidates from the six configured category endpoints (newest-first listings).
+1. Discover candidates from the six configured category endpoints, scanning up to 2 archive pages per category (25 articles per page, newest-first).
 2. Normalize each candidate date in Turkey time and classify it as `today`, `unknown`, `stale`, or `future`.
-3. Bulk-check normalized `source_url` values in Supabase before expensive work.
-4. Skip candidates that already exist in the database.
-5. Verify `unknown` candidates with detail metadata before translation or save.
-6. Translate, validate, and save only valid missing articles.
-7. Write a replayable JSON artifact for every run under `artifacts/tech-news-runs/`.
+3. `stale` articles within the 5-day recency window (`MAX_RECENT_PUBLISH_DAYS`) are still eligible — this safety net catches articles missed in a previous run due to the per-page discovery cap.
+4. Bulk-check normalized `source_url` values in Supabase before expensive work.
+5. Skip candidates that already exist in the database.
+6. Verify `unknown` candidates with detail metadata before translation or save.
+7. Translate, validate, and save only valid missing articles.
+8. Write a replayable JSON artifact for every run under `artifacts/tech-news-runs/`.
 
 ### Operational Rules
 

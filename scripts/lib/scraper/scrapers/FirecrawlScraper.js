@@ -341,9 +341,9 @@ export class FirecrawlScraper extends BaseScraper {
               role: 'system',
               content: `You are a web scraping assistant. Extract article information from Turkish tech news markdown.
 
-CRITICAL URL PATTERNS (updated December 2025):
-- NEW format: https://nuvemmag.com/article-slug-here/
-- OLD format: https://nuvemmag.com/post/article-slug/ (still valid)
+CRITICAL URL PATTERNS:
+- PREFERRED format: https://nuvemmag.com/article-slug-here/
+- LEGACY format: https://nuvemmag.com/post/article-slug/ (deprecated — most return 404; do NOT include these)
 - Do NOT include category URLs like /category/
 - Do NOT include utility pages: /hesabim/, /giris/, /kayit/, /iletisim/, /hakkimizda/, /gizlilik/, /cerez/, /my-account/, /login/, /register/, /contact/, /about/, /privacy/, /cookie/
 - ONLY include actual news article URLs
@@ -353,9 +353,9 @@ DATE FORMATS to recognize:
 - Relative: "3 gün önce", "11 saat önce", "1 hafta önce", "2 ay önce", "bugün", "dün"
 
 RULES:
-1. Extract article URLs (NOT category URLs)
+1. Extract article URLs (NOT category URLs, NOT /post/ legacy URLs)
 2. Extract publication date (absolute or relative format)
-3. Return ONLY valid JSON array
+3. Return ONLY a valid JSON array — no extra text, no markdown fences
 4. If no articles found, return: []
 
 Output JSON:
@@ -363,7 +363,8 @@ Output JSON:
 
 IMPORTANT:
 - Extract every visible article in this markdown chunk.
-- Keep URLs unique.`,
+- Keep URLs unique.
+- Output must be parseable JSON with no trailing commas.`,
             },
             {
               role: 'user',

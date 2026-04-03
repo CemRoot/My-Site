@@ -56,7 +56,11 @@ export class ScraperRouter {
       const result = await scraper.scrapeArticleDetails(url);
       if (result == null && scraper === this.firecrawl) {
         console.log(`  🔄 Firecrawl returned null for article details, trying cheerio fallback...`);
-        return await this.cheerio.scrapeArticleDetails(url);
+        const cheerioResult = await this.cheerio.scrapeArticleDetails(url);
+        if (cheerioResult == null) {
+          return await this._retryWithCanonicalUrl(url);
+        }
+        return cheerioResult;
       }
       return result;
     } catch (error) {
@@ -75,6 +79,31 @@ export class ScraperRouter {
         }
       }
       throw error;
+    }
+  }
+
+  /**
+   * When a /post/ URL fails with both scrapers, strip the /post/ prefix and
+   * retry with the canonical slug-only URL. Many nuvemmag.com articles migrated
+   * from /post/<slug>/ to /<slug>/ and the old paths return 404.
+   */
+  async _retryWithCanonicalUrl(url) {
+    try {
+      const parsed = new URL(url);
+      if (!parsed.pathname.startsWith('/post/')) return null;
+      const canonicalPath = parsed.pathname.replace(/^\/post\//, '/');
+      const canonicalUrl = `${parsed.origin}${canonicalPath}`;
+      console.log(`  🔄 /post/ URL returned null — retrying with canonical: ${canonicalUrl}`);
+      const scraper = this.getActiveScraper();
+      const result = await scraper.scrapeArticleDetails(canonicalUrl);
+      if (result != null) {
+        console.log(`  ✅ Recovered article via canonical URL: ${canonicalUrl}`);
+      }
+      return result;
+    } catch (err) {
+      // URL construction or scraper error — not a hard failure; just skip canonical retry
+      console.warn(`  ⚠️ Canonical URL retry failed for ${url}: ${err?.message || err}`);
+      return null;
     }
   }
 
