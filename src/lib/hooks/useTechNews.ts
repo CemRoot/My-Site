@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ARTICLES_PER_PAGE, NEWS_CACHE_MAX_AGE_MS } from '../constants/animation';
 import { TECH_NEWS_API_BASE } from '../constants/urls';
 import type { NewsDatabase } from '../types';
@@ -38,7 +38,10 @@ function mergePaginatedArticles(
   return mergedArticles;
 }
 
-export function useTechNews(selectedCategory: string) {
+export function useTechNews(
+  selectedCategory: string,
+  restorationTargetPage: number | null = null,
+) {
   const [state, setState] = useState<TechNewsState>({
     newsData: null,
     loading: true,
@@ -46,6 +49,7 @@ export function useTechNews(selectedCategory: string) {
     error: null,
   });
   const [currentPage, setCurrentPage] = useState(1);
+  const restorationChainDoneRef = useRef(false);
 
   const updateStateWithNewData = useCallback(
     (data: NewsDatabase, isNewSearch: boolean) => {
@@ -161,6 +165,7 @@ export function useTechNews(selectedCategory: string) {
   );
 
   useEffect(() => {
+    restorationChainDoneRef.current = false;
     setState((prev) => ({ ...prev, newsData: null, error: null }));
     setCurrentPage(1);
     fetchNews(1, true);
@@ -176,6 +181,26 @@ export function useTechNews(selectedCategory: string) {
     setCurrentPage(nextPage);
     fetchNews(nextPage, false);
   }, [currentPage, totalPages, fetchNews]);
+
+  useEffect(() => {
+    if (!restorationTargetPage || restorationTargetPage <= 1) return;
+    if (restorationChainDoneRef.current) return;
+    if (loading || loadingMore) return;
+
+    if (currentPage >= restorationTargetPage || currentPage >= totalPages) {
+      restorationChainDoneRef.current = true;
+      return;
+    }
+
+    handleLoadMore();
+  }, [
+    restorationTargetPage,
+    loading,
+    loadingMore,
+    currentPage,
+    totalPages,
+    handleLoadMore,
+  ]);
 
   return {
     newsData: state.newsData,

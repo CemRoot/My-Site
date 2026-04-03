@@ -11,14 +11,20 @@ import type { Article } from '../lib/types';
 interface TechNewsArticleCardProps {
   article: Article;
   truncateText: (text: string, maxLength: number) => string;
+  onBeforeNavigate?: () => void;
 }
 
-export function TechNewsArticleCard({ article, truncateText }: TechNewsArticleCardProps) {
+export function TechNewsArticleCard({
+  article,
+  truncateText,
+  onBeforeNavigate,
+}: TechNewsArticleCardProps) {
   return (
     <ErrorBoundary title="Failed to load article card">
       <Link
         to={`/tech-news/${article.slug}`}
         className="group block h-full"
+        onClick={() => onBeforeNavigate?.()}
       >
         <Card className="overflow-hidden h-full transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 border-border/50 hover:border-primary/50">
           {article.image && (

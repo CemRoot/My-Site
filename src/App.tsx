@@ -1,4 +1,4 @@
-import { useEffect, Suspense, useMemo } from 'react';
+import { useEffect, useLayoutEffect, Suspense, useMemo, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ArrowUp } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
@@ -13,6 +13,10 @@ import { PageContextProvider } from './lib/context/PageContext';
 import { lazyWithRetry, resetChunkErrorCounter } from './lib/chunk-error-handler';
 import { initLazyBlur, debouncedResizeHandler } from './lib/lazy-blur';
 import { SCROLL_TOP_THRESHOLD, ROUTE_CHANGE_BLUR_DELAY_MS } from './lib/constants/animation';
+import {
+  clearTechNewsRestoreNavFlag,
+  setTechNewsRestoreNavFlag,
+} from './lib/techNewsListRestore';
 
 // HomePage is loaded synchronously for fast FCP (it's the main landing page)
 import HomePage from './pages/HomePage';
@@ -40,12 +44,36 @@ function RouteLoadingFallback() {
 
 function ScrollToTopOnRouteChange() {
   const { pathname } = useLocation();
+  const prevPathRef = useRef<string | undefined>(undefined);
+
+  const prev = prevPathRef.current;
+  const isTechNewsList = pathname === '/tech-news';
+  const wasTechNewsDetail =
+    typeof prev === 'string' &&
+    prev.startsWith('/tech-news/') &&
+    prev !== '/tech-news';
+
+  // Session flags must run during render so /tech-news list useState initializers
+  // see the correct value in the same commit (before child layout effects).
+  if (isTechNewsList) {
+    if (wasTechNewsDetail) {
+      setTechNewsRestoreNavFlag();
+    } else {
+      clearTechNewsRestoreNavFlag();
+    }
+  } else if (pathname.startsWith('/tech-news/')) {
+    clearTechNewsRestoreNavFlag();
+  }
+
+  prevPathRef.current = pathname;
+
+  useLayoutEffect(() => {
+    if (!(isTechNewsList && wasTechNewsDetail)) {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+  }, [pathname, isTechNewsList, wasTechNewsDetail]);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' });
-
-    // Re-initialize lazy blur for new route elements
-    // Wait for DOM to update with new route content
     const timer = setTimeout(() => {
       initLazyBlur();
     }, ROUTE_CHANGE_BLUR_DELAY_MS);

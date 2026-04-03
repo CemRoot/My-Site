@@ -1,4 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react';
 import { Newspaper, TrendingUp, Calendar } from 'lucide-react';
 import { Card, CardHeader, CardContent } from './ui/card';
 import { Skeleton } from './ui/skeleton';
@@ -11,6 +18,12 @@ import { formatDate } from '../lib/utils/formatDate';
 import { getCategoryColor } from '../lib/utils/articleHelpers';
 import { TechNewsArticleCard } from './TechNewsArticleCard';
 import { useTechNews } from '../lib/hooks/useTechNews';
+import {
+  clearTechNewsRestoreNavFlag,
+  isTechNewsRestoreNavActive,
+  readTechNewsListScroll,
+  writeTechNewsListScroll,
+} from '../lib/techNewsListRestore';
 
 /**
  * Tech News Component
@@ -33,8 +46,18 @@ function truncateText(text: string, maxLength: number) {
 }
 
 function TechNews() {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => {
+    if (!isTechNewsRestoreNavActive()) return 'all';
+    return readTechNewsListScroll()?.category ?? 'all';
+  });
   const { setPageInfo } = usePageContext();
+
+  const restorationTargetPage = useMemo(() => {
+    if (!isTechNewsRestoreNavActive()) return null;
+    const saved = readTechNewsListScroll();
+    if (!saved || saved.page < 2) return null;
+    return saved.page;
+  }, []);
 
   const {
     newsData,
@@ -47,7 +70,91 @@ function TechNews() {
     totalArticles,
     handleLoadMore,
     refetch,
-  } = useTechNews(selectedCategory);
+  } = useTechNews(selectedCategory, restorationTargetPage);
+
+  const categoryRef = useRef(selectedCategory);
+  const pageRef = useRef(currentPage);
+  useEffect(() => {
+    categoryRef.current = selectedCategory;
+    pageRef.current = currentPage;
+  }, [selectedCategory, currentPage]);
+
+  const persistListScroll = useCallback(() => {
+    writeTechNewsListScroll({
+      scrollY: window.scrollY,
+      category: categoryRef.current,
+      page: pageRef.current,
+    });
+  }, []);
+
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const onScroll = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        persistListScroll();
+      }, 200);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [persistListScroll]);
+
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = loadMoreSentinelRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        if (loading || loadingMore) return;
+        if (currentPage >= totalPages) return;
+        handleLoadMore();
+      },
+      { root: null, rootMargin: '320px 0px', threshold: 0 },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [currentPage, totalPages, loading, loadingMore, handleLoadMore]);
+
+  const scrollRestoreDoneRef = useRef(false);
+  useLayoutEffect(() => {
+    if (scrollRestoreDoneRef.current) return;
+    if (!isTechNewsRestoreNavActive()) return;
+    if (loading || loadingMore) return;
+    if (
+      restorationTargetPage != null &&
+      restorationTargetPage > 1 &&
+      currentPage < restorationTargetPage
+    ) {
+      return;
+    }
+
+    const saved = readTechNewsListScroll();
+    if (!saved || saved.category !== selectedCategory) {
+      clearTechNewsRestoreNavFlag();
+      scrollRestoreDoneRef.current = true;
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      if (scrollRestoreDoneRef.current) return;
+      scrollRestoreDoneRef.current = true;
+      window.scrollTo({ top: saved.scrollY, left: 0, behavior: 'auto' });
+      clearTechNewsRestoreNavFlag();
+    });
+  }, [
+    loading,
+    loadingMore,
+    currentPage,
+    restorationTargetPage,
+    selectedCategory,
+    newsData?.articles.length,
+  ]);
 
   useEffect(() => {
     const total = Math.max(1, totalPages || 1);
@@ -215,9 +322,18 @@ function TechNews() {
                   key={article.id}
                   article={article}
                   truncateText={truncateText}
+                  onBeforeNavigate={persistListScroll}
                 />
               ))}
             </div>
+
+            {currentPage < totalPages && (
+              <div
+                ref={loadMoreSentinelRef}
+                className="h-8 w-full mt-8"
+                aria-hidden="true"
+              />
+            )}
 
           {/* Loading More State */}
           {loadingMore && (
@@ -239,18 +355,10 @@ function TechNews() {
             </div>
           )}
 
-          {/* Load More Button */}
-          {currentPage < totalPages && !loadingMore && (
-            <div className="mt-12 flex justify-center items-center">
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={handleLoadMore}
-                className="px-8 py-6 text-lg rounded-full hover:bg-primary hover:text-primary-foreground transition-all duration-300"
-              >
-                Load More Articles
-              </Button>
-            </div>
+          {currentPage < totalPages && loadingMore && (
+            <p className="sr-only" role="status">
+              Loading more articles
+            </p>
           )}
         </>
         )}
