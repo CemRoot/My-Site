@@ -48,6 +48,19 @@ const runLabel = report.runLabel ? escapeTelegramHtml(report.runLabel) : '';
 const line = (label, value) =>
   `${escapeTelegramHtml(label)} <code>${escapeTelegramHtml(String(value))}</code>`;
 
+function summarizeBatchReasons(items, limit = 3) {
+  const counts = new Map();
+  for (const item of Array.isArray(items) ? items : []) {
+    const key = item?.reasonCode || item?.stage || item?.reason || 'UNSPECIFIED';
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([reason, count]) => `${reason} (${count})`);
+}
+
 const blocks = [
   `${statusEmoji} <b>${escapeTelegramHtml(headline)}</b>`,
   '———————————————',
@@ -71,6 +84,24 @@ blocks.push(
 
 if (runLabel) {
   blocks.push(`<b>Run label</b> <code>${runLabel}</code>`);
+}
+
+if (saved === 0) {
+  const batches = report.batches || {};
+  const failedReasons = summarizeBatchReasons(batches.failed);
+  const rejectedReasons = summarizeBatchReasons(batches.rejected);
+  const deferredReasons = summarizeBatchReasons(batches.deferred);
+  const skippedReasons = summarizeBatchReasons(batches.skipped);
+
+  const reasonLines = [];
+  if (failedReasons.length) reasonLines.push(line('Failed reasons', failedReasons.join(', ')));
+  if (rejectedReasons.length) reasonLines.push(line('Rejected reasons', rejectedReasons.join(', ')));
+  if (deferredReasons.length) reasonLines.push(line('Deferred reasons', deferredReasons.join(', ')));
+  if (skippedReasons.length) reasonLines.push(line('Skipped reasons', skippedReasons.join(', ')));
+
+  if (reasonLines.length) {
+    blocks.push('———————————————', '<b>Unsaved reasons</b>', ...reasonLines);
+  }
 }
 
 const message = blocks.join('\n');
