@@ -5,6 +5,7 @@
  */
 
 import { supabase } from '../lib/supabaseAdmin.js';
+import { checkRateLimit, getClientIdentifier, sendRateLimitResponse } from '../lib/rate-limit.js';
 
 export default async function handler(req, res) {
   // CORS headers - Security: Only allow requests from trusted origins
@@ -32,6 +33,13 @@ export default async function handler(req, res) {
       success: false, 
       message: 'Method not allowed' 
     });
+  }
+
+  // Rate limiting: max 5 subscription attempts per IP per 10 minutes
+  const clientId = getClientIdentifier(req);
+  const rateLimit = checkRateLimit(`newsletter:${clientId}`, 5, 600000);
+  if (!rateLimit.success) {
+    return sendRateLimitResponse(res, rateLimit);
   }
 
   try {

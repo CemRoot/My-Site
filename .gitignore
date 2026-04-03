@@ -30,6 +30,10 @@ yarn-error.log*
 *.swo
 *~
 
+# Vercel project metadata (contains projectId/orgId – do not commit)
+.vercel/project.json
+.vercel/.vc-config.json
+
 # Temporary files
 scripts/test-translation.js
 artifacts/tech-news-runs/

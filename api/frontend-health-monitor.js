@@ -117,18 +117,23 @@ function formatErrorMessage(errorData) {
  * Main handler
  */
 export default async function handler(req, res) {
-  // CORS headers - Allow Vercel preview deployments
+  // CORS – restrict to the production domain and known Vercel preview URLs only.
+  // Wildcard *.vercel.app is intentionally NOT used: any developer can claim a
+  // free *.vercel.app subdomain, making it an effectively open CORS policy.
   const origin = req.headers.origin || '';
-  
-  // Check if origin is allowed
-  const isAllowedOrigin = 
-    origin === 'https://cemkoyluoglu.codes' ||
-    origin === 'http://localhost:5173' ||
-    origin.includes('.vercel.app') || // All Vercel preview deployments
-    origin.includes('cemroots-projects.vercel.app'); // All project previews
-  
+  const ALLOWED_ORIGINS = [
+    'https://cemkoyluoglu.codes',
+    'https://www.cemkoyluoglu.codes',
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+  ].filter(Boolean);
+
+  // Also allow localhost in development
+  const isLocal = process.env.NODE_ENV !== 'production' && origin === 'http://localhost:5173';
+  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin) || isLocal;
+
   if (isAllowedOrigin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
   }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');

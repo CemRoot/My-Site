@@ -10,6 +10,7 @@
  * 3. Set secret token in DEPLOYMENT_WEBHOOK_SECRET env var
  */
 
+import crypto from 'crypto';
 import { withSentry } from '../lib/sentry-server.js';
 import { notifyTelegram } from '../lib/telegram.js';
 
@@ -103,7 +104,20 @@ export default withSentry(async function handler(req, res) {
 
     const providedSecret = req.headers['x-vercel-signature'] || req.query.secret;
 
-    if (providedSecret !== webhookSecret) {
+    // Use timing-safe comparison to prevent timing-attack secret enumeration
+    let isAuthorized = false;
+    try {
+      const providedBuf = Buffer.from(String(providedSecret || ''));
+      const expectedBuf = Buffer.from(webhookSecret);
+      if (providedBuf.length === expectedBuf.length) {
+        isAuthorized = crypto.timingSafeEqual(providedBuf, expectedBuf);
+      }
+    } catch (err) {
+      // Buffer.from may throw on unusual input; treat as unauthorized
+      console.warn('⚠️ Secret comparison error (malformed input):', err.message);
+    }
+
+    if (!isAuthorized) {
       console.warn('⚠️ Invalid webhook secret');
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -128,7 +142,6 @@ export default withSentry(async function handler(req, res) {
     console.error('❌ Webhook processing error:', error);
     return res.status(500).json({
       error: 'Internal server error',
-      message: error.message,
     });
   }
 });
