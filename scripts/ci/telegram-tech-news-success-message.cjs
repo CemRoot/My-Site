@@ -58,7 +58,10 @@ function summarizeBatchReasons(items, limit = 3) {
 
   return [...counts.entries()]
     // Show the most frequent causes first; tie-break alphabetically for stable output.
-    .sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]))
+    .sort((a, b) => {
+      const countDiff = b[1] - a[1];
+      return countDiff !== 0 ? countDiff : a[0].localeCompare(b[0]);
+    })
     .slice(0, limit)
     .map(([reason, count]) => `${reason} (${count})`);
 }
