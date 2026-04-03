@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { TECH_NEWS_API_BASE } from '../constants/urls';
+import { pickRelatedArticles } from '../utils/articleHelpers';
 import type { Article } from '../types';
+
+const RELATED_POOL_LIMIT = 60;
+const RELATED_DISPLAY_COUNT = 3;
 
 interface ArticleDetailResponse {
   success: boolean;
@@ -58,12 +62,13 @@ export function useArticle(slug: string | undefined) {
         const loadedArticle = articlePayload.article;
         setArticle(loadedArticle);
 
-        if (!loadedArticle.category) {
-          return;
-        }
+        const categoryQuery =
+          loadedArticle.category && loadedArticle.category.trim() !== ''
+            ? `&category=${encodeURIComponent(loadedArticle.category)}`
+            : '';
 
         const relatedResponse = await fetch(
-          `${TECH_NEWS_API_BASE}?page=1&limit=4&category=${encodeURIComponent(loadedArticle.category)}`,
+          `${TECH_NEWS_API_BASE}?page=1&limit=${RELATED_POOL_LIMIT}${categoryQuery}`,
           {
             cache: 'no-store',
             signal: controller.signal,
@@ -80,10 +85,34 @@ export function useArticle(slug: string | undefined) {
           relatedPayload.success &&
           relatedPayload.data?.articles
         ) {
+          let pool = relatedPayload.data.articles;
+
+          if (pool.length < RELATED_DISPLAY_COUNT && categoryQuery) {
+            const fallbackResponse = await fetch(
+              `${TECH_NEWS_API_BASE}?page=1&limit=${RELATED_POOL_LIMIT}`,
+              {
+                cache: 'no-store',
+                signal: controller.signal,
+              },
+            );
+            if (fallbackResponse.ok) {
+              const fallbackPayload =
+                (await fallbackResponse.json()) as ArticleListResponse;
+              if (
+                fallbackPayload.success &&
+                fallbackPayload.data?.articles?.length
+              ) {
+                const byId = new Map(pool.map((a) => [a.id, a]));
+                for (const a of fallbackPayload.data.articles) {
+                  if (!byId.has(a.id)) byId.set(a.id, a);
+                }
+                pool = [...byId.values()];
+              }
+            }
+          }
+
           setRelatedArticles(
-            relatedPayload.data.articles
-              .filter((article) => article.slug !== loadedArticle.slug)
-              .slice(0, 3),
+            pickRelatedArticles(loadedArticle, pool, RELATED_DISPLAY_COUNT),
           );
         }
       } catch (err) {

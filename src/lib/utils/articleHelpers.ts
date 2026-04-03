@@ -5,6 +5,93 @@
  * duplication and keep components focused on rendering.
  */
 
+import type { Article } from '../types';
+
+const TITLE_STOP_WORDS = new Set([
+  'the',
+  'and',
+  'for',
+  'are',
+  'but',
+  'not',
+  'you',
+  'all',
+  'can',
+  'her',
+  'was',
+  'one',
+  'our',
+  'out',
+  'has',
+  'his',
+  'how',
+  'its',
+  'new',
+  'who',
+  'way',
+  'may',
+  'now',
+  'use',
+]);
+
+function articleTimestamp(a: Pick<Article, 'date' | 'createdAt'>): number {
+  const fromDate = Date.parse(a.date || '');
+  if (!Number.isNaN(fromDate)) return fromDate;
+  const fromCreated = Date.parse(a.createdAt || '');
+  return Number.isNaN(fromCreated) ? 0 : fromCreated;
+}
+
+function titleKeywordOverlap(titleA: string, titleB: string): number {
+  const tokenize = (t: string) =>
+    new Set(
+      t
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .filter((w) => w.length > 2 && !TITLE_STOP_WORDS.has(w)),
+    );
+  const A = tokenize(titleA);
+  const B = tokenize(titleB);
+  if (A.size === 0 || B.size === 0) return 0;
+  let n = 0;
+  for (const w of A) {
+    if (B.has(w)) n += 1;
+  }
+  return n;
+}
+
+/**
+ * Pick related articles from a pool: closest publish dates first, then title keyword overlap,
+ * so each detail page surfaces neighbours in time (not always the three newest in the category).
+ */
+export function pickRelatedArticles(
+  current: Article,
+  pool: Article[],
+  take: number,
+): Article[] {
+  const filtered = pool.filter(
+    (a) => a.slug !== current.slug && a.id !== current.id,
+  );
+  if (filtered.length === 0) return [];
+
+  const t0 = articleTimestamp(current);
+  if (t0 === 0) {
+    return filtered.slice(0, take);
+  }
+
+  return [...filtered]
+    .sort((a, b) => {
+      const da = Math.abs(articleTimestamp(a) - t0);
+      const db = Math.abs(articleTimestamp(b) - t0);
+      if (da !== db) return da - db;
+      const oa = titleKeywordOverlap(current.title, a.title);
+      const ob = titleKeywordOverlap(current.title, b.title);
+      if (oa !== ob) return ob - oa;
+      return articleTimestamp(b) - articleTimestamp(a);
+    })
+    .slice(0, take);
+}
+
 const CATEGORY_COLORS: Record<string, string> = {
   'AI': '#FF6B6B',
   'AI Applications': '#4ECDC4',
