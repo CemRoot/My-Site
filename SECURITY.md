@@ -116,6 +116,17 @@ N8N_CHATBOT_WEBHOOK=<your n8n chatbot webhook URL>
 - **API Keys**: Every 180 days
 - **After Breach**: Immediately
 
+### If a secret was committed or scanned (e.g. GitGuardian)
+
+**Assume the value is compromised** — making the repo private or deleting the file is **not** enough; anyone or any indexer may have copied it.
+
+1. **Telegram bot token** — In [@BotFather](https://t.me/BotFather), open the bot → revoke the token and issue a new one. Update **Vercel** env vars and **GitHub Actions** repository secrets (`TELEGRAM_BOT_TOKEN`). Re-run webhook setup if you use the Telegram webhook (`scripts/setup-telegram-webhook.js` / `npm run telegram:webhook-setup`).
+2. **Google API key** — In [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials: delete or rotate the key, add HTTP referrer / API restrictions, then update env vars (e.g. `GEMINI_API_KEY`).
+3. **Never commit** scan outputs such as `gitleaks-report.json` (they echo detected secrets). This repo gitignores `gitleaks-report.json` and `*-report.json`.
+4. **Optional** — Remove secrets from Git history with [GitHub’s guide](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository) (rewriting history + force-push); you must still rotate keys.
+
+Placeholder-only checklist for Vercel: `docs/VERCEL_MISSING_VARS.md`.
+
 ## 🛠️ Security Best Practices for Developers
 
 ### Before Committing
