@@ -1,7 +1,7 @@
 # Content Cleaning Pipeline - Complete Guide
 
 ## Overview
-This document explains the complete content cleaning pipeline in `news-scraper.js` to ensure NO unwanted content appears in articles.
+This document explains the complete content cleaning pipeline in `scripts/lib/scraper/ScrapeOrchestrator.js` (CLI entrypoint: `scripts/news-scraper.js`) to ensure NO unwanted content appears in articles.
 
 ## Pipeline Steps (In Order)
 
@@ -363,7 +363,7 @@ node scripts/scrape-single-article.js
 ## Maintenance Checklist
 
 When updating the pipeline:
-1. ✅ Update code in news-scraper.js
+1. ✅ Update code in `scripts/lib/scraper/ScrapeOrchestrator.js` (or the called scraper/agent module)
 2. ✅ Add test case to test-content-validation.js
 3. ✅ Run validation tests
 4. ✅ Update this guide
@@ -448,4 +448,3 @@ After implementing this pipeline:
 - ✅ 0 translation instruction leakage
 - ✅ 0 Nuvemmag branding in content
 - ✅ 100% correct embed rendering
-

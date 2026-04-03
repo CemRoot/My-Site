@@ -8,7 +8,7 @@ Stack: Node.js ESM, Vercel Edge Functions, Supabase PostgreSQL, GitHub Actions
 ### Daily Agent Contract
 - Scan only these 6 business categories: `yapay-zeka`, `teknoloji`, `yapay-zeka-uygulamalari`, `gundem`, `surdurulebilirlik`, `bilim-ve-dunya`
 - Scrapers discover candidates only
-- `news-scraper.js` decides which candidates are `today`, `unknown`, `stale` (recent ≤MAX_RECENT_PUBLISH_DAYS / truly stale), or `future`
+- `scripts/lib/scraper/ScrapeOrchestrator.js` decides which candidates are `today`, `unknown`, `stale` (recent ≤MAX_RECENT_PUBLISH_DAYS / truly stale), or `future`
 - Database-first gate must happen before expensive translation/save work
 - `unknown` date candidates require detail verification before they can move forward
 - `stale` candidates within `SCRAPER_CONFIG.MAX_RECENT_PUBLISH_DAYS` (default 3) are treated as recent and included alongside today candidates
@@ -31,7 +31,8 @@ ScraperRouter          — Routes between scrapers, handles auto-fallback
 ### File Locations
 ```
 scripts/
-├── news-scraper.js                          ← Entry point (orchestration ONLY)
+├── news-scraper.js                          ← CLI entry point (delegates to ScrapeOrchestrator)
+├── lib/scraper/ScrapeOrchestrator.js        ← Active orchestration + decision engine
 ├── lib/scraper/
 │   ├── config.js                            ← All config constants & model names
 │   ├── database.js                          ← Supabase ops + duplicate/date save guards
@@ -53,7 +54,8 @@ scripts/
     └── smartArticleProcessor.js             ← Smart validation pipeline
 ```
 
-### CRITICAL: news-scraper.js is ORCHESTRATION ONLY
+### CRITICAL: Orchestration lives in ScrapeOrchestrator
+- `news-scraper.js` is CLI glue only
 - No scraping logic in news-scraper.js
 - No Firecrawl API calls in news-scraper.js
 - No cheerio parsing in news-scraper.js
@@ -224,7 +226,7 @@ Layer 3: content_hash match (handles same article, different URL)
 
 ## Rules for AI Agents
 
-1. **NEVER add scraping logic to news-scraper.js** — only orchestration
+1. **NEVER add scraping logic to news-scraper.js** — keep it as CLI glue; orchestration belongs in `ScrapeOrchestrator.js`
 2. **NEVER duplicate functions** — check if method exists in parent/sibling class first
 3. **NEVER use Firecrawl v1** — always v2 (`https://api.firecrawl.dev/v2/scrape`)
 4. **NEVER add embed examples to prompts** — causes hallucination

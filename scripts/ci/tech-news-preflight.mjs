@@ -86,6 +86,17 @@ async function main() {
     return;
   }
 
+  // force_urls workflow_dispatch input: always proceed so the scraper can run force-ingest mode.
+  const forceUrls = (process.env.TECH_NEWS_FORCE_URLS || '').trim();
+  if (forceUrls) {
+    const urlCount = forceUrls.split(',').map(u => u.trim()).filter(Boolean).length;
+    console.log(`Preflight: TECH_NEWS_FORCE_URLS set (${urlCount} URL(s)) → proceed with force-ingest.`);
+    writeOutput('proceed', 'true');
+    writeOutput('reason', 'force_urls');
+    writePreflightResultFile({ proceed: true, reason: 'force_urls', forceUrlCount: urlCount });
+    return;
+  }
+
   if (process.env.TECH_NEWS_PREFLIGHT_FORCE_PROCEED === '1') {
     console.log('Preflight: TECH_NEWS_PREFLIGHT_FORCE_PROCEED=1 → proceed (manual / forced run).');
     writeOutput('proceed', 'true');

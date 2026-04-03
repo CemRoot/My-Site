@@ -8,71 +8,12 @@ name: Scrape Tech News
 # Supabase PostgreSQL veritabanına kaydeder.
 #
 # ============================================================================
-# ÖĞRENILEN DERSLER & KALİTE KONTROL MEKANİZMALARI
+# PIPELINE NOTE
 # ============================================================================
 #
-# 1. TARİH VALİDASYONU:
-#    - Yıl 2020-{current_year} arasında olmalı
-#    - Gelecek tarihler kabul edilmez
-#    - Bilinmeyen/geçersiz tarihler otomatik save edilmez
-#
-# 2. ÇEVİRİ KALİTE KONTROL:
-#    - Türkçe karakter kontrolü (ğüşıöçĞÜŞİÖÇ)
-#    - CJK karakter kontrolü (Çince/Japonca/Korece)
-#    - Non-Latin karakter kontrolü (Arapça/İbranice/Kiril)
-#    - Latin oranı kontrolü (>%80 İngilizce olmalı)
-#    - Retry mekanizması (her model için 2 deneme)
-#
-# 3. INSTRUCTION LEAKAGE TESPİTİ:
-#    - "Return the enhanced article" → ❌ Reddet
-#    - "Here is the translation" → ❌ Reddet
-#    - "Note: I have" → ❌ Reddet
-#    - "Your task:" → ❌ Reddet
-#    - "TL;DR and key highlights" → ❌ Reddet
-#
-# 4. EMBED TOKEN SİSTEMİ:
-#    - YouTube: [[EMBED:YOUTUBE:VIDEO_ID]]
-#    - Twitter: [[EMBED:TWEET:TWEET_ID]]
-#    - TikTok: [[EMBED:TIKTOK:URL]]
-#    - Token'lar çeviri sırasında __WIDGET_N__ placeholder'larıyla korunur
-#    - Çeviri sonrası validateTokenPreservation() ile doğrulanır
-#    - Kayıp token'lar otomatik olarak yeniden eklenir
-#    - Inline URL'ler de yakalanır (sadece satır başı değil)
-#
-# 5. YOUTUBE GARBAGE TEXT TEMİZLİK:
-#    - Pattern-based skip (sabit 15 satır yerine akıllı algılama)
-#    - Gerçek içerik: >80 karakter, noktalama, başlık → KORU
-#    - Kısa/belirsiz satırlar: kanal adı, abone sayısı → SİL
-#    - "If playback doesn't begin" → ✂️ Sil
-#    - "retrieving sharing information" → ✂️ Sil
-#    - "0:00 / 1:00" → ✂️ Sil
-#
-# 6. TWITTER GARBAGE TEXT TEMİZLİK:
-#    - "Twitter Widget Iframe" → ✂️ Sil
-#    - "Log in" (kısa) → ✂️ Sil
-#    - "View on Twitter" → ✂️ Sil
-#
-# 7. KAYNAK SİTESİ BRANDING TEMİZLİK:
-#    - Kaynak sitesi adı sonekleri başlıktan → ✂️ Sil
-#    - Kaynak sitesi URL'leri içerikten → ✂️ Sil
-#    - Logo ve navigasyon → ✂️ Sil
-#
-# 8. DUPLICATE TESPİTİ:
-#    - Slug-based (URL slug'ından çıkarılır)
-#    - Same-run tracking (aynı URL 2 kategoride varsa)
-#    - source_url unique constraint
-#
-# 9. AI MODELLERİ (SADECE PRODUCTION - STABİL):
-#    - Primary: llama-3.1-8b-instant (560 T/s, 250K TPM)
-#    - Fallback: openai/gpt-oss-20b (1000 T/s, 250K TPM)
-#    - Last Resort: llama-3.3-70b-versatile (280 T/s, 300K TPM)
-#    NOT: Preview modelleri (llama-4-scout, qwen3) kullanılmıyor!
-#
-# 10. RATE LIMITING:
-#     - Groq: 1000ms delay between requests
-#     - Firecrawl: 10000ms (10s) delay between articles
-#     - Firecrawl waitFor: 4500ms (embed JS rendering time)
-#     - Retry with simplified prompt on failure
+# İş kuralları (date integrity, quality gates, embed token preservation,
+# duplicate checks, reject/defer reason-code üretimi) workflow yerine
+# scripts/lib/scraper/ScrapeOrchestrator.js içindeki agent pipeline'da çalışır.
 #
 # ============================================================================
 # GITHUB ACTIONS YAPISI (kalıcı mimari)
@@ -116,6 +57,10 @@ on:
         description: 'Bypass preflight (always run full scrape; no headline-vs-DB gate)'
         type: boolean
         default: false
+      force_urls:
+        description: 'Comma-separated source URLs to force-ingest (skips discovery; bypasses date gate)'
+        type: string
+        default: ''
 
 # Keep runs deterministic and auditable (see header: cancel-in-progress false by design)
 concurrency:
@@ -147,6 +92,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TECH_NEWS_SKIP_PREFLIGHT: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_preflight == true && '1' || '0' }}
           TECH_NEWS_PREFLIGHT_FORCE_PROCEED: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_preflight == false && '1' || '0' }}
+          TECH_NEWS_FORCE_URLS: ${{ inputs.force_urls }}
         run: node scripts/ci/tech-news-preflight.mjs
 
       - name: 📦 Install dependencies
@@ -166,6 +112,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
+          TECH_NEWS_FORCE_URLS: ${{ inputs.force_urls }}
           NODE_OPTIONS: '--max-old-space-size=4096'
           TZ: UTC
         run: |
