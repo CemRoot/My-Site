@@ -51,11 +51,13 @@ const line = (label, value) =>
 function summarizeBatchReasons(items, limit = 3) {
   const counts = new Map();
   for (const item of Array.isArray(items) ? items : []) {
+    // Run artifacts may have reasonCode (preferred), stage, or free-text reason depending on pipeline stage.
     const key = item?.reasonCode || item?.stage || item?.reason || 'UNSPECIFIED';
     counts.set(key, (counts.get(key) || 0) + 1);
   }
 
   return [...counts.entries()]
+    // Show the most frequent causes first; tie-break alphabetically for stable output.
     .sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]))
     .slice(0, limit)
     .map(([reason, count]) => `${reason} (${count})`);
