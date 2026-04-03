@@ -185,7 +185,7 @@ export function useTechNews(
   useEffect(() => {
     if (!restorationTargetPage || restorationTargetPage <= 1) return;
     if (restorationChainDoneRef.current) return;
-    if (loading || loadingMore) return;
+    if (state.loading || state.loadingMore) return;
 
     if (currentPage >= restorationTargetPage || currentPage >= totalPages) {
       restorationChainDoneRef.current = true;
@@ -195,8 +195,8 @@ export function useTechNews(
     handleLoadMore();
   }, [
     restorationTargetPage,
-    loading,
-    loadingMore,
+    state.loading,
+    state.loadingMore,
     currentPage,
     totalPages,
     handleLoadMore,

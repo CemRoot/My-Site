@@ -52,7 +52,7 @@
             "next": "16.2.2"
       },
       "scripts": {
-            "test": "node --test tests/rate-limit.test.js tests/format-tech-news-article.test.mjs tests/preflight-url-utils.test.mjs tests/telegram-html-escape.test.mjs tests/telegram-tech-news-success-message.test.mjs tests/slug-normalization.test.mjs",
+            "test": "node --test tests/rate-limit.test.js tests/format-tech-news-article.test.mjs tests/preflight-url-utils.test.mjs tests/telegram-html-escape.test.mjs tests/telegram-tech-news-success-message.test.mjs tests/slug-normalization.test.mjs tests/use-tech-news-loading-regression.test.mjs",
             "dev": "vite",
             "build": "vite build",
             "postbuild": "node scripts/sitemap-generator.js && node scripts/post-build-telegram.js || true",
