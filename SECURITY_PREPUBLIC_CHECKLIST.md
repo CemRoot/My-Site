@@ -48,7 +48,7 @@
 |---|---------|-------|
 | I-1 | GitHub Actions workflows reference secrets via `${{ secrets.* }}` — correct. No hardcoded values. | ✅ Healthy |
 | I-2 | `api/chat.js`, `api/telegram-control.js`, `api/revalidate-news.js` all use `crypto.timingSafeEqual()` for auth. | ✅ Healthy |
-| I-3 | n8n workflow JSON files (`docs/*.json`) contain credential *reference names* only (no actual keys). | ✅ Healthy |
+| I-3 | n8n workflow JSON is **not** kept in this repo (`docs/` removed); store exports only in n8n or private backup — never commit static Bearer tokens or API keys. | ✅ Policy |
 | I-4 | `npm audit` returns **0 vulnerabilities**. | ✅ Healthy |
 | I-5 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` is intentionally public (Supabase Row-Level Security enforces access control). | ✅ By design |
 | I-6 | Sentry DSN (`VITE_SENTRY_DSN`) is public by design — it only accepts inbound error reports. | ✅ By design |

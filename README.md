@@ -770,11 +770,6 @@ My-Site/
 │   ├── frontend-health-monitor.js# Error monitoring
 │   ├── conversation-state.js     # Telegram state management
 │   └── revalidate-news.js        # News cache revalidation
-├── docs/                         # Workflow & SQL references
-│   ├── n8n-chatbot-ai.json
-│   ├── n8n-linkedin-unified-workflow.json
-│   ├── n8n-linkedin-digest-for-groups.json
-│   └── supabase-*.sql            # Database schema files
 ├── lib/                          # Server-side shared libraries
 │   ├── rate-limit.js             # Rate limiting
 │   ├── sentry-server.js          # Sentry integration
