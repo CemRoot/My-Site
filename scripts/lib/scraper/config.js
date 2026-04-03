@@ -18,17 +18,22 @@ export const SCRAPER_CONFIG = {
   GROQ_PARSER_API_KEY: env.GROQ_PARSER_API_KEY,
   /**
    * Rows taken from each category list (newest first on NuvemMag). Increased to
-   * 20 to reduce the chance of missing recent articles when a category has many
+   * 25 to reduce the chance of missing recent articles when a category has many
    * same-day posts.
    */
-  MAX_ARTICLES_PER_CATEGORY: 20,
-  /** Only first page per category unless you explicitly need older archive pages. */
-  CATEGORY_ARCHIVE_MAX_PAGES: 1,
+  MAX_ARTICLES_PER_CATEGORY: 25,
   /**
-   * Publish/discovery dates older than this (calendar days) are skipped — aligns with
-   * “top of feed only” scraping.
+   * Number of archive pages to check per category. Set to 2 so articles that
+   * appear below the first ~17 posts on the category listing are still discovered.
+   * Keep low to control Firecrawl credit usage.
    */
-  MAX_RECENT_PUBLISH_DAYS: 3,
+  CATEGORY_ARCHIVE_MAX_PAGES: 2,
+  /**
+   * Publish/discovery dates older than this (calendar days) are skipped — aligns
+   * with "top of feed" scraping. Widened to 5 days so articles missed in a
+   * previous run (due to the discovery cap) are still picked up on the next pass.
+   */
+  MAX_RECENT_PUBLISH_DAYS: 5,
   TRANSLATION_DELAY: 1000,
   RATE_LIMIT_DELAY: 10000,
   MAX_ARTICLES_PER_RUN: 50,
