@@ -1027,13 +1027,6 @@ async function scrapeNews(argv = process.argv) {
 
   if (dryRun) {
     console.log('🔍 DRY RUN — database saves and Telegram notifications are disabled\n');
-  } else {
-    await notifyTelegram(
-      `🚀 <b>Scraper Başladı</b>\n` +
-      `📂 ${CONFIG.CATEGORIES.length} kategori | 🔧 ${scraperRouter.getActiveScraperName()}\n` +
-      `${runLabel ? `🏷️ ${runLabel}\n` : ''}` +
-      `🕐 ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`
-    );
   }
 
   currentCount = await agents.persistence.getArticleCount();
@@ -1506,15 +1499,6 @@ async function forceIngestUrls(urls, argv = process.argv) {
   }
 
   console.log(`\n✅ URLs to process: ${toProcess.length}\n`);
-
-  if (!dryRun) {
-    await notifyTelegram(
-      `🎯 <b>Force Ingest Başladı</b>\n` +
-      `📋 ${toProcess.length} URL | 🔧 ${scraperRouter.getActiveScraperName()}\n` +
-      `${runLabel ? `🏷️ ${runLabel}\n` : ''}` +
-      `🕐 ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`
-    );
-  }
 
   let consecutiveFailures = 0;
 

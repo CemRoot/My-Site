@@ -35,18 +35,18 @@ const allInDb =
 
 const headline =
   saved > 0
-    ? 'Tech news scraper — saves complete'
+    ? 'News Scraper — Saved Successfully'
     : hasUnsavedActionable
-      ? 'Tech news scraper — new candidates not saved'
+      ? 'News Scraper — No New Articles Saved'
       : allInDb
-        ? 'Tech news scraper — all candidates already in DB'
-        : 'Tech news scraper — run complete';
+        ? 'News Scraper — All Found Articles Are In DB'
+        : 'News Scraper — Run Completed';
 
 const scraper = escapeTelegramHtml(report.scraper || 'unknown');
 const runLabel = report.runLabel ? escapeTelegramHtml(report.runLabel) : '';
 
 const line = (label, value) =>
-  `${escapeTelegramHtml(label)} <code>${escapeTelegramHtml(String(value))}</code>`;
+  `• ${escapeTelegramHtml(label)}: <b>${escapeTelegramHtml(String(value))}</b>`;
 
 /**
  * Summarize batch reasons as "REASON (count)" strings.
@@ -71,28 +71,27 @@ function summarizeBatchReasons(items, limit = 3) {
 }
 
 const blocks = [
-  `${statusEmoji} <b>${escapeTelegramHtml(headline)}</b>`,
-  '———————————————',
+  `${statusEmoji} <b>${escapeTelegramHtml(headline)}</b>\n`,
+  '📊 <b>Processing Summary</b>',
   line('Saved', saved),
-  line('New after DB check', metrics.newAfterDbCheck || 0),
-  line('Today candidates', metrics.todayCandidates || 0),
-  line('Recent stale', metrics.recentStaleCandidates || 0),
-  line('Unknown candidates', metrics.unknownCandidates || 0),
-];
-
-blocks.push(
+  line('Found Today', metrics.todayCandidates || 0),
+  line('Found Recent (Stale)', metrics.recentStaleCandidates || 0),
+  line('New after DB Check', metrics.newAfterDbCheck || 0),
+  '',
+  '📉 <b>Rejected / Skipped</b>',
   line('Already in DB', metrics.alreadyInDb || 0),
-  line('Future rejected', metrics.futureRejected || 0),
-  line('Date mismatch rejected', metrics.rejectedDateMismatch || 0),
-  line('Stale skipped', metrics.staleSkipped || 0),
+  line('Skipped (Too Old)', metrics.staleSkipped || 0),
+  line('Rejected (Date Mismatch)', metrics.rejectedDateMismatch || 0),
+  line('Rejected (Future Date)', metrics.futureRejected || 0),
   line('Deferred', metrics.deferred || 0),
   line('Failed', failed),
-  '———————————————',
-  `<b>Scraper</b> ${scraper}`,
-);
+  '',
+  '⚙️ <b>System Info</b>',
+  `• Scraper: <code>${scraper}</code>`,
+];
 
 if (runLabel) {
-  blocks.push(`<b>Run label</b> <code>${runLabel}</code>`);
+  blocks.push(`• Run Label: <code>${runLabel}</code>`);
 }
 
 if (saved === 0) {
@@ -103,13 +102,13 @@ if (saved === 0) {
   const skippedReasons = summarizeBatchReasons(batches.skipped);
 
   const reasonLines = [];
-  if (failedReasons.length) reasonLines.push(line('Failed reasons', failedReasons.join(', ')));
-  if (rejectedReasons.length) reasonLines.push(line('Rejected reasons', rejectedReasons.join(', ')));
-  if (deferredReasons.length) reasonLines.push(line('Deferred reasons', deferredReasons.join(', ')));
-  if (skippedReasons.length) reasonLines.push(line('Skipped reasons', skippedReasons.join(', ')));
+  if (failedReasons.length) reasonLines.push(`• Failed: ${failedReasons.join(', ')}`);
+  if (rejectedReasons.length) reasonLines.push(`• Rejected: ${rejectedReasons.join(', ')}`);
+  if (deferredReasons.length) reasonLines.push(`• Deferred: ${deferredReasons.join(', ')}`);
+  if (skippedReasons.length) reasonLines.push(`• Skipped: ${skippedReasons.join(', ')}`);
 
   if (reasonLines.length) {
-    blocks.push('———————————————', '<b>Unsaved reasons</b>', ...reasonLines);
+    blocks.push('', '📝 <b>Reasons for 0 Saves</b>', ...reasonLines);
   }
 }
 

@@ -122,7 +122,7 @@ export default async function handler(req, res) {
               break;
             default:
               await menuHandler.sendTelegramMessage(
-                `❓ Bilinmeyen komut: ${command}\n\nKullanılabilir komutlar için /help yazın`
+                `❓ Unknown command: ${command}\n\nType /help for available commands`
               );
           }
         } else {
@@ -188,6 +188,15 @@ export default async function handler(req, res) {
           });
 
           switch (action) {
+            case 'scraper_menu':
+              await menuHandler.handleScraperMenu();
+              break;
+            case 'social_menu':
+              await menuHandler.handleSocialMenu();
+              break;
+            case 'analytics_menu':
+              await menuHandler.handleAnalyticsMenu();
+              break;
             case 'scrape':
               await menuHandler.handleScrapeAction();
               break;
