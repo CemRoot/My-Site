@@ -13,20 +13,22 @@ const safeUrl = escapeTelegramHtml(logUrl);
 const safeTime = escapeTelegramHtml(currentTime);
 
 const lines = [
-  '🚨 <b>Tech news scraper — failed</b>',
-  '———————————————',
-  `<b>Time</b> <code>${safeTime}</code>`,
-  `<b>Workflow</b> Scrape Tech News`,
+  '🚨 <b>News Scraper Failed</b>',
   '',
-  '<b>Likely causes</b>',
-  '• API keys or quotas (scraping / LLM)',
-  '• Database connectivity',
-  '• Upstream site or rate limits',
-  '• Date or quality checks',
+  '❌ The GitHub Actions scraper workflow encountered a critical error.',
   '',
-  logUrl ? `<a href="${safeUrl}">Open run logs</a>` : '',
+  `• <b>Time:</b> <code>${safeTime}</code>`,
+  `• <b>Workflow:</b> Scrape Tech News`,
   '',
-  '<i>Check the workflow run for details.</i>',
+  '🔍 <b>Likely Causes:</b>',
+  '• API limits reached (Firecrawl / Groq)',
+  '• Database connection issues',
+  '• Upstream site blocked the scraper',
+  '• Translation quality checks failed',
+  '',
+  logUrl ? `🔗 <a href="${safeUrl}">View GitHub Actions Logs</a>` : '',
+  '',
+  '<i>Check the logs to find the exact issue.</i>',
 ];
 
 process.stdout.write(lines.filter(Boolean).join('\n'));

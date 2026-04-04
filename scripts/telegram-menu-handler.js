@@ -9,7 +9,13 @@ import { spawn } from 'child_process';
 import { supabase } from './lib/supabaseAdmin.js';
 import { env } from './lib/config.js';
 import { sendTelegramMessage, callTelegramApi } from './lib/telegram.js';
-import { getMainMenuKeyboard, getSystemManagementKeyboard } from './lib/menu/keyboards.js';
+import {
+  getMainMenuKeyboard,
+  getSystemManagementKeyboard,
+  getScraperMenuKeyboard,
+  getSocialMenuKeyboard,
+  getAnalyticsMenuKeyboard
+} from './lib/menu/keyboards.js';
 
 const CONFIG = {
   GROQ_API_KEY: env.GROQ_API_KEY,
@@ -25,31 +31,26 @@ export { sendTelegramMessage };
  */
 export async function handleStartCommand() {
   const welcomeText = `
-🤖 <b>Tech News Bot'a Hoş Geldiniz!</b>
+🤖 <b>Welcome to Tech News Bot!</b>
 
-Bu bot ile tüm sistemlerinizi Telegram'dan yönetin!
+Manage all your systems directly from Telegram!
 
-<b>📋 Menü Komutları:</b>
-/menu - Ana menüyü göster
-/status - Hızlı durum raporu
-/scrape - Haberleri çek
-/health - Sistem sağlığı
-/help - Yardım ve komutlar
+<b>📋 Commands:</b>
+/menu - Show main menu
+/status - Quick status report
+/scrape - Run news scraper
+/health - System health check
+/help - Help and information
 
-<b>🎯 Özellikler:</b>
-✅ Otomatik haber toplama
-✅ LinkedIn digest yönetimi
-✅ n8n trial takibi
-✅ Webhook yönetimi (reset)
-✅ Sistem sağlığı izleme
-✅ GitHub Actions kontrolü
+<b>🎯 Features:</b>
+✅ Automated news scraping
+✅ LinkedIn digest management
+✅ n8n trial tracking
+✅ Webhook management
+✅ System health monitoring
+✅ GitHub Actions control
 
-<b>🆕 Yeni!</b> Sistem Yönetimi menüsünden:
-• n8n deneme süresini takip edin
-• Telegram webhook'u resetleyin
-• Tüm sistemi tek yerden yönetin
-
-Başlamak için aşağıdaki menüyü kullanın:`;
+Select an option below to get started:`;
 
   await sendTelegramMessage(welcomeText, {
     reply_markup: getMainMenuKeyboard()
@@ -61,29 +62,76 @@ Başlamak için aşağıdaki menüyü kullanın:`;
  */
 export async function handleMenuCommand() {
   const menuText = `
-📱 <b>ANA MENÜ</b>
+📱 <b>MAIN MENU</b>
 
-Yapmak istediğiniz işlemi seçin:
+Select an action below:
 
-<b>📰 İçerik Yönetimi</b>
-• Haberleri Çek - Yeni haberler topla
-• Manuel Ekle - Tek haber ekle
+<b>📡 Scraper & Content</b>
+• Run Scraper, Add Article, Delete
 
-<b>📱 LinkedIn</b> - Digest yönetimi
+<b>📱 Social Media</b>
+• LinkedIn Digests & Groups
 
-<b>🔧 Sistem Yönetimi</b> [Yeni!]
-• n8n Durumu - Trial takibi
-• Webhook Reset - Kuyruk temizle
-• Sağlık Kontrolü - Sistem durumu
-• GitHub Actions - Workflow'lar
+<b>📊 Analytics & Data</b>
+• System Status, Statistics, DB Info
 
-<b>📊 Raporlar</b>
-• Durum, İstatistikler, Veritabanı
+<b>⚙️ System Management</b>
+• GitHub Actions, Health Check, n8n Settings
 
-<i>Butonlara tıklayarak işlem yapabilirsiniz.</i>`;
+<i>Tap a button to proceed.</i>`;
 
   await sendTelegramMessage(menuText, {
     reply_markup: getMainMenuKeyboard()
+  });
+}
+
+/**
+ * Handle Scraper & Content Submenu
+ */
+export async function handleScraperMenu() {
+  const text = `
+📡 <b>SCRAPER & CONTENT</b>
+
+Manage content gathering and articles:
+• <b>Run Scraper:</b> Trigger GitHub Action to scrape new tech news
+• <b>Manual Add:</b> Provide a URL to add a specific article
+• <b>Delete:</b> Remove an existing article`;
+
+  await sendTelegramMessage(text, {
+    reply_markup: getScraperMenuKeyboard()
+  });
+}
+
+/**
+ * Handle Social Media Submenu
+ */
+export async function handleSocialMenu() {
+  const text = `
+📱 <b>SOCIAL MEDIA</b>
+
+Manage automated social posts:
+• <b>LinkedIn Digests:</b> View, approve, or reject daily digests
+• <b>LinkedIn Groups:</b> Trigger group-specific automated digests`;
+
+  await sendTelegramMessage(text, {
+    reply_markup: getSocialMenuKeyboard()
+  });
+}
+
+/**
+ * Handle Analytics & Data Submenu
+ */
+export async function handleAnalyticsMenu() {
+  const text = `
+📊 <b>ANALYTICS & DATA</b>
+
+View system data and metrics:
+• <b>System Status:</b> Quick overview of total articles and recent updates
+• <b>Statistics:</b> Article counts over time and top categories
+• <b>Database:</b> Source URLs and general DB health`;
+
+  await sendTelegramMessage(text, {
+    reply_markup: getAnalyticsMenuKeyboard()
   });
 }
 
@@ -92,8 +140,6 @@ Yapmak istediğiniz işlemi seçin:
  */
 export async function handleScrapeAction() {
   try {
-    await sendTelegramMessage('🔄 <b>Haber Toplama Başlatılıyor...</b>\n\nLütfen bekleyin, bu işlem birkaç dakika sürebilir.');
-
     // Trigger GitHub Actions workflow
     if (CONFIG.GITHUB_TOKEN) {
       const [owner, repo] = CONFIG.GITHUB_REPO.split('/');
@@ -114,10 +160,9 @@ export async function handleScrapeAction() {
 
       if (response.ok) {
         await sendTelegramMessage(
-          '✅ <b>Haber toplama başlatıldı!</b>\n\n' +
-          '📊 GitHub Actions workflow tetiklendi\n' +
-          '⏳ İşlem tamamlandığında bildirim alacaksınız\n\n' +
-          '<i>Durum: Çalışıyor...</i>'
+          '🔄 <b>Tech News Scraper Started</b>\n\n' +
+          '📊 GitHub Actions workflow has been triggered.\n' +
+          '⏳ You will receive a summary when the process completes.'
         );
       } else {
         throw new Error(`GitHub API error: ${response.status}`);
@@ -125,8 +170,8 @@ export async function handleScrapeAction() {
     } else {
       // Fallback: Run locally
       await sendTelegramMessage(
-        '⚠️ GitHub token bulunamadı, lokal çalıştırılıyor...\n\n' +
-        'Bu işlem daha uzun sürebilir.'
+        '⚠️ GitHub token not found, running locally...\n\n' +
+        'This may take several minutes.'
       );
       
       // Run scraper locally
@@ -137,14 +182,14 @@ export async function handleScrapeAction() {
 
       scraper.on('close', async (code) => {
         if (code === 0) {
-          await sendTelegramMessage('✅ Haber toplama başarıyla tamamlandı!');
+          await sendTelegramMessage('✅ Local scraping completed successfully!');
         } else {
-          await sendTelegramMessage(`❌ Haber toplama başarısız oldu (Exit code: ${code})`);
+          await sendTelegramMessage(`❌ Local scraping failed (Exit code: ${code})`);
         }
       });
     }
   } catch (error) {
-    await sendTelegramMessage(`❌ <b>Hata!</b>\n\n${error.message}`);
+    await sendTelegramMessage(`❌ <b>Error!</b>\n\n${error.message}`);
   }
 }
 
@@ -153,14 +198,14 @@ export async function handleScrapeAction() {
  */
 export async function handleHealthAction() {
   try {
-    await sendTelegramMessage('🔍 <b>Sistem sağlığı kontrol ediliyor...</b>');
+    await sendTelegramMessage('🔍 <b>Checking system health...</b>');
 
     // Check Supabase
     const { count: articleCount, error: countError } = await supabase
       .from('tech_news_articles')
       .select('*', { count: 'exact', head: true });
     
-    const supabaseStatus = countError ? '❌ Hata' : '✅ Bağlı';
+    const supabaseStatus = countError ? '❌ Error' : '✅ Connected';
 
     // Check recent articles
     const yesterday = new Date();
@@ -175,7 +220,7 @@ export async function handleHealthAction() {
     const recentCount = recentArticles?.length || 0;
 
     // Check Firecrawl API
-    let firecrawlStatus = '❓ Bilinmiyor';
+    let firecrawlStatus = '❓ Unknown';
     try {
       const fcResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
         method: 'POST',
@@ -185,47 +230,47 @@ export async function handleHealthAction() {
         },
         body: JSON.stringify({ url: 'https://example.com', formats: ['markdown'] })
       });
-      firecrawlStatus = (fcResponse.status === 401 || fcResponse.status === 403) ? '❌ API Key Invalid' : '✅ Aktif';
+      firecrawlStatus = (fcResponse.status === 401 || fcResponse.status === 403) ? '❌ API Key Invalid' : '✅ Active';
     } catch (e) {
-      firecrawlStatus = '❌ Bağlantı Hatası';
+      firecrawlStatus = '❌ Connection Error';
     }
 
     // Check Groq API
-    let groqStatus = '❓ Bilinmiyor';
+    let groqStatus = '❓ Unknown';
     try {
       const groqResponse = await fetch('https://api.groq.com/openai/v1/models', {
         headers: { 'Authorization': `Bearer ${CONFIG.GROQ_API_KEY}` }
       });
-      groqStatus = groqResponse.ok ? '✅ Aktif' : '❌ Hata';
+      groqStatus = groqResponse.ok ? '✅ Active' : '❌ Error';
     } catch (e) {
-      groqStatus = '❌ Bağlantı Hatası';
+      groqStatus = '❌ Connection Error';
     }
 
     const healthReport = `
-🏥 <b>SİSTEM SAĞLIK RAPORU</b>
-⏰ ${new Date().toLocaleString('tr-TR')}
+🏥 <b>SYSTEM HEALTH REPORT</b>
+⏰ ${new Date().toLocaleString('en-US', { timeZone: 'UTC' })} UTC
 
-<b>📊 Veritabanı (Supabase)</b>
+<b>📊 Database (Supabase)</b>
 ${supabaseStatus}
-📰 Toplam haber: ${articleCount || 0}
-🆕 Son 24 saat: ${recentCount} yeni haber
-${recentArticles?.[0] ? `⏰ Son: ${new Date(recentArticles[0].created_at).toLocaleString('tr-TR')}` : ''}
+📰 Total Articles: ${articleCount || 0}
+🆕 Last 24h: ${recentCount} new
+${recentArticles?.[0] ? `⏰ Latest: ${new Date(recentArticles[0].created_at).toLocaleString('en-US', { timeZone: 'UTC' })}` : ''}
 
-<b>🌐 API Servisleri</b>
+<b>🌐 API Services</b>
 Firecrawl API: ${firecrawlStatus}
 Groq AI API: ${groqStatus}
-Telegram Bot: ✅ Aktif
+Telegram Bot: ✅ Active
 
-<b>🔄 Durum</b>
-${supabaseStatus === '✅ Bağlı' && firecrawlStatus.includes('✅') && groqStatus.includes('✅') 
-  ? '✨ <b>Tüm sistemler çalışıyor</b>' 
-  : '⚠️ <b>Bazı sistemlerde sorun var</b>'}`;
+<b>🔄 Overall Status</b>
+${supabaseStatus === '✅ Connected' && firecrawlStatus.includes('✅') && groqStatus.includes('✅')
+  ? '✨ <b>All systems operational</b>'
+  : '⚠️ <b>Issues detected</b>'}`;
 
     await sendTelegramMessage(healthReport, {
-      reply_markup: getMainMenuKeyboard()
+      reply_markup: getSystemManagementKeyboard()
     });
   } catch (error) {
-    await sendTelegramMessage(`❌ <b>Sağlık kontrolü hatası!</b>\n\n${error.message}`);
+    await sendTelegramMessage(`❌ <b>Health check failed!</b>\n\n${error.message}`);
   }
 }
 
@@ -245,20 +290,20 @@ export async function handleStatusAction() {
       .limit(1);
 
     const statusText = `
-📊 <b>HIZLI DURUM</b>
-⏰ ${new Date().toLocaleString('tr-TR')}
+📊 <b>QUICK STATUS</b>
+⏰ ${new Date().toLocaleString('en-US', { timeZone: 'UTC' })} UTC
 
-📰 Toplam haber: ${count || 0}
-⏰ Son güncelleme: ${recent?.[0] ? new Date(recent[0].created_at).toLocaleString('tr-TR') : 'Bilinmiyor'}
-🔄 Durum: ✅ Aktif
+📰 Total Articles: ${count || 0}
+⏰ Last Update: ${recent?.[0] ? new Date(recent[0].created_at).toLocaleString('en-US', { timeZone: 'UTC' }) : 'Unknown'}
+🔄 Bot Status: ✅ Active
 
-<i>Detaylı kontrol için 🏥 Sağlık Kontrolü'ne tıklayın</i>`;
+<i>For detailed info, check Health Check in System Management</i>`;
 
     await sendTelegramMessage(statusText, {
-      reply_markup: getMainMenuKeyboard()
+      reply_markup: getAnalyticsMenuKeyboard()
     });
   } catch (error) {
-    await sendTelegramMessage(`❌ Durum alınamadı: ${error.message}`);
+    await sendTelegramMessage(`❌ Failed to retrieve status: ${error.message}`);
   }
 }
 
@@ -308,26 +353,26 @@ export async function handleStatsAction() {
       .join('\n');
 
     const statsText = `
-📈 <b>İSTATİSTİKLER</b>
-⏰ ${new Date().toLocaleString('tr-TR')}
+📈 <b>STATISTICS</b>
+⏰ ${new Date().toLocaleString('en-US', { timeZone: 'UTC' })} UTC
 
-<b>📰 Haber Sayıları</b>
-Toplam: ${totalCount || 0}
-Son 7 gün: ${weekCount || 0}
-Son 24 saat: ${dayCount || 0}
+<b>📰 Article Counts</b>
+Total: ${totalCount || 0}
+Last 7 Days: ${weekCount || 0}
+Last 24 Hours: ${dayCount || 0}
 
-<b>🏆 En Popüler Kategoriler</b>
-${topCategories || 'Veri yok'}
+<b>🏆 Top Categories</b>
+${topCategories || 'No data'}
 
-<b>📊 Ortalamalar</b>
-Günlük: ~${Math.round((weekCount || 0) / 7)} haber
-Haftalık: ~${weekCount || 0} haber`;
+<b>📊 Averages</b>
+Daily: ~${Math.round((weekCount || 0) / 7)} articles
+Weekly: ~${weekCount || 0} articles`;
 
     await sendTelegramMessage(statsText, {
-      reply_markup: getMainMenuKeyboard()
+      reply_markup: getAnalyticsMenuKeyboard()
     });
   } catch (error) {
-    await sendTelegramMessage(`❌ İstatistikler alınamadı: ${error.message}`);
+    await sendTelegramMessage(`❌ Failed to retrieve stats: ${error.message}`);
   }
 }
 
@@ -353,34 +398,34 @@ export async function handleDatabaseAction() {
     const sourcePercentage = total > 0 ? Math.round((withSource / total) * 100) : 0;
 
     const dbText = `
-💾 <b>VERİTABANI BİLGİLERİ</b>
+💾 <b>DATABASE INFO</b>
 
-<b>📊 Genel İstatistikler</b>
-Toplam kayıt: ${total}
-Original source var: ${withSource} (${sourcePercentage}%)
-Original source yok: ${nullSource}
+<b>📊 Overview</b>
+Total Records: ${total}
+Has Original Source: ${withSource} (${sourcePercentage}%)
+Missing Source: ${nullSource}
 
-<b>🔧 Bakım</b>
-${nullSource > 0 ? `⚠️ ${nullSource} kayıtta source eksik\n\nDüzeltmek için:\nnpm run fix:original-sources` : '✅ Tüm kayıtlar düzgün'}
+<b>🔧 Maintenance</b>
+${nullSource > 0 ? `⚠️ ${nullSource} records missing source.\n\nRun locally:\nnpm run fix:original-sources` : '✅ All records healthy'}
 
-<b>🔗 Bağlantı</b>
-Supabase: ✅ Bağlı
+<b>🔗 Connection</b>
+Supabase: ✅ Connected
 URL: ${env.SUPABASE_URL.substring(0, 30)}...`;
 
     await sendTelegramMessage(dbText, {
       reply_markup: {
         inline_keyboard: [
           [
-            { text: '🔧 Source\'ları Düzelt', callback_data: 'action_fix_sources' },
+            { text: '🔧 Fix Sources', callback_data: 'action_fix_sources' },
           ],
           [
-            { text: '🔙 Ana Menü', callback_data: 'action_refresh_menu' },
+            { text: '🔙 Analytics Menu', callback_data: 'action_analytics_menu' },
           ],
         ]
       }
     });
   } catch (error) {
-    await sendTelegramMessage(`❌ Veritabanı bilgisi alınamadı: ${error.message}`);
+    await sendTelegramMessage(`❌ Failed to retrieve DB info: ${error.message}`);
   }
 }
 
@@ -389,30 +434,23 @@ URL: ${env.SUPABASE_URL.substring(0, 30)}...`;
  */
 export async function handleSystemManagementMenu() {
   const systemText = `
-🔧 <b>SİSTEM YÖNETİMİ</b>
+⚙️ <b>SYSTEM MANAGEMENT</b>
 
-Sistemlerinizi buradan yönetin:
+Manage and monitor internal systems:
 
-<b>🤖 n8n Durumu</b>
-• Deneme süresi takibi
-• Kalan gün kontrolü
-• Trial sıfırlama
+<b>🤖 n8n Status</b>
+• Track trial period and reset limits
 
 <b>🔄 Webhook Reset</b>
-• Telegram webhook'u sıfırla
-• Kuyrukta sıkışan mesajları temizle
-• GitHub Actions ile otomatik
+• Clear stuck messages and reset Telegram hook
 
-<b>🏥 Sağlık Kontrolü</b>
-• Tüm sistemleri kontrol et
-• API durumları
-• Veritabanı bağlantısı
+<b>🏥 Health Check</b>
+• Full diagnostic of APIs and Database
 
 <b>🔧 GitHub Actions</b>
-• Workflow durumları
-• Manuel tetikleme
+• Enable/disable workflows and check status
 
-<i>Yapmak istediğiniz işlemi seçin:</i>`;
+<i>Select an option below:</i>`;
 
   await sendTelegramMessage(systemText, {
     reply_markup: getSystemManagementKeyboard()
@@ -443,40 +481,40 @@ export async function handleN8nStatusAction() {
     const progressBar = '▓'.repeat(filledBars) + '░'.repeat(emptyBars);
 
     let statusText = `
-🤖 <b>n8n DENEME SÜRESİ DURUMU</b>
+🤖 <b>n8n TRIAL STATUS</b>
 
-<b>📅 Tarih Bilgileri:</b>
-Başlangıç: ${startDate}
-Bitiş: ${endDate}
-Toplam süre: ${durationDays} gün
+<b>📅 Dates:</b>
+Start: ${startDate}
+End: ${endDate}
+Total: ${durationDays} days
 
-<b>📊 İlerleme:</b>
+<b>📊 Progress:</b>
 ${progressBar} ${progress}%
-✅ Geçen: ${daysPassed} gün
-⏳ Kalan: ${daysRemaining} gün
+✅ Elapsed: ${daysPassed} days
+⏳ Remaining: ${daysRemaining} days
 
-<b>🔔 Durum:</b>`;
+<b>🔔 Status:</b>`;
 
     if (isExpired) {
       statusText += `
-❌ Deneme süresi ${Math.abs(daysRemaining)} gün önce sona erdi!
+❌ Trial expired ${Math.abs(daysRemaining)} days ago!
 
-<b>⚠️ Yapılması Gerekenler:</b>
-1. Yeni n8n hesabı oluştur
-2. Workflow'u yeni hesaba aktar  
-3. Vercel webhook URL'ini güncelle
-4. "30 Günü Yeniden Başlat" butonuna bas
+<b>⚠️ Required Actions:</b>
+1. Create a new n8n account
+2. Export/Import workflow to new account
+3. Update Vercel webhook URL
+4. Click "Reset 30 Days" button
 
-<i>Not: Yeni hesap kurduktan sonra trial'ı sıfırlayın.</i>`;
+<i>Note: Reset trial only after setting up the new account.</i>`;
       
       // Add reset button
       const keyboard = {
         inline_keyboard: [
           [
-            { text: '🔄 30 Günü Yeniden Başlat', callback_data: 'action_n8n_trial_reset' }
+            { text: '🔄 Reset 30 Days', callback_data: 'action_n8n_trial_reset' }
           ],
           [
-            { text: '🔙 Sistem Yönetimi', callback_data: 'action_system_management' }
+            { text: '🔙 System Management', callback_data: 'action_system_management' }
           ]
         ]
       };
@@ -484,36 +522,30 @@ ${progressBar} ${progress}%
       await sendTelegramMessage(statusText, { reply_markup: keyboard });
     } else if (daysRemaining <= 1) {
       statusText += `
-⚠️ <b>KRİTİK!</b> Deneme süreniz yarın bitiyor!
+⚠️ <b>CRITICAL!</b> Trial ends tomorrow!
 
-Yeni n8n hesabı için hazırlık yapın:
-• Workflow'u export edin
-• Yeni hesap oluşturun
-• Webhook URL'lerini güncelleyin
-
-<i>Süre bitince trial'ı sıfırlayabilirsiniz.</i>`;
+Prepare new n8n account:
+• Export workflow
+• Create new account
+• Update webhook URLs`;
       
       await sendTelegramMessage(statusText, {
         reply_markup: getSystemManagementKeyboard()
       });
     } else if (daysRemaining <= 3) {
       statusText += `
-⚠️ <b>UYARI!</b> ${daysRemaining} gün kaldı.
+⚠️ <b>WARNING!</b> ${daysRemaining} days left.
 
-Yeni n8n hesabı için hazırlık yapmayı unutmayın!
-
-<i>Günlük otomatik kontroller devam edecek.</i>`;
+Don't forget to prepare a new n8n account!`;
       
       await sendTelegramMessage(statusText, {
         reply_markup: getSystemManagementKeyboard()
       });
     } else {
       statusText += `
-✅ <b>Her şey yolunda!</b> ${daysRemaining} gün kaldı.
+✅ <b>All good!</b> ${daysRemaining} days remaining.
 
-Sistem normal çalışıyor. ${daysRemaining <= 7 ? 'Hazırlık yapmaya başlayabilirsiniz.' : ''}
-
-<i>Günlük otomatik kontroller aktif.</i>`;
+System is operating normally.`;
       
       await sendTelegramMessage(statusText, {
         reply_markup: getSystemManagementKeyboard()
@@ -522,16 +554,11 @@ Sistem normal çalışıyor. ${daysRemaining <= 7 ? 'Hazırlık yapmaya başlaya
 
   } catch (error) {
     console.error('❌ n8n status error:', error);
-    console.error('Error stack:', error.stack);
     
     await sendTelegramMessage(
-      `❌ <b>n8n Durumu Alınamadı!</b>\n\n` +
-      `<b>Hata:</b> <code>${error.message}</code>\n\n` +
-      `<b>Detay:</b> ${error.stack ? error.stack.split('\n')[0] : 'Bilinmiyor'}\n\n` +
-      `💡 Kontrol edin:\n` +
-      `• Supabase system_settings tablosu var mı?\n` +
-      `• SUPABASE_SERVICE_ROLE_KEY doğru mu?\n` +
-      `• Vercel env variables güncel mi?`,
+      `❌ <b>Failed to get n8n Status!</b>\n\n` +
+      `<b>Error:</b> <code>${error.message}</code>\n\n` +
+      `💡 Please check Supabase system_settings table.`,
       { reply_markup: getSystemManagementKeyboard() }
     );
   }
@@ -543,9 +570,9 @@ Sistem normal çalışıyor. ${daysRemaining <= 7 ? 'Hazırlık yapmaya başlaya
 export async function handleWebhookResetAction() {
   try {
     await sendTelegramMessage(
-      '🔄 <b>Telegram Webhook Reset Başlatılıyor...</b>\n\n' +
-      'GitHub Actions workflow tetikleniyor...\n' +
-      'Bu işlem 1-2 dakika sürebilir.'
+      '🔄 <b>Initiating Telegram Webhook Reset...</b>\n\n' +
+      'Triggering GitHub Actions workflow...\n' +
+      'This may take 1-2 minutes.'
     );
 
     // Trigger GitHub Actions workflow
@@ -568,15 +595,14 @@ export async function handleWebhookResetAction() {
 
       if (response.ok) {
         await sendTelegramMessage(
-          '✅ <b>Webhook Reset Başlatıldı!</b>\n\n' +
-          '📊 GitHub Actions workflow tetiklendi\n' +
-          '⏳ İşlemler:\n' +
-          '  1️⃣ Eski webhook siliniyor...\n' +
-          '  2️⃣ Pending updates temizleniyor...\n' +
-          '  3️⃣ Yeni webhook kuruluyor...\n' +
-          '  4️⃣ Durum doğrulanıyor...\n\n' +
-          '🔔 Tamamlandığında bildirim alacaksınız (30-60 saniye)\n\n' +
-          '<i>GitHub Actions sekmesinden takip edebilirsiniz.</i>',
+          '✅ <b>Webhook Reset Started!</b>\n\n' +
+          '📊 GitHub Actions workflow triggered\n' +
+          '⏳ Steps:\n' +
+          '  1️⃣ Removing old webhook...\n' +
+          '  2️⃣ Clearing pending updates...\n' +
+          '  3️⃣ Setting new webhook...\n' +
+          '  4️⃣ Verifying status...\n\n' +
+          '🔔 You will be notified upon completion.',
           { reply_markup: getSystemManagementKeyboard() }
         );
       } else {
@@ -587,10 +613,10 @@ export async function handleWebhookResetAction() {
     }
   } catch (error) {
     await sendTelegramMessage(
-      `❌ <b>Webhook Reset Başlatılamadı!</b>\n\n` +
+      `❌ <b>Failed to Start Webhook Reset!</b>\n\n` +
       `<code>${error.message}</code>\n\n` +
-      `💡 Alternatif:\n` +
-      `Lokal olarak çalıştırın:\n` +
+      `💡 Alternative:\n` +
+      `Run locally:\n` +
       `<code>npm run telegram:reset</code>`,
       { reply_markup: getSystemManagementKeyboard() }
     );
@@ -603,8 +629,8 @@ export async function handleWebhookResetAction() {
 export async function handleN8nTrialResetAction() {
   try {
     await sendTelegramMessage(
-      '🔄 <b>n8n Trial Sıfırlanıyor...</b>\n\n' +
-      'Yeni 30 günlük süre başlatılıyor...'
+      '🔄 <b>Resetting n8n Trial...</b>\n\n' +
+      'Starting a new 30-day period...'
     );
 
     // Import reset function
@@ -616,23 +642,21 @@ export async function handleN8nTrialResetAction() {
     const { startDate, endDate, durationDays } = newStatus;
 
     await sendTelegramMessage(
-      '✅ <b>n8n Trial Sıfırlandı!</b>\n\n' +
-      `📅 <b>Yeni Süre:</b>\n` +
-      `Başlangıç: ${startDate}\n` +
-      `Bitiş: ${endDate}\n` +
-      `Toplam: ${durationDays} gün\n\n` +
-      `💚 Yeni 30 günlük deneme süresi başladı!\n\n` +
-      `⏰ Her gün otomatik kontrol edilecek.\n` +
-      `🔔 ${durationDays - 3} gün sonra uyarı mesajları başlayacak.\n\n` +
-      `<i>Not: Yeni n8n hesabı oluşturduktan sonra bu işlemi yapın.</i>`,
+      '✅ <b>n8n Trial Reset Successful!</b>\n\n' +
+      `📅 <b>New Period:</b>\n` +
+      `Start: ${startDate}\n` +
+      `End: ${endDate}\n` +
+      `Total: ${durationDays} days\n\n` +
+      `💚 New 30-day trial tracking has begun.\n\n` +
+      `<i>Note: Only do this after setting up a new n8n account.</i>`,
       { reply_markup: getSystemManagementKeyboard() }
     );
 
   } catch (error) {
     await sendTelegramMessage(
-      `❌ <b>Trial Sıfırlama Başarısız!</b>\n\n` +
+      `❌ <b>Trial Reset Failed!</b>\n\n` +
       `<code>${error.message}</code>\n\n` +
-      `Lütfen Supabase bağlantısını kontrol edin.`,
+      `Please check Supabase connection.`,
       { reply_markup: getSystemManagementKeyboard() }
     );
   }
@@ -741,41 +765,41 @@ async function setN8nTrialNotificationsSetting(enabled, updatedBy = 'telegram') 
  */
 export async function handleN8nNotificationsMenu() {
   try {
-    await sendTelegramMessage('🔍 <b>n8n Bildirim Ayarı Kontrol Ediliyor...</b>');
+    await sendTelegramMessage('🔍 <b>Checking n8n Notification Settings...</b>');
 
     const enabled = await getN8nTrialNotificationsSetting();
 
     const statusText = `
-🔔 <b>n8n BİLDİRİM AYARLARI</b>
+🔔 <b>n8n NOTIFICATION SETTINGS</b>
 
-<b>📊 Günlük Trial Bildirimleri:</b>
-${enabled ? '✅ Açık' : '🔕 Kapalı'}
+<b>📊 Daily Trial Notifications:</b>
+${enabled ? '✅ Enabled' : '🔕 Disabled'}
 
-<b>📝 Açıklama:</b>
-• Açık: n8n trial günlük kontrol mesajı Telegram'a gönderilir
-• Kapalı: günlük n8n trial mesajı gönderilmez
-• Manuel "🤖 n8n Durumu" kontrolü her zaman çalışır
+<b>📝 Description:</b>
+• Enabled: Daily automated Telegram messages are sent
+• Disabled: Daily automated messages are silenced
+• Manual "🤖 n8n Status" checks will always work
 
-<i>Durumu değiştirmek için aşağıdan seçin:</i>`;
+<i>Select to change status:</i>`;
 
     await sendTelegramMessage(statusText, {
       reply_markup: {
         inline_keyboard: [
           [
             {
-              text: enabled ? '🟢 Bildirimler Açık (Aktif)' : '⚪ Bildirimleri Aç',
+              text: enabled ? '🟢 Enabled (Active)' : '⚪ Enable',
               callback_data: 'n8n_notifications_on'
             },
             {
-              text: enabled ? '⚪ Bildirimleri Kapat' : '🔕 Bildirimler Kapalı (Aktif)',
+              text: enabled ? '⚪ Disable' : '🔕 Disabled (Active)',
               callback_data: 'n8n_notifications_off'
             }
           ],
           [
-            { text: '🔄 Durumu Yenile', callback_data: 'action_n8n_notifications' }
+            { text: '🔄 Refresh', callback_data: 'action_n8n_notifications' }
           ],
           [
-            { text: '🔙 Sistem Yönetimi', callback_data: 'action_system_management' }
+            { text: '🔙 System Management', callback_data: 'action_system_management' }
           ]
         ]
       }
@@ -784,9 +808,9 @@ ${enabled ? '✅ Açık' : '🔕 Kapalı'}
   } catch (error) {
     console.error('n8n notifications menu error:', error);
     await sendTelegramMessage(
-      `❌ <b>n8n Bildirim Menüsü Yüklenemedi!</b>\n\n` +
+      `❌ <b>Failed to load notification menu!</b>\n\n` +
       `<code>${error.message}</code>\n\n` +
-      `Supabase system_settings tablosunu kontrol edin.`,
+      `Check Supabase system_settings table.`,
       { reply_markup: getSystemManagementKeyboard() }
     );
   }
@@ -835,54 +859,54 @@ export async function handleN8nNotificationsToggle(enabled) {
  */
 export async function handleChatBackendMenu() {
   try {
-    await sendTelegramMessage('🔍 <b>Chat Backend Durumu Kontrol Ediliyor...</b>');
+    await sendTelegramMessage('🔍 <b>Checking Chat Backend Status...</b>');
 
     const currentBackend = await getChatBackendSetting();
     const isVercel = currentBackend === 'vercel';
     const isN8n = currentBackend === 'n8n';
 
     const statusText = `
-🔀 <b>CHAT BACKEND AYARLARI</b>
+🔀 <b>CHAT BACKEND SETTINGS</b>
 
-<b>📊 Mevcut Backend:</b>
+<b>📊 Current Backend:</b>
 ${isVercel ? '✅' : '⚪'} Vercel API (chat.js)
 ${isN8n ? '✅' : '⚪'} n8n Workflow
 
-<b>📝 Backend Özellikleri:</b>
+<b>📝 Backend Features:</b>
 
 <b>🟢 Vercel API (chat.js)</b>
 • Model: Groq Llama 3.3 70B
-• Hız: ⚡ Çok hızlı
-• Maliyet: 💚 Ücretsiz
-• Memory: ❌ Yok
-• Durum: Production-ready
+• Speed: ⚡ Very Fast
+• Cost: 💚 Free
+• Memory: ❌ None
+• Status: Production-ready
 
 <b>🔵 n8n Workflow</b>
 • Model: OpenAI GPT-4o-mini
-• Hız: 🔄 Normal
-• Maliyet: 💛 Ücretli (OpenAI)
+• Speed: 🔄 Normal
+• Cost: 💛 Paid (OpenAI)
 • Memory: ✅ Supabase DB
-• Durum: Test/Yedek
+• Status: Testing/Backup
 
-<i>Değiştirmek için aşağıdan seçin:</i>`;
+<i>Select to change:</i>`;
 
     const keyboard = {
       inline_keyboard: [
         [
           {
-            text: isVercel ? '🟢 Vercel API (Aktif)' : '⚪ Vercel API',
+            text: isVercel ? '🟢 Vercel API (Active)' : '⚪ Vercel API',
             callback_data: 'chat_backend_vercel'
           },
           {
-            text: isN8n ? '🟢 n8n Workflow (Aktif)' : '⚪ n8n Workflow',
+            text: isN8n ? '🟢 n8n Workflow (Active)' : '⚪ n8n Workflow',
             callback_data: 'chat_backend_n8n'
           }
         ],
         [
-          { text: '🔄 Durumu Yenile', callback_data: 'action_chat_backend' }
+          { text: '🔄 Refresh', callback_data: 'action_chat_backend' }
         ],
         [
-          { text: '🔙 Sistem Yönetimi', callback_data: 'action_system_management' }
+          { text: '🔙 System Management', callback_data: 'action_system_management' }
         ]
       ]
     };
@@ -892,9 +916,9 @@ ${isN8n ? '✅' : '⚪'} n8n Workflow
   } catch (error) {
     console.error('Chat backend menu error:', error);
     await sendTelegramMessage(
-      `❌ <b>Chat Backend Menüsü Yüklenemedi!</b>\n\n` +
+      `❌ <b>Failed to load Chat Backend Menu!</b>\n\n` +
       `<code>${error.message}</code>\n\n` +
-      `Supabase system_settings tablosunu kontrol edin.`,
+      `Check Supabase system_settings table.`,
       { reply_markup: getSystemManagementKeyboard() }
     );
   }
@@ -1067,25 +1091,25 @@ async function toggleGitHubWorkflow(workflowFileName, enable) {
  */
 export async function handleGitHubAction() {
   try {
-    await sendTelegramMessage('🔍 <b>GitHub Actions durumu kontrol ediliyor...</b>');
+    await sendTelegramMessage('🔍 <b>Checking GitHub Actions status...</b>');
 
     const statuses = await getGitHubWorkflowStatus();
     
-    let githubText = `🔧 <b>GITHUB ACTIONS YÖNETİMİ</b>\n\n`;
+    let githubText = `🔧 <b>GITHUB ACTIONS MANAGEMENT</b>\n\n`;
 
     if (!statuses || statuses.length === 0) {
-      githubText += `⚠️ <b>Workflow durumları alınamadı</b>\n\n`;
-      githubText += `GITHUB_TOKEN environment variable'ı kontrol edin.`;
+      githubText += `⚠️ <b>Could not retrieve workflow statuses</b>\n\n`;
+      githubText += `Check your GITHUB_TOKEN environment variable.`;
     } else {
-      githubText += `<b>📋 Workflow Durumları:</b>\n\n`;
+      githubText += `<b>📋 Workflow Statuses:</b>\n\n`;
       
       statuses.forEach(status => {
         const icon = status.enabled ? '✅' : '❌';
         githubText += `${icon} ${status.name}\n`;
       });
 
-      githubText += `\n<b>ℹ️ Not</b>\n`;
-      githubText += `Workflow'ları devre dışı bırakmak için aşağıdaki butonları kullanın.`;
+      githubText += `\n<b>ℹ️ Note</b>\n`;
+      githubText += `Use the buttons below to toggle workflows.`;
     }
 
     // Create keyboard with workflow toggle buttons
@@ -1123,11 +1147,11 @@ export async function handleGitHubAction() {
     }
 
     keyboard.push([
-      { text: '🔄 Durumu Yenile', callback_data: 'action_github' },
+      { text: '🔄 Refresh Status', callback_data: 'action_github' },
     ]);
     
     keyboard.push([
-      { text: '🔙 Sistem Yönetimi', callback_data: 'action_system_management' },
+      { text: '🔙 System Management', callback_data: 'action_system_management' },
     ]);
 
   await sendTelegramMessage(githubText, {
@@ -1137,8 +1161,8 @@ export async function handleGitHubAction() {
   } catch (error) {
     console.error('GitHub action error:', error);
     await sendTelegramMessage(
-      `❌ <b>Hata!</b>\n\n${error.message}\n\n` +
-      `GITHUB_TOKEN kontrol edin veya /help ile destek alın.`
+      `❌ <b>Error!</b>\n\n${error.message}\n\n` +
+      `Check GITHUB_TOKEN or use /help for support.`
     );
   }
 }
@@ -1618,36 +1642,33 @@ export async function handleDeleteArticleConfirm(articleId) {
  */
 export async function handleHelpAction() {
   const helpText = `
-ℹ️ <b>YARDIM VE KOMUTLAR</b>
+ℹ️ <b>HELP & COMMANDS</b>
 
-<b>📱 Bot Komutları</b>
-/start - Bot'u başlat
-/menu - Ana menüyü göster
-/linkedin - LinkedIn digest'leri yönet
-/status - Hızlı durum raporu
-/scrape - Haberleri çek
-/health - Sağlık kontrolü
-/help - Bu yardım mesajı
+<b>📱 Bot Commands</b>
+/start - Start Bot
+/menu - Show main menu
+/status - Quick status report
+/scrape - Run news scraper
+/health - System health check
+/help - This help message
 
-<b>🎯 Menü Özellikleri</b>
-• 📰 Haberleri Çek - Yeni haberler topla
-• 🏥 Sağlık Kontrolü - Sistemleri kontrol et
-• 📊 Sistem Durumu - Hızlı özet
-• 📈 İstatistikler - Detaylı veriler
-• 🔧 GitHub Actions - Workflow durumu
-• 💾 Veritabanı - DB yönetimi
+<b>🎯 Menu Features</b>
+• 📡 Scraper & Content: Run scraper, add/delete articles
+• 📱 Social Media: Manage LinkedIn Digests & Groups
+• 📊 Analytics & Data: DB metrics, status, statistics
+• ⚙️ System Management: Webhook, n8n, Actions, Health
 
-<b>🔔 Otomatik Bildirimler</b>
-• ✅ Başarılı işlemler
-• ❌ Hatalar ve sorunlar
-• 📊 Günlük sağlık raporu
+<b>🔔 Automated Notifications</b>
+• ✅ Success operations
+• ❌ Errors & Failures
+• 📊 Daily health reports
 
-<b>💡 İpuçları</b>
-• Butonlara tıklayarak işlem yapın
-• Komutları direkt yazabilirsiniz
-• Bildirimler otomatik gelir
+<b>💡 Tips</b>
+• Tap buttons to perform actions
+• You can write commands directly
+• If stuck, type /menu to reset state
 
-<i>Sorun olursa /menu ile yenileyin</i>`;
+<i>Need more help? Check the README or /menu to refresh</i>`;
 
   await sendTelegramMessage(helpText, {
     reply_markup: getMainMenuKeyboard()
@@ -2126,12 +2147,12 @@ export async function handleConfirmCleanAction() {
  */
 export async function setBotCommands() {
   const commands = [
-    { command: 'start', description: 'Bot\'u başlat' },
-    { command: 'menu', description: 'Ana menüyü göster' },
-    { command: 'status', description: 'Hızlı durum raporu' },
-    { command: 'scrape', description: 'Haberleri çek' },
-    { command: 'health', description: 'Sağlık kontrolü' },
-    { command: 'help', description: 'Yardım ve komutlar' },
+    { command: 'start', description: 'Start Bot' },
+    { command: 'menu', description: 'Show Main Menu' },
+    { command: 'status', description: 'Quick Status Report' },
+    { command: 'scrape', description: 'Run Scraper' },
+    { command: 'health', description: 'Health Check' },
+    { command: 'help', description: 'Help and Commands' },
   ];
 
   try {
@@ -2146,6 +2167,9 @@ export default {
   sendTelegramMessage,
   handleStartCommand,
   handleMenuCommand,
+  handleScraperMenu,
+  handleSocialMenu,
+  handleAnalyticsMenu,
   handleLinkedInCommand,
   handleLinkedInGroupsDigest,
   handleCreateDigestAction,
@@ -2164,6 +2188,7 @@ export default {
   handleStatusAction,
   handleStatsAction,
   handleDatabaseAction,
+  handleSystemManagementMenu,
   handleGitHubAction,
   handleGitHubWorkflowToggle,
   handleHelpAction,
