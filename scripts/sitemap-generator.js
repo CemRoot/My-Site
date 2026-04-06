@@ -1,3 +1,7 @@
+/**
+ * Writes public/sitemap.xml. Run via npm prebuild (before vite build) so the file
+ * is included in the build/ output on Vercel; do not commit the generated file.
+ */
 import fs from 'fs';
 import path from 'path';
 import { supabase } from './lib/supabaseAdmin.js';

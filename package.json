@@ -54,8 +54,10 @@
       "scripts": {
             "test": "node --test tests/rate-limit.test.js tests/format-tech-news-article.test.mjs tests/preflight-url-utils.test.mjs tests/telegram-html-escape.test.mjs tests/telegram-tech-news-success-message.test.mjs tests/slug-normalization.test.mjs tests/use-tech-news-loading-regression.test.mjs",
             "dev": "vite",
+            "prebuild": "node scripts/sitemap-generator.js",
             "build": "vite build",
-            "postbuild": "node scripts/sitemap-generator.js && node scripts/post-build-telegram.js || true",
+            "postbuild": "node scripts/post-build-telegram.js || true",
+            "sitemap": "node scripts/sitemap-generator.js",
             "scrape:news": "node --max-old-space-size=4096 scripts/news-scraper.js",
             "scrape:news:parity": "node scripts/ci/tech-news-preflight.mjs && node scripts/ci/run-scrape-if-preflight-ok.mjs",
             "scrape:news:replay": "node --max-old-space-size=4096 scripts/news-scraper.js --replay-status rejected,failed,deleted",
