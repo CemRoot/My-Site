@@ -98,6 +98,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<from Supabase dashboard>
 # Telegram
 TELEGRAM_BOT_TOKEN=<from @BotFather>
 TELEGRAM_CHAT_ID=<your chat ID>
+TELEGRAM_WEBHOOK_SECRET=<openssl rand -hex 32 — webhook isteğinin Telegram’dan geldiğini doğrular>
 
 # GitHub (auto-provided in Actions)
 GITHUB_TOKEN=<auto>
@@ -120,7 +121,7 @@ N8N_CHATBOT_WEBHOOK=<your n8n chatbot webhook URL>
 
 **Assume the value is compromised** — making the repo private or deleting the file is **not** enough; anyone or any indexer may have copied it.
 
-1. **Telegram bot token** — In [@BotFather](https://t.me/BotFather), open the bot → revoke the token and issue a new one. Update **Vercel** env vars and **GitHub Actions** repository secrets (`TELEGRAM_BOT_TOKEN`). Re-run webhook setup if you use the Telegram webhook (`scripts/setup-telegram-webhook.js` / `npm run telegram:webhook-setup`).
+1. **Telegram bot token** — In [@BotFather](https://t.me/BotFather), open the bot → revoke the token and issue a new one. Update **Vercel** env vars and **GitHub Actions** repository secrets (`TELEGRAM_BOT_TOKEN`). Re-run webhook setup if you use the Telegram webhook (`scripts/setup-telegram-webhook.js` / `npm run telegram:webhook-setup`). **Webhook URL** (`/api/telegram-webhook`) is public by design; set **`TELEGRAM_WEBHOOK_SECRET`** on Vercel and in `.env.local`, then run webhook setup again so Telegram sends `X-Telegram-Bot-Api-Secret-Token` — otherwise anyone can POST fake updates (your code still checks `TELEGRAM_CHAT_ID`, but that is not proof the request came from Telegram).
 2. **Google API key** — In [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials: delete or rotate the key, add HTTP referrer / API restrictions, then update env vars (e.g. `GEMINI_API_KEY`).
 3. **Never commit** scan outputs such as `gitleaks-report.json` (they echo detected secrets). This repo gitignores `gitleaks-report.json` and `*-report.json`.
 4. **n8n workflow exports** (if you ever commit them): do not embed static `Authorization: Bearer …` or API keys. Use n8n expressions and environment variables (e.g. `TELEGRAM_CONTROL_API_SECRET` for `/api/conversation-state`, aligned with Vercel).

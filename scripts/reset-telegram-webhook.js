@@ -48,14 +48,26 @@ async function deleteWebhook(dropPendingUpdates = false) {
 async function setWebhook(url, options = {}) {
   log(`\n🔧 Setting up new webhook...`, 'cyan');
   log(`📡 URL: ${url}`, 'blue');
-  
-  const result = await callTelegramApi('setWebhook', {
+
+  const secret = (process.env.TELEGRAM_WEBHOOK_SECRET || '').trim();
+  const body = {
     url,
     allowed_updates: options.allowed_updates || ['callback_query', 'message'],
     max_connections: options.max_connections || 40,
     drop_pending_updates: options.drop_pending_updates || false,
-  });
-  
+  };
+  if (secret) {
+    if (!/^[\w-]{1,256}$/.test(secret)) {
+      throw new Error(
+        'TELEGRAM_WEBHOOK_SECRET geçersiz (1–256 karakter: A–Z a–z 0–9 _ -). Örn: openssl rand -hex 32',
+      );
+    }
+    body.secret_token = secret;
+    log('🔐 secret_token: ayarlı (Vercel TELEGRAM_WEBHOOK_SECRET ile aynı olmalı)', 'cyan');
+  }
+
+  const result = await callTelegramApi('setWebhook', body);
+
   log(`✅ Webhook set successfully!`, 'green');
   return result;
 }

@@ -1,8 +1,12 @@
 /**
  * Telegram Webhook Handler
  * Handles Telegram bot callbacks for LinkedIn automation approval workflow
+ *
+ * İsteğe bağlı: TELEGRAM_WEBHOOK_SECRET ayarlanırsa setWebhook(secret_token) ile
+ * aynı değer kullanılmalı; Telegram her istekte X-Telegram-Bot-Api-Secret-Token gönderir.
  */
 
+import crypto from 'crypto';
 import { supabase } from '../lib/supabaseAdmin.js';
 import { sendTelegramMessage, callTelegramApi } from '../lib/telegram.js';
 
@@ -15,6 +19,27 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 function isValidUUID(uuid) {
   return UUID_REGEX.test(uuid);
+}
+
+function webhookSecretOk(req) {
+  const expected = process.env.TELEGRAM_WEBHOOK_SECRET;
+  if (!expected || !String(expected).trim()) {
+    return true;
+  }
+  const provided = req.headers['x-telegram-bot-api-secret-token'];
+  if (!provided || typeof provided !== 'string') {
+    return false;
+  }
+  const a = Buffer.from(provided, 'utf8');
+  const b = Buffer.from(String(expected).trim(), 'utf8');
+  if (a.length !== b.length) {
+    return false;
+  }
+  try {
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
 }
 
 function checkRateLimit(userId, maxRequests = 10, windowMs = 60000) {
@@ -62,6 +87,11 @@ export default async function handler(req, res) {
     });
   }
 
+  if (!webhookSecretOk(req)) {
+    console.warn('Telegram webhook: rejected (missing or invalid X-Telegram-Bot-Api-Secret-Token)');
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
   try {
     // Get the update from Telegram
     const update = req.body;
@@ -86,8 +116,10 @@ export default async function handler(req, res) {
       const text = message.text;
 
       // Ensure the message is from the authorized chat ID
-      if (chatId.toString() !== TELEGRAM_CHAT_ID()) {
-        console.warn(`Unauthorized Telegram message from chat ID: ${chatId}`);
+      if (chatId.toString() !== TELEGRAM_CHAT_ID().trim()) {
+        console.warn(
+          `Unauthorized Telegram message from chat ID: ${chatId} (env TELEGRAM_CHAT_ID must match this chat; private: user id, group: often -100…).`,
+        );
         return res.status(200).json({ success: false, message: 'Unauthorized chat ID' });
       }
 
@@ -169,8 +201,10 @@ export default async function handler(req, res) {
       const fromId = callback_query.from.id;
 
       // Ensure the callback is from the authorized chat ID
-      if (chatId.toString() !== TELEGRAM_CHAT_ID()) {
-        console.warn(`Unauthorized Telegram callback from chat ID: ${chatId}`);
+      if (chatId.toString() !== TELEGRAM_CHAT_ID().trim()) {
+        console.warn(
+          `Unauthorized Telegram callback from chat ID: ${chatId} (env TELEGRAM_CHAT_ID must match this chat).`,
+        );
         return res.status(200).json({ success: false, message: 'Unauthorized chat ID' });
       }
 

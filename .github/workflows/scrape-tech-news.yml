@@ -177,6 +177,20 @@ jobs:
           echo "Preflight skipped Firecrawl/Groq/npm ci: reason=${{ steps.gate.outputs.reason }}"
           echo "   (scheduled run when sampled headline URLs were already in DB)"
 
+      # Zamanlanmış koşularda tam scrape atlanınca da Telegram'a kısa özet gider (aksi halde "bildirim yok" sanılıyordu).
+      - name: 📱 Telegram — preflight atladı (tam scrape yok)
+        if: success() && steps.gate.outputs.proceed != 'true' && github.event_name == 'schedule'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_MESSAGE_BODY: |
+            ⏭️ <b>TECH NEWS — PREFLIGHT ATLADI</b>
+
+            Örneklenen başlıklar zaten DB'de; Firecrawl/Groq çalıştırılmadı.
+            <b>Sebep:</b> ${{ steps.gate.outputs.reason }}
+            <b>Run:</b> ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node scripts/ci/github-send-telegram.cjs
+
       - name: 🧾 Upload tech news run artifacts
         if: always() && steps.gate.outputs.proceed == 'true'
         uses: actions/upload-artifact@v7
@@ -223,26 +237,20 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           NOTIFY_SUCCESS: 'true'
         run: |
-          if [ "$NOTIFY_SUCCESS" = "true" ]; then
-            REPORT_PATH=$(ls -t artifacts/tech-news-runs/*.json 2>/dev/null | head -n 1 || true)
-
-            if [ -n "$REPORT_PATH" ]; then
-              MESSAGE=$(REPORT_PATH="$REPORT_PATH" node scripts/ci/telegram-tech-news-success-message.cjs)
-            else
-              CURRENT_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
-              MESSAGE="ℹ️ <b>TECH NEWS SCRAPER - TAMAMLANDI</b> | 🧾 Run report bulunamadi | ⏰ ${CURRENT_TIME} | 💾 Workflow crash olmadan tamamlandi"
-            fi
-            
-            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-              -d "chat_id=${TELEGRAM_CHAT_ID}" \
-              --data-urlencode "text=${MESSAGE}" \
-              -d "parse_mode=HTML" \
-              -d "disable_web_page_preview=true" > /dev/null
-            
-            echo "📱 Telegram bildirim gönderildi"
-          else
+          if [ "$NOTIFY_SUCCESS" != "true" ]; then
             echo "📱 Başarı bildirimi devre dışı (sadece hata bildirimleri aktif)"
+            exit 0
           fi
+          REPORT_PATH=$(ls -t artifacts/tech-news-runs/*.json 2>/dev/null | head -n 1 || true)
+          if [ -n "$REPORT_PATH" ]; then
+            MESSAGE=$(REPORT_PATH="$REPORT_PATH" node scripts/ci/telegram-tech-news-success-message.cjs)
+          else
+            CURRENT_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+            MESSAGE="ℹ️ <b>TECH NEWS SCRAPER - TAMAMLANDI</b> | 🧾 Run report bulunamadi | ⏰ ${CURRENT_TIME} | 💾 Workflow crash olmadan tamamlandi"
+          fi
+          export TELEGRAM_MESSAGE_BODY="$MESSAGE"
+          node scripts/ci/github-send-telegram.cjs
+          echo "📱 Telegram bildirim gönderildi"
       
       - name: 📧 Send notification on failure
         if: failure()
@@ -279,11 +287,8 @@ jobs:
           export FAILURE_LOG_URL="${LOG_URL}"
           export FAILURE_TIME_UTC="${CURRENT_TIME}"
           MESSAGE=$(node scripts/ci/telegram-tech-news-failure-message.cjs)
+          export TELEGRAM_MESSAGE_BODY="$MESSAGE"
+          export TELEGRAM_WEB_PAGE_PREVIEW=true
+          node scripts/ci/github-send-telegram.cjs
 
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            --data-urlencode "text=${MESSAGE}" \
-            -d "parse_mode=HTML" \
-            -d "disable_web_page_preview=false" > /dev/null
-          
           echo "📱 Hata bildirimi Telegram'a gönderildi"

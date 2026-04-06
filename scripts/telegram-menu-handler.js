@@ -8,7 +8,7 @@
 import { spawn } from 'child_process';
 import { supabase } from './lib/supabaseAdmin.js';
 import { env } from './lib/config.js';
-import { sendTelegramMessage, callTelegramApi } from './lib/telegram.js';
+import { sendTelegramMessage, callTelegramApi } from '../lib/telegram.js';
 import {
   getMainMenuKeyboard,
   getSystemManagementKeyboard,

@@ -75,12 +75,13 @@ test('telegram success message includes unsaved reason breakdown when saved is z
       },
     );
 
-    assert.match(out, /<b>Unsaved reasons<\/b>/);
-    assert.match(out, /Failed reasons[^]*SCRAPE_FAILED \(2\)/);
-    assert.match(out, /Failed reasons[^]*translation \(1\)/);
-    assert.match(out, /Failed reasons <code>SCRAPE_FAILED \(2\), translation \(1\)<\/code>/);
-    assert.match(out, /Rejected reasons[^]*DETAIL_DATE_MISMATCH \(1\)/);
-    assert.match(out, /Skipped reasons[^]*DUPLICATE_SOURCE_URL \(2\), STALE_DISCOVERY_DATE \(1\)/);
+    assert.match(out, /<b>Reasons for 0 Saves<\/b>/);
+    assert.match(out, /• Failed: SCRAPE_FAILED \(2\), translation \(1\)/);
+    assert.match(out, /• Rejected: DETAIL_DATE_MISMATCH \(1\)/);
+    assert.match(
+      out,
+      /• Skipped: DUPLICATE_SOURCE_URL \(2\), STALE_DISCOVERY_DATE \(1\)/,
+    );
   } finally {
     unlinkSync(p);
   }

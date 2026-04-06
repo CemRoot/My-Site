@@ -19,11 +19,28 @@ async function setupWebhook() {
   console.log(`📡 Bot Token: ${env.TELEGRAM_BOT_TOKEN.substring(0, 10)}...`);
   console.log(`🌐 Webhook URL: ${WEBHOOK_URL}`);
 
+  const secret = (process.env.TELEGRAM_WEBHOOK_SECRET || '').trim();
+  const payload = {
+    url: WEBHOOK_URL,
+    allowed_updates: ['callback_query', 'message'],
+  };
+  if (secret) {
+    if (!/^[\w-]{1,256}$/.test(secret)) {
+      console.error(
+        '❌ TELEGRAM_WEBHOOK_SECRET must be 1–256 chars (only A–Z, a–z, 0–9, _, -). Örn: openssl rand -hex 32',
+      );
+      process.exit(1);
+    }
+    payload.secret_token = secret;
+    console.log('🔐 Webhook secret_token: ayarlı (Vercel’de TELEGRAM_WEBHOOK_SECRET ile aynı olmalı)');
+  } else {
+    console.warn(
+      '⚠️  TELEGRAM_WEBHOOK_SECRET yok — webhook URL’ü bilen herkes sahte POST deneyebilir. Üretim için secret ekleyin.',
+    );
+  }
+
   try {
-    await callTelegramApi('setWebhook', {
-      url: WEBHOOK_URL,
-      allowed_updates: ['callback_query', 'message'],
-    });
+    await callTelegramApi('setWebhook', payload);
     console.log('✅ Webhook set successfully!');
 
     const getResult = await callTelegramApi('getWebhookInfo');
