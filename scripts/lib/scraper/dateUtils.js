@@ -92,7 +92,9 @@ function parseTurkishAbsoluteDateParts(raw) {
 }
 
 function parseRelativeDateParts(raw) {
-  const normalized = raw.toLowerCase().trim();
+  // Normalize non-breaking spaces (\u00A0) → regular spaces.
+  // Nuvemmag uses \u00A0 in relative dates like "4 saat\u00A0önce".
+  const normalized = raw.replace(/\u00a0/g, ' ').toLowerCase().trim();
   const now = new Date();
   const subtractByMs = (ms) => getTurkeyDateParts(new Date(now.getTime() - ms));
 
@@ -226,7 +228,9 @@ export function normalizeSourceDate(rawDate, options = {}) {
     return createDateAssessment(getTurkeyDateParts(rawDate), rawDate.toISOString(), source, confidence);
   }
 
-  const text = String(rawDate).trim();
+  // Normalize non-breaking spaces (\u00A0) → regular spaces before parsing.
+  // Nuvemmag uses \u00A0 in relative dates like "4 saat\u00A0önce".
+  const text = String(rawDate).replace(/\u00a0/g, ' ').trim();
   if (!text) {
     return createUnknownDateAssessment('', source, 'low');
   }

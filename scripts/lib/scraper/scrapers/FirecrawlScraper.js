@@ -644,7 +644,24 @@ IMPORTANT:
 
     const image = metadata['og:image'] || metadata.image || '';
 
-    const rawDate = metadata.date || metadata.publishDate || metadata['article:published_time'] || '';
+    let rawDate = metadata.date || metadata.publishDate || metadata['article:published_time'] || '';
+
+    // If Firecrawl didn't extract metadata properly, fallback to native HTML parsing
+    if (!rawDate && htmlContent) {
+      const ogMatch = htmlContent.match(/property="article:published_time"[^>]+content="([^"]+)"/i) ||
+                      htmlContent.match(/content="([^"]+)"[^>]+property="article:published_time"/i);
+      if (ogMatch) {
+        rawDate = ogMatch[1];
+        console.log(`   📅 Found date in raw HTML og:published_time: ${rawDate}`);
+      } else {
+        const jsonLdMatch = htmlContent.match(/"datePublished"\s*:\s*"([^"]+)"/i);
+        if (jsonLdMatch) {
+          rawDate = jsonLdMatch[1];
+          console.log(`   📅 Found date in raw HTML JSON-LD: ${rawDate}`);
+        }
+      }
+    }
+
     const dateAssessment = normalizeSourceDate(rawDate, {
       source: 'detail_metadata',
       confidence: rawDate ? 'high' : 'low',
