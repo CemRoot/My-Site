@@ -8,7 +8,6 @@
 
 import crypto from 'crypto';
 import fs from 'fs/promises';
-import { notifyTelegram } from '../telegram.js';
 import { resolveArtifactPath, writeJsonArtifact } from '../config.js';
 import { SCRAPER_CONFIG } from './config.js';
 import {
@@ -696,11 +695,10 @@ async function verifyUnknownCandidates(candidates, agents, runReport) {
 }
 
 async function processArticleQueue(articleQueue, agents, runReport, options = {}) {
-  const { dryRun = false, shouldNotify = true } = options;
+  const { dryRun = false } = options;
   let consecutiveFailures = 0;
   let circuitBreakerTriggered = false;
   const processedInThisRun = new Set();
-  let garbageNotifyCount = 0;
 
   for (const rawCandidate of articleQueue) {
     const candidate = ensureCandidateDateAssessment(rawCandidate);
@@ -769,9 +767,6 @@ async function processArticleQueue(articleQueue, agents, runReport, options = {}
         replayReason,
       });
       console.log(`❌ Failed (${consecutiveFailures} consecutive failures)\n`);
-      if (shouldNotify && consecutiveFailures >= 2) {
-        notifyTelegram(`❌ <b>Makale scrape başarısız</b> (${consecutiveFailures} ardışık)\n${url}`);
-      }
       continue;
     }
 
@@ -837,10 +832,6 @@ async function processArticleQueue(articleQueue, agents, runReport, options = {}
         replayReason,
       });
       console.log(`🚫 [${category}] Rejected garbage page: ${garbageReason}\n`);
-      if (shouldNotify && garbageNotifyCount < 3) {
-        garbageNotifyCount++;
-        notifyTelegram(`🚫 <b>Garbage reddedildi</b>\n${garbageReason.substring(0, 100)}`);
-      }
       continue;
     }
 
@@ -988,9 +979,6 @@ async function processArticleQueue(articleQueue, agents, runReport, options = {}
         replayReason,
       });
       console.log(`❌ [${category}] Translation failed: ${translationError.message}\n`);
-      if (shouldNotify) {
-        notifyTelegram(`❌ <b>Çeviri hatası</b> [${category}]\n<code>${translationError.message.substring(0, 120)}</code>`);
-      }
       continue;
     }
 
@@ -1189,7 +1177,6 @@ async function scrapeNews(argv = process.argv) {
 
   const processResult = await processArticleQueue(newArticles, agents, runReport, {
     dryRun,
-    shouldNotify: !dryRun,
   });
   circuitBreakerTriggered = processResult.circuitBreakerTriggered;
 
@@ -1211,11 +1198,8 @@ async function scrapeNews(argv = process.argv) {
       runReport.metrics.skippedHashDuplicate
     ));
 
-    await notifyTelegram(
-      `🚨 <b>Haber Scraper: Circuit Breaker Aktif</b>\n\n` +
-      `⚠️  <b>${CONFIG.MAX_CONSECUTIVE_FAILURES} ardışık hata eşiği</b> aşıldı\n` +
-      `📊 ✅ Kaydedildi: ${runReport.metrics.saved} | 🚫 Reddedildi: ${rejectedCount} | ❌ Başarısız: ${failedCount} | ⏭️ Kalan: ${remaining}`
-    );
+    console.log(`🚨 Circuit breaker triggered: ${CONFIG.MAX_CONSECUTIVE_FAILURES} consecutive failures exceeded`);
+    console.log(`📊 Saved: ${runReport.metrics.saved} | Rejected: ${rejectedCount} | Failed: ${failedCount} | Remaining: ${remaining}`);
   }
 
   finalCount = await agents.persistence.getArticleCount();
@@ -1243,15 +1227,9 @@ async function scrapeNews(argv = process.argv) {
     else if (hasUnsavedActionableCandidates) statusEmoji = '⚠️';
     else if (runReport.metrics.failed > runReport.metrics.saved) statusEmoji = '⚠️';
 
-    await notifyTelegram(
-      `${statusEmoji} <b>Haber Scraper</b>\n\n` +
-      `📰 Bulundu: ${runReport.metrics.rawFound} ham | ${runReport.metrics.uniqueCandidates} tekil | bugün ${runReport.metrics.todayCandidates} | yakın bayat ${runReport.metrics.recentStaleCandidates} | bilinmeyen ${runReport.metrics.unknownCandidates}\n` +
-      `🗂️  DB'de vardı: ${runReport.metrics.alreadyInDb} | doğrulanan bilinmeyen: ${runReport.metrics.verifiedUnknown} | bayat atlandı: ${runReport.metrics.staleSkipped} | gelecek: ${runReport.metrics.futureRejected} | tarih uyumsuz: ${runReport.metrics.rejectedDateMismatch}\n` +
-      `✅ Kaydedildi: ${runReport.metrics.saved} | 🚫 Reddedildi: ${runReport.metrics.rejected} | ⏭️ Atlandı: ${runReport.metrics.skipped} | ⏸️ Ertelendi: ${runReport.metrics.deferred} | ❌ Başarısız: ${runReport.metrics.failed}\n` +
-      `📈 Başarı: ${successRate}% | 💾 Toplam: ${finalCount}\n` +
-      `🔧 Scraper: ${scraperRouter.getActiveScraperName()}${runLabel ? ` | 🏷️ ${runLabel}` : ''}\n` +
-      `⏰ ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`
-    );
+    // Telegram notification is handled by GitHub Actions (telegram-tech-news-success-message.cjs)
+    // to avoid duplicate messages. Only console output here for CI logs.
+    console.log(`${statusEmoji} Scraper completed — Saved: ${runReport.metrics.saved} | Success: ${successRate}% | Total: ${finalCount}`);
   }
 }
 
@@ -1285,12 +1263,7 @@ async function replayBatch(filePath, argv = process.argv) {
   console.log(`🔧 Scraper: ${scraperRouter.getActiveScraperName()}`);
   console.log('='.repeat(60));
 
-  await notifyTelegram(
-    `♻️ <b>Haber Replay Başladı</b>\n` +
-    `🧾 ${resolvedPath.split('/').pop()}\n` +
-    `🎯 ${replayStatuses.join(', ')} | 📰 ${replayCandidates.length} aday\n` +
-    `🔧 ${scraperRouter.getActiveScraperName()}`
-  );
+  console.log(`♻️ Replay started — ${resolvedPath.split('/').pop()} | Statuses: ${replayStatuses.join(', ')} | Candidates: ${replayCandidates.length} | Scraper: ${scraperRouter.getActiveScraperName()}`);
 
   if (replayCandidates.length === 0) {
     finalizeRunReport(runReport, {
