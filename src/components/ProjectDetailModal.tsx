@@ -118,7 +118,7 @@ export function ProjectDetailModal({ project, onClose }: ProjectDetailModalProps
                     >
                       <a href={project.link} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="w-4 h-4 mr-2" />
-                        Try It Live
+                        {project.linkLabel ?? 'Try It Live'}
                       </a>
                     </Button>
                   )}

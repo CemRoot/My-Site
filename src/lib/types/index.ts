@@ -142,4 +142,6 @@ export interface ProjectData {
   highlights: readonly string[];
   github?: string;
   link?: string;
+  /** Overrides default "Try It Live" for the primary external link button */
+  linkLabel?: string;
 }

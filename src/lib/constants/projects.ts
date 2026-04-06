@@ -2,7 +2,7 @@
  * Project data displayed on the portfolio
  */
 
-import { Eye, Database, Bot, Plane, Globe } from 'lucide-react';
+import { Eye, Database, Bot, Plane, Globe, Youtube } from 'lucide-react';
 import { PROJECT_URLS } from './urls';
 
 export const PROJECTS = [
@@ -23,6 +23,34 @@ export const PROJECTS = [
     ],
     github: PROJECT_URLS.deepfakeGithub,
     link: PROJECT_URLS.deepfakeDemo,
+  },
+  {
+    title: 'YouTube AI Summarizer',
+    description:
+      'Free Chrome extension: AI summaries, key points, detailed analysis, two-host AI podcast (Gemini TTS), and transcript-grounded chat for any YouTube video — Groq or Ollama Cloud, 20+ languages, open source.',
+    icon: Youtube,
+    tags: [
+      'Chrome Extension',
+      'JavaScript',
+      'Manifest V3',
+      'Groq',
+      'Ollama Cloud',
+      'Gemini TTS',
+    ],
+    color: 'secondary',
+    stats: ['Chrome Web Store', 'BYOK / No subscription', '20+ languages'],
+    details:
+      'Shipped a privacy-first Chrome extension that extracts YouTube captions, runs a single efficient LLM call for summary + key points + deep analysis, and adds podcast generation plus chat grounded in the transcript. Users bring their own Groq or Ollama Cloud API key; keys stay in the browser. Fully open source with CI/CD and store listing.',
+    highlights: [
+      'Published on the Chrome Web Store with onboarding, settings, LRU cache, and SPA-safe YouTube integration',
+      'Dual provider support (Groq and Ollama Cloud) with model selection and localized UI',
+      'AI podcast mode via Gemini TTS with player controls and WAV export',
+      'Video chat tab answers follow-up questions strictly from transcript context',
+      'Automated maintenance: InnerTube client monitoring and transcript health checks in GitHub Actions',
+    ],
+    github: PROJECT_URLS.youtubeAiSummarizerGithub,
+    link: PROJECT_URLS.youtubeAiSummarizerStore,
+    linkLabel: 'Chrome Web Store',
   },
   {
     title: 'Ireland Expat Assistant',

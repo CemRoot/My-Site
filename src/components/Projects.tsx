@@ -40,7 +40,7 @@ function Projects() {
         </div>
 
         {/* Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-12 items-stretch">
           {PROJECTS.map((project, index) => {
             const Icon = project.icon;
             const colorClasses = {
@@ -52,14 +52,16 @@ function Projects() {
             return (
               <div
                 key={index}
-                className="group relative liquid-glow cursor-pointer"
+                className="group relative liquid-glow cursor-pointer h-full min-h-0 flex flex-col"
                 onClick={() => setSelectedProject(project)}
               >
                 {/* Glow effect */}
                 <div className={`absolute -inset-2 bg-gradient-to-br ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[0]} rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
 
-                {/* Card */}
-                <div className={`relative p-5 sm:p-8 rounded-2xl sm:rounded-3xl frosted-glass transition-all duration-500 min-h-0 liquid-border liquid-shimmer hover:scale-[1.02] ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[1]} ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[2]}`}>
+                {/* Card — uniform min-height so short copy (e.g. thesis card) aligns with peers in the row */}
+                <div
+                  className={`relative p-5 sm:p-8 rounded-2xl sm:rounded-3xl frosted-glass transition-all duration-500 min-h-[22rem] md:min-h-[24rem] flex flex-col flex-1 liquid-border liquid-shimmer hover:scale-[1.02] ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[1]} ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[2]}`}
+                >
                   <div className="flex items-start justify-between mb-4 sm:mb-6">
                     <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[0]} flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-lg flex-shrink-0`}>
                       <Icon className={`w-6 h-6 sm:w-7 sm:h-7 ${colorClasses[project.color as keyof typeof colorClasses].split(' ')[3]}`} />
@@ -76,7 +78,7 @@ function Projects() {
                   <h3 className="text-xl sm:text-2xl mb-2 sm:mb-3 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
                     {project.title}
                   </h3>
-                  <p className="text-sm text-muted-foreground mb-4 sm:mb-6 leading-relaxed line-clamp-3 sm:line-clamp-none">
+                  <p className="text-sm text-muted-foreground mb-4 sm:mb-6 leading-relaxed line-clamp-3 sm:line-clamp-none flex-1 min-h-[4.5rem] sm:min-h-0">
                     {project.description}
                   </p>
 
@@ -93,7 +95,7 @@ function Projects() {
                   </div>
 
                   {/* Tags */}
-                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-auto">
                     {project.tags.slice(0, 5).map((tag, idx) => (
                       <Badge
                         key={idx}
