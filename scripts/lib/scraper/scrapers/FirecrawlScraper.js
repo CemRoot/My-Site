@@ -211,6 +211,7 @@ export class FirecrawlScraper extends BaseScraper {
           formats: ['markdown'],
           onlyMainContent: true,
           waitFor: 2000,
+          maxAge: 0,
         }),
       },
       `category ${categoryTag} ${pageLabel}`
@@ -380,6 +381,10 @@ IMPORTANT:
         const jsonMatch = response.match(/\[[\s\S]*\]/);
         if (jsonMatch) jsonStr = jsonMatch[0];
 
+        // Sanitize for invalid unicode escapes and control chars
+        jsonStr = jsonStr.replace(/\\u(?![0-9a-fA-F]{4})/g, "\\\\u");
+        jsonStr = jsonStr.replace(/[\u0000-\u001F]/g, "");
+
         const articles = JSON.parse(jsonStr);
         if (!Array.isArray(articles)) throw new Error('AI response is not an array');
 
@@ -477,6 +482,7 @@ IMPORTANT:
               'footer', 'header', 'nav',
             ],
             waitFor: 3000,
+            maxAge: 0,
           }),
         },
         `article-markdown ${slug}`
@@ -486,7 +492,7 @@ IMPORTANT:
         {
           method: 'POST',
           headers,
-          body: JSON.stringify({ url, formats: ['html'], onlyMainContent: false, waitFor: 3000 }),
+          body: JSON.stringify({ url, formats: ['html'], onlyMainContent: false, waitFor: 3000, maxAge: 0 }),
         },
         `article-html ${slug}`
       ),
