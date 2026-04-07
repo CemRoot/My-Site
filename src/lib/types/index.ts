@@ -44,6 +44,8 @@ export interface SEOMetadata {
   ogDescription?: string;
   ogImage?: string;
   twitterCard?: string;
+  /** e.g. "noindex, nofollow" for error pages */
+  robots?: string;
 }
 
 /** Tech news article from the Supabase database */

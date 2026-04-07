@@ -17,6 +17,7 @@ export function SEO({
   ogDescription = `AI Engineer with ${EDUCATION.degree} (${EDUCATION.classification}). Expert in LLMs, NLP, Computer Vision, Azure & Microsoft 365. Based in ${PERSONAL_INFO.location}, available for freelance & full-time opportunities.`,
   ogImage = DEFAULT_OG_IMAGE_URL,
   twitterCard = 'summary_large_image',
+  robots = 'index, follow',
 }: SEOMetadata = {}) {
   useEffect(() => {
     // Set page title
@@ -40,7 +41,7 @@ export function SEO({
     setMetaTag('description', description);
     setMetaTag('keywords', keywords);
     setMetaTag('author', author);
-    setMetaTag('robots', 'index, follow');
+    setMetaTag('robots', robots);
     setMetaTag('language', 'English');
     setMetaTag('revisit-after', '7 days');
 
@@ -110,7 +111,7 @@ export function SEO({
       document.head.appendChild(scriptTag);
     }
     scriptTag.textContent = JSON.stringify(structuredData);
-  }, [title, description, keywords, author, ogTitle, ogDescription, ogImage, twitterCard]);
+  }, [title, description, keywords, author, ogTitle, ogDescription, ogImage, twitterCard, robots]);
 
   return null;
 }

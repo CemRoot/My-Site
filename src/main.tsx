@@ -5,6 +5,7 @@ if (!Object.hasOwn) {
     Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
+import { lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import App from "./App.tsx";
@@ -12,9 +13,19 @@ import "./fonts.css";
 import "./index.css";
 import ErrorBoundary from "./components/ErrorBoundary";
 
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
+
 // Render app immediately for fast FCP
 createRoot(document.getElementById("root")!).render(
-  <ErrorBoundary>
+  <ErrorBoundary
+    fallback={
+      <Suspense
+        fallback={<div className="min-h-screen bg-background" aria-hidden />}
+      >
+        <NotFoundPage bare />
+      </Suspense>
+    }
+  >
     <App />
     <SpeedInsights />
   </ErrorBoundary>
