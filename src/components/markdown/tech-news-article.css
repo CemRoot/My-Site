@@ -1,0 +1,26 @@
+/**
+ * Haber gövdesi iki yana yaslama.
+ * Projede kullanılan önceden üretilmiş Tailwind bundle'da `text-justify` utility yok;
+ * bu yüzden burada açık CSS ile uygulanır.
+ */
+.tech-news-article-body p,
+.tech-news-article-body li,
+.tech-news-article-body blockquote,
+.tech-news-article-body td,
+.tech-news-article-body th {
+  text-align: justify;
+}
+
+.tech-news-article-body :is(h1, h2, h3, h4, h5, h6) {
+  text-align: start;
+}
+
+.tech-news-article-body pre,
+.tech-news-article-body pre code {
+  text-align: start;
+}
+
+/* Key Highlights: flex satırında metin yaslama span üzerinde uygulanır */
+.tech-news-article-body .article-highlight-text {
+  text-align: justify;
+}

@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { DEFAULT_OG_IMAGE_URL } from '../lib/constants/urls';
 import { usePageContext } from '../lib/context/PageContext';
 import SmartMarkdown from './markdown/SmartMarkdown';
+import './markdown/tech-news-article.css';
 import { SEO } from './SEO';
 import { getOptimizedImageUrl, IMAGE_PRESETS } from '../lib/utils/imageProxy';
 import ErrorBoundary from './ErrorBoundary';
@@ -223,7 +224,7 @@ function TechNewsDetail() {
           <Separator />
 
           {/* Article Content - Using SmartMarkdown for safe rendering with auto-embeds */}
-          <div className="prose prose-lg dark:prose-invert max-w-none">
+          <div className="prose prose-lg dark:prose-invert max-w-none tech-news-article-body">
             <SmartMarkdown content={sanitizedContent} />
           </div>
 

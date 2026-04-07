@@ -224,9 +224,7 @@ export default function SmartMarkdown({ content }: SmartMarkdownProps) {
           <h3 className="text-xl font-bold mb-3">
             TL;DR
           </h3>
-          <p className="text-lg leading-relaxed text-justify">
-            {tldr}
-          </p>
+          <p className="text-lg leading-relaxed">{tldr}</p>
         </div>
       )}
       
@@ -240,7 +238,9 @@ export default function SmartMarkdown({ content }: SmartMarkdownProps) {
             {highlights.map((highlight, index) => (
               <li key={index} className="flex items-start gap-2">
                 <span className="text-primary mt-1" aria-hidden="true">•</span>
-                <span className="text-lg leading-relaxed flex-1 text-justify">{highlight}</span>
+                <span className="text-lg leading-relaxed flex-1 article-highlight-text">
+                  {highlight}
+                </span>
               </li>
             ))}
           </ul>
@@ -271,7 +271,11 @@ function renderMarkdownContent(content: string) {
               return <EmbedFromURL url={url} />;
             }
             
-            return <p className="text-lg leading-relaxed mb-4 text-justify" {...props}>{children}</p>;
+            return (
+              <p className="text-lg leading-relaxed mb-4" {...props}>
+                {children}
+              </p>
+            );
           },
         // Open links in new tab
         a({ href, children, ...props }) {
@@ -299,15 +303,26 @@ function renderMarkdownContent(content: string) {
         },
         // Style lists
         ul({ children, ...props }) {
-          return <ul className="list-disc list-inside mb-4 space-y-2 text-justify" {...props}>{children}</ul>;
+          return (
+            <ul className="list-disc list-inside mb-4 space-y-2" {...props}>
+              {children}
+            </ul>
+          );
         },
         ol({ children, ...props }) {
-          return <ol className="list-decimal list-inside mb-4 space-y-2 text-justify" {...props}>{children}</ol>;
+          return (
+            <ol className="list-decimal list-inside mb-4 space-y-2" {...props}>
+              {children}
+            </ol>
+          );
         },
         // Style blockquotes
         blockquote({ children, ...props }) {
           return (
-            <blockquote className="border-l-4 border-primary/30 pl-4 italic my-4 text-muted-foreground text-justify" {...props}>
+            <blockquote
+              className="border-l-4 border-primary/30 pl-4 italic my-4 text-muted-foreground"
+              {...props}
+            >
               {children}
             </blockquote>
           );
