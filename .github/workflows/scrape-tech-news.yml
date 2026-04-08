@@ -41,13 +41,12 @@ name: Scrape Tech News
 # including any DST (Daylight Saving Time) changes - no manual updates needed!
 #
 # Schedule is in UTC (GitHub Actions standard):
-# - Morning, afternoon, and evening checks to catch articles throughout the day
-# - 10:00 Turkey (07:00 UTC), 16:00 Turkey (13:00 UTC), 18:00 Turkey (15:00 UTC)
+# - Afternoon and evening checks to catch active news hours
+# - 16:00 Turkey (13:00 UTC), 18:00 Turkey (15:00 UTC)
 
 on:
   schedule:
-    # Monday-Friday only - Three daily checks
-    - cron: '0 7 * * 1-5'    # 07:00 UTC = 10:00 Turkey - Morning check
+    # Monday-Friday only - Two daily checks
     - cron: '0 13 * * 1-5'   # 13:00 UTC = 16:00 Turkey - Afternoon check
     - cron: '0 15 * * 1-5'   # 15:00 UTC = 18:00 Turkey - Evening check
   
