@@ -6,10 +6,10 @@ const workflowPath = new URL('../.github/workflows/scrape-tech-news.yml', import
 const workflow = readFileSync(workflowPath, 'utf8');
 
 test('scrape tech news schedule excludes morning run', () => {
-  assert.ok(!workflow.includes("cron: '0 7 * * 1-5'"));
+  assert.strictEqual(/cron:\s*['"]0 7 \* \* 1-5['"]/.test(workflow), false);
 });
 
 test('scrape tech news schedule keeps afternoon and evening runs', () => {
-  assert.ok(workflow.includes("cron: '0 13 * * 1-5'"));
-  assert.ok(workflow.includes("cron: '0 15 * * 1-5'"));
+  assert.strictEqual(/cron:\s*['"]0 13 \* \* 1-5['"]/.test(workflow), true);
+  assert.strictEqual(/cron:\s*['"]0 15 \* \* 1-5['"]/.test(workflow), true);
 });
