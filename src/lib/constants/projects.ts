@@ -25,7 +25,7 @@ export const PROJECTS = [
     link: PROJECT_URLS.deepfakeDemo,
   },
   {
-    title: 'YT AI Summaries',
+    title: 'SummaTube AI',
     description:
       'Free Chrome extension: AI summaries, key points, detailed analysis, two-host AI podcast (Gemini TTS), and transcript-grounded chat for any YouTube video — Groq or Ollama Cloud, 20+ languages, open source.',
     icon: Youtube,
