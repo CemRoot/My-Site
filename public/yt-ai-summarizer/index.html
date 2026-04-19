@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<!-- OAuth "Application home page" for Google Cloud Console — https://cemkoyluoglu.codes/yt-ai-summarizer/ -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="YT AI Summaries — Chrome extension for AI summaries, chat, and podcast features for YouTube videos. Not affiliated with YouTube.">
+  <meta name="theme-color" content="#0f0f0f">
+  <title>YT AI Summaries</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23FF0000' d='M21.58 7.19a2.51 2.51 0 00-1.77-1.77C18.25 5 12 5 12 5s-6.25 0-7.81.42c-.86.23-1.54.91-1.77 1.77C2 8.75 2 12 2 12s0 3.25.42 4.81c.23.86.91 1.54 1.77 1.77C5.75 19 12 19 12 19s6.25 0 7.81-.42a2.51 2.51 0 001.77-1.77C22 15.25 22 12 22 12s0-3.25-.42-4.81z'/%3E%3Cpath fill='%23fff' d='M10 15.5l5.5-3.5L10 8.5v7z'/%3E%3C/svg%3E" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --text: #f1f1f1;
+      --muted: #a8a8a8;
+      --accent: #ff0000;
+      --link: #8ab4f8;
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 48px 24px 64px;
+    }
+    h1 {
+      font-size: clamp(1.5rem, 4vw, 1.85rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 28px;
+    }
+    p {
+      color: var(--muted);
+      font-size: 1rem;
+      margin-bottom: 16px;
+    }
+    p strong { color: var(--text); font-weight: 600; }
+    .links {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .links a {
+      color: var(--link);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .links a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>YT AI Summaries</h1>
+    <p class="sub">AI summaries for YouTube videos — not affiliated with or endorsed by YouTube.</p>
+    <p>
+      <strong>YT AI Summaries</strong> is a Chrome extension that reads captions for the video you are watching and helps you generate summaries, follow-up chat grounded in the transcript, and optional podcast-style audio — using providers you configure (for example Groq or Ollama Cloud) or optional managed AI where available.
+    </p>
+    <p>
+      Your API keys and most preferences stay in the browser unless you choose features that explicitly use sign-in or cloud processing described in our privacy policy. We do not run ads or analytics telemetry in the extension.
+    </p>
+    <p>
+      This page exists for store and OAuth verification. For details on data practices, use the link below.
+    </p>
+    <div class="links">
+      <a href="privacy-policy.html">Privacy policy</a>
+      <a href="https://chromewebstore.google.com/detail/dkbgkfeobjailmeiaidmapifohkjpgji" target="_blank" rel="noopener noreferrer">Chrome Web Store listing</a>
+      <a href="https://github.com/CemRoot/yt-ai-summarizer" target="_blank" rel="noopener noreferrer">Source code (GitHub)</a>
+    </div>
+  </div>
+</body>
+</html>
