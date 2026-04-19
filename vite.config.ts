@@ -1,8 +1,39 @@
 
   import { defineConfig, loadEnv } from 'vite';
+  import type { Plugin } from 'vite';
   import react from '@vitejs/plugin-react-swc';
   import path from 'path';
   import { sentryVitePlugin } from '@sentry/vite-plugin';
+
+  /** Vite dev/preview do not map `/path/` → `/path/index.html` for public/ assets; production hosts (e.g. Vercel) do. */
+  function publicDirIndexFallback(staticPaths: string[]): Plugin {
+    const apply = (req: { url?: string } | undefined) => {
+      const raw = req?.url ?? '';
+      const pathname = raw.split('?')[0];
+      for (const base of staticPaths) {
+        if (pathname === base || pathname === `${base}/`) {
+          const qs = raw.includes('?') ? raw.slice(raw.indexOf('?')) : '';
+          req.url = `${base}/index.html${qs}`;
+          break;
+        }
+      }
+    };
+    return {
+      name: 'public-dir-index-fallback',
+      configureServer(server) {
+        server.middlewares.use((req, _res, next) => {
+          apply(req);
+          next();
+        });
+      },
+      configurePreviewServer(server) {
+        server.middlewares.use((req, _res, next) => {
+          apply(req);
+          next();
+        });
+      },
+    };
+  }
 
   export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '');
@@ -10,6 +41,7 @@
     return {
     plugins: [
       react(),
+      publicDirIndexFallback(['/yt-ai-summarizer']),
       // Sentry plugin for uploading source maps
       // Only in production builds with auth token
       mode === 'production' && env.SENTRY_AUTH_TOKEN
