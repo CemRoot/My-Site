@@ -19,6 +19,22 @@
       ]
     },
     {
+      "source": "/finance",
+      "destination": "https://broker.cemkoyluoglu.codes/finance"
+    },
+    {
+      "source": "/finance/:path*",
+      "destination": "https://broker.cemkoyluoglu.codes/finance/:path*"
+    },
+    {
+      "source": "/public/live",
+      "destination": "https://broker.cemkoyluoglu.codes/public/live"
+    },
+    {
+      "source": "/health",
+      "destination": "https://broker.cemkoyluoglu.codes/health"
+    },
+    {
       "source": "/:path((?!robots\\.txt|sitemap\\.xml|favicon\\.ico|favicon\\.webp|og-image\\.png|og-image\\.webp|portrait\\.webp|assets|fonts|yt-ai-summarizer\\/).*)",
       "destination": "/index.html"
     }
