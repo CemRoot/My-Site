@@ -152,7 +152,7 @@ GROQ_FALLBACK_MODEL = 'openai/gpt-oss-20b'
 GROQ_LAST_RESORT_MODEL = 'llama-3.1-8b-instant'
 GROQ_FAST_MODEL = 'llama-3.1-8b-instant'          // title/desc
 GROQ_ENHANCEMENT_MODEL = 'llama-3.1-8b-instant'   // TL;DR
-OLLAMA_PRIMARY_MODEL = 'gemini-3-flash-preview:cloud'  // content primary
+OLLAMA_PRIMARY_MODEL = 'deepseek-v4-pro:cloud'  // content primary
 ```
 
 ---
