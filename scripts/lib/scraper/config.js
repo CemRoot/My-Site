@@ -47,5 +47,5 @@ export const GROQ_LAST_RESORT_MODEL = 'llama-3.1-8b-instant';
 export const GROQ_ENHANCEMENT_MODEL = 'llama-3.1-8b-instant';
 export const GROQ_FAST_MODEL = 'llama-3.1-8b-instant';
 
-export const OLLAMA_PRIMARY_MODEL = 'gemini-3-flash-preview:cloud';
+export const OLLAMA_PRIMARY_MODEL = 'deepseek-v4-pro:cloud';
 export const OLLAMA_API_KEY = env.OLLAMA_API_KEY;
