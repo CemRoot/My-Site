@@ -3262,6 +3262,11 @@ html {
 .w-80           { width: calc(var(--spacing) * 80); }
 .max-h-0        { max-height: 0; }
 .max-h-\[700px\]{ max-height: 700px; }
+.max-h-dialog-viewport {
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+}
+.min-h-0        { min-height: 0; }
 
 /* ── Layout ── */
 .items-baseline { align-items: baseline; }

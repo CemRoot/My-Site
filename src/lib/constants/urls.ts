@@ -21,6 +21,6 @@ export const PROJECT_URLS = {
   deepfakeDemo: 'https://deepfake-detection-app-4ogcgzlgv7n9yuncblpz2r.streamlit.app/',
   irelandExpatAssistant: 'https://chatgpt.com/g/g-693c3f003b308191a3aa51cf1e75e47e-ireland-expat-assistant',
   youtubeAiSummarizerStore:
-    'https://chromewebstore.google.com/detail/youtube-ai-summarizer/dkbgkfeobjailmeiaidmapifohkjpgji',
+    'https://chromewebstore.google.com/detail/youtube-ai-summarizer/dkbgkfeobjailmeiaidmapifohkjpgji?authuser=0&hl=en',
   youtubeAiSummarizerGithub: 'https://github.com/CemRoot/yt-ai-summarizer',
 } as const;

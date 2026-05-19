@@ -12,11 +12,11 @@ interface ProjectDetailModalProps {
 export function ProjectDetailModal({ project, onClose }: ProjectDetailModalProps) {
   return (
     <Dialog open={!!project} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-3xl w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-h-[85vh] sm:max-h-[80vh] overflow-y-auto bg-background/95 backdrop-blur-2xl border-primary/20 shadow-2xl p-4 sm:p-6">
+      <DialogContent className="flex max-h-dialog-viewport max-w-3xl w-[calc(100%-1rem)] flex-col overflow-hidden p-0 sm:w-[calc(100%-2rem)] bg-background/95 backdrop-blur-2xl border-primary/20 shadow-2xl">
         {project && (
-          <>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-hide p-4 sm:p-6">
             <DialogHeader>
-              <div className="flex items-start gap-3 sm:gap-4 mb-4">
+              <div className="flex items-start gap-3 sm:gap-4 mb-4 pr-8">
                 {(() => {
                   const Icon = project.icon;
                   const colorClasses = {
@@ -125,7 +125,7 @@ export function ProjectDetailModal({ project, onClose }: ProjectDetailModalProps
                 </div>
               )}
             </div>
-          </>
+          </div>
         )}
       </DialogContent>
     </Dialog>
