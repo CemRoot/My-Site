@@ -21,12 +21,13 @@ import { notifyTelegram } from '../../lib/telegram.js';
 
 const groq = new Groq({ apiKey: SCRAPER_CONFIG.GROQ_API_KEY });
 
-const ollama = OLLAMA_API_KEY
-  ? new Ollama({
-      host: 'https://ollama.com',
-      headers: { Authorization: `Bearer ${OLLAMA_API_KEY}` },
-    })
-  : null;
+// const ollama = OLLAMA_API_KEY
+//   ? new Ollama({
+//       host: 'https://ollama.com',
+//       headers: { Authorization: `Bearer ${OLLAMA_API_KEY}` },
+//     })
+//   : null;
+const ollama = null; // Disabled Ollama as requested, using Groq solely.
 
 function preserveWidgets(content) {
   const widgets = [];
@@ -284,21 +285,22 @@ export async function translateText(text, useOllama = false, fastMode = false, s
   let translatedContent = null;
 
   // Ollama Cloud — only used for content translation (useOllama=true)
-  if (useOllama && ollama) {
-    try {
-      const result = await translateWithOllama(cleanContent);
-      const quality = validateTranslationQuality(result);
-      if (quality.valid) {
-        translatedContent = result;
-        console.log(`    ✅ Ollama (${OLLAMA_PRIMARY_MODEL}) translation succeeded`);
-      } else {
-        console.warn(`    ⚠️  Ollama quality check failed: ${quality.reason}`);
-      }
-    } catch (error) {
-      console.warn(`    ⚠️  Ollama translation failed: ${error.message}`);
-      notifyTelegram(`⚠️ <b>Ollama Fallback</b>\nGroq cascade started\n<code>${error.message.substring(0,100)}</code>`);
-    }
-  }
+  // Disabled Ollama integration as requested.
+  // if (useOllama && ollama) {
+  //   try {
+  //     const result = await translateWithOllama(cleanContent);
+  //     const quality = validateTranslationQuality(result);
+  //     if (quality.valid) {
+  //       translatedContent = result;
+  //       console.log(`    ✅ Ollama (${OLLAMA_PRIMARY_MODEL}) translation succeeded`);
+  //     } else {
+  //       console.warn(`    ⚠️  Ollama quality check failed: ${quality.reason}`);
+  //     }
+  //   } catch (error) {
+  //     console.warn(`    ⚠️  Ollama translation failed: ${error.message}`);
+  //     notifyTelegram(`⚠️ <b>Ollama Fallback</b>\nGroq cascade started\n<code>${error.message.substring(0,100)}</code>`);
+  //   }
+  // }
 
   const models = fastMode
     ? [GROQ_FAST_MODEL, GROQ_PRIMARY_MODEL, GROQ_LAST_RESORT_MODEL]
