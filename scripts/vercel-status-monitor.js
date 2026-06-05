@@ -24,9 +24,15 @@ async function fetchVercelStatus() {
   try {
     console.log('📡 Fetching Vercel status RSS feed...');
     
-    const response = await fetch(CONFIG.VERCEL_STATUS_RSS);
+    const response = await fetch(CONFIG.VERCEL_STATUS_RSS, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+      }
+    });
+
     if (!response.ok) {
-      throw new Error(`RSS fetch error: ${response.status}`);
+      throw new Error(`RSS fetch error: ${response.status} ${response.statusText}`);
     }
 
     const xmlText = await response.text();
