@@ -4,10 +4,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="YouTube AI Summarizer — Chrome extension for AI summaries, chat, and podcast features for YouTube videos. Not affiliated with YouTube.">
+  <meta name="description" content="Gleano — Chrome extension for AI summaries and chat on YouTube videos and web articles. BYOK or managed AI. Not affiliated with YouTube.">
   <meta name="theme-color" content="#eceef2">
-  <title>YouTube AI Summarizer</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23FF0000' d='M21.58 7.19a2.51 2.51 0 00-1.77-1.77C18.25 5 12 5 12 5s-6.25 0-7.81.42c-.86.23-1.54.91-1.77 1.77C2 8.75 2 12 2 12s0 3.25.42 4.81c.23.86.91 1.54 1.77 1.77C5.75 19 12 19 12 19s6.25 0 7.81-.42a2.51 2.51 0 001.77-1.77C22 15.25 22 12 22 12s0-3.25-.42-4.81z'/%3E%3Cpath fill='%23fff' d='M10 15.5l5.5-3.5L10 8.5v7z'/%3E%3C/svg%3E" type="image/svg+xml">
+  <title>Gleano</title>
+  <link rel="icon" href="favicon.png?v=2.1.0" sizes="32x32" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -24,10 +24,10 @@
       --dim: #80868b;
       --border: #dadce0;
       --border-subtle: rgba(0, 0, 0, 0.06);
-      --brand: #ff0000;
-      --brand-dark: #cc0000;
-      --brand-soft: rgba(255, 0, 0, 0.09);
-      --brand-softer: rgba(255, 0, 0, 0.05);
+      --brand: #6366f1;
+      --brand-dark: #4f46e5;
+      --brand-soft: rgba(99, 102, 241, 0.09);
+      --brand-softer: rgba(99, 102, 241, 0.05);
       --link: #065fd4;
       --link-hover: #044aa3;
       --accent-green: #0f9d58;
@@ -54,8 +54,10 @@
         --dim: #6b7280;
         --border: #2a2e36;
         --border-subtle: rgba(255, 255, 255, 0.06);
-        --brand-soft: rgba(255, 64, 64, 0.18);
-        --brand-softer: rgba(255, 64, 64, 0.09);
+        --brand: #818cf8;
+        --brand-dark: #6366f1;
+        --brand-soft: rgba(129, 140, 248, 0.18);
+        --brand-softer: rgba(129, 140, 248, 0.09);
         --link: #8ab4f8;
         --link-hover: #a9c5fb;
         --accent-green: #34d399;
@@ -104,7 +106,7 @@
     }
     .doc-header-top {
       height: 4px;
-      background: linear-gradient(90deg, var(--brand) 0%, #ff4040 50%, var(--brand-dark) 100%);
+      background: linear-gradient(90deg, var(--brand) 0%, #8b5cf6 50%, var(--brand-dark) 100%);
     }
     .doc-header-inner {
       padding: 28px 28px 26px;
@@ -134,23 +136,12 @@
       margin-bottom: 16px;
     }
     .doc-logo {
+      display: block;
       width: 52px;
       height: 52px;
       border-radius: 14px;
-      background: linear-gradient(145deg, #fff 0%, #f5f5f5 100%);
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
       flex-shrink: 0;
     }
-    @media (prefers-color-scheme: dark) {
-      .doc-logo {
-        background: linear-gradient(145deg, #1e2128 0%, #15171c 100%);
-      }
-    }
-    .doc-logo svg { display: block; width: 28px; height: 28px; }
     .doc-title-block { flex: 1; min-width: 0; }
     h1 {
       font-size: clamp(1.5rem, 4vw, 1.85rem);
@@ -251,7 +242,7 @@
       justify-content: center;
     }
     @media (prefers-color-scheme: dark) {
-      .action-tile-icon { color: #ff7676; }
+      .action-tile-icon { color: #a5b4fc; }
     }
     .action-tile-icon svg { width: 20px; height: 20px; }
     .action-tile h3 {
@@ -284,7 +275,7 @@
     .action-tile a:hover {
       border-color: var(--brand);
       color: var(--brand-dark);
-      box-shadow: 0 2px 12px rgba(255, 0, 0, 0.12);
+      box-shadow: 0 2px 12px rgba(99, 102, 241, 0.18);
     }
     .action-tile a:focus-visible {
       outline: 2px solid var(--link);
@@ -346,17 +337,15 @@
       <div class="doc-header-inner">
         <p class="doc-eyebrow">Application home</p>
         <div class="doc-brand">
-          <div class="doc-logo" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="28" height="28"><path d="M21.58 7.19a2.51 2.51 0 00-1.77-1.77C18.25 5 12 5 12 5s-6.25 0-7.81.42c-.86.23-1.54.91-1.77 1.77C2 8.75 2 12 2 12s0 3.25.42 4.81c.23.86.91 1.54 1.77 1.77C5.75 19 12 19 12 19s6.25 0 7.81-.42a2.51 2.51 0 001.77-1.77C22 15.25 22 12 22 12s0-3.25-.42-4.81z" fill="#FF0000"/><path d="M10 15.5l5.5-3.5L10 8.5v7z" fill="#fff"/></svg>
-          </div>
+          <img class="doc-logo" src="icons/icon48.png?v=2.1.0" width="52" height="52" alt="" aria-hidden="true">
           <div class="doc-title-block">
-            <h1>YouTube AI Summarizer</h1>
-            <p class="doc-lead">AI summaries for YouTube videos — <strong>not affiliated with or endorsed by YouTube.</strong> Bring your own API keys or use optional managed AI where available.</p>
+            <h1>Gleano</h1>
+            <p class="doc-lead">AI summaries for YouTube videos and web articles — <strong>not affiliated with or endorsed by YouTube.</strong> Bring your own API keys or use optional managed AI where available.</p>
           </div>
         </div>
         <div class="meta-row">
           <span class="meta-pill meta-pill--ok">No ads · no telemetry</span>
-          <span class="meta-pill">OAuth &amp; store verification page</span>
+          <span class="meta-pill">Extension v2.1.0 · OAuth &amp; store verification</span>
         </div>
       </div>
     </header>
@@ -364,7 +353,7 @@
     <section class="card" aria-labelledby="about-heading">
       <h2 id="about-heading">About this extension</h2>
       <p>
-        <strong>YouTube AI Summarizer</strong> is a Chrome extension that reads captions for the video you are watching and helps you generate summaries, follow-up chat grounded in the transcript, and optional podcast-style audio — using providers you configure (for example Groq or Ollama Cloud) or optional managed AI where available.
+        <strong>Gleano</strong> is a Chrome extension that summarizes YouTube videos (from captions) and web articles (via Article Reader on the tab you open). Get summaries, transcript- or article-grounded chat, and optional podcast-style audio — using providers you configure (for example Groq or Ollama Cloud) or optional managed AI where available.
       </p>
       <p>
         Your API keys and most preferences stay in the browser unless you choose features that explicitly use sign-in or cloud processing described in our privacy policy. We do not run ads or analytics telemetry in the extension.
@@ -399,7 +388,7 @@
     </section>
 
     <footer class="site-footer">
-      YouTube AI Summarizer · <a href="https://github.com/CemRoot/yt-ai-summarizer" target="_blank" rel="noopener noreferrer">Source</a>
+      Gleano · v2.1.0 · <a href="https://github.com/CemRoot/yt-ai-summarizer" target="_blank" rel="noopener noreferrer">Source</a>
     </footer>
   </div>
 </body>
