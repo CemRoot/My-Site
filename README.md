@@ -190,11 +190,11 @@
 | | Webhooks | Telegram, Deployment | Event handling |
 | **Database** | Primary DB | Supabase PostgreSQL | Structured data storage |
 | | Chat History | Supabase | Conversation persistence |
-| **AI/ML** | Translation | Groq AI (Llama 3.3 70B) | Multi-language support |
+| **AI/ML** | Translation | Groq AI (Llama 3.1 8B primary, 70B last resort) | Multi-language support |
 | | Content Gen | Google Gemini 2.0 Flash | Article processing |
 | | Chat Widget | Groq AI + n8n fallback | User interaction |
 | | Web Scraping | Firecrawl API | Article extraction |
-| **Observability** | Error Tracking | Sentry 7.119 | Frontend & backend |
+| **Observability** | Error Tracking | Sentry 10.x | Frontend & backend |
 | | Health Checks | Custom Scripts | System monitoring |
 | **Communication** | Bot Platform | Telegram Bot API | Interactive control |
 | | Social Media | LinkedIn API (n8n OAuth) | Content distribution |
@@ -207,19 +207,19 @@
 ### Frontend
 | Technology | Version | Purpose |
 |-----------|---------|---------|
-| **React** | 18.3 | UI Framework |
-| **TypeScript** | 5.9 | Type Safety |
-| **Vite** | 6.4 | Build Tool |
+| **React** | 19.2 | UI Framework |
+| **TypeScript** | 6.0 | Type Safety |
+| **Vite** | 8.0 | Build Tool |
 | **Tailwind CSS** | 4.x (CSS-first) | Styling |
 | **Radix UI** | Selective | Dialog, Checkbox, Separator |
-| **React Router** | 7.9 | Navigation |
+| **React Router** | 7.18 | Navigation |
 | **React Markdown** | 10.1 | Content Rendering |
 
 ### Backend & APIs
 | Service | Purpose | Notes |
 |---------|---------|-------|
 | **Supabase** | PostgreSQL Database | Free/Pro tier |
-| **Groq AI** | Translation & Chat | Llama 3.3 70B |
+| **Groq AI** | Translation & Chat | Chat: Llama 3.3 70B · Translation: Llama 3.1 8B (70B fallback) |
 | **Google Gemini** | Content Generation | 2.0 Flash |
 | **Firecrawl** | Web Scraping | 500/mo free |
 | **n8n** | Workflow Automation | Self-hosted/Cloud |
@@ -443,12 +443,19 @@ The pipeline in `scripts/lib/scraper/ScrapeOrchestrator.js` consists of **6 agen
 
 | Role | Model | Provider |
 |------|-------|----------|
-| Translation (primary) | `llama-3.3-70b-versatile` | Groq |
+| Translation (primary) | `llama-3.1-8b-instant` | Groq |
 | Translation (fallback) | `openai/gpt-oss-20b` | Groq |
-| Translation (last resort) | `llama-3.1-8b-instant` | Groq |
+| Translation (last resort) | `llama-3.3-70b-versatile` | Groq |
 | List extraction / parser | `llama-3.1-8b-instant` | Groq |
 | Enhancement checks | `llama-3.1-8b-instant` | Groq |
 | Optional (content translation) | `gemini-3-flash-preview:cloud` | Ollama cloud |
+
+> **Model tiering rationale:** the lightweight, high-throughput `llama-3.1-8b-instant`
+> is the primary translation model so a full run does not exhaust the daily token
+> budget (TPD) on the heavy 70B model. `llama-3.3-70b-versatile` is kept only as a
+> last-resort quality fallback. Both Groq clients are configured with `maxRetries`
+> and `timeout`, so transient connection drops (e.g. "Premature close") are retried
+> automatically before the model cascade falls back.
 
 Required secrets: `GROQ_API_KEY`, `GROQ_PARSER_API_KEY`, `OLLAMA_API_KEY` (optional fallback).
 

@@ -215,7 +215,13 @@ function TechNewsDetail() {
                 width={1200}
                 height={675}
                 onError={(e) => {
-                  e.currentTarget.parentElement!.style.display = 'none';
+                  const img = e.currentTarget;
+                  if (img.dataset.fallbackApplied !== 'true' && article.image) {
+                    img.dataset.fallbackApplied = 'true';
+                    img.src = article.image;
+                    return;
+                  }
+                  img.parentElement!.style.display = 'none';
                 }}
               />
             </div>
@@ -275,7 +281,13 @@ function TechNewsDetail() {
                           width={300}
                           height={169}
                           onError={(e) => {
-                            e.currentTarget.style.display = 'none';
+                            const img = e.currentTarget;
+                            if (img.dataset.fallbackApplied !== 'true' && related.image) {
+                              img.dataset.fallbackApplied = 'true';
+                              img.src = related.image;
+                              return;
+                            }
+                            img.style.display = 'none';
                           }}
                         />
                       </div>

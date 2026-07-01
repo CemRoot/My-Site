@@ -39,7 +39,13 @@ export function TechNewsArticleCard({
                 width={400}
                 height={225}
                 onError={(e) => {
-                  e.currentTarget.style.display = 'none';
+                  const img = e.currentTarget;
+                  if (img.dataset.fallbackApplied !== 'true' && article.image) {
+                    img.dataset.fallbackApplied = 'true';
+                    img.src = article.image;
+                    return;
+                  }
+                  img.style.display = 'none';
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true" />

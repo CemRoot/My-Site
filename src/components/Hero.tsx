@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Github, Linkedin, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
+import { Github, Linkedin } from './icons/brand-icons';
 import { Button } from './ui/button';
 import { PERSONAL_INFO, SOCIAL_LINKS } from '../lib/constants/personal';
 import { HERO_ROLES, HERO_TAGLINE, SCRAMBLE_CHARS, HERO_STATS } from '../lib/constants/content';

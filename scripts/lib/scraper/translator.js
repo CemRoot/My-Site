@@ -19,7 +19,14 @@ import { assertContentQuality } from '../../validation/contentQualityCheck.js';
 import { validateArticle } from '../../validation/smartArticleProcessor.js';
 import { notifyTelegram } from '../../lib/telegram.js';
 
-const groq = new Groq({ apiKey: SCRAPER_CONFIG.GROQ_API_KEY });
+// maxRetries lets the SDK ride out transient Groq connection drops
+// ("Premature close" / socket hang up) with exponential backoff before the
+// pipeline's own model-cascade fallback kicks in.
+const groq = new Groq({
+  apiKey: SCRAPER_CONFIG.GROQ_API_KEY,
+  maxRetries: 4,
+  timeout: 120000,
+});
 
 // const ollama = OLLAMA_API_KEY
 //   ? new Ollama({
@@ -325,6 +332,7 @@ export async function translateText(text, useOllama = false, fastMode = false, s
       } catch (error) {
         const msg = String(error?.message || error);
         const isRateLimit = msg.includes('429') || msg.includes('rate_limit') || msg.includes('Rate limit');
+        const isTransientNetwork = /premature close|econnreset|socket hang up|network|fetch failed|terminated|aborted|ETIMEDOUT|502|503|504/i.test(msg);
 
         if (isRetry || i === models.length - 1) {
           console.warn(`⚠️ Model ${model} failed${isRetry ? ' (retry)' : ''}: ${msg}`);
@@ -334,6 +342,12 @@ export async function translateText(text, useOllama = false, fastMode = false, s
           console.log(`⏳ Rate limit detected, waiting 3 seconds before trying next model...`);
           await new Promise(resolve => setTimeout(resolve, 3000));
           break;
+        }
+
+        // Brief backoff on transient connection drops before the same-model retry
+        // (the SDK already retried internally, so give Groq a moment to recover).
+        if (isTransientNetwork && !isRetry) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
         if (!isRetry) continue;

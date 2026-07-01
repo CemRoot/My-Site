@@ -2,7 +2,8 @@
  * Project data displayed on the portfolio
  */
 
-import { Eye, Database, Bot, Plane, Globe, Youtube } from 'lucide-react';
+import { Eye, Database, Bot, Plane, Globe } from 'lucide-react';
+import { Youtube } from '../../components/icons/brand-icons';
 import { PROJECT_URLS } from './urls';
 
 export const PROJECTS = [

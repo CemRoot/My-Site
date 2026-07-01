@@ -2,7 +2,8 @@
  * Contact Methods & Availability Constants
  */
 
-import { Mail, Phone, MessageCircle, Github, Linkedin, MapPin } from 'lucide-react';
+import { Mail, Phone, MessageCircle, MapPin } from 'lucide-react';
+import { Github, Linkedin } from '../../components/icons/brand-icons';
 import { PERSONAL_INFO, SOCIAL_LINKS } from './personal';
 import { GOOGLE_MAPS_DUBLIN_URL } from './urls';
 import type { ContactMethod } from '../types';

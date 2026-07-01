@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ExternalLink, Github } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
+import { Github } from './icons/brand-icons';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { SOCIAL_LINKS } from '../lib/constants/personal';

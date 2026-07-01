@@ -9,6 +9,7 @@ import React, { Fragment } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import EmbedFromURL, { EmbedFromToken } from '../embeds/EmbedFromURL';
+import { getOptimizedImageUrl, IMAGE_PRESETS } from '../../lib/utils/imageProxy';
 
 interface MarkdownNode {
   children?: Array<{
@@ -344,6 +345,34 @@ function renderMarkdownContent(content: string) {
         // Style list items
         li({ children, ...props }) {
           return <li {...props}>{children}</li>;
+        },
+        // Route body images through the proxy with a one-time fallback to the original source
+        img({ node, src, alt, ...props }) {
+          void node;
+          const originalSrc = typeof src === 'string' ? src : '';
+          if (!originalSrc) {
+            return null;
+          }
+
+          return (
+            <img
+              {...props}
+              src={getOptimizedImageUrl(originalSrc, IMAGE_PRESETS.hero)}
+              alt={typeof alt === 'string' ? alt : ''}
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              className="rounded-lg my-4 max-w-full h-auto"
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (img.dataset.fallbackApplied !== 'true') {
+                  img.dataset.fallbackApplied = 'true';
+                  img.src = originalSrc;
+                  return;
+                }
+                img.style.display = 'none';
+              }}
+            />
+          );
         },
       }}
     >

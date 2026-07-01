@@ -41,9 +41,13 @@ export const SCRAPER_CONFIG = {
   MAX_CONSECUTIVE_FAILURES: 3,
 };
 
-export const GROQ_PRIMARY_MODEL = 'llama-3.3-70b-versatile';
+// Model tiering intentionally starts with the lightweight, high-throughput
+// llama-3.1-8b-instant so a full run does not exhaust the daily token budget
+// (TPD) on the heavy 70B model. The 70B model is kept only as a last resort for
+// quality. This matches the tiering documented in scrape-tech-news.yml.
+export const GROQ_PRIMARY_MODEL = 'llama-3.1-8b-instant';
 export const GROQ_FALLBACK_MODEL = 'openai/gpt-oss-20b';
-export const GROQ_LAST_RESORT_MODEL = 'llama-3.1-8b-instant';
+export const GROQ_LAST_RESORT_MODEL = 'llama-3.3-70b-versatile';
 export const GROQ_ENHANCEMENT_MODEL = 'llama-3.1-8b-instant';
 export const GROQ_FAST_MODEL = 'llama-3.1-8b-instant';
 

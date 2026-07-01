@@ -1,4 +1,5 @@
-import { Heart, Github, Linkedin, Mail } from 'lucide-react';
+import { Heart, Mail } from 'lucide-react';
+import { Github, Linkedin } from './icons/brand-icons';
 import { Link } from 'react-router-dom';
 import { PERSONAL_INFO, SOCIAL_LINKS } from '../lib/constants/personal';
 

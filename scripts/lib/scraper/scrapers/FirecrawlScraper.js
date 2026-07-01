@@ -137,7 +137,13 @@ export class FirecrawlScraper extends BaseScraper {
   constructor(apiKey) {
     super('FirecrawlScraper');
     this.apiKey = apiKey;
-    this.groqParser = new Groq({ apiKey: SCRAPER_CONFIG.GROQ_PARSER_API_KEY });
+    // maxRetries lets the SDK auto-retry transient Groq connection drops
+    // ("Premature close") with exponential backoff before we fall back to regex.
+    this.groqParser = new Groq({
+      apiKey: SCRAPER_CONFIG.GROQ_PARSER_API_KEY,
+      maxRetries: 4,
+      timeout: 90000,
+    });
   }
 
   isAvailable() {
@@ -409,12 +415,22 @@ IMPORTANT:
       } catch (error) {
         const message = String(error?.message || error);
         const isRateLimited = /rate limit|rate_limit_exceeded|please try again in/i.test(message);
+        // Transient Groq/network drops (undici "Premature close", socket resets,
+        // aborted requests, gateway errors) should be retried rather than
+        // immediately falling back to the date-less regex extractor.
+        const isTransientNetwork = /premature close|econnreset|socket hang up|network|fetch failed|terminated|aborted|ETIMEDOUT|502|503|504/i.test(message);
 
-        if (isRateLimited && attempt < maxAttempts) {
-          const retryMatch = message.match(/Please try again in\s+([\d.]+)s/i);
-          const retryDelayMs = Math.max(2000, Math.ceil((Number.parseFloat(retryMatch?.[1] || '3') + 1) * 1000));
+        if ((isRateLimited || isTransientNetwork) && attempt < maxAttempts) {
+          let retryDelayMs;
+          if (isRateLimited) {
+            const retryMatch = message.match(/Please try again in\s+([\d.]+)s/i);
+            retryDelayMs = Math.max(2000, Math.ceil((Number.parseFloat(retryMatch?.[1] || '3') + 1) * 1000));
+          } else {
+            retryDelayMs = 2000 * attempt; // linear backoff: 2s, 4s
+          }
+          const reason = isRateLimited ? 'rate-limited' : 'transient network error';
           console.log(
-            `  ⏳ AI chunk ${chunkIndex}/${chunkCount} rate-limited; retrying in ${(retryDelayMs / 1000).toFixed(0)}s ` +
+            `  ⏳ AI chunk ${chunkIndex}/${chunkCount} ${reason}; retrying in ${(retryDelayMs / 1000).toFixed(0)}s ` +
             `(attempt ${attempt + 1}/${maxAttempts})`
           );
           await new Promise(resolve => setTimeout(resolve, retryDelayMs));
