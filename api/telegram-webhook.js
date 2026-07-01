@@ -24,7 +24,8 @@ function isValidUUID(uuid) {
 function webhookSecretOk(req) {
   const expected = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (!expected || !String(expected).trim()) {
-    return true;
+    console.error('TELEGRAM_WEBHOOK_SECRET is not configured — rejecting webhook request');
+    return false;
   }
   const provided = req.headers['x-telegram-bot-api-secret-token'];
   if (!provided || typeof provided !== 'string') {
@@ -188,7 +189,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, message: 'Command processed' });
       } catch (error) {
         console.error('❌ Command handler error:', error);
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
       }
     }
 

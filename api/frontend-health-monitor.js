@@ -48,6 +48,55 @@ async function sendTelegramMessage(text) {
   }
 }
 
+const ALLOWED_ERROR_TYPES = new Set(['error', 'crash', 'performance']);
+const MAX_MESSAGE_LEN = 2000;
+const MAX_STACK_LEN = 8000;
+const MAX_URL_LEN = 2048;
+const MAX_USER_AGENT_LEN = 512;
+const MAX_ADDITIONAL_JSON_LEN = 4096;
+
+function truncate(value, maxLen) {
+  if (value == null) return null;
+  const str = String(value);
+  return str.length > maxLen ? str.slice(0, maxLen) : str;
+}
+
+function sanitizeAdditionalData(data) {
+  if (data == null || typeof data !== 'object' || Array.isArray(data)) {
+    return {};
+  }
+  try {
+    const json = JSON.stringify(data);
+    if (json.length > MAX_ADDITIONAL_JSON_LEN) {
+      return { _truncated: true, preview: json.slice(0, MAX_ADDITIONAL_JSON_LEN) };
+    }
+    return data;
+  } catch {
+    return {};
+  }
+}
+
+function sanitizeErrorPayload(raw) {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+  const type = raw.type;
+  if (typeof type !== 'string' || !ALLOWED_ERROR_TYPES.has(type)) {
+    return null;
+  }
+  return {
+    type,
+    message: truncate(raw.message, MAX_MESSAGE_LEN),
+    stack: truncate(raw.stack, MAX_STACK_LEN),
+    userAgent: truncate(raw.userAgent, MAX_USER_AGENT_LEN),
+    pageUrl: truncate(raw.pageUrl, MAX_URL_LEN),
+    componentStack: truncate(raw.componentStack, MAX_STACK_LEN),
+    sentryUrl: truncate(raw.sentryUrl, MAX_URL_LEN),
+    severity: typeof raw.severity === 'string' ? truncate(raw.severity, 32) : undefined,
+    additionalData: sanitizeAdditionalData(raw.additionalData),
+  };
+}
+
 /**
  * Log error to Supabase
  */
@@ -62,7 +111,7 @@ async function logError(errorData) {
         user_agent: errorData.userAgent,
         page_url: errorData.pageUrl,
         timestamp: new Date().toISOString(),
-        additional_data: errorData.additionalData || {}
+        additional_data: errorData.additionalData || {},
       });
 
     if (error) {
@@ -150,12 +199,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    const errorData = req.body;
-    
-    if (!errorData || !errorData.type) {
+    const errorData = sanitizeErrorPayload(req.body);
+
+    if (!errorData) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid error data'
+        message: 'Invalid error data',
       });
     }
 

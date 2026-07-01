@@ -110,10 +110,16 @@ export default async function handler(request) {
 
   try {
     // Parse query parameters
-    const page = parseInt(url.searchParams.get('page') || '1', 10);
-    const limit = parseInt(url.searchParams.get('limit') || '20', 10);
+    const pageRaw = parseInt(url.searchParams.get('page') || '1', 10);
+    const limitRaw = parseInt(url.searchParams.get('limit') || '20', 10);
+    const page = Number.isFinite(pageRaw) ? Math.min(Math.max(pageRaw, 1), 500) : 1;
+    const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 100) : 20;
     const category = url.searchParams.get('category');
     const slug = url.searchParams.get('slug');
+
+    if (category && (typeof category !== 'string' || category.length > 64)) {
+      return jsonResponse({ success: false, message: 'Invalid category' }, 400, corsHeaders);
+    }
 
     // Security: Validate slug input
     if (slug) {
