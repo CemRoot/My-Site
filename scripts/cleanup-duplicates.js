@@ -1,12 +1,12 @@
 import crypto from 'crypto';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseServerClient } from '../lib/createSupabaseServerClient.js';
 import { config } from 'dotenv';
 import { writeJsonArtifact } from './lib/config.js';
 
 config({ path: '.env' });
 config({ path: '.env.local' });
 
-const supabase = createClient(
+const supabase = createSupabaseServerClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
