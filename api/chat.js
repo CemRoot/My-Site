@@ -11,7 +11,8 @@ import {
   sanitizeResponse,
   hasSuspiciousCharacters,
   formatPageContext,
-  isObviouslyOffTopic,
+  validateUserMessage,
+  enforceResponsePolicy,
 } from '../lib/chatHelpers.js';
 import { CHAT_SYSTEM_PROMPT } from '../lib/chatSystemPrompt.js';
 
@@ -88,13 +89,20 @@ export default withSentry(async function handler(req, res) {
 
     const sessionId = generateSessionId();
 
-    const offTopicRefusal = isObviouslyOffTopic(userMessage);
-    if (offTopicRefusal) {
-      console.log('🚫 Off-topic pre-filter triggered, skipping LLM call');
-      saveChatHistory(sessionId, userMessage, offTopicRefusal, 'vercel_prefilter').catch(err => {
+    const conversationHistory = Array.isArray(history)
+      ? history
+          .slice(-8)
+          .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+          .map(m => ({ role: m.role, content: m.content.substring(0, 500) }))
+      : [];
+
+    const securityBlock = validateUserMessage(userMessage, conversationHistory);
+    if (securityBlock) {
+      console.log(`🚫 Chat security pre-filter triggered (${securityBlock.reason}), skipping LLM call`);
+      saveChatHistory(sessionId, userMessage, securityBlock.reply, 'vercel_prefilter').catch(err => {
         console.error('Failed to save chat history:', err);
       });
-      return res.status(200).json({ reply: offTopicRefusal, sessionId, source: 'vercel_prefilter' });
+      return res.status(200).json({ reply: securityBlock.reply, sessionId, source: 'vercel_prefilter' });
     }
 
     const chatBackend = await getChatBackend();
@@ -118,8 +126,14 @@ export default withSentry(async function handler(req, res) {
             userMessage
           ).catch(err => console.error('Telegram notification error:', err));
         } else {
+          const safeReply = enforceResponsePolicy(
+            sanitizeResponse(typeof n8nResponse.reply === 'string' ? n8nResponse.reply : ''),
+            userMessage,
+          );
+
           return res.status(200).json({
             ...n8nResponse,
+            reply: safeReply,
             sessionId: n8nResponse.sessionId || sessionId,
             source: 'n8n',
           });
@@ -153,13 +167,6 @@ export default withSentry(async function handler(req, res) {
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-    const conversationHistory = Array.isArray(history)
-      ? history
-          .slice(-8)
-          .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
-          .map(m => ({ role: m.role, content: m.content.substring(0, 500) }))
-      : [];
-
     const messages = [
       { role: 'system', content: CHAT_SYSTEM_PROMPT },
       ...(pageContextSummary
@@ -188,6 +195,7 @@ export default withSentry(async function handler(req, res) {
     }
 
     reply = sanitizeResponse(reply);
+    reply = enforceResponsePolicy(reply, userMessage);
 
     const source = chatBackend === 'n8n' ? 'n8n_fallback' : 'vercel';
     saveChatHistory(sessionId, userMessage, reply, source).catch(err => {
