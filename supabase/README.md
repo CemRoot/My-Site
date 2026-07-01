@@ -8,6 +8,8 @@ The migration `migrations/20260701170000_enable_rls_least_privilege.sql` locks d
 2. Paste and run the full contents of `migrations/20260701170000_enable_rls_least_privilege.sql`
 3. Verify in **Authentication → Policies** that sensitive tables have RLS enabled and only `tech_news_articles` has an `anon` SELECT policy
 
+**Note:** The migration skips tables that are not created yet (e.g. `linkedin_posts`). Check the SQL Editor **Messages** tab for `NOTICE: Skipping public....` lines.
+
 ### Quick verification (anon key)
 
 ```bash
