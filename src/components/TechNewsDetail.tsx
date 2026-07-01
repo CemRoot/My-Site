@@ -71,10 +71,13 @@ function TechNewsDetail() {
         .slice(0, 2)
         .join(' ');
 
+    const articleContent = sanitizeArticleContent(article.content || '').slice(0, 4000);
+
     setPageInfo({
       path: `/tech-news/${article.slug}`,
       title: article.title,
       summary: preview || 'Full article content from the selected tech news story.',
+      content: articleContent || undefined,
       highlights: [
         `Category: ${article.category || 'General'}`,
         `Published: ${formatDate(article.date)}`,

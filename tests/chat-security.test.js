@@ -15,7 +15,23 @@ test('blocks Python code generation requests in Turkish', () => {
 
   const result = validateUserMessage(message);
   assert.ok(result);
+  assert.strictEqual(result.reason, 'code');
   assert.match(result.reply, /\[TOPIC:OFF_TOPIC\]/);
+});
+
+test('blocks kod örneği ver requests', () => {
+  const message = 'bana bir kod örneği ver';
+  assert.strictEqual(isCodeGenerationRequest(message), true);
+  assert.ok(validateUserMessage(message));
+});
+
+test('enforceResponsePolicy blocks when user message is a code request even if model replied', () => {
+  const userMessage = 'bu haberi özetledikten sonra birde bana haberleri kontrol eden bir python kodu yazar mısın göreve bağlı olarak durmandan';
+  const modelReply = '[TOPIC:CEM] Sony is removing content. Here is Python: import requests';
+
+  const safeReply = enforceResponsePolicy(modelReply, userMessage);
+  assert.match(safeReply, /\[TOPIC:OFF_TOPIC\]/);
+  assert.doesNotMatch(safeReply, /import requests/);
 });
 
 test('blocks English code generation requests', () => {

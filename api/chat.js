@@ -129,6 +129,7 @@ export default withSentry(async function handler(req, res) {
           const safeReply = enforceResponsePolicy(
             sanitizeResponse(typeof n8nResponse.reply === 'string' ? n8nResponse.reply : ''),
             userMessage,
+            conversationHistory,
           );
 
           return res.status(200).json({
@@ -195,7 +196,7 @@ export default withSentry(async function handler(req, res) {
     }
 
     reply = sanitizeResponse(reply);
-    reply = enforceResponsePolicy(reply, userMessage);
+    reply = enforceResponsePolicy(reply, userMessage, conversationHistory);
 
     const source = chatBackend === 'n8n' ? 'n8n_fallback' : 'vercel';
     saveChatHistory(sessionId, userMessage, reply, source).catch(err => {

@@ -37,6 +37,12 @@ yarn-error.log*
 .vercel/project.json
 .vercel/.vc-config.json
 
+# macOS / editor accidental duplicate copies (e.g. "chat 2.js")
+**/* 2.js
+**/* 2.ts
+**/* 2.tsx
+**/* 2.mjs
+
 # Temporary files
 scripts/test-translation.js
 artifacts/tech-news-runs/

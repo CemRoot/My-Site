@@ -194,6 +194,7 @@ export function useChat(pageInfo: PageInfo | null) {
     },
     [
       isLoading,
+      messages,
       pageInfo,
       offTopicCount,
       awaitingRelevantQuestion,
