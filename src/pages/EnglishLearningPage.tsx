@@ -19,8 +19,7 @@ import { Badge } from '../components/ui/badge';
 import { usePageContext } from '../lib/context/PageContext';
 import { SEO } from '../components/SEO';
 
-const AUTH_CALLBACK_URL =
-  'https://pibzvubeoqrhkwmwifdc.supabase.co/functions/v1/auth-callback';
+const AUTH_CALLBACK_URL = 'https://auth.cemkoyluoglu.codes';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
