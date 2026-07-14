@@ -26,6 +26,7 @@ const TechNews = lazyWithRetry(() => import('./components/TechNews'));
 const TechNewsDetail = lazyWithRetry(() => import('./components/TechNewsDetail'));
 const TermsPage = lazyWithRetry(() => import('./pages/TermsPage'));
 const PrivacyPage = lazyWithRetry(() => import('./pages/PrivacyPage'));
+const EnglishLearningPage = lazyWithRetry(() => import('./pages/EnglishLearningPage'));
 const NotFoundPage = lazyWithRetry(() => import('./pages/NotFoundPage'));
 
 // Lazy load ChatWidget - it's heavy and not immediately needed
@@ -148,6 +149,7 @@ export default function App() {
                 <Route path="/tech-news/:slug" element={<TechNewsDetail />} />
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="/privacy-policy" element={<PrivacyPage />} />
+                <Route path="/english-learning" element={<EnglishLearningPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </Suspense>
