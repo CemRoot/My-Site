@@ -12,6 +12,7 @@ import crypto from 'crypto';
 import { supabase } from '../supabaseAdmin.js';
 import { SCRAPER_CONFIG } from './config.js';
 import { validateArticle, autoFixArticle } from '../../validation/smartArticleProcessor.js';
+import { stripSourceSocialLeaks } from '../../embeds/cleanMarkdownEmbeds.js';
 import { getTurkeyIsoDate, normalizeSourceDate } from './dateUtils.js';
 import { generateSlug, transliterateToAscii } from './slugUtils.js';
 
@@ -351,7 +352,7 @@ export async function saveArticle(article) {
       .replace(/\s{2,}/g, ' ')
       .trim();
 
-    let cleanContent = (article.content || '')
+    let cleanContent = stripSourceSocialLeaks(article.content || '')
       .replace(/\bNuvemMag\b/gi, '')
       .replace(/https?:\/\/(?:www\.)?nuvemmag\.com[^\s\)>\]"']*/gi, '')
       .replace(/\[[^\]]*\]\([^)]*nuvemmag\.com[^)]*\)/gi, '')
@@ -390,7 +391,8 @@ export async function saveArticle(article) {
         e.includes('translation error') ||
         e.includes('Title is empty') ||
         e.includes('Content is empty') ||
-        e.includes('NuvemMag branding/URLs')
+        e.includes('NuvemMag branding/URLs') ||
+        e.includes('source social links')
       );
 
       if (criticalErrors.length > 0) {

@@ -5,6 +5,8 @@
  * Can also auto-fix certain issues
  */
 
+import { hasSourceSocialLeak, stripSourceSocialLeaks } from '../embeds/cleanMarkdownEmbeds.js';
+
 /**
  * Clean Nuvemmag branding from content
  * @param {string} content - Content to clean
@@ -45,7 +47,20 @@ export function validateArticleContent(article, autoFix = false) {
   // CRITICAL ERRORS (Must not exist)
   // ============================================
   
-  // 1. Check for Nuvemmag branding - auto-fix if enabled
+  // 1. Check for leaked NuvemMag source social links / widget tags
+  if (hasSourceSocialLeak(content) || hasSourceSocialLeak(title) || hasSourceSocialLeak(description)) {
+    if (autoFix) {
+      content = stripSourceSocialLeaks(content);
+      title = stripSourceSocialLeaks(title);
+      description = stripSourceSocialLeaks(description);
+      wasFixed = true;
+      warnings.push('⚠️ Auto-fixed: Removed NuvemMag source social links / leaked widget tags');
+    } else {
+      errors.push('❌ Contains NuvemMag source social links or leaked [TWEET/INSTAGRAM/LINKEDIN/YOUTUBE] tags');
+    }
+  }
+
+  // 2. Check for Nuvemmag branding - auto-fix if enabled
   if (content.includes('nuvemmag.com') || content.includes('NuvemMag')) {
     if (autoFix) {
       content = cleanNuvemmagBranding(content);
@@ -56,12 +71,12 @@ export function validateArticleContent(article, autoFix = false) {
     }
   }
   
-  // 2. Check for navigation/category links
+  // 3. Check for navigation/category links
   if (content.includes('post-category')) {
     errors.push('❌ Contains category URLs');
   }
   
-  // 3. Check for header navigation
+  // 4. Check for header navigation
   const headerPatterns = [
     'Ana Sayfa',
     'Ana SayfaEn',
@@ -76,12 +91,12 @@ export function validateArticleContent(article, autoFix = false) {
     }
   }
   
-  // 4. Check if content starts with date (should not)
+  // 5. Check if content starts with date (should not)
   if (content.match(/^\d{1,2}\/\d{1,2}\/\d{4}/)) {
     errors.push('❌ Content starts with date (header not removed)');
   }
   
-  // 5. Check for YouTube UI text
+  // 6. Check for YouTube UI text
   const youtubeUIPatterns = [
     /youtube\.com\/channel/,
     /embeds_referring_euri/,
@@ -101,12 +116,12 @@ export function validateArticleContent(article, autoFix = false) {
     }
   }
   
-  // 6. Check for example placeholder leakage (from system prompts)
+  // 7. Check for example placeholder leakage (from system prompts)
   if (content.includes('VIDEO_ID_HERE') || content.includes('123456789012345678')) {
     errors.push('❌ CRITICAL: Contains example placeholder from system prompt!');
   }
   
-  // 7. Check for translation/enhancement instruction leakage
+  // 8. Check for translation/enhancement instruction leakage
   const instructionPatterns = [
     // Translation prompt leakage
     'REMINDER:',
@@ -176,7 +191,7 @@ export function validateArticleContent(article, autoFix = false) {
     errors.push('❌ CRITICAL: Contains invalid embed placeholder tokens');
   }
   
-  // 8. Check for non-English characters (Chinese, Japanese, Korean, Arabic, etc.)
+  // 9. Check for non-English characters (Chinese, Japanese, Korean, Arabic, etc.)
   const cjkChars = /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/;
   const arabicHebrewChars = /[\u0600-\u06ff\u0590-\u05ff]/;
   const cyrillicChars = /[\u0400-\u04ff]/;
@@ -201,17 +216,17 @@ export function validateArticleContent(article, autoFix = false) {
     warnings.push('⚠️  Content contains Turkish characters (may be intentional)');
   }
   
-  // 9. Check for footer text
+  // 10. Check for footer text
   if (content.includes('Pinetent Digital') || content.includes('Tüm Hakları Saklıdır')) {
     errors.push('❌ Contains footer text');
   }
   
-  // 9. Check for "İlginizi Çekebilir" (related articles section)
+  // 11. Check for "İlginizi Çekebilir" (related articles section)
   if (content.includes('İlginizi Çekebilir')) {
     errors.push('❌ Contains related articles section');
   }
   
-  // 10. Check for empty markdown links
+  // 12. Check for empty markdown links
   if (content.match(/\[\]\([^\)]*\)/)) {
     errors.push('❌ Contains empty markdown links []()');
   }
@@ -271,6 +286,8 @@ export function validateArticleContent(article, autoFix = false) {
   // Add fixed content if auto-fix was enabled and changes were made
   if (autoFix && wasFixed) {
     result.fixedContent = content;
+    result.fixedTitle = title;
+    result.fixedDescription = description;
   }
   
   return result;

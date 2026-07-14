@@ -6,6 +6,7 @@
  */
 
 import type { Article } from '../types';
+import { stripSourceSocialLeaks } from '../../../scripts/embeds/cleanMarkdownEmbeds.js';
 
 const TITLE_STOP_WORDS = new Set([
   'the',
@@ -129,7 +130,7 @@ export function sanitizeArticleContent(content: string): string {
     return content;
   }
 
-  let sanitized = content;
+  let sanitized = stripSourceSocialLeaks(content);
 
   // Remove remaining markdown images (backend already handles most)
   sanitized = sanitized.replace(/!\[[^\]]*\]\([^)]+\)/g, '');

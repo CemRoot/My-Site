@@ -3,8 +3,12 @@ node_modules/
 .pnp
 .pnp.js
 
-# Testing
+# Testing (local only — not published to GitHub)
+tests/
 coverage/
+
+# Scraper run artifacts & local diagnostics (may contain URLs/titles from production)
+artifacts/
 
 # Production
 build/
@@ -12,6 +16,7 @@ dist/
 
 # Generated at build time (Supabase slugs + dated lastmod); avoids daily git churn
 public/sitemap.xml
+public/optimized/
 
 # Misc
 .DS_Store
@@ -45,8 +50,6 @@ yarn-error.log*
 
 # Temporary files
 scripts/test-translation.js
-artifacts/tech-news-runs/
-artifacts/preflight-result.json
 
 # Private data
 data/newsletter-subscribers.json

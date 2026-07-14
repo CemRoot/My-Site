@@ -20,6 +20,11 @@ import {
   normalizeSourceUrl,
 } from './database.js';
 import { translateArticle } from './translator.js';
+import {
+  runContentPipeline,
+  prepareArticleForSaveRetry,
+  isFixableSaveRejection,
+} from './contentRemediation.js';
 import { ScraperRouter } from './scrapers/ScraperRouter.js';
 import { normalizeSourceDate } from './dateUtils.js';
 
@@ -434,8 +439,8 @@ class DetailExtractionAgent {
 }
 
 class TranslationAgent {
-  async run(article) {
-    return translateArticle(article);
+  async run(article, options = {}) {
+    return translateArticle(article, options);
   }
 }
 
@@ -854,12 +859,13 @@ async function processArticleQueue(articleQueue, agents, runReport, options = {}
     consecutiveFailures = 0;
 
     try {
-      const translatedArticle = await agents.translation.run(article);
+      const { article: translatedArticle, remediationLog } = await runContentPipeline(agents, {
+        url,
+        sourceArticle: article,
+      });
 
-      if (!translatedArticle || translatedArticle.title === article.title ||
-          translatedArticle.title.includes('**Translation**') ||
-          translatedArticle.content.includes('**Translation**')) {
-        throw new Error('Translation failed or returned original/garbage text');
+      if (remediationLog.some((entry) => entry.action !== 'validated')) {
+        console.log(`   ✅ Content remediation completed (${remediationLog.length} steps)`);
       }
 
       const enhancementGate = agents.enhancement.ensureFullContent(translatedArticle);
@@ -902,8 +908,22 @@ async function processArticleQueue(articleQueue, agents, runReport, options = {}
         continue;
       }
 
-      const result = await agents.persistence.save(articleData);
-      const disposition = agents.quality.getSaveDisposition(result);
+      let result = await agents.persistence.save(articleData);
+      let disposition = agents.quality.getSaveDisposition(result);
+
+      if (disposition === 'rejected') {
+        const saveError = result.error?.message || result.reason || '';
+        if (isFixableSaveRejection(saveError)) {
+          console.log(`   🔧 [${category}] Save rejected with fixable error — retrying after remediation`);
+          const repaired = prepareArticleForSaveRetry(articleData);
+          result = await agents.persistence.save({
+            ...repaired,
+            slug: articleData.slug,
+            category: articleData.category,
+          });
+          disposition = agents.quality.getSaveDisposition(result);
+        }
+      }
 
       if (disposition === 'saved') {
         runReport.metrics.saved++;
@@ -1326,12 +1346,14 @@ async function testSingleUrl(url) {
   }
   console.log('   ✅ Passed — no garbage detected');
 
-  console.log('\n3️⃣  translateArticle()...');
-  const translatedArticle = await agents.translation.run(article);
+  console.log('\n3️⃣  runContentPipeline() (translate + remediation loop)...');
+  const { article: translatedArticle, remediationLog } = await runContentPipeline(agents, {
+    url,
+    sourceArticle: article,
+  });
 
-  if (!translatedArticle || translatedArticle.title === article.title) {
-    console.error('   ❌ Translation failed or returned original text');
-    process.exit(1);
+  if (remediationLog.some((entry) => entry.action !== 'validated')) {
+    console.log(`   ✅ Remediation log: ${JSON.stringify(remediationLog, null, 2)}`);
   }
 
   const enhancementGate = agents.enhancement.ensureFullContent(translatedArticle);
@@ -1548,12 +1570,13 @@ async function forceIngestUrls(urls, argv = process.argv) {
     consecutiveFailures = 0;
 
     try {
-      const translatedArticle = await agents.translation.run(article);
+      const { article: translatedArticle, remediationLog } = await runContentPipeline(agents, {
+        url,
+        sourceArticle: article,
+      });
 
-      if (!translatedArticle || translatedArticle.title === article.title ||
-          translatedArticle.title.includes('**Translation**') ||
-          translatedArticle.content.includes('**Translation**')) {
-        throw new Error('Translation failed or returned original/garbage text');
+      if (remediationLog.some((entry) => entry.action !== 'validated')) {
+        console.log(`   ✅ [Force] Content remediation completed (${remediationLog.length} steps)`);
       }
 
       const enhancementGate = agents.enhancement.ensureFullContent(translatedArticle);
@@ -1591,8 +1614,22 @@ async function forceIngestUrls(urls, argv = process.argv) {
         continue;
       }
 
-      const result = await agents.persistence.save(articleData);
-      const disposition = agents.quality.getSaveDisposition(result);
+      let result = await agents.persistence.save(articleData);
+      let disposition = agents.quality.getSaveDisposition(result);
+
+      if (disposition === 'rejected') {
+        const saveError = result.error?.message || result.reason || '';
+        if (isFixableSaveRejection(saveError)) {
+          console.log(`   🔧 [Force] Save rejected with fixable error — retrying after remediation`);
+          const repaired = prepareArticleForSaveRetry(articleData);
+          result = await agents.persistence.save({
+            ...repaired,
+            slug: articleData.slug,
+            category: articleData.category,
+          });
+          disposition = agents.quality.getSaveDisposition(result);
+        }
+      }
 
       if (disposition === 'saved') {
         runReport.metrics.saved++;

@@ -22,6 +22,9 @@ const BAD_TITLE_PATTERNS = [
 
 const BAD_CONTENT_PATTERNS = [
   { pattern: /__WIDGET_\d+__/, label: '__WIDGET__ not restored' },
+  { pattern: /\[(?:Tweet by @|Instagram post by|LinkedIn post by|Youtube video by)/i, label: 'leaked markdown footer social tags' },
+  { pattern: /\(\s*https?:\/\/(?:www\.)?(?:twitter|x|instagram|linkedin|youtube)\.com/i, label: 'parenthesized social URL debris' },
+  { pattern: /(?:\(\s*\)\s*){2,}/, label: 'repeated empty parentheses debris' },
   { pattern: /We use cookies/i, label: 'cookie banner' },
   { pattern: /NecessaryAlways Active/i, label: 'cookie accordion' },
   { pattern: /CustomizeDeclineAccept/i, label: 'cookie buttons' },

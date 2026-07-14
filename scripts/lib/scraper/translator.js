@@ -14,7 +14,7 @@ import {
   createArticleEnhancementPrompt,
   validateTokenPreservation,
 } from '../../translate/prompt.js';
-import { removeEmbedArtifactNoise, dedupeEmbedTokens } from '../../embeds/cleanMarkdownEmbeds.js';
+import { removeEmbedArtifactNoise, dedupeEmbedTokens, hasSourceSocialLeak, stripSourceSocialLeaks } from '../../embeds/cleanMarkdownEmbeds.js';
 import { assertContentQuality } from '../../validation/contentQualityCheck.js';
 import { validateArticle } from '../../validation/smartArticleProcessor.js';
 import { notifyTelegram } from '../../lib/telegram.js';
@@ -109,7 +109,7 @@ function calculateSimilarity(str1, str2) {
   return matches / longer.length;
 }
 
-async function translateWithModel(model, text, retry = false, shortText = false, context = '') {
+async function translateWithModel(model, text, retry = false, shortText = false, context = '', userPromptOverride = null) {
   const systemPrompt = retry
     ? 'Translate from Turkish to English. Output ONLY the English translation. Do NOT include any notes, explanations, or the original text.'
     : (shortText
@@ -118,7 +118,7 @@ async function translateWithModel(model, text, retry = false, shortText = false,
 
   const userPrompt = retry
     ? `Translate this Turkish text to English.\n\nCRITICAL RULES:\n1. Output ONLY the English translation, nothing else.\n2. Keep ALL __WIDGET_0__, __WIDGET_1__, __WIDGET_N__ placeholders exactly as-is. Do not translate, remove, or modify them.\n3. No notes, no explanations.\n\nText:\n${text}`
-    : (shortText ? createShortTextTranslationPrompt(text, context) : createTranslationPrompt(text));
+    : (userPromptOverride || (shortText ? createShortTextTranslationPrompt(text, context) : createTranslationPrompt(text)));
 
   const completion = await groq.chat.completions.create({
     model,
@@ -285,7 +285,7 @@ function validateTranslationQuality(result) {
   return { valid: true };
 }
 
-export async function translateText(text, useOllama = false, fastMode = false, shortText = false, context = '') {
+export async function translateText(text, useOllama = false, fastMode = false, shortText = false, context = '', userPromptOverride = null) {
   if (!text || text.trim().length === 0) return text;
 
   const { content: cleanContent, widgets } = preserveWidgets(text);
@@ -320,7 +320,7 @@ export async function translateText(text, useOllama = false, fastMode = false, s
       const isRetry = attempt > 0;
 
       try {
-        const result = await translateWithModel(model, cleanContent, isRetry, shortText, context);
+        const result = await translateWithModel(model, cleanContent, isRetry, shortText, context, userPromptOverride);
         const quality = validateTranslationQuality(result);
 
         if (quality.valid) {
@@ -452,10 +452,15 @@ export function cleanTranslation(text) {
   return cleaned.trim();
 }
 
-export async function translateArticle(article) {
+export async function translateArticle(article, options = {}) {
+  const { remediationHints = [], throwOnError = false } = options;
+
   console.log(`🌐 Translating article with Groq AI...`);
   console.log(`   Title length: ${article.title.length} chars`);
   console.log(`   Content length: ${article.content.length} chars`);
+  if (remediationHints.length > 0) {
+    console.log(`   🔧 Remediation hints: ${remediationHints.length}`);
+  }
 
   try {
     const contentExcerpt = (article.content || '').substring(0, 300);
@@ -493,8 +498,9 @@ export async function translateArticle(article) {
     await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.TRANSLATION_DELAY));
 
     console.log(`   📄 Translating full content...`);
+    const contentPrompt = createTranslationPrompt(article.content, remediationHints);
     let translatedContent = sanitizeTranslatedArtifacts(
-      cleanTranslation(await translateText(article.content, true, false)),
+      cleanTranslation(await translateText(article.content, true, false, false, '', contentPrompt)),
     );
 
     await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.TRANSLATION_DELAY));
@@ -510,15 +516,18 @@ export async function translateArticle(article) {
 
     const translatedArticle = {
       ...article,
-      title: translatedTitle,
-      description: translatedDescription,
-      content: translatedContent,
+      title: stripSourceSocialLeaks(translatedTitle),
+      description: stripSourceSocialLeaks(translatedDescription),
+      content: stripSourceSocialLeaks(translatedContent),
       originalTitle: article.title,
       originalContent: article.content,
     };
 
     console.log(`   🔍 Running legacy content quality check...`);
     assertContentQuality(translatedArticle);
+    if (hasSourceSocialLeak(translatedArticle.content)) {
+      throw new Error('Translation still contains source social leaks after sanitization');
+    }
     console.log(`   ✅ Legacy quality check PASSED`);
 
     console.log(`   🔍 Running smart validation...`);
@@ -526,8 +535,14 @@ export async function translateArticle(article) {
 
     if (!validation.isValid) {
       const criticalErrors = validation.errors.filter(e =>
-        e.includes('Turkish') || e.includes('year') ||
-        e.includes('instruction leakage') || e.includes('translation error')
+        e.includes('Turkish') ||
+        e.includes('year') ||
+        e.includes('instruction leakage') ||
+        e.includes('translation error') ||
+        e.includes('NuvemMag branding') ||
+        e.includes('source social links') ||
+        e.includes('widget placeholders') ||
+        e.includes('invalid embed placeholder')
       );
       if (criticalErrors.length > 0) {
         throw new Error(`Smart validation failed: ${criticalErrors.join('; ')}`);
@@ -540,6 +555,9 @@ export async function translateArticle(article) {
     return translatedArticle;
   } catch (error) {
     console.error(`❌ Translation failed: ${error.message}`);
+    if (throwOnError) {
+      throw error;
+    }
     return article;
   }
 }

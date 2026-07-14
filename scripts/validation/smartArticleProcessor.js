@@ -4,6 +4,8 @@
  * Prevents common errors: wrong dates, Turkish content, bad translations, duplicates
  */
 
+import { hasSourceSocialLeak, stripSourceSocialLeaks } from '../embeds/cleanMarkdownEmbeds.js';
+
 /**
  * Validation result structure
  */
@@ -237,6 +239,11 @@ export function validateContent(content, originalContent = null) {
     return result;
   }
 
+  if (hasSourceSocialLeak(content)) {
+    result.addError('Content contains NuvemMag source social links or leaked widget tags');
+    return result;
+  }
+
   // Check for NuvemMag branding (except in image URLs)
   const nuvemMagPattern = /nuvemmag\.com(?!\/wp-content)/gi;
   if (nuvemMagPattern.test(content)) {
@@ -324,8 +331,17 @@ export function validateArticle(article) {
  * Auto-fix common issues
  */
 export function autoFixArticle(article, validationResults) {
-  const fixed = { ...article };
+  const fixed = {
+    ...article,
+    title: stripSourceSocialLeaks(article.title || ''),
+    description: stripSourceSocialLeaks(article.description || ''),
+    content: stripSourceSocialLeaks(article.content || ''),
+  };
   let fixedCount = 0;
+
+  if (fixed.title !== article.title || fixed.description !== article.description || fixed.content !== article.content) {
+    fixedCount++;
+  }
 
   // Fix title
   if (validationResults.title.fixedTitle) {

@@ -14,6 +14,7 @@ import {
   cleanSocialEmbedRemnants,
   removeEmbedArtifactNoise,
   dedupeEmbedTokens,
+  hasSourceSocialLeak,
 } from '../../../embeds/cleanMarkdownEmbeds.js';
 import { normalizeSourceDate } from '../dateUtils.js';
 import { extractSlugFromUrl, generateSlug, normalizeSourceUrl } from '../database.js';
@@ -562,6 +563,7 @@ IMPORTANT:
       if (/^\[?Nuvem\]?\s*\(.*nuvemmag\.com\/author/i.test(trimmed)) return false;
       if (/^\s*Yazarın Profili\s*$/i.test(trimmed)) return false;
       if (/^\[Yazarın Profili\]/i.test(trimmed)) return false;
+      if (hasSourceSocialLeak(trimmed)) return false;
       return true;
     });
     markdownContent = cleanedLines.join('\n');

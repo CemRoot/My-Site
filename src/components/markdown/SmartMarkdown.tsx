@@ -10,6 +10,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import EmbedFromURL, { EmbedFromToken } from '../embeds/EmbedFromURL';
 import { getOptimizedImageUrl, IMAGE_PRESETS } from '../../lib/utils/imageProxy';
+import { stripSourceSocialLeaks } from '../../../scripts/embeds/cleanMarkdownEmbeds.js';
 
 interface MarkdownNode {
   children?: Array<{
@@ -27,13 +28,13 @@ const GLOBAL_TOKEN_REGEX = /\[\[EMBED:(TIKTOK|TWEET|YOUTUBE):([^\]]+)\]\]/gi;
 function sanitizeContentArtifacts(content: string) {
   const seenTokens = new Set<string>();
 
-  const withoutArtifacts = content
+  const withoutArtifacts = stripSourceSocialLeaks(content)
     .replace(/`(\[\[EMBED:(?!TIKTOK|TWEET|YOUTUBE)[^\]]+\]\])`/gi, '')
     .replace(/\[\[EMBED:(?!TIKTOK|TWEET|YOUTUBE)[^\]]+\]\]/gi, '')
     .replace(/__WIDGET_\d+__/g, '')
     .replace(/\bWIDGET_\d+\b/g, '')
     .replace(/^\s*(?:Twitter|TikTok)\s+Embed\s*$/gim, '')
-    .replace(/^\s*(?:YouTube Widget|Twitter Widget Iframe|Widget Iframe)\s*$/gim, '');
+    .replace(/^\s*(?:YouTube Widget|Twitter Widget Iframe|Widget Iframe|Instagram Widget|Social Media Widget)\s*$/gim, '');
 
   const dedupedTokens = withoutArtifacts.replace(
     /\[\[EMBED:(TIKTOK|TWEET|YOUTUBE):([^\]]+)\]\]/gi,

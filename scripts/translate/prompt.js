@@ -102,10 +102,17 @@ ${content}`;
 /**
  * User prompt template for full article translation
  */
-export function createTranslationPrompt(content) {
+export function createTranslationPrompt(content, remediationHints = []) {
+  const fixBlock =
+    remediationHints.length > 0
+      ? `\n\nCRITICAL FIXES REQUIRED (previous output was rejected):\n${remediationHints
+          .map((hint, index) => `${index + 1}. ${hint}`)
+          .join('\n')}\n`
+      : '';
+
   return `Rewrite the following Turkish tech article as an original English news piece.
 Follow all rules from your system instructions exactly.
-Preserve every [[EMBED:...]] and __WIDGET_N__ token without modification.
+Preserve every [[EMBED:...]] and __WIDGET_N__ token without modification.${fixBlock}
 
 Source article:
 
