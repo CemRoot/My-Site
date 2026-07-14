@@ -1,11 +1,12 @@
-import { useEffect, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   BookOpen,
   Brain,
   CheckCircle2,
   Globe,
+  KeyRound,
   LogIn,
   MousePointerClick,
   PlayCircle,
@@ -17,6 +18,9 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { usePageContext } from '../lib/context/PageContext';
 import { SEO } from '../components/SEO';
+
+const AUTH_CALLBACK_URL =
+  'https://pibzvubeoqrhkwmwifdc.supabase.co/functions/v1/auth-callback';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -98,25 +102,144 @@ function safeEmail(value: string | null): string | null {
   return EMAIL_PATTERN.test(trimmed) ? trimmed : null;
 }
 
+function ResetPasswordForm() {
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setError('');
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+    if (password !== confirm) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const form = new FormData();
+      form.append('action', 'reset-password');
+      form.append('password', password);
+      form.append('password_confirm', confirm);
+
+      const res = await fetch(AUTH_CALLBACK_URL, {
+        method: 'POST',
+        body: form,
+        credentials: 'include',
+      });
+      const data = (await res.json()) as { ok?: boolean; redirect?: string; error?: string };
+
+      if (!res.ok || !data.ok) {
+        setError(data.error ?? 'Could not update password. Request a new reset email.');
+        return;
+      }
+
+      if (data.redirect) {
+        window.location.href = data.redirect;
+        return;
+      }
+
+      navigate('/english-learning?status=password-updated', { replace: true });
+    } catch {
+      setError('Network error. Try again or request a new reset email from the extension.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-md mx-auto text-left">
+      <div className="relative group mb-6">
+        <div className="absolute -inset-2 bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20 rounded-3xl blur-2xl opacity-50" />
+        <div className="relative liquid-glass-strong rounded-3xl p-6 sm:p-8">
+          <label htmlFor="new-password" className="block text-sm text-muted-foreground mb-2">
+            New password
+          </label>
+          <input
+            id="new-password"
+            type="password"
+            minLength={6}
+            autoComplete="new-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full mb-4 px-4 py-3 rounded-xl bg-background/60 border border-white/10 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+          <label htmlFor="confirm-password" className="block text-sm text-muted-foreground mb-2">
+            Confirm password
+          </label>
+          <input
+            id="confirm-password"
+            type="password"
+            minLength={6}
+            autoComplete="new-password"
+            required
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            className="w-full mb-6 px-4 py-3 rounded-xl bg-background/60 border border-white/10 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? 'Updating...' : 'Update password'}
+          </Button>
+          {error ? (
+            <p className="mt-4 text-sm text-red-400" role="alert">
+              {error}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </form>
+  );
+}
+
 function EnglishLearningPage() {
   const [searchParams] = useSearchParams();
-  const isVerified = searchParams.get('status') === 'verified';
+  const status = searchParams.get('status');
+  const isVerified = status === 'verified';
+  const isResetPassword = status === 'reset-password';
+  const isPasswordUpdated = status === 'password-updated';
+  const isPrivateFlow = isVerified || isResetPassword || isPasswordUpdated;
+
   const email = useMemo(
     () => safeEmail(searchParams.get('email')),
     [searchParams],
   );
 
-  const pageTitle = isVerified ? 'Email verified' : 'Learn English';
-  const pageDescription = isVerified
-    ? 'Your Learn English account is confirmed. Sign in from the Chrome extension to start saving vocabulary from video subtitles.'
-    : 'Contextual vocabulary learning from video subtitles — Chrome extension and iOS spaced repetition app.';
+  const pageTitle = isPasswordUpdated
+    ? 'Password updated'
+    : isResetPassword
+      ? 'Reset password'
+      : isVerified
+        ? 'Email verified'
+        : 'Learn English';
+
+  const pageDescription = isPasswordUpdated
+    ? 'Your Learn English password was changed. Sign in with your new password.'
+    : isResetPassword
+      ? 'Choose a new password for your Learn English account.'
+      : isVerified
+        ? 'Your Learn English account is confirmed. Sign in from the Chrome extension to start saving vocabulary from video subtitles.'
+        : 'Contextual vocabulary learning from video subtitles — Chrome extension and iOS spaced repetition app.';
 
   const highlights = useMemo(() => {
+    if (isPasswordUpdated) {
+      return ['Open the Chrome extension', 'Sign in with your new password'];
+    }
+    if (isResetPassword) {
+      return ['Choose a strong password', 'Sign in again from the extension'];
+    }
     if (isVerified) {
       return VERIFIED_STEPS.map((step) => step.description);
     }
     return HOW_IT_WORKS.map((item) => item.description);
-  }, [isVerified]);
+  }, [isPasswordUpdated, isResetPassword, isVerified]);
 
   const { setPageInfo } = usePageContext();
 
@@ -148,7 +271,7 @@ function EnglishLearningPage() {
         description={pageDescription}
         ogTitle={`${pageTitle} | Learn English`}
         ogDescription={pageDescription}
-        robots={isVerified ? 'noindex, nofollow' : 'index, follow'}
+        robots={isPrivateFlow ? 'noindex, nofollow' : 'index, follow'}
       />
       <main
         className="relative min-h-screen overflow-hidden px-4 sm:px-6 lg:px-8 pb-24"
@@ -180,7 +303,36 @@ function EnglishLearningPage() {
               </div>
             </div>
 
-            {isVerified ? (
+            {isPasswordUpdated ? (
+              <>
+                <div className="mx-auto mb-6 w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-400/30 flex items-center justify-center">
+                  <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+                </div>
+                <h1 className="text-4xl sm:text-5xl mb-4 font-[Hobo_BT]">
+                  <span className="bg-gradient-to-r from-emerald-300 via-primary to-secondary bg-clip-text text-transparent">
+                    Password updated
+                  </span>
+                </h1>
+                <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                  Your password has been changed. Sign in from the Chrome extension with your new password.
+                </p>
+              </>
+            ) : isResetPassword ? (
+              <>
+                <div className="mx-auto mb-6 w-20 h-20 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
+                  <KeyRound className="w-10 h-10 text-primary" />
+                </div>
+                <h1 className="text-4xl sm:text-5xl mb-4 font-[Hobo_BT]">
+                  <span className="bg-gradient-to-r from-foreground via-primary to-secondary bg-clip-text text-transparent">
+                    Choose a new password
+                  </span>
+                </h1>
+                <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                  Enter a new password for your account. This page is secure — your session is stored in an
+                  HttpOnly cookie, not in the page source.
+                </p>
+              </>
+            ) : isVerified ? (
               <>
                 <div className="mx-auto mb-6 w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-400/30 flex items-center justify-center shadow-[0_0_40px_rgba(52,211,153,0.15)]">
                   <CheckCircle2 className="w-10 h-10 text-emerald-400" />
@@ -226,7 +378,27 @@ function EnglishLearningPage() {
             )}
           </div>
 
-          {isVerified ? (
+          {isResetPassword ? (
+            <ResetPasswordForm />
+          ) : isPasswordUpdated ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-10">
+              {[
+                { title: 'Open the extension', desc: 'Click the puzzle icon in Chrome.', icon: Puzzle },
+                { title: 'Sign in', desc: 'Use your email and new password.', icon: LogIn },
+              ].map((step) => {
+                const Icon = step.icon;
+                return (
+                  <div key={step.title} className="liquid-glass rounded-2xl p-6 border border-white/5 text-left">
+                    <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
+                      <Icon className="w-5 h-5 text-primary" />
+                    </div>
+                    <h2 className="text-lg font-[Hobo_BT] mb-2">{step.title}</h2>
+                    <p className="text-sm text-muted-foreground">{step.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
+          ) : isVerified ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 mb-10">
               {VERIFIED_STEPS.map((step, index) => {
                 const Icon = step.icon;
@@ -327,22 +499,30 @@ function EnglishLearningPage() {
             </>
           )}
 
-          <div className="relative group max-w-3xl mx-auto">
-            <div className="absolute -inset-2 bg-gradient-to-r from-primary/15 via-secondary/15 to-accent/15 rounded-3xl blur-2xl opacity-70" />
-            <div className="relative liquid-glass-strong rounded-3xl p-6 sm:p-8 text-center">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-primary" />
+          {!isResetPassword ? (
+            <div className="relative group max-w-3xl mx-auto">
+              <div className="absolute -inset-2 bg-gradient-to-r from-primary/15 via-secondary/15 to-accent/15 rounded-3xl blur-2xl opacity-70" />
+              <div className="relative liquid-glass-strong rounded-3xl p-6 sm:p-8 text-center">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <BookOpen className="w-6 h-6 text-primary" />
+                </div>
+                <h2 className="text-xl sm:text-2xl font-[Hobo_BT] mb-2">
+                  {isPasswordUpdated
+                    ? 'All done'
+                    : isVerified
+                      ? 'Ready when you are'
+                      : 'Get started'}
+                </h2>
+                <p className="text-muted-foreground max-w-xl mx-auto leading-relaxed">
+                  {isPasswordUpdated
+                    ? 'You can close this tab and sign in from the extension.'
+                    : isVerified
+                      ? 'Open the Learn English extension, sign in, and click your first subtitle word.'
+                      : 'Install the Chrome extension, create an account, and confirm your email to unlock subtitle capture.'}
+                </p>
               </div>
-              <h2 className="text-xl sm:text-2xl font-[Hobo_BT] mb-2">
-                {isVerified ? 'Ready when you are' : 'Get started'}
-              </h2>
-              <p className="text-muted-foreground max-w-xl mx-auto leading-relaxed">
-                {isVerified
-                  ? 'Open the Learn English extension, sign in, and click your first subtitle word. You can close this tab anytime.'
-                  : 'Install the Chrome extension, create an account, and confirm your email to unlock subtitle capture and your vocabulary journal.'}
-              </p>
             </div>
-          </div>
+          ) : null}
         </div>
       </main>
     </>
