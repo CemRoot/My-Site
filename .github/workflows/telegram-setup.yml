@@ -25,6 +25,9 @@ concurrency:
   group: telegram-setup-${{ github.run_id }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   setup-telegram-bot:
     runs-on: ubuntu-latest

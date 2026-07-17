@@ -5,6 +5,9 @@ on:
     - cron: '0 0 * * 1' # Runs every Monday at 00:00 UTC
   workflow_dispatch: # Allows manual trigger from GitHub Actions tab
 
+permissions:
+  contents: read
+
 jobs:
   cleanup-database:
     runs-on: ubuntu-latest

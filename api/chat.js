@@ -14,7 +14,13 @@ import {
   validateUserMessage,
   enforceResponsePolicy,
 } from '../lib/chatHelpers.js';
+import { isUnsupportedScriptLanguage, needsEnglishOnlyReply } from '../lib/chatSecurity.js';
 import { CHAT_SYSTEM_PROMPT } from '../lib/chatSystemPrompt.js';
+import {
+  CHAT_COMPLETION_OPTIONS,
+  CHAT_MODEL_FALLBACKS,
+  CHAT_MODEL_PRIMARY,
+} from '../lib/chatKnowledge.js';
 
 const FALLBACK_REASON_EMOJI = {
   'token_exhausted': '💰',
@@ -91,9 +97,9 @@ export default withSentry(async function handler(req, res) {
 
     const conversationHistory = Array.isArray(history)
       ? history
-          .slice(-8)
+          .slice(-12)
           .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
-          .map(m => ({ role: m.role, content: m.content.substring(0, 500) }))
+          .map(m => ({ role: m.role, content: m.content.substring(0, 1200) }))
       : [];
 
     const securityBlock = validateUserMessage(userMessage, conversationHistory);
@@ -168,24 +174,60 @@ export default withSentry(async function handler(req, res) {
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+    const languageGuard = needsEnglishOnlyReply(userMessage)
+      ? [{
+          role: 'system',
+          content:
+            'LANGUAGE LOCK: The latest user message is not English/Turkish. Reply ONLY in English (Latin script). Do not use German, French, Spanish, Russian, Arabic, or other languages. Start by saying you can help in English or Turkish, then answer about Cem in English.',
+        }]
+      : [];
+
     const messages = [
       { role: 'system', content: CHAT_SYSTEM_PROMPT },
+      ...languageGuard,
       ...(pageContextSummary
-        ? [{ role: 'system', content: `Current page context for reference:\n${pageContextSummary}` }]
+        ? [{
+            role: 'system',
+            content:
+              `CURRENT PAGE CONTEXT (highest priority for questions about "this page", "here", "this article"):\n${pageContextSummary}`,
+          }]
         : []),
       ...conversationHistory,
       { role: 'user', content: userMessage },
     ];
 
-    const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages,
-      temperature: 0.2,
-      max_tokens: 700,
-      top_p: 0.8,
-      frequency_penalty: 0.3,
-      presence_penalty: 0.2,
-    });
+    const modelCandidates = [CHAT_MODEL_PRIMARY, ...CHAT_MODEL_FALLBACKS]
+      .filter((model, index, arr) => arr.indexOf(model) === index);
+
+    let completion = null;
+    let usedModel = modelCandidates[0];
+    let lastError = null;
+
+    for (const model of modelCandidates) {
+      try {
+        completion = await groq.chat.completions.create({
+          model,
+          messages,
+          ...CHAT_COMPLETION_OPTIONS,
+        });
+        usedModel = model;
+        break;
+      } catch (modelError) {
+        lastError = modelError;
+        const msg = String(modelError?.message || modelError);
+        const retryable = /rate limit|429|503|502|timeout|overloaded|unavailable|model/i.test(msg);
+        console.warn(`Chat model ${model} failed: ${msg.substring(0, 160)}`);
+        if (!retryable || model === modelCandidates[modelCandidates.length - 1]) {
+          throw modelError;
+        }
+      }
+    }
+
+    if (!completion) {
+      throw lastError || new Error('All chat models failed');
+    }
+
+    console.log(`🧠 Chat completion via ${usedModel}`);
 
     let reply = completion.choices[0]?.message?.content ||
       '[TOPIC:CEM] I apologize, but I encountered an issue generating a response. Please try asking your question again!';

@@ -8,6 +8,9 @@ on:
   # Manuel tetikleme
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   check-vercel-status:
     runs-on: ubuntu-latest

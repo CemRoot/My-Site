@@ -14,6 +14,9 @@ concurrency:
   group: system-health-check
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   health-check:
     runs-on: ubuntu-latest

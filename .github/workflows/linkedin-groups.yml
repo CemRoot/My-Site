@@ -36,6 +36,9 @@ concurrency:
   group: linkedin-groups-digest
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   generate-digest:
     runs-on: ubuntu-latest

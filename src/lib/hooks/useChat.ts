@@ -89,7 +89,7 @@ export function useChat(pageInfo: PageInfo | null) {
       try {
         const recentHistory = messages
           .filter(m => m.id !== '1')
-          .slice(-8)
+          .slice(-12)
           .map(m => ({ role: m.role, content: m.content }));
 
         const response = await fetch('/api/chat', {

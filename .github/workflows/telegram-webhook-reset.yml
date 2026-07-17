@@ -9,6 +9,9 @@ concurrency:
   group: telegram-webhook-reset
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   reset-webhook:
     runs-on: ubuntu-latest

@@ -24,6 +24,9 @@ concurrency:
   group: n8n-trial-tracker
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   check-trial-status:
     runs-on: ubuntu-latest

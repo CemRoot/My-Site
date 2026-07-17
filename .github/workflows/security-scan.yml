@@ -10,6 +10,9 @@ on:
     - cron: '0 9 * * 1'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   npm-audit:
     name: NPM Security Audit
@@ -86,6 +89,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [npm-audit]
     if: always()
+    permissions: {}
     
     steps:
       - name: Security scan completed
