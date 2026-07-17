@@ -164,26 +164,76 @@ function monitorNetworkErrors(): void {
   };
 }
 
+const BOT_UA_RE =
+  /bot|crawl|spider|slurp|headless|wget|curl|python-requests|scrapy|bytespider|gptbot|claude|perplexity|semrush|ahrefs|bingpreview|facebookexternalhit|twitterbot|linkedinbot|slackbot|discordbot|preview|lighthouse|pagespeed|pingdom|uptimerobot|vercel-screenshot|google-inspection|storebot|chrome-lighthouse/i;
+
+function isLikelyAutomatedClient(): boolean {
+  try {
+    const ua = navigator.userAgent || '';
+    if (BOT_UA_RE.test(ua)) return true;
+    if ((navigator as Navigator & { webdriver?: boolean }).webdriver) return true;
+    // Prefetch / prerender / background tabs often never paint React fully
+    if (document.visibilityState === 'hidden') return true;
+  } catch {
+    // ignore
+  }
+  return false;
+}
+
+function hasRenderableApp(): boolean {
+  const root = document.getElementById('root');
+  if (!root) return false;
+  if (root.children.length > 0) return true;
+  // React 18 may briefly have text/comment nodes before element children
+  if ((root.textContent || '').trim().length > 0) return true;
+  return false;
+}
+
 /**
- * Check if site is black screen (no content rendered)
+ * Check if site is black screen (no content rendered).
+ * Retries to avoid false positives from slow chunk loads and bot/prerender clients.
  */
 function checkBlackScreen(): void {
-  setTimeout(() => {
-    const root = document.getElementById('root');
-    
-    if (!root || root.children.length === 0) {
-      reportError({
-        type: 'crash',
-        message: 'Black screen detected - Root element is empty',
-        severity: 'critical',
-        additionalData: {
-          rootExists: !!root,
-          childrenCount: root?.children.length || 0,
-          bodyHTML: document.body.innerHTML.substring(0, 200),
-        },
-      });
+  if (isLikelyAutomatedClient()) {
+    return;
+  }
+
+  const delaysMs = [5000, 8000, 12000];
+  let attempt = 0;
+
+  const runCheck = () => {
+    if (hasRenderableApp()) {
+      return;
     }
-  }, 3000); // Wait 3 seconds for React to render
+
+    // Still empty — schedule another check unless this was the last attempt
+    if (attempt < delaysMs.length - 1) {
+      attempt += 1;
+      setTimeout(runCheck, delaysMs[attempt] - delaysMs[attempt - 1]);
+      return;
+    }
+
+    // Final confirmation: ignore bots/hidden tabs that appeared mid-check
+    if (isLikelyAutomatedClient() || document.visibilityState === 'hidden') {
+      return;
+    }
+
+    const root = document.getElementById('root');
+    reportError({
+      type: 'crash',
+      message: 'Black screen detected - Root element is empty',
+      severity: 'critical',
+      additionalData: {
+        rootExists: !!root,
+        childrenCount: root?.children.length || 0,
+        bodyHTML: document.body.innerHTML.substring(0, 200),
+        visibilityState: document.visibilityState,
+        readyState: document.readyState,
+      },
+    });
+  };
+
+  setTimeout(runCheck, delaysMs[0]);
 }
 
 /**

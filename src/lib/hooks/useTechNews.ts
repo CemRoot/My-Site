@@ -95,7 +95,8 @@ export function useTechNews(
             ? `&category=${encodeURIComponent(selectedCategory)}`
             : '';
         const apiUrl = `${TECH_NEWS_API_BASE}?page=${page}&limit=${ARTICLES_PER_PAGE}${categoryQuery}`;
-        const response = await fetch(apiUrl, { cache: 'no-store' });
+        // Allow browser/CDN HTTP cache (API sends s-maxage). sessionStorage SWR still applies.
+        const response = await fetch(apiUrl, { cache: 'default' });
 
         if (!response.ok) {
           throw new Error(`Failed to fetch news (status ${response.status})`);

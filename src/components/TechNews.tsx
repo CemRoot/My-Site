@@ -317,12 +317,13 @@ function TechNews() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {currentArticles.map((article) => (
+              {currentArticles.map((article, index) => (
                 <TechNewsArticleCard
                   key={article.id}
                   article={article}
                   truncateText={truncateText}
                   onBeforeNavigate={persistListScroll}
+                  index={index}
                 />
               ))}
             </div>

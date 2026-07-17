@@ -5,26 +5,53 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { getOptimizedImageUrl, IMAGE_PRESETS } from '../lib/utils/imageProxy';
 import { formatDate } from '../lib/utils/formatDate';
 import { getCategoryColor } from '../lib/utils/articleHelpers';
+import { prefetchArticle } from '../lib/hooks/useArticle';
 import ErrorBoundary from './ErrorBoundary';
 import type { Article } from '../lib/types';
+
+/** Above-the-fold cards on desktop (3-col) + mobile (1-col first screen) */
+const PRIORITY_IMAGE_COUNT = 3;
+
+let detailChunkPrefetchStarted = false;
+
+function prefetchDetailChunk() {
+  if (detailChunkPrefetchStarted) return;
+  detailChunkPrefetchStarted = true;
+  void import('./TechNewsDetail').catch(() => {
+    detailChunkPrefetchStarted = false;
+  });
+}
 
 interface TechNewsArticleCardProps {
   article: Article;
   truncateText: (text: string, maxLength: number) => string;
   onBeforeNavigate?: () => void;
+  /** Zero-based index in the visible list — first cards get high-priority images */
+  index?: number;
 }
 
 export function TechNewsArticleCard({
   article,
   truncateText,
   onBeforeNavigate,
+  index = 0,
 }: TechNewsArticleCardProps) {
+  const prioritizeImage = index < PRIORITY_IMAGE_COUNT;
+
+  const handlePrefetch = () => {
+    prefetchDetailChunk();
+    prefetchArticle(article.slug);
+  };
+
   return (
     <ErrorBoundary title="Failed to load article card">
       <Link
         to={`/tech-news/${article.slug}`}
         className="group block h-full"
         onClick={() => onBeforeNavigate?.()}
+        onMouseEnter={handlePrefetch}
+        onFocus={handlePrefetch}
+        onTouchStart={handlePrefetch}
       >
         <Card className="overflow-hidden h-full transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 border-border/50 hover:border-primary/50">
           {article.image && (
@@ -33,9 +60,10 @@ export function TechNewsArticleCard({
                 src={getOptimizedImageUrl(article.image, IMAGE_PRESETS.thumbnail)}
                 alt={article.title}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                loading="lazy"
+                loading={prioritizeImage ? 'eager' : 'lazy'}
                 decoding="async"
-                fetchPriority="low"
+                fetchPriority={prioritizeImage ? 'high' : 'low'}
+                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 width={400}
                 height={225}
                 onError={(e) => {

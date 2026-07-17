@@ -48,6 +48,39 @@ async function sendTelegramMessage(text) {
   }
 }
 
+const BOT_UA_RE =
+  /bot|crawl|spider|slurp|headless|wget|curl|python-requests|scrapy|bytespider|gptbot|claude|perplexity|semrush|ahrefs|bingpreview|facebookexternalhit|twitterbot|linkedinbot|slackbot|discordbot|preview|lighthouse|pagespeed|pingdom|uptimerobot|vercel-screenshot|google-inspection|storebot|chrome-lighthouse/i;
+
+/** Simplified Chrome UAs like Chrome/150.0.0.0 are almost always crawlers/previews, not real users. */
+function isSimplifiedChromeUa(userAgent) {
+  return /Chrome\/\d+\.0\.0\.0\b/i.test(String(userAgent || ''))
+    && !/Edg\/|OPR\/|Brave/i.test(String(userAgent || ''));
+}
+
+function isBotOrNoiseReport(errorData) {
+  const ua = String(errorData?.userAgent || '');
+  const message = String(errorData?.message || '');
+
+  if (BOT_UA_RE.test(ua) || isSimplifiedChromeUa(ua)) {
+    return true;
+  }
+
+  // Empty-root false positives from partial JS execution / link unfurlers
+  if (/Black screen detected/i.test(message) && (!ua || isSimplifiedChromeUa(ua))) {
+    return true;
+  }
+
+  return false;
+}
+
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.length > 0) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown';
+}
+
 const ALLOWED_ERROR_TYPES = new Set(['error', 'crash', 'performance']);
 const MAX_MESSAGE_LEN = 2000;
 const MAX_STACK_LEN = 8000;
@@ -208,8 +241,9 @@ export default async function handler(req, res) {
       });
     }
 
-    // Rate limit check
-    const rateLimitKey = `${errorData.type}_${errorData.message}`;
+    // Rate limit check (IP + error type/message) — prevents Telegram spam from crawlers
+    const clientIp = getClientIp(req);
+    const rateLimitKey = `${clientIp}_${errorData.type}_${errorData.message}`;
     if (!checkRateLimit(rateLimitKey)) {
       console.log('Rate limit exceeded for:', rateLimitKey);
       return res.status(200).json({
@@ -218,10 +252,24 @@ export default async function handler(req, res) {
       });
     }
 
-    // Log to Supabase (non-blocking)
+    // Log to Supabase (non-blocking) — keep logs even for bots for diagnostics
     logError(errorData).catch(err => {
       console.error('Failed to log error:', err);
     });
+
+    const isBotNoise = isBotOrNoiseReport(errorData);
+    if (isBotNoise) {
+      console.log('Suppressed Telegram notify for bot/noise report:', {
+        message: errorData.message,
+        userAgent: errorData.userAgent,
+        pageUrl: errorData.pageUrl,
+      });
+      return res.status(200).json({
+        success: true,
+        message: 'Logged without Telegram notification (bot/noise filtered)',
+        filtered: true,
+      });
+    }
 
     // Send Telegram notification for critical errors
     const isCritical = errorData.type === 'crash' || 

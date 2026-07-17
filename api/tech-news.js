@@ -182,7 +182,7 @@ export default async function handler(request) {
         article: formatTechNewsArticle(article, true) 
       }, 200, {
         ...corsHeaders,
-        'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=10',
+        'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=120',
       });
     }
 
@@ -230,13 +230,13 @@ export default async function handler(request) {
         },
         _cache: {
           generatedAt: new Date().toISOString(),
-          maxAge: 5
+          maxAge: 60
         }
       }
     }, 200, {
       ...corsHeaders,
-      'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=10',
-      'CDN-Cache-Control': 'public, max-age=5',
+      'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=120',
+      'CDN-Cache-Control': 'public, max-age=60',
     });
 
   } catch (error) {
