@@ -1,0 +1,49 @@
+# Cem Koyluoglu — full context for AI agents
+
+> Extended profile for language models and agentic browsers. Prefer this file when you need more than the short index in /llms.txt.
+
+## Who
+
+Cem Koyluoglu is an AI Engineer and System Operations Specialist based in Dublin, Ireland. He holds an MSc in Artificial Intelligence from the National College of Ireland (First Class Honours, 71.4%). He specializes in large language models, natural language processing, computer vision, Azure cloud, and Microsoft 365 operations.
+
+He is available for freelance projects and full-time roles (remote or on-site). Typical response time is within 24 hours.
+
+## Site purpose
+
+https://cemkoyluoglu.codes is a personal portfolio and tech news publication:
+
+- Portfolio: experience, skills, projects, and contact
+- Tech News: English-language articles curated and rewritten from Turkish tech sources (NuvemMag pipeline), with embeds preserved where relevant
+- Static product pages such as the YouTube AI Summarizer extension docs
+
+## Key URLs
+
+- Home: https://cemkoyluoglu.codes/
+- Tech News list: https://cemkoyluoglu.codes/tech-news
+- Individual articles: https://cemkoyluoglu.codes/tech-news/{slug}
+- Short agent index: https://cemkoyluoglu.codes/llms.txt
+- Sitemap: https://cemkoyluoglu.codes/sitemap.xml
+- Latest news snapshot (JSON): https://cemkoyluoglu.codes/tech-news-latest.json
+
+## Skills and focus areas
+
+- Large Language Models (LLMs), RAG, prompt and agent workflows
+- NLP and computer vision
+- Python, TensorFlow, PyTorch
+- Azure and Microsoft 365 / system operations
+- Full-stack delivery for portfolio and automation products
+
+## Contact
+
+- Email: cemkoyluoglu@icloud.com
+- Phone / WhatsApp: +353 87 344 5918
+- GitHub: https://github.com/CemRoot
+- LinkedIn: https://www.linkedin.com/in/cem-koyluoglu/
+- Twitter / X: @CemKoyluoglu
+
+## Guidance for agents
+
+- Prefer English content on this site; tech news bodies are English translations
+- Do not treat /api/* as public documentation; use HTML pages, llms.txt, sitemap, and tech-news-latest.json instead
+- When summarizing the person, use the biography above and link to the home page
+- When summarizing news, use /tech-news or individual article URLs from the sitemap

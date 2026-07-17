@@ -3,6 +3,8 @@ import { ARTICLES_PER_PAGE, NEWS_CACHE_MAX_AGE_MS } from '../constants/animation
 import { TECH_NEWS_API_BASE } from '../constants/urls';
 import type { NewsDatabase } from '../types';
 
+const BUILD_SNAPSHOT_URL = '/tech-news-latest.json';
+
 interface TechNewsState {
   newsData: {
     version: string;
@@ -38,6 +40,20 @@ function mergePaginatedArticles(
   return mergedArticles;
 }
 
+async function loadBuildSnapshot(): Promise<NewsDatabase | null> {
+  try {
+    const response = await fetch(BUILD_SNAPSHOT_URL, { cache: 'default' });
+    if (!response.ok) return null;
+    const result = await response.json();
+    if (result?.success && result?.data?.articles?.length) {
+      return result.data as NewsDatabase;
+    }
+  } catch {
+    // Snapshot is best-effort
+  }
+  return null;
+}
+
 export function useTechNews(
   selectedCategory: string,
   restorationTargetPage: number | null = null,
@@ -65,7 +81,7 @@ export function useTechNews(
           newsData: {
             version: '2.0.0',
             lastUpdated: data._cache?.generatedAt || new Date().toISOString(),
-            totalArticles: data.pagination.totalArticles,
+            totalArticles: data.pagination?.totalArticles ?? data.articles.length,
             articles: newArticles,
           },
         };
@@ -85,7 +101,7 @@ export function useTechNews(
         if (!backgroundRefresh) {
           setState((prev) => ({
             ...prev,
-            loading: isNewSearch ? true : prev.loading,
+            loading: isNewSearch && !prev.newsData ? true : prev.loading,
             loadingMore: !isNewSearch,
           }));
         }
@@ -95,7 +111,6 @@ export function useTechNews(
             ? `&category=${encodeURIComponent(selectedCategory)}`
             : '';
         const apiUrl = `${TECH_NEWS_API_BASE}?page=${page}&limit=${ARTICLES_PER_PAGE}${categoryQuery}`;
-        // Allow browser/CDN HTTP cache (API sends s-maxage). sessionStorage SWR still applies.
         const response = await fetch(apiUrl, { cache: 'default' });
 
         if (!response.ok) {
@@ -152,6 +167,20 @@ export function useTechNews(
           }
         }
 
+        // Cold first page (all categories): paint from build snapshot, then refresh API
+        if (
+          isNewSearch &&
+          page === 1 &&
+          (!selectedCategory || selectedCategory === 'all')
+        ) {
+          const snapshot = await loadBuildSnapshot();
+          if (snapshot) {
+            updateStateWithNewData(snapshot, true);
+            void fetchFreshData(page, cacheKey, true, true);
+            return;
+          }
+        }
+
         await fetchFreshData(page, cacheKey, isNewSearch);
       } catch (err) {
         setState((prev) => ({
@@ -167,7 +196,7 @@ export function useTechNews(
 
   useEffect(() => {
     restorationChainDoneRef.current = false;
-    setState((prev) => ({ ...prev, newsData: null, error: null }));
+    setState((prev) => ({ ...prev, newsData: null, error: null, loading: true }));
     setCurrentPage(1);
     fetchNews(1, true);
   }, [selectedCategory]); // eslint-disable-line react-hooks/exhaustive-deps

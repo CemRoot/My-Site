@@ -104,9 +104,10 @@ export function SEO({
       ],
     };
 
-    let scriptTag = document.querySelector('script[type="application/ld+json"]');
+    let scriptTag = document.querySelector('script#seo-json-ld');
     if (!scriptTag) {
       scriptTag = document.createElement('script');
+      scriptTag.id = 'seo-json-ld';
       scriptTag.type = 'application/ld+json';
       document.head.appendChild(scriptTag);
     }

@@ -75,9 +75,47 @@
       }
     </style>
 
-    <!-- Preconnect to Sentry for faster error reporting -->
-    <link rel="dns-prefetch" href="https://o4508211887607104.ingest.de.sentry.io" />
-    <link rel="preconnect" href="https://o4508211887607104.ingest.de.sentry.io" crossorigin />
+    <!-- Preconnect to Sentry deferred — not on critical rendering path -->
+
+    <!-- Static structured data for crawlers (no JS required). Runtime SEO uses #seo-json-ld. -->
+    <script type="application/ld+json" id="bootstrap-json-ld">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://cemkoyluoglu.codes/#website",
+          "url": "https://cemkoyluoglu.codes/",
+          "name": "Cem Koyluoglu Portfolio",
+          "description": "AI Engineer specializing in Large Language Models, NLP, Computer Vision, and Microsoft 365 solutions. Based in Dublin, Ireland.",
+          "publisher": { "@id": "https://cemkoyluoglu.codes/#person" },
+          "inLanguage": "en-IE"
+        },
+        {
+          "@type": "Person",
+          "@id": "https://cemkoyluoglu.codes/#person",
+          "name": "Cem Koyluoglu",
+          "url": "https://cemkoyluoglu.codes/",
+          "jobTitle": "AI Engineer & System Operations Specialist",
+          "email": "cemkoyluoglu@icloud.com",
+          "telephone": "+353 87 344 5918",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Dublin",
+            "addressCountry": "Ireland"
+          },
+          "sameAs": [
+            "https://github.com/CemRoot",
+            "https://www.linkedin.com/in/cem-koyluoglu/"
+          ],
+          "alumniOf": {
+            "@type": "CollegeOrUniversity",
+            "name": "National College of Ireland"
+          }
+        }
+      ]
+    }
+    </script>
   </head>
 
   <body>

@@ -18,10 +18,8 @@ import {
   setTechNewsRestoreNavFlag,
 } from './lib/techNewsListRestore';
 
-// HomePage is loaded synchronously for fast FCP (it's the main landing page)
-import HomePage from './pages/HomePage';
-
-// Lazy load secondary routes for code splitting
+// Lazy-load all pages so /tech-news does not download HomePage (Hero/Projects) on cold start
+const HomePage = lazyWithRetry(() => import('./pages/HomePage'));
 const TechNews = lazyWithRetry(() => import('./components/TechNews'));
 const TechNewsDetail = lazyWithRetry(() => import('./components/TechNewsDetail'));
 const TermsPage = lazyWithRetry(() => import('./pages/TermsPage'));
@@ -32,14 +30,12 @@ const NotFoundPage = lazyWithRetry(() => import('./pages/NotFoundPage'));
 // Lazy load ChatWidget - it's heavy and not immediately needed
 const ChatWidget = lazyWithRetry(() => import('./components/ChatWidget'));
 
-// Loading fallback component
+// Lightweight shell for first paint while route chunks load
 function RouteLoadingFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-        <p className="text-sm text-muted-foreground">Loading...</p>
-      </div>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3 px-4" role="status" aria-live="polite">
+      <p className="text-2xl font-semibold tracking-tight text-foreground">Cem Koyluoglu</p>
+      <p className="text-sm text-muted-foreground">Loading…</p>
     </div>
   );
 }

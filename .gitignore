@@ -16,6 +16,7 @@ dist/
 
 # Generated at build time (Supabase slugs + dated lastmod); avoids daily git churn
 public/sitemap.xml
+public/tech-news-latest.json
 public/optimized/
 
 # Misc

@@ -1,0 +1,30 @@
+# Cem Koyluoglu
+
+> AI Engineer and System Operations Specialist based in Dublin, Ireland. Portfolio covering LLMs, NLP, computer vision, Azure, Microsoft 365, and curated tech news.
+
+Cem Koyluoglu builds intelligent systems, automation workflows, and cloud solutions. This site is the canonical source for his professional profile, selected projects, and English tech news rewritten from Turkish sources.
+
+## Primary
+
+- [Home](https://cemkoyluoglu.codes/): Portfolio landing page with experience, skills, and contact
+- [Tech News](https://cemkoyluoglu.codes/tech-news): Latest technology articles translated and curated in English
+- [Full LLM context](https://cemkoyluoglu.codes/llms-full.txt): Expanded biography, skills, and site map for agents
+- [Sitemap](https://cemkoyluoglu.codes/sitemap.xml): Machine-readable list of all public pages and articles
+
+## Projects and work
+
+- [GitHub](https://github.com/CemRoot): Open-source and professional repositories
+- [LinkedIn](https://www.linkedin.com/in/cem-koyluoglu/): Professional profile and career updates
+- [YouTube AI Summarizer](https://cemkoyluoglu.codes/yt-ai-summarizer/): Chrome extension privacy policy and product info
+
+## Contact
+
+- [Email](mailto:cemkoyluoglu@icloud.com): Direct email for freelance and full-time opportunities
+- [WhatsApp](https://wa.me/353873445918): Fast contact channel (Dublin timezone)
+
+## Optional
+
+- [Privacy Policy](https://cemkoyluoglu.codes/privacy-policy): How site data and analytics are handled
+- [Terms](https://cemkoyluoglu.codes/terms): Website terms and conditions
+- [English Learning](https://cemkoyluoglu.codes/english-learning): Language learning resources page
+- [Tech news API snapshot](https://cemkoyluoglu.codes/tech-news-latest.json): Build-time JSON of the latest article list

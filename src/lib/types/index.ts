@@ -69,6 +69,19 @@ export interface NewsDatabase {
   lastUpdated?: string | null;
   totalArticles?: number;
   articles: Article[];
+  pagination?: {
+    page: number;
+    limit: number;
+    totalArticles: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+  _cache?: {
+    generatedAt?: string;
+    maxAge?: number;
+    source?: string;
+    note?: string;
+  };
 }
 
 /** Chat widget message */

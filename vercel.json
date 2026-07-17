@@ -35,11 +35,55 @@
       "destination": "https://broker.cemkoyluoglu.codes/health"
     },
     {
-      "source": "/:path((?!robots\\.txt|sitemap\\.xml|favicon\\.ico|favicon\\.webp|og-image\\.png|og-image\\.webp|portrait\\.webp|assets|fonts|yt-ai-summarizer\\/).*)",
+      "source": "/:path((?!robots\\.txt|sitemap\\.xml|llms\\.txt|llms-full\\.txt|tech-news-latest\\.json|favicon\\.ico|favicon\\.webp|og-image\\.png|og-image\\.webp|portrait\\.webp|assets|fonts|yt-ai-summarizer\\/).*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
+    {
+      "source": "/llms.txt",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/llms-full.txt",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/tech-news-latest.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=60, s-maxage=60, stale-while-revalidate=300"
+        }
+      ]
+    },
+    {
+      "source": "/tech-news",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, s-maxage=60, stale-while-revalidate=300"
+        }
+      ]
+    },
     {
       "source": "/index.html",
       "headers": [
