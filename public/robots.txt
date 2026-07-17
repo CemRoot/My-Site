@@ -1,4 +1,8 @@
 # https://cemkoyluoglu.codes robots.txt
+#
+# NOTE: If Cloudflare "AI Scrapers and Crawlers" / managed robots.txt is enabled,
+# it may prepend Disallow rules for GPTBot/ClaudeBot/etc. Disable that managed
+# block in Cloudflare if you want those agents to crawl this site.
 
 User-agent: *
 Allow: /
