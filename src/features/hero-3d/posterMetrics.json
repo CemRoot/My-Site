@@ -1,0 +1,21 @@
+{
+  "generatedBy": "scripts/generate-hero-poster.mjs — do not edit by hand",
+  "file": "hero-head-poster.webp",
+  "pixels": {
+    "width": 400,
+    "height": 398
+  },
+  "bytes": 29352,
+  "modelAspect": 1.036484,
+  "heightOverModelHeight": 1.077778,
+  "edges": 39721,
+  "style": {
+    "left": "50%",
+    "top": "39.0000%",
+    "height": "min(48.5000%, calc(clamp(260px, min(100vw, 1440px) * 0.34, 520px) * 1.039840))",
+    "aspectRatio": "400 / 398",
+    "width": "auto",
+    "transform": "translate(-50%, -50%)",
+    "pointerEvents": "none"
+  }
+}

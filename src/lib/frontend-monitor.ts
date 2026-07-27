@@ -5,7 +5,6 @@
  * Integrates with Sentry and custom monitoring
  */
 
-import * as Sentry from '@sentry/react';
 
 interface ErrorReport {
   type: 'error' | 'crash' | 'performance' | 'network';

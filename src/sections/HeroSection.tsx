@@ -61,9 +61,19 @@ export function HeroSection() {
         aligned, then obvious on a wide display.
       */}
       <div className="relative z-10 mx-auto max-w-[1440px] px-[clamp(18px,4vw,52px)]">
-        {/* Status / field rows */}
-        <div className="anim-fade flex flex-wrap justify-between gap-6 font-mono text-[11px] leading-[1.7] text-ink-45 [animation-delay:0.1s]">
-          <div className="max-w-[230px]">
+        {/*
+          Dual-column meta: 01 left / 02 right.
+          w-full + justify-between span the row; wrap keeps 02 right-aligned
+          (ml-auto + items-end) when it drops below on narrow viewports.
+        */}
+        <div
+          data-hero-meta
+          className="anim-fade flex w-full flex-row flex-wrap items-start justify-between gap-x-6 gap-y-5 font-mono text-[11px] leading-[1.7] text-ink-45 [animation-delay:0.1s]"
+        >
+          <div
+            data-hero-status
+            className="mr-auto max-w-[230px] shrink-0 text-left"
+          >
             <div className="tracking-[0.12em] text-signal">
               {t({ en: '01 / STATUS', tr: '01 / DURUM' })}
             </div>
@@ -74,7 +84,10 @@ export function HeroSection() {
               })}
             </div>
           </div>
-          <div className="max-w-[250px] text-right">
+          <div
+            data-hero-field
+            className="ml-auto flex max-w-[250px] shrink-0 flex-col items-end text-right"
+          >
             <div className="tracking-[0.12em] text-signal">
               {t({ en: '02 / FIELD', tr: '02 / ALAN' })}
             </div>

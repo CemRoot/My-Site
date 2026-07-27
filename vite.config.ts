@@ -87,7 +87,21 @@
       },
     },
     build: {
-      target: ['es2021', 'chrome90', 'firefox88', 'safari14', 'edge90'],
+      /*
+        es2022, not the old ['es2021','chrome90','firefox88','safari14','edge90'].
+
+        That list was aspirational rather than real: globals.css uses color-mix()
+        (Chrome 111 / Safari 16.2) and :has() (Chrome 105 / Safari 15.4), and
+        `overflow-x: clip` degrades on Safari 14 — so the site has never rendered
+        correctly on the browsers the target was protecting. Downlevelling the
+        JavaScript for them only bought transpiler helpers, which is what
+        Lighthouse reports as "Legacy JavaScript".
+
+        es2022 is a LOOSER requirement than the stylesheet already imposes, so
+        this narrows nothing in practice. It also makes Object.hasOwn native,
+        which is why the hand-written polyfill could leave main.tsx.
+      */
+      target: 'es2022',
       outDir: 'build',
       // Generate source maps for Sentry
       sourcemap: mode === 'production',
@@ -102,10 +116,26 @@
           pure_funcs: mode === 'production' ? ['console.log', 'console.info'] : [],
         },
       },
-      // Manual chunk splitting for better caching
+      /*
+        React and the router go in their own chunk.
+
+        This does NOT speed up a first visit — the bytes are identical and it
+        adds a request. What it buys is caching: react/react-dom/react-router
+        change a few times a year, the app changes every deploy, and today they
+        share one hash, so every content edit re-downloads all of React.
+      */
       rollupOptions: {
         output: {
-          manualChunks: undefined, // Let Vite handle chunking automatically
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return undefined;
+            if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) {
+              return 'react-vendor';
+            }
+            if (/[\\/]node_modules[\\/](react-router|react-router-dom)[\\/]/.test(id)) {
+              return 'react-vendor';
+            }
+            return undefined;
+          },
         },
       },
       // Chunk size warnings

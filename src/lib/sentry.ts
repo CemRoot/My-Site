@@ -1,4 +1,23 @@
-import * as Sentry from '@sentry/react';
+/*
+  Named imports, not `import * as Sentry`.
+
+  This module is a lazily-imported chunk, and a namespace import forces the
+  bundler to keep the SDK's shape across that boundary: measured at 465 KiB
+  as a namespace import. Every wrapper below shares a name with the SDK
+  function it wraps, so the imports are aliased — without the alias,
+  `setContext` would call itself.
+*/
+import {
+  init,
+  reactRouterV6BrowserTracingIntegration,
+  captureException as sentryCaptureException,
+  captureMessage as sentryCaptureMessage,
+  addBreadcrumb as sentryAddBreadcrumb,
+  setUser as sentrySetUser,
+  setTag as sentrySetTag,
+  setContext as sentrySetContext,
+  type SeverityLevel,
+} from '@sentry/react';
 import { useEffect } from 'react';
 import {
   createRoutesFromChildren,
@@ -25,7 +44,7 @@ export function initSentry() {
     return;
   }
 
-  Sentry.init({
+  init({
     dsn,
     
     // Environment and Release tracking
@@ -35,7 +54,7 @@ export function initSentry() {
     // Performance Monitoring
     integrations: [
       // React Router integration for navigation tracking
-      Sentry.reactRouterV6BrowserTracingIntegration({
+      reactRouterV6BrowserTracingIntegration({
         useEffect,
         useLocation,
         useNavigationType,
@@ -129,7 +148,7 @@ export function initSentry() {
 
   // Set user context if available (e.g., from auth)
   // You can call this from your auth system
-  // Sentry.setUser({ id: 'user-id', email: 'user@example.com' });
+  // sentrySetUser({ id: 'user-id', email: 'user@example.com' });
 
   console.info('✅ Sentry initialized successfully');
 }
@@ -139,23 +158,23 @@ export function initSentry() {
  */
 export function captureException(error: Error, context?: Record<string, any>) {
   if (context) {
-    Sentry.setContext('custom', context);
+    sentrySetContext('custom', context);
   }
-  Sentry.captureException(error);
+  sentryCaptureException(error);
 }
 
 /**
  * Capture a custom message
  */
-export function captureMessage(message: string, level: Sentry.SeverityLevel = 'info') {
-  Sentry.captureMessage(message, level);
+export function captureMessage(message: string, level: SeverityLevel = 'info') {
+  sentryCaptureMessage(message, level);
 }
 
 /**
  * Add a breadcrumb for debugging
  */
 export function addBreadcrumb(message: string, data?: Record<string, any>) {
-  Sentry.addBreadcrumb({
+  sentryAddBreadcrumb({
     message,
     level: 'info',
     data,
@@ -166,23 +185,20 @@ export function addBreadcrumb(message: string, data?: Record<string, any>) {
  * Set user context
  */
 export function setUser(user: { id?: string; email?: string; username?: string } | null) {
-  Sentry.setUser(user);
+  sentrySetUser(user);
 }
 
 /**
  * Set custom tags
  */
 export function setTag(key: string, value: string) {
-  Sentry.setTag(key, value);
+  sentrySetTag(key, value);
 }
 
 /**
  * Set custom context
  */
 export function setContext(name: string, context: Record<string, any>) {
-  Sentry.setContext(name, context);
+  sentrySetContext(name, context);
 }
-
-// Export Sentry for direct use if needed
-export { Sentry };
 

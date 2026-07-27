@@ -1,9 +1,38 @@
 /**
- * Hero wire head stage — idle-loads the GLB, runs scatter→assemble, then
- * pointer-repels bars while the cursor is over the stage.
+ * Hero wire head stage.
+ *
+ * Poster first, canvas second. A static WebP of the assembled bust ships in the
+ * HTML and paints with first paint; three.js and the 251 KB GLB are fetched only
+ * once the hero is in view AND the main thread is idle, then cross-fade in over
+ * the poster and take over the scatter/assemble and pointer wake.
+ *
+ * The 1,200 ms idle timeout this used to carry always expired on a mid-range
+ * phone — the main thread is never idle while React is booting — so ~430 KB of
+ * 3D landed in the middle of the LCP window for a decoration nobody could see
+ * yet. The poster removes the reason to hurry.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import posterMetrics from './posterMetrics.json';
+
+const POSTER_SRC = `/models/${posterMetrics.file}`;
+/**
+ * A JSON import widens every value to `string`, and React types properties like
+ * `pointerEvents` as unions of literals. The generator only ever writes valid
+ * CSS here, so the cast is asserting what the file already guarantees.
+ */
+const POSTER_STYLE = posterMetrics.style as CSSProperties;
+
+/**
+ * How long to wait for an idle main thread before loading anyway. Long enough
+ * to clear hydration and the LCP window; the poster is on screen throughout, so
+ * there is nothing to race.
+ */
+const IDLE_TIMEOUT_MS = 3500;
+/** Same intent for browsers without requestIdleCallback (Safari < 16.4). */
+const FALLBACK_DELAY_MS = 2500;
+/** Start loading slightly before the stage scrolls into view. */
+const ROOT_MARGIN = '200px';
 
 interface HeroHeadCanvasProps {
   className?: string;
@@ -17,8 +46,23 @@ interface HeroHeadCanvasProps {
   pointerTargetRef?: React.RefObject<HTMLElement | null>;
 }
 
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
 function canLoad3D(): boolean {
   if (typeof window === 'undefined') return false;
+
+  /*
+    Under reduced motion the controller renders one static frame of the
+    assembled bust and disables the pointer wake — which is precisely what the
+    poster already shows. Loading three.js to redraw it would cost ~430 KB for
+    no visible difference, so the poster simply stays.
+  */
+  if (prefersReducedMotion()) return false;
 
   const connection = (
     navigator as Navigator & {
@@ -29,10 +73,6 @@ function canLoad3D(): boolean {
   if (connection?.effectiveType && /^(slow-)?2g$/.test(connection.effectiveType)) return false;
 
   return true;
-}
-
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 export function HeroHeadCanvas({ className, pointerTargetRef }: HeroHeadCanvasProps) {
@@ -50,6 +90,7 @@ export function HeroHeadCanvas({ className, pointerTargetRef }: HeroHeadCanvasPr
     let cancelled = false;
     let idleHandle: number | undefined;
     let timeoutHandle: number | undefined;
+    let observer: IntersectionObserver | undefined;
 
     const start = () => {
       requestAnimationFrame(() => {
@@ -60,15 +101,11 @@ export function HeroHeadCanvas({ className, pointerTargetRef }: HeroHeadCanvasPr
         // Full-bleed inside the stage — no max-width shrink.
         canvas.className = 'pointer-events-none absolute inset-0 h-full w-full';
         host.appendChild(canvas);
-        setLive3d(true);
-
-        const reducedMotion = prefersReducedMotion();
 
         import('./headController')
           .then(({ mountHead }) => {
             if (cancelled || !canvas?.isConnected) return;
             return mountHead(canvas, {
-              reducedMotion,
               pointerTarget: pointerTargetRef?.current ?? stage,
             }).then((d) => {
               if (cancelled) {
@@ -76,6 +113,10 @@ export function HeroHeadCanvas({ className, pointerTargetRef }: HeroHeadCanvasPr
                 return;
               }
               dispose = d;
+              // Only now is there something to look at. Revealing the canvas
+              // when it was merely *created* used to blank the stage for the
+              // whole GLB fetch.
+              setLive3d(true);
             });
           })
           .catch((error) => {
@@ -86,14 +127,33 @@ export function HeroHeadCanvas({ className, pointerTargetRef }: HeroHeadCanvasPr
       });
     };
 
-    if (typeof requestIdleCallback === 'function') {
-      idleHandle = requestIdleCallback(start, { timeout: 1200 });
+    const startWhenIdle = () => {
+      if (cancelled) return;
+      if (typeof requestIdleCallback === 'function') {
+        idleHandle = requestIdleCallback(start, { timeout: IDLE_TIMEOUT_MS });
+      } else {
+        timeoutHandle = window.setTimeout(start, FALLBACK_DELAY_MS);
+      }
+    };
+
+    if (typeof IntersectionObserver === 'function') {
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          observer?.disconnect();
+          observer = undefined;
+          startWhenIdle();
+        },
+        { rootMargin: ROOT_MARGIN },
+      );
+      observer.observe(stage);
     } else {
-      timeoutHandle = window.setTimeout(start, 350);
+      startWhenIdle();
     }
 
     return () => {
       cancelled = true;
+      observer?.disconnect();
       if (idleHandle !== undefined) cancelIdleCallback(idleHandle);
       if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
       dispose?.();
@@ -108,10 +168,35 @@ export function HeroHeadCanvas({ className, pointerTargetRef }: HeroHeadCanvasPr
       aria-hidden="true"
       className={`pointer-events-none touch-none ${className ?? ''}`}
     >
+      {/*
+        Matches the markup homeShell() writes into #root, so React's swap is a
+        no-op repaint. Kept mounted rather than unmounted on hand-off: it is the
+        fallback whenever the canvas never arrives (reduced motion, save-data,
+        2G, WebGL failure), and it fades under the assembling bust instead of
+        cutting out.
+      */}
+      <img
+        src={POSTER_SRC}
+        alt=""
+        width={posterMetrics.pixels.width}
+        height={posterMetrics.pixels.height}
+        decoding="async"
+        fetchPriority="high"
+        className="absolute transition-opacity duration-500 ease-out"
+        style={{
+          // Position, size and transform all come from posterMetrics.json so the
+          // shell's copy of this image and React's copy cannot disagree.
+          ...POSTER_STYLE,
+          opacity: live3d ? 0 : 1,
+          transitionDelay: live3d ? '220ms' : '0ms',
+        }}
+      />
       <div
         ref={canvasHostRef}
         aria-hidden="true"
-        className={`pointer-events-none absolute inset-0 ${live3d ? 'opacity-100' : 'opacity-0'}`}
+        className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ease-out ${
+          live3d ? 'opacity-100' : 'opacity-0'
+        }`}
       />
     </div>
   );

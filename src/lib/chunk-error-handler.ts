@@ -10,7 +10,22 @@
  */
 
 import React from 'react';
-import { captureException, addBreadcrumb } from './sentry';
+
+/**
+ * Sentry is reached through a dynamic import, never a static one.
+ *
+ * This module is imported by App.tsx, so a static `import { captureException }
+ * from './sentry'` put the whole @sentry/react SDK in the ENTRY chunk — every
+ * visitor downloaded and parsed it on first paint. Deferring `initSentry()`
+ * (main.tsx) only delayed the network call; the code was already there.
+ *
+ * Nothing below needs Sentry unless a chunk has actually failed to load, which
+ * is a rare recovery path and can afford one more request.
+ */
+function reportToSentry(use: (sentry: typeof import('./sentry')) => void): void {
+  // Error reporting must never be able to break error recovery.
+  import('./sentry').then(use).catch(() => {});
+}
 
 const CHUNK_LOAD_ERROR_PATTERNS = [
   'Failed to fetch dynamically imported module',
@@ -45,21 +60,27 @@ export function handleChunkError(error: Error): void {
 
   if (reloadCount >= MAX_RELOAD_ATTEMPTS) {
     // Max attempts reached, log to Sentry and show error
-    captureException(error, {
-      chunkError: true,
-      reloadAttempts: reloadCount,
-      userAgent: navigator.userAgent,
-    });
+    reportToSentry(({ captureException }) =>
+      captureException(error, {
+        chunkError: true,
+        reloadAttempts: reloadCount,
+        userAgent: navigator.userAgent,
+      }),
+    );
 
     console.error('Failed to load application chunks after multiple attempts. Please refresh the page manually.');
     return;
   }
 
-  // Log breadcrumb before reload
-  addBreadcrumb('Chunk load error detected, reloading page', {
-    error: error.message,
-    reloadAttempt: reloadCount + 1,
-  });
+  // Log breadcrumb before reload. Best-effort: the reload below will usually win
+  // the race, and an in-memory breadcrumb does not survive it either way — the
+  // captureException above is the branch that actually reports.
+  reportToSentry(({ addBreadcrumb }) =>
+    addBreadcrumb('Chunk load error detected, reloading page', {
+      error: error.message,
+      reloadAttempt: reloadCount + 1,
+    }),
+  );
 
   // Increment reload counter
   sessionStorage.setItem(RELOAD_KEY, String(reloadCount + 1));

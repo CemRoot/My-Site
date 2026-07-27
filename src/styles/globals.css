@@ -212,6 +212,12 @@
   to   { opacity: 1; transform: none; }
 }
 
+/* Same motion as ck-rise but never transparent — safe for LCP candidates. */
+@keyframes ck-lift {
+  from { transform: translateY(14px); }
+  to   { transform: none; }
+}
+
 @keyframes ck-fade {
   from { opacity: 0; }
   to   { opacity: 1; }
@@ -245,8 +251,21 @@
     animation-range: entry 5% entry 90%;
   }
 
-  .anim-rise  { animation: ck-rise 0.8s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
-  .anim-fade  { animation: ck-fade 0.7s both; }
+  /*
+    Above-the-fold intros animate TRANSFORM ONLY and start fully opaque.
+
+    `ck-rise` fades from opacity 0, and with `both` fill mode an element carrying
+    it is invisible through its animation-delay. Largest Contentful Paint does
+    not count an element rendered at opacity 0, so the hero headline — the
+    largest thing on the page — was excluded from LCP for up to ~0.9 s after it
+    was already in the DOM. `ck-lift` gives the same motion without ever hiding
+    the text.
+
+    Below-the-fold reveals keep `.rv` / `ck-rise`: they can never be the LCP
+    element, and there the fade is what makes the reveal read.
+  */
+  .anim-rise  { animation: ck-lift 0.8s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+  .anim-fade  { animation: ck-lift 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
   .anim-pulse { animation: ck-pulse 2.4s ease-in-out infinite; }
 
   /*

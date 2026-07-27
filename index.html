@@ -49,16 +49,22 @@
     <!-- Canonical -->
     <link rel="canonical" href="https://cemkoyluoglu.codes/" />
     
-    <!-- DNS Prefetch & Preconnect for faster external resources -->
-    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-    <link rel="dns-prefetch" href="https://vercel.live" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
-    
-    <!-- Image CDN preconnect for optimized images -->
-    <link rel="dns-prefetch" href="https://wsrv.nl" />
-    <link rel="preconnect" href="https://wsrv.nl" crossorigin />
+    <!--
+      Image CDN. src/lib/utils/imageProxy.ts routes every article image through
+      wsrv.nl, and /tech-news paints one above the fold, so the handshake is
+      worth starting early.
 
-    <!-- Hero image loaded eagerly in Hero.tsx with fetchPriority="high" -->
+      NO `crossorigin` here, deliberately. Those <img> tags carry no crossOrigin
+      attribute, so they fetch in no-cors mode — and a CORS-mode preconnect
+      opens a connection they are not allowed to reuse. The old crossorigin
+      version paid for a handshake and then made the images do it again.
+
+      fonts.googleapis.com (preconnect + dns-prefetch) and vercel.live
+      (dns-prefetch) were removed: fonts are self-hosted through @fontsource and
+      nothing on the site requests either host. The wsrv.nl dns-prefetch went
+      too — preconnect already covers DNS.
+    -->
+    <link rel="preconnect" href="https://wsrv.nl" />
 
     <!--
       Critical first-paint styles. The real @font-face set is self-hosted via

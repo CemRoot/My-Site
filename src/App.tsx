@@ -16,8 +16,22 @@ import {
   setTechNewsRestoreNavFlag,
 } from './lib/techNewsListRestore';
 
-// Lazy-load all pages so /tech-news does not download HomePage (Hero/Projects) on cold start
-const HomePage = lazyWithRetry(() => import('./pages/HomePage'));
+/*
+  HomePage is imported EAGERLY; every other route stays lazy.
+
+  It used to be lazy so that /tech-news would not pull the hero code. But `/` is
+  the primary route, and splitting it meant the landing page paid an extra
+  serialised round-trip for its own content: the entry chunk had to download and
+  execute, React then painted the `RouteLoadingFallback` ("Loading…"), and only
+  after HomePage-*.js (33.6 KB) arrived did the hero appear. That was the second
+  and third of three throwaway paints before any real content.
+
+  Bundling it into the entry chunk removes a request from the critical path and
+  means the Suspense fallback never paints on `/` at all. /tech-news grows by the
+  hero's share of the entry chunk, which is the cheaper side of the trade.
+*/
+import HomePage from './pages/HomePage';
+
 const TechNews = lazyWithRetry(() => import('./components/TechNews'));
 const TechNewsDetail = lazyWithRetry(() => import('./components/TechNewsDetail'));
 const TermsPage = lazyWithRetry(() => import('./pages/TermsPage'));
@@ -137,6 +151,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={scrollToTop}
+                data-site-fab
                 className="fixed bottom-[var(--fab-bottom)] left-4 z-50 flex h-11 w-11 cursor-pointer items-center justify-center border border-hairline-strong bg-background font-mono text-sm text-foreground hover:border-[rgba(255,255,255,0.35)] sm:left-6"
                 aria-label="Scroll to top"
               >
