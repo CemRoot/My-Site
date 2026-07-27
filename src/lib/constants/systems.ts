@@ -2,7 +2,7 @@
  * "Live systems" section data — the automation that actually runs this site.
  *
  * Copy is grounded in the real stack (see api/chat.js, scripts/news-scraper.js,
- * scripts/telegram-menu-handler.js, api/telegram-webhook.js, .github/workflows).
+ * scripts/lib/telegram-ops/, api/telegram-webhook.js, .github/workflows).
  * The design prototype claimed "FASTAPI" for the chatbot; corrected here — the
  * chat endpoint is a Vercel function calling Groq with Supabase persistence.
  * Telegram is the authorized human ops channel over scrapers, digests, and Actions.

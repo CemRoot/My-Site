@@ -822,7 +822,8 @@ My-Site/
 │   ├── news-scraper.js           # News scraping CLI entrypoint
 │   ├── backfill-importance-scores.js # Score existing rows (supports --dry-run)
 │   ├── optimize-hero-model.mjs   # GLB decimation pipeline for the 3D hero
-│   ├── telegram-menu-handler.js  # Telegram bot menu handler
+│   ├── telegram-menu-handler.js  # Compat shim → lib/telegram-ops/
+│   └── lib/telegram-ops/         # Telegram ops domain services (OOP)
 │   ├── manual-article-scraper.js # Manual article processing
 │   ├── system-health-check.js    # Health monitoring
 │   ├── validation/               # Content validation
@@ -887,9 +888,7 @@ npm run backfill:importance     # Write importance scores for existing rows
 
 ### LinkedIn Automation
 ```bash
-npm run linkedin:analyze        # Analyze content for posting
-npm run linkedin:post           # Post to LinkedIn
-npm run linkedin:test           # Test LinkedIn workflow
+# Daily digests are owned by n8n + Telegram approve/reject (see scripts/lib/telegram-ops/)
 npm run linkedin:groups         # Daily LinkedIn groups digest
 npm run linkedin:groups-weekly  # Weekly LinkedIn groups digest
 ```

@@ -9,6 +9,12 @@
 */
 import {
   init,
+  inboundFiltersIntegration,
+  functionToStringIntegration,
+  globalHandlersIntegration,
+  linkedErrorsIntegration,
+  dedupeIntegration,
+  httpContextIntegration,
   captureException as sentryCaptureException,
   captureMessage as sentryCaptureMessage,
   addBreadcrumb as sentryAddBreadcrumb,
@@ -65,7 +71,41 @@ export function initSentry() {
       To re-enable: restore the integration import, put it back in `integrations`,
       and set tracesSampleRate. Expect desktop TBT to rise again.
     */
-    integrations: [],
+    /*
+      Removing tracing was not enough: Lighthouse still attributed two long
+      tasks (229 ms + 142 ms) to sentry-*.js. That is the DEFAULT integration
+      set, which wraps a lot of the platform before it can report anything.
+
+      Dropped:
+      - `BrowserApiErrors` re-wraps setTimeout, setInterval,
+        requestAnimationFrame, requestIdleCallback, XMLHttpRequest and every
+        addEventListener call. Its only job is prettier stack traces for errors
+        thrown inside those callbacks; `GlobalHandlers` still reports the error.
+      - `Breadcrumbs` wraps console, DOM events, fetch, history and XHR, and
+        attaches global click/keypress listeners. Useful context, but it is
+        paid on every session and this site already reports errors
+        independently through lib/frontend-monitor.ts.
+
+      Kept (the parts that actually capture errors): GlobalHandlers for uncaught
+      exceptions and unhandled rejections, LinkedErrors, Dedupe, InboundFilters,
+      HttpContext, FunctionToString.
+
+      The list is explicit rather than a filter over the defaults. Filtering
+      leaves the dropped integrations in the bundle and only skips installing
+      them; naming what we want lets the bundler drop their code entirely.
+      `defaultIntegrations: false` alone would have been the blunt version — it
+      also disables automatic error capture, which is the one thing worth
+      keeping, so GlobalHandlers is listed back explicitly.
+    */
+    defaultIntegrations: false,
+    integrations: [
+      inboundFiltersIntegration(),
+      functionToStringIntegration(),
+      globalHandlersIntegration(),
+      linkedErrorsIntegration(),
+      dedupeIntegration(),
+      httpContextIntegration(),
+    ],
     tracesSampleRate: 0,
 
     // Capture unhandled promise rejections

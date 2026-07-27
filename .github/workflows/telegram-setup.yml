@@ -1,6 +1,6 @@
 name: Telegram Bot Setup
 
-# Run when manually triggered or after deployment
+# Manual trigger only (postbuild already sets bot commands on production deploy)
 on:
   workflow_dispatch:
     inputs:
@@ -13,14 +13,7 @@ on:
           - setup-menu
           - send-welcome
           - test-connection
-  
-  # Auto-run after successful deployment
-  workflow_run:
-    workflows: ["Deploy"]
-    types:
-      - completed
 
-# Allow concurrent runs
 concurrency:
   group: telegram-setup-${{ github.run_id }}
   cancel-in-progress: false
@@ -31,23 +24,22 @@ permissions:
 jobs:
   setup-telegram-bot:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
-    
+
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: 🟢 Setup Node.js
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
-      - name: 📦 Install dependencies
+
+      - name: Install dependencies
         run: npm ci
-      
-      - name: 🤖 Setup Telegram Bot Menu
-        if: github.event.inputs.action == 'setup-menu' || github.event_name != 'workflow_dispatch'
+
+      - name: Setup Telegram Bot Menu
+        if: github.event.inputs.action == 'setup-menu' || github.event.inputs.action == 'send-welcome'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -58,24 +50,21 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          echo "🤖 Setting up Telegram bot menu..."
+          echo "Setting up Telegram bot menu..."
           npm run telegram:setup-menu
-      
-      - name: 📱 Send Test Message
+
+      - name: Send Test Message
         if: github.event.inputs.action == 'test-connection'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          echo "📱 Testing Telegram connection..."
+          echo "Testing Telegram connection..."
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TELEGRAM_CHAT_ID}" \
             -d "text=✅ GitHub Actions test successful! Bot is connected." \
             -d "parse_mode=HTML"
-      
-      - name: ✅ Setup Complete
-        run: |
-          echo "🎉 Telegram bot setup completed successfully!"
-          echo "📱 Bot commands are now available in Telegram"
-          echo "🔔 Menu has been sent to your chat"
 
+      - name: Setup Complete
+        run: |
+          echo "Telegram bot setup completed successfully!"

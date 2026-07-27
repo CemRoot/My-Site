@@ -1,8 +1,7 @@
 /**
  * Telegram Bot Control API
- * 
- * Vercel serverless function to control Telegram bot
- * Endpoints:
+ *
+ * Thin Vercel entry with bearer auth. Actions delegate to TelegramOpsBot.
  * - /api/telegram-control?action=setup-menu
  * - /api/telegram-control?action=send-status
  * - /api/telegram-control?action=trigger-scrape
@@ -10,185 +9,61 @@
  */
 
 import crypto from 'crypto';
-import { supabase } from '../lib/supabaseAdmin.js';
-import { sendTelegramMessage, callTelegramApi } from '../lib/telegram.js';
+import { createTelegramOpsBot } from '../scripts/lib/telegram-ops/TelegramOpsBot.js';
 
-const CONFIG = {
-  GITHUB_TOKEN: process.env.GITHUB_TOKEN || '',
-  GITHUB_REPO: process.env.GITHUB_REPOSITORY || 'username/My-Site',
-  API_SECRET: process.env.TELEGRAM_CONTROL_API_SECRET || '',
-};
+const API_SECRET = process.env.TELEGRAM_CONTROL_API_SECRET || '';
 
-/**
- * Setup bot menu
- */
-async function setupBotMenu() {
-  // Set bot commands
-  const commands = [
-    { command: 'start', description: 'Bot\'u başlat' },
-    { command: 'menu', description: 'Ana menüyü göster' },
-    { command: 'status', description: 'Hızlı durum raporu' },
-    { command: 'scrape', description: 'Haberleri çek' },
-    { command: 'health', description: 'Sağlık kontrolü' },
-    { command: 'help', description: 'Yardım ve komutlar' },
-  ];
-
-  await callTelegramApi('setMyCommands', { commands });
-
-  // Send welcome message with menu
-  const welcomeText = `
-🤖 <b>Tech News Bot - Menü Güncellemesi</b>
-
-Bot menüsü başarıyla güncellendi!
-
-<b>📋 Kullanılabilir Komutlar:</b>
-/menu - Ana menüyü göster
-/status - Hızlı durum raporu
-/scrape - Haberleri çek
-/health - Sistem sağlığı kontrolü
-/help - Yardım
-
-<i>Komutları kullanmak için / tuşuna basın</i>`;
-
-  const keyboard = {
-    inline_keyboard: [
-      [
-        { text: '📰 Haberleri Çek', callback_data: 'action_scrape' },
-        { text: '🏥 Sağlık Kontrolü', callback_data: 'action_health' },
-      ],
-      [
-        { text: '📊 Sistem Durumu', callback_data: 'action_status' },
-        { text: '📈 İstatistikler', callback_data: 'action_stats' },
-      ],
-      [
-        { text: '🔧 GitHub Actions', callback_data: 'action_github' },
-        { text: '💾 Veritabanı', callback_data: 'action_database' },
-      ],
-      [
-        { text: 'ℹ️ Yardım', callback_data: 'action_help' },
-      ],
-    ],
-  };
-
-  await sendTelegramMessage(welcomeText, { reply_markup: keyboard });
-  
-  return { success: true, message: 'Bot menu setup completed' };
-}
-
-/**
- * Send status report
- */
-async function sendStatusReport() {
-  const { count } = await supabase
-    .from('tech_news_articles')
-    .select('*', { count: 'exact', head: true });
-
-  const { data: recent } = await supabase
-    .from('tech_news_articles')
-    .select('created_at')
-    .order('created_at', { ascending: false })
-    .limit(1);
-
-  const statusText = `
-📊 <b>HIZLI DURUM RAPORU</b>
-⏰ ${new Date().toLocaleString('tr-TR')}
-
-📰 Toplam haber: ${count || 0}
-⏰ Son güncelleme: ${recent?.[0] ? new Date(recent[0].created_at).toLocaleString('tr-TR') : 'Bilinmiyor'}
-🔄 Durum: ✅ Aktif
-
-<i>Detaylı kontrol için /health yazın</i>`;
-
-  await sendTelegramMessage(statusText);
-  
-  return { success: true, message: 'Status report sent' };
-}
-
-/**
- * Trigger GitHub Actions scraping
- */
-async function triggerScraping() {
-  if (!CONFIG.GITHUB_TOKEN) {
-    return { success: false, message: 'GITHUB_TOKEN not configured' };
+function authorize(req) {
+  if (!API_SECRET) {
+    return { ok: false, status: 500, body: { error: 'Configuration error' } };
   }
 
-  await sendTelegramMessage('🔄 <b>Haber Toplama Başlatılıyor...</b>\n\nGitHub Actions workflow tetikleniyor...');
-
-  const [owner, repo] = CONFIG.GITHUB_REPO.split('/');
-  const response = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/actions/workflows/scrape-tech-news.yml/dispatches`,
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${CONFIG.GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return {
+      ok: false,
+      status: 401,
+      body: {
+        success: false,
+        error: 'Unauthorized',
+        message: 'Bearer token required in Authorization header',
       },
-      body: JSON.stringify({ ref: 'main' })
-    }
-  );
-
-  if (response.ok) {
-    await sendTelegramMessage('✅ <b>GitHub Actions tetiklendi!</b>\n\nİşlem tamamlandığında bildirim alacaksınız.');
-    return { success: true, message: 'Scraping workflow triggered' };
-  } else {
-    const error = await response.json();
-    return { success: false, message: `GitHub API error: ${error.message}` };
+    };
   }
+
+  const providedSecret = authHeader.split(' ')[1];
+  let isAuthorized = false;
+  try {
+    const providedBuffer = Buffer.from(providedSecret || '');
+    const expectedBuffer = Buffer.from(API_SECRET);
+    if (providedBuffer.length === expectedBuffer.length) {
+      isAuthorized = crypto.timingSafeEqual(providedBuffer, expectedBuffer);
+    }
+  } catch {
+    isAuthorized = false;
+  }
+
+  if (!isAuthorized) {
+    return {
+      ok: false,
+      status: 403,
+      body: {
+        success: false,
+        error: 'Forbidden',
+        message: 'Invalid API secret',
+      },
+    };
+  }
+
+  return { ok: true };
 }
 
-/**
- * Run health check
- */
-async function runHealthCheck() {
-  await sendTelegramMessage('🔍 <b>Sistem sağlığı kontrol ediliyor...</b>');
-
-  // Check Supabase
-  const { count: articleCount, error: countError } = await supabase
-    .from('tech_news_articles')
-    .select('*', { count: 'exact', head: true });
-  
-  const supabaseStatus = countError ? '❌ Hata' : '✅ Bağlı';
-
-  // Check recent articles
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  
-  const { data: recentArticles } = await supabase
-    .from('tech_news_articles')
-    .select('id, created_at')
-    .gte('created_at', yesterday.toISOString())
-    .order('created_at', { ascending: false });
-  
-  const recentCount = recentArticles?.length || 0;
-
-  const healthReport = `
-🏥 <b>SİSTEM SAĞLIK RAPORU</b>
-⏰ ${new Date().toLocaleString('tr-TR')}
-
-<b>📊 Veritabanı</b>
-${supabaseStatus}
-📰 Toplam: ${articleCount || 0}
-🆕 Son 24 saat: ${recentCount}
-
-<b>🔄 Durum</b>
-${supabaseStatus === '✅ Bağlı' ? '✨ Sistemler çalışıyor' : '⚠️ Sorun tespit edildi'}`;
-
-  await sendTelegramMessage(healthReport);
-  
-  return { success: true, message: 'Health check completed' };
-}
-
-/**
- * Main handler
- */
 export default async function handler(req, res) {
-  // CORS headers - Security: Only allow requests from trusted origins
   const ALLOWED_ORIGINS = [
     'https://cemkoyluoglu.codes',
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
   ].filter(Boolean);
-  
+
   const origin = req.headers.origin;
   if (ALLOWED_ORIGINS.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
@@ -196,113 +71,80 @@ export default async function handler(req, res) {
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  
+
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
   try {
-    // Security: Check API secret (REQUIRED)
-    if (!CONFIG.API_SECRET) {
+    if (!API_SECRET) {
       console.error('Security violation: TELEGRAM_CONTROL_API_SECRET not set');
-      return res.status(500).json({ error: 'Configuration error' });
     }
 
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.warn('Unauthorized access attempt to telegram-control API');
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized',
-        message: 'Bearer token required in Authorization header'
-      });
-    }
-
-    const providedSecret = authHeader.split(' ')[1];
-
-    // Use timing-safe comparison to prevent timing attacks
-    let isAuthorized = false;
-    try {
-      const providedBuffer = Buffer.from(providedSecret || '');
-      const expectedBuffer = Buffer.from(CONFIG.API_SECRET);
-
-      if (providedBuffer.length === expectedBuffer.length) {
-        isAuthorized = crypto.timingSafeEqual(providedBuffer, expectedBuffer);
+    const auth = authorize(req);
+    if (!auth.ok) {
+      if (auth.status === 401) {
+        console.warn('Unauthorized access attempt to telegram-control API');
+      } else if (auth.status === 403) {
+        console.warn('Invalid API secret provided to telegram-control API');
       }
-    } catch (e) {
-      // In case of any error (e.g., malformed token), it remains false
+      return res.status(auth.status).json(auth.body);
     }
 
-    if (!isAuthorized) {
-      console.warn('Invalid API secret provided to telegram-control API');
-      return res.status(403).json({
-        success: false,
-        error: 'Forbidden',
-        message: 'Invalid API secret'
-      });
-    }
-
-    // Get action from query or body
     const action = req.query.action || req.body?.action;
+    const available = ['setup-menu', 'send-status', 'trigger-scrape', 'health-check'];
 
     if (!action) {
       return res.status(400).json({
         success: false,
         message: 'Missing action parameter',
-        available_actions: [
-          'setup-menu',
-          'send-status',
-          'trigger-scrape',
-          'health-check'
-        ]
+        available_actions: available,
       });
     }
 
     console.log(`🤖 Telegram Control API: ${action}`);
 
+    const bot = createTelegramOpsBot();
     let result;
 
     switch (action) {
       case 'setup-menu':
-        result = await setupBotMenu();
+        await bot.setBotCommands();
+        await bot.handleStartCommand();
+        result = { success: true, message: 'Bot menu setup completed' };
         break;
 
       case 'send-status':
-        result = await sendStatusReport();
+        await bot.handleStatusAction();
+        result = { success: true, message: 'Status report sent' };
         break;
 
       case 'trigger-scrape':
-        result = await triggerScraping();
+        await bot.handleScrapeAction();
+        result = { success: true, message: 'Scraping workflow triggered' };
         break;
 
       case 'health-check':
-        result = await runHealthCheck();
+        await bot.handleHealthAction();
+        result = { success: true, message: 'Health check completed' };
         break;
 
       default:
         return res.status(400).json({
           success: false,
           message: `Unknown action: ${action}`,
-          available_actions: [
-            'setup-menu',
-            'send-status',
-            'trigger-scrape',
-            'health-check'
-          ]
+          available_actions: available,
         });
     }
 
     return res.status(200).json(result);
-
   } catch (error) {
     console.error('❌ Telegram Control API error:', error);
-    
+
     return res.status(500).json({
       success: false,
       message: 'Internal server error',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
-};
-
+}

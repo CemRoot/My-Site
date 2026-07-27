@@ -1,24 +1,25 @@
 /**
  * Setup Telegram Bot Menu
- * 
- * Configures bot commands and sends welcome message
+ *
+ * Configures bot commands and sends welcome message via TelegramOpsBot.
  */
 
 import 'dotenv/config';
-import menuHandler from './telegram-menu-handler.js';
+import {
+  setBotCommands,
+  handleStartCommand,
+} from './lib/telegram-ops/TelegramOpsBot.js';
 
 async function setupTelegramMenu() {
   console.log('🤖 Setting up Telegram bot menu...\n');
 
   try {
-    // Step 1: Set bot commands
     console.log('1️⃣ Setting bot commands...');
-    await menuHandler.setBotCommands();
+    await setBotCommands();
     console.log('✅ Bot commands configured\n');
 
-    // Step 2: Send welcome message
     console.log('2️⃣ Sending welcome message...');
-    await menuHandler.handleStartCommand();
+    await handleStartCommand();
     console.log('✅ Welcome message sent\n');
 
     console.log('='.repeat(60));
@@ -32,13 +33,10 @@ async function setupTelegramMenu() {
     console.log('   /health - Sistem sağlığı');
     console.log('   /help   - Yardım ve komutlar');
     console.log('\n💡 Telegram\'dan bot\'unuza /start yazarak başlayın!\n');
-
   } catch (error) {
     console.error('❌ Setup failed:', error.message);
     process.exit(1);
   }
 }
 
-// Run setup
 setupTelegramMenu();
-
