@@ -101,7 +101,10 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
     <>
       {/* Chat panel */}
       {isOpen && (
-        <div className="anim-rise fixed bottom-[var(--chat-panel-bottom)] right-[clamp(14px,2vw,26px)] z-[70] w-[min(380px,calc(100vw-28px))] border border-hairline-strong bg-surface shadow-[0_24px_60px_rgba(0,0,0,0.6)] [animation-duration:0.28s]">
+        <div
+          data-site-fab
+          className="anim-rise fixed bottom-[var(--chat-panel-bottom)] right-[clamp(14px,2vw,26px)] z-[70] w-[min(380px,calc(100vw-28px))] border border-hairline-strong bg-surface shadow-[0_24px_60px_rgba(0,0,0,0.6)] [animation-duration:0.28s]"
+        >
           {/* Header */}
           <div className={`${MONO_LABEL} flex items-center justify-between border-b border-hairline px-4 py-3.5 text-ink-55`}>
             <span className="flex items-center gap-[7px]">
@@ -178,7 +181,10 @@ function ChatWidget({ showNewsNotification = false }: ChatWidgetProps) {
       )}
 
       {/* Floating button + notification */}
-      <div className="fixed bottom-[var(--fab-bottom)] right-[clamp(14px,2vw,26px)] z-[70]">
+      <div
+        data-site-fab
+        className="fixed bottom-[var(--fab-bottom)] right-[clamp(14px,2vw,26px)] z-[70]"
+      >
         {showNotification && !isOpen && (
           <div className="anim-rise absolute bottom-full right-0 mb-3 [animation-duration:0.3s]">
             <div className="flex min-w-max items-center gap-3 border border-hairline-strong bg-surface px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.5)]">

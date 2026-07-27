@@ -60,6 +60,7 @@ supabase/.temp/
 # Temporary files
 scripts/test-translation.js
 .tmp/
+.firecrawl/
 
 # Private data
 .env*.local

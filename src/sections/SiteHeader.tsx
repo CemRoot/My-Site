@@ -1,9 +1,16 @@
 /**
  * Editorial site header — sticky mono nav + scroll progress bar.
  * Three-zone grid (brand | links | utilities) with text-slide + L→R underline hover.
+ * Below `md`, links collapse into a Menu/Close sliding toggle + overlay panel.
  */
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type TransitionEvent,
+} from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { NAV_ITEMS, type NavItem } from '../lib/constants/navigation';
 import { useAvailability } from '../lib/hooks/useAvailability';
@@ -15,11 +22,17 @@ const LABEL = 'font-mono text-[11px] font-medium leading-none tracking-[0.14em]'
 const HOVER_EASE =
   'duration-[600ms] ease-[cubic-bezier(0.215,0.61,0.355,1)] motion-reduce:transition-none';
 
+const MENU_EASE =
+  'duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none';
+
 const STATUS_LABEL: Record<AvailabilityStatus, Tr> = {
   available: { en: 'AVAILABLE', tr: 'MÜSAİT' },
   offline: { en: 'OFFLINE', tr: 'ÇEVRİMDIŞI' },
   holiday: { en: 'HOLIDAY', tr: 'TATİL' },
 };
+
+const MENU_LABEL: Tr = { en: 'Menu', tr: 'Menü' };
+const CLOSE_LABEL: Tr = { en: 'Close', tr: 'Kapat' };
 
 const BRAND = 'CEM KÖYLÜOĞLU';
 
@@ -100,11 +113,15 @@ function HeaderNavLink({
   label,
   isHome,
   pathname,
+  onNavigate,
+  className: classNameProp,
 }: {
   item: NavItem;
   label: string;
   isHome: boolean;
   pathname: string;
+  onNavigate?: () => void;
+  className?: string;
 }) {
   const active =
     !item.isHash &&
@@ -114,12 +131,21 @@ function HeaderNavLink({
     ? 'text-signal group-hover:text-signal-hover'
     : 'text-ink-55 group-hover:text-foreground';
 
-  const className = hoverLinkClass(colour);
-  const children: ReactNode = <NavLinkFace label={label} active={active} />;
+  const className = classNameProp ?? hoverLinkClass(colour);
+  const children: ReactNode = classNameProp ? (
+    label
+  ) : (
+    <NavLinkFace label={label} active={active} />
+  );
 
   if (!item.isHash) {
     return (
-      <Link to={item.href} className={className} aria-label={label}>
+      <Link
+        to={item.href}
+        className={className}
+        aria-label={label}
+        onClick={onNavigate}
+      >
         {children}
       </Link>
     );
@@ -127,14 +153,24 @@ function HeaderNavLink({
 
   if (isHome) {
     return (
-      <a href={item.href} className={className} aria-label={label}>
+      <a
+        href={item.href}
+        className={className}
+        aria-label={label}
+        onClick={onNavigate}
+      >
         {children}
       </a>
     );
   }
 
   return (
-    <Link to={`/${item.href}`} className={className} aria-label={label}>
+    <Link
+      to={`/${item.href}`}
+      className={className}
+      aria-label={label}
+      onClick={onNavigate}
+    >
       {children}
     </Link>
   );
@@ -159,12 +195,64 @@ function BrandLink({ isHome }: { isHome: boolean }) {
   );
 }
 
+/** Menu ↔ Close vertical slide; clipped by the button’s overflow-hidden. */
+function MenuToggle({
+  open,
+  onToggle,
+  menuLabel,
+  closeLabel,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  menuLabel: string;
+  closeLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      data-menu-toggle
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls="mobile-nav"
+      aria-label={open ? closeLabel : menuLabel}
+      className={`${LABEL} h-5 cursor-pointer overflow-hidden text-foreground`}
+    >
+      <span
+        aria-hidden="true"
+        className={[
+          'flex flex-col transition-transform',
+          MENU_EASE,
+          open ? '-translate-y-1/2' : 'translate-y-0',
+        ].join(' ')}
+      >
+        <span className="flex h-5 items-center leading-5">{menuLabel}</span>
+        <span className="flex h-5 items-center leading-5">{closeLabel}</span>
+      </span>
+    </button>
+  );
+}
+
 export function SiteHeader() {
   const { lang, t, toggle } = useI18n();
   const availability = useAvailability();
   const location = useLocation();
   const isHome = location.pathname === '/';
   const headerRef = useRef<HTMLElement>(null);
+  /**
+   * Compact = Menu/Close panel. Driven by CSS `@media (max-width: 1399.98px)`
+   * for layout; this flag only mirrors that for panel/scroll-lock behaviour.
+   */
+  const [compact, setCompact] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 1399.98px)').matches,
+  );
+  /** Intended open/closed (toggle + Escape + route). */
+  const [menuOpen, setMenuOpen] = useState(false);
+  /** Keeps panel in the DOM through the exit clip-path animation. */
+  const [panelMounted, setPanelMounted] = useState(false);
+  /** Drives `.is-open` after mount so the browser can interpolate clip-path. */
+  const [panelRevealed, setPanelRevealed] = useState(false);
+
+  const closeMenu = () => setMenuOpen(false);
 
   // Legacy pages size sticky offsets from --nav-height; keep it accurate.
   useEffect(() => {
@@ -178,41 +266,171 @@ export function SiteHeader() {
     return () => observer.disconnect();
   }, []);
 
+  // Compact (Menü) for all phone + tablet widths, including iPad Mini/Air.
+  // 1400px = first width where TR inline labels fit without crushing utilities.
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1399.98px)');
+    const sync = () => setCompact(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    // DevTools device toggles sometimes skip matchMedia 'change' — also listen resize.
+    window.addEventListener('resize', sync);
+    return () => {
+      mq.removeEventListener('change', sync);
+      window.removeEventListener('resize', sync);
+    };
+  }, []);
+
+  // Close overlay on route / hash change, or when expanding to desktop nav.
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname, location.hash]);
+
+  useEffect(() => {
+    if (!compact) setMenuOpen(false);
+  }, [compact]);
+
+  // Mount → reveal (open); collapse reveal (close). Unmount after clip-path ends.
+  useEffect(() => {
+    if (menuOpen) {
+      setPanelMounted(true);
+      return;
+    }
+    setPanelRevealed(false);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setPanelMounted(false);
+    }
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!panelMounted || !menuOpen) return;
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setPanelRevealed(true));
+    });
+    return () => cancelAnimationFrame(id);
+  }, [panelMounted, menuOpen]);
+
+  // Safety net if `transitionend` is skipped (tab backgrounded, etc.).
+  useEffect(() => {
+    if (menuOpen || !panelMounted || panelRevealed) return;
+    const timer = window.setTimeout(() => setPanelMounted(false), 560);
+    return () => window.clearTimeout(timer);
+  }, [menuOpen, panelMounted, panelRevealed]);
+
+  // Escape + hard scroll lock (iOS-safe) while the mobile panel is mounted.
+  useEffect(() => {
+    if (!panelMounted) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+
+    const scrollY = window.scrollY;
+    const html = document.documentElement;
+    const { body } = document;
+    const previous = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyLeft: body.style.left,
+      bodyRight: body.style.right,
+      bodyWidth: body.style.width,
+    };
+
+    html.classList.add('mobile-nav-open');
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+    body.style.width = '100%';
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      html.classList.remove('mobile-nav-open');
+      html.style.overflow = previous.htmlOverflow;
+      body.style.overflow = previous.bodyOverflow;
+      body.style.position = previous.bodyPosition;
+      body.style.top = previous.bodyTop;
+      body.style.left = previous.bodyLeft;
+      body.style.right = previous.bodyRight;
+      body.style.width = previous.bodyWidth;
+      window.scrollTo(0, scrollY);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [panelMounted]);
+
+  const onPanelTransitionEnd = (event: TransitionEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
+    if (event.propertyName !== 'clip-path') return;
+    if (!menuOpen) setPanelMounted(false);
+  };
+
+  const menuLabel = t(MENU_LABEL);
+  const closeLabel = t(CLOSE_LABEL);
+  const showPanel = panelMounted && compact;
+
   return (
     <>
       <ScrollProgress />
-      {/*
-        Full-bleed sticky bar; content capped at max-w-[1440px] to match page
-        sections. Semantic <nav> uses a three-zone grid: brand | links | utilities.
-      */}
+      {showPanel && (
+        <div
+          aria-hidden="true"
+          style={{ height: 'var(--nav-height, 64px)' }}
+        />
+      )}
       <header
         ref={headerRef}
-        className="sticky top-0 z-50 border-b border-hairline bg-[rgba(10,10,11,0.82)] backdrop-blur-[14px]"
+        data-site-header
+        data-compact={compact ? 'true' : 'false'}
+        data-lang={lang}
+        className={[
+          'border-b border-hairline bg-[rgba(10,10,11,0.82)] backdrop-blur-[14px]',
+          showPanel
+            ? 'fixed inset-x-0 top-0 z-[90]'
+            : 'sticky top-0 z-50',
+        ].join(' ')}
       >
         <nav
           aria-label="Main navigation"
-          className={`${LABEL} mx-auto grid max-w-[1440px] grid-cols-[1fr_auto] items-center gap-x-6 gap-y-3 px-[clamp(18px,4vw,52px)] py-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]`}
+          className={[
+            LABEL,
+            'mx-auto grid max-w-[1440px] items-center gap-x-[clamp(12px,2vw,24px)] px-[clamp(18px,4vw,52px)] py-4',
+            compact
+              ? 'grid-cols-[1fr_auto]'
+              : 'grid-cols-[auto_1fr_auto]',
+          ].join(' ')}
         >
-          {/* Zone 1 — brand */}
-          <div className="flex min-w-0 items-center">
+          {/* Zone 1 — brand (auto = içerik kadar, ezilmez) */}
+          <div className="flex shrink-0 items-center whitespace-nowrap">
             <BrandLink isHome={isHome} />
           </div>
 
-          {/* Zone 2 — primary links (center on md+) */}
-          <div className="col-span-2 flex flex-wrap items-center justify-start gap-x-[clamp(14px,2vw,26px)] gap-y-2 md:col-span-1 md:justify-center">
-            {NAV_ITEMS.map((item) => (
-              <HeaderNavLink
-                key={item.href}
-                item={item}
-                label={t(item.label)}
-                isHome={isHome}
-                pathname={location.pathname}
-              />
-            ))}
-          </div>
+          {/*
+            Zone 2 — desktop links ONLY when there is room (≥1400px).
+            Unmounted on tablet/phone so Turkish labels cannot overlap utilities.
+          */}
+          {!compact && (
+            <div
+              data-desktop-links
+              className="flex min-w-0 items-center justify-center gap-x-[clamp(10px,1.4vw,22px)]"
+            >
+              {NAV_ITEMS.map((item) => (
+                <HeaderNavLink
+                  key={item.href}
+                  item={item}
+                  label={t(item.label)}
+                  isHome={isHome}
+                  pathname={location.pathname}
+                />
+              ))}
+            </div>
+          )}
 
-          {/* Zone 3 — availability + language */}
-          <div className="col-start-2 row-start-1 flex items-center justify-end gap-3.5 md:col-start-auto md:row-start-auto">
+          {/* Zone 3 — availability + language + Menu/Close (auto, nowrap) */}
+          <div className="flex shrink-0 items-center justify-end gap-3.5 whitespace-nowrap">
             <span
               className={`flex items-center gap-[7px] ${
                 availability === 'available'
@@ -242,7 +460,11 @@ export function SiteHeader() {
                       : 'h-1.5 w-1.5 rounded-full bg-ink-38'
                 }
               />
-              <span>{t(STATUS_LABEL[availability])}</span>
+              {compact ? (
+                <span className="sr-only">{t(STATUS_LABEL[availability])}</span>
+              ) : (
+                <span data-status-label>{t(STATUS_LABEL[availability])}</span>
+              )}
             </span>
             <button
               type="button"
@@ -252,9 +474,71 @@ export function SiteHeader() {
             >
               {lang === 'en' ? 'TR' : 'EN'}
             </button>
+            {compact && (
+              <MenuToggle
+                open={menuOpen}
+                onToggle={() => setMenuOpen((prev) => !prev)}
+                menuLabel={menuLabel}
+                closeLabel={closeLabel}
+              />
+            )}
           </div>
         </nav>
       </header>
+
+      {showPanel && (
+        <>
+          <button
+            type="button"
+            aria-label={closeLabel}
+            tabIndex={panelRevealed ? 0 : -1}
+            onClick={closeMenu}
+            className={[
+              'mobile-nav-backdrop fixed inset-0 z-[80] bg-black/45 backdrop-blur-[6px]',
+              panelRevealed ? 'is-open' : '',
+            ].join(' ')}
+            style={{ top: 'var(--nav-height, 64px)' }}
+          />
+          <div
+            id="mobile-nav"
+            role="dialog"
+            aria-modal="true"
+            aria-label={menuLabel}
+            aria-hidden={!panelRevealed}
+            onTransitionEnd={onPanelTransitionEnd}
+            className={[
+              'mobile-nav-reveal fixed inset-x-0 bottom-0 z-[85] overscroll-contain',
+              panelRevealed ? 'is-open' : '',
+              panelRevealed ? '' : 'pointer-events-none',
+            ].join(' ')}
+            style={{ top: 'var(--nav-height, 64px)' }}
+          >
+            <div className="flex h-full flex-col border-t border-hairline bg-[rgba(10,10,11,0.97)] backdrop-blur-[10px]">
+              <nav
+                aria-label="Mobile navigation"
+                className={`${LABEL} flex flex-1 flex-col gap-7 overflow-y-auto overscroll-contain px-[clamp(18px,4vw,52px)] py-10`}
+              >
+                {NAV_ITEMS.map((item) => (
+                  <HeaderNavLink
+                    key={item.href}
+                    item={item}
+                    label={t(item.label)}
+                    isHome={isHome}
+                    pathname={location.pathname}
+                    onNavigate={closeMenu}
+                    className={[
+                      'font-mono text-[15px] font-medium tracking-[0.14em] transition-colors',
+                      item.accent
+                        ? 'text-signal hover:text-signal-hover'
+                        : 'text-ink-55 hover:text-foreground',
+                    ].join(' ')}
+                  />
+                ))}
+              </nav>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }
