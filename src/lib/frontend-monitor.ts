@@ -93,8 +93,13 @@ function monitorWindowErrors(): void {
  * Monitor performance issues
  */
 function monitorPerformance(): void {
-  // Check if page load is too slow
-  window.addEventListener('load', () => {
+  /*
+    This module is now imported AFTER the load event (see lib/afterLoad.ts), so
+    a bare addEventListener('load', …) would never fire and slow-load reporting
+    would silently stop. Navigation timing is retained by the browser either
+    way, so when load has already happened we just read it.
+  */
+  const onLoaded = () => {
     setTimeout(() => {
       const perfData = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
       
@@ -116,7 +121,13 @@ function monitorPerformance(): void {
         }
       }
     }, 100);
-  });
+  };
+
+  if (document.readyState === 'complete') {
+    onLoaded();
+  } else {
+    window.addEventListener('load', onLoaded, { once: true });
+  }
 }
 
 /**

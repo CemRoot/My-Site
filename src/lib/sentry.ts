@@ -9,7 +9,6 @@
 */
 import {
   init,
-  reactRouterV6BrowserTracingIntegration,
   captureException as sentryCaptureException,
   captureMessage as sentryCaptureMessage,
   addBreadcrumb as sentryAddBreadcrumb,
@@ -18,13 +17,6 @@ import {
   setContext as sentrySetContext,
   type SeverityLevel,
 } from '@sentry/react';
-import { useEffect } from 'react';
-import {
-  createRoutesFromChildren,
-  matchRoutes,
-  useLocation,
-  useNavigationType,
-} from 'react-router-dom';
 
 /**
  * Sentry Configuration
@@ -51,30 +43,30 @@ export function initSentry() {
     environment: import.meta.env.VITE_SENTRY_ENVIRONMENT || 'development',
     release: import.meta.env.VITE_APP_VERSION || 'unknown',
     
-    // Performance Monitoring
-    integrations: [
-      // React Router integration for navigation tracking
-      reactRouterV6BrowserTracingIntegration({
-        useEffect,
-        useLocation,
-        useNavigationType,
-        createRoutesFromChildren,
-        matchRoutes,
-      }),
-      
-      // Replay integration DISABLED for better performance
-      // Only enable when debugging specific issues
-      // Sentry.replayIntegration({
-      //   maskAllText: true,
-      //   blockAllMedia: true,
-      //   replaysSessionSampleRate: 0,
-      //   replaysOnErrorSampleRate: 0.5,
-      // }),
-    ],
+    /*
+      ERROR REPORTING ONLY — no browser tracing.
 
-    // Performance traces sample rate - reduced for better INP
-    // Lower sample rate = less overhead on main thread
-    tracesSampleRate: import.meta.env.PROD ? 0.05 : 0.5,
+      `reactRouterV6BrowserTracingIntegration` used to be here. Measured on
+      production with Lighthouse, sentry-*.js was the single most expensive
+      script on the page: 1,873 ms of CPU time, three times three.js, and it
+      was what kept desktop Total Blocking Time above 1,000 ms.
+
+      That cost is the instrumentation, not the reporting. With its defaults the
+      integration installs PerformanceObservers for long tasks, long animation
+      frames and INP, patches fetch, XHR and history, and reads Resource Timing
+      for every request. All of that runs for 100% of sessions — `tracesSampleRate`
+      only decides whether the resulting trace is SENT. At 0.05 that meant every
+      visitor paid the full main-thread cost so that 5% of them produced data.
+
+      And there is no data to lose: PageSpeed reports "No Data" for this origin's
+      real-user metrics, so 5% of that is nothing. Errors are the part worth
+      having, and captureException/captureMessage below are cheap.
+
+      To re-enable: restore the integration import, put it back in `integrations`,
+      and set tracesSampleRate. Expect desktop TBT to rise again.
+    */
+    integrations: [],
+    tracesSampleRate: 0,
 
     // Capture unhandled promise rejections
     attachStacktrace: true,
