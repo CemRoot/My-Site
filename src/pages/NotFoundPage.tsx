@@ -1,9 +1,10 @@
+import { Link } from 'react-router-dom';
 import { SEO } from '../components/SEO';
 import { PERSONAL_INFO } from '../lib/constants/personal';
 import './not-found-duck.css';
 
 type NotFoundPageProps = {
-  /** Kök ErrorBoundary: Navbar yok, üst boşluk azaltılır */
+  /** Root ErrorBoundary: no SiteHeader, reduce top padding */
   bare?: boolean;
 };
 
@@ -18,24 +19,27 @@ export default function NotFoundPage({ bare }: NotFoundPageProps = {}) {
         ogDescription="This page does not exist."
       />
       <div
-        className="min-h-screen bg-background flex items-center justify-center px-4 pb-24"
+        className="not-found-page flex min-h-screen items-center justify-center px-[clamp(18px,4vw,52px)] pb-24"
         style={{
-          paddingTop: bare ? '2rem' : 'calc(var(--nav-height, 120px) + 56px)',
+          paddingTop: bare ? '2rem' : 'calc(var(--nav-height, 64px) + 40px)',
         }}
       >
-        <div className="not-found-duck w-full flex justify-center">
-          <div className="card">
+        <div className="not-found-duck w-full max-w-[600px]">
+          <div className="stage">
             <div className="orb orb--1" />
             <div className="orb orb--2" />
             <div className="orb orb--3" />
             <div className="orb orb--4" />
 
             <div className="error-container">
-              <div className="error-code">404</div>
-              <div className="error-msg">Nothing to see here.</div>
-              <a href="/" className="home-btn">
-                Go Home
-              </a>
+              <p className="error-label">ERROR · SIGNAL LOST</p>
+              <div className="error-code" aria-hidden="true">
+                404
+              </div>
+              <h1 className="error-msg">Nothing to see here.</h1>
+              <Link to="/" className="home-btn">
+                RETURN HOME →
+              </Link>
             </div>
 
             <div className="duck__wrapper">

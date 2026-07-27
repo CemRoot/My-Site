@@ -61,6 +61,8 @@ export interface Article {
   originalTitle?: string;
   category?: string;
   originalSource?: string;
+  views?: number;
+  importanceScore?: number;
 }
 
 /** Response shape from /api/tech-news */

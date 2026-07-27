@@ -6,8 +6,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.3-61dafb)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0-blue)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19.2-61dafb)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-8.0-646cff?logo=vite)](https://vite.dev/)
 [![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-000000?logo=vercel)](https://vercel.com)
 [![Sentry](https://img.shields.io/badge/Monitored%20by-Sentry-362d59?logo=sentry)](https://sentry.io)
 
@@ -39,18 +40,29 @@
 
 ## 🎯 Overview
 
-**Tech News Platform** is an enterprise-grade, fully automated news aggregation and distribution system that combines cutting-edge AI, intelligent scraping, and seamless automation to deliver tech news in real-time.
+This repository is a personal portfolio site that is also a **running system**,
+not a static brochure. The public site at
+[cemkoyluoglu.codes](https://cemkoyluoglu.codes) is the front door; behind it sit
+scrapers that pull tech news on a schedule, AI agents that translate and score
+it, a RAG chatbot grounded in the author's CV and projects, and a Telegram bot
+that operates the whole thing from a phone.
+
+The frontend is deliberately part of the story: the site's own architecture is
+what the "Systems" section on the home page describes.
 
 ### 🌟 What Makes This Special?
 
 - **🤖 AI-Powered**: Multi-AI system (Groq Llama 3.3 + Google Gemini 2.0 Flash)
 - **💬 AI Chatbot**: Interactive portfolio chatbot with n8n fallback
+- **📊 Relevance Ranking**: Articles carry a scrape-time importance score, blended
+  at query time with view count and recency in a Postgres RPC
 - **📱 Telegram Control Center**: Full system control from your phone
-- **📧 Newsletter System**: Email subscription and newsletter management
 - **🔄 100% Automated**: GitHub Actions + n8n + Vercel integration
-- **📊 Production-Ready**: Sentry monitoring, health checks, deployment tracking
-- **⚡ Lightning Fast**: Supabase backend, optimized queries
-- **🔒 Enterprise Security**: Rate limiting, API secrets, fail-safe mechanisms
+- **🎨 Editorial Frontend**: Hand-built design system, EN/TR i18n, and a 3D
+  wireframe hero compressed ~330× so it stays off the critical path
+- **📈 Production-Ready**: Sentry monitoring, health checks, deployment tracking
+- **🔒 Security-Conscious**: Rate limiting, secret hygiene, strict CSP,
+  least-privilege database functions
 
 ---
 
@@ -145,12 +157,15 @@
 </tr>
 </table>
 
-### 📧 Newsletter System
+### 🎨 Editorial Frontend
 
-- Email subscription management
-- Subscriber data storage (Supabase + JSON backup)
-- Rate limiting protection
-- Input validation
+- Dark editorial design system — a single CSS source of truth, zero-radius
+  surfaces, hairline borders, `Space Grotesk` + `IBM Plex Mono`
+- 3D wireframe hero: a 1.8M-triangle photogrammetry scan reduced to a **251 KB**
+  GLB (~330×) and lazy-loaded on idle, so it never touches first paint
+- Full EN/TR internationalisation via React context
+- `/tech-news` reading experience tuned for scannability — F-pattern list,
+  ~68ch body measure, sticky related rail
 
 ### 🔄 Full Automation
 
@@ -207,13 +222,19 @@
 ### Frontend
 | Technology | Version | Purpose |
 |-----------|---------|---------|
-| **React** | 19.2 | UI Framework |
-| **TypeScript** | 6.0 | Type Safety |
-| **Vite** | 8.0 | Build Tool |
-| **Tailwind CSS** | 4.x (CSS-first) | Styling |
-| **Radix UI** | Selective | Dialog, Checkbox, Separator |
-| **React Router** | 7.18 | Navigation |
-| **React Markdown** | 10.1 | Content Rendering |
+| **React** | 19.2 | UI framework |
+| **TypeScript** | 6.0 | Type safety (`strict`) |
+| **Vite** | 8.0 | Build tool — output in `build/` |
+| **Tailwind CSS** | 4.3 (CSS-first) | Styling, compiled by `@tailwindcss/vite` |
+| **three.js** | 0.185 | Hero wireframe head, lazy-loaded on idle |
+| **React Router** | 7.18 | Client-side routing (`BrowserRouter`) |
+| **React Markdown** | 10.1 | Article rendering (no `dangerouslySetInnerHTML`) |
+| **Radix UI** | `react-slot` only | Underpins the `button` primitive |
+| **Fontsource** | 5.3 | Self-hosted Space Grotesk + IBM Plex Mono |
+
+Design tokens, the `@theme` block and every utility live in a single source of
+truth: `src/styles/globals.css`. There is no `tailwind.config.js` — Tailwind v4
+is configured in CSS.
 
 ### Backend & APIs
 | Service | Purpose | Notes |
@@ -762,25 +783,28 @@ npm run health:check
 ```
 My-Site/
 ├── api/                          # Vercel Serverless Functions
-│   ├── lib/                      # Shared API modules
-│   │   ├── supabaseAdmin.js      # Shared Supabase admin client
-│   │   ├── telegram.js           # Shared Telegram utilities
-│   │   ├── chatHelpers.js        # Chat endpoint helpers
-│   │   └── chatSystemPrompt.js   # AI system prompt
+│   ├── lib/                      # Modules used only by the API layer
+│   │   ├── formatTechNewsArticle.js # Public article shape (field allowlist)
+│   │   └── techNewsRank.js       # Composite rank used by the edge fallback
 │   ├── chat.js                   # AI Chatbot endpoint
 │   ├── tech-news.js              # News API (Edge Runtime)
 │   ├── telegram-webhook.js       # Telegram bot webhook
 │   ├── telegram-control.js       # Bot control endpoint
-│   ├── newsletter.js             # Newsletter subscription
 │   ├── og-meta.js                # Dynamic Open Graph meta
 │   ├── deployment-webhook.js     # Deploy notifications
 │   ├── frontend-health-monitor.js# Error monitoring
 │   ├── conversation-state.js     # Telegram state management
 │   └── revalidate-news.js        # News cache revalidation
 ├── lib/                          # Server-side shared libraries
+│   ├── chatHelpers.js            # Chat endpoint helpers
+│   ├── chatKnowledge.js          # RAG knowledge grounding the chatbot
+│   ├── chatSecurity.js           # Prompt/topic guardrails
+│   ├── chatSystemPrompt.js       # AI system prompt
 │   ├── rate-limit.js             # Rate limiting
+│   ├── supabaseAdmin.js          # Service-role client (server only)
+│   ├── supabasePublic.js         # Anon-key client
+│   ├── telegram.js               # Shared Telegram utilities
 │   ├── sentry-server.js          # Sentry integration
-│   ├── supabase.js               # Database client
 │   └── conversation-state.js     # Conversation state logic
 ├── scripts/                      # Automation & CI scripts
 │   ├── lib/                      # Shared script modules
@@ -791,30 +815,44 @@ My-Site/
 │   │   │   ├── config.js         # Scraper configuration
 │   │   │   ├── database.js       # Article storage & dedup
 │   │   │   ├── dateUtils.js      # Date parsing utilities
+│   │   │   ├── importanceScore.js# 0–100 scoring (Gemini + keyword fallback)
 │   │   │   └── translator.js     # AI translation pipeline
 │   │   └── menu/                 # Telegram bot menu modules
 │   │       └── keyboards.js      # Keyboard layouts
 │   ├── news-scraper.js           # News scraping CLI entrypoint
+│   ├── backfill-importance-scores.js # Score existing rows (supports --dry-run)
+│   ├── optimize-hero-model.mjs   # GLB decimation pipeline for the 3D hero
 │   ├── telegram-menu-handler.js  # Telegram bot menu handler
 │   ├── manual-article-scraper.js # Manual article processing
 │   ├── system-health-check.js    # Health monitoring
 │   ├── validation/               # Content validation
 │   └── translate/                # Translation prompts
 ├── src/                          # React Frontend
-│   ├── components/               # UI Components
-│   │   ├── ui/                   # shadcn/radix primitives
+│   ├── sections/                 # Home page sections (editorial layout)
+│   │   ├── SiteHeader.tsx        # Sticky nav + scroll progress
+│   │   ├── HeroSection.tsx       # Headline + full-bleed 3D canvas layer
+│   │   ├── SystemsSection.tsx    # "what runs this site" status cards
+│   │   ├── WorkSection.tsx       # Numbered project rows
+│   │   ├── SignalSection.tsx     # Latest tech-news teasers
+│   │   └── …                     # Stats, Experience/Stack, Services, Contact
+│   ├── features/                 # Self-contained feature modules
+│   │   ├── hero-3d/              # three.js controller + React canvas wrapper
+│   │   └── i18n/                 # EN/TR provider and dictionary
+│   ├── components/               # Shared UI
+│   │   ├── ui/                   # button, card, textarea, sonner primitives
 │   │   ├── chat/                 # Chat widget sub-components
 │   │   ├── embeds/               # Social media embeds
-│   │   └── markdown/             # Markdown rendering
-│   ├── pages/                    # Page components
+│   │   └── markdown/             # Article renderer + typography stylesheet
+│   ├── pages/                    # Route-level pages
 │   ├── lib/                      # Frontend shared modules
-│   │   ├── constants/            # Centralized constants
+│   │   ├── constants/            # Centralized content constants
 │   │   ├── types/                # Shared TypeScript types
 │   │   ├── hooks/                # Custom React hooks
 │   │   ├── utils/                # Utility functions
 │   │   └── context/              # React context providers
-│   └── styles/                   # CSS files
-└── public/                       # Static assets
+│   └── styles/globals.css        # Design tokens + Tailwind entry (single source)
+├── supabase/migrations/          # Versioned SQL migrations
+└── public/                       # Static assets (incl. models/ for the GLB)
 ```
 
 ---
@@ -823,9 +861,17 @@ My-Site/
 
 ### Development
 ```bash
-npm run dev                     # Start dev server (port 3000)
-npm run build                   # Production build
+npm run dev                     # Dev server on :3000, bound to the LAN for device testing
+npm run preview                 # Serve the production build locally on :4173
+npm run typecheck               # tsc --noEmit
+npm test                        # Node built-in test runner
+npm run build                   # prebuild (sitemap + snapshot) → vite → postbuild
 ```
+
+> `vite.config.ts` proxies `/api/*` to production during development, because the
+> `api/` folder is Vercel serverless and Vite would otherwise serve those files as
+> JavaScript source. Point it elsewhere with `VITE_DEV_API_PROXY`
+> (e.g. `http://localhost:3001` when running `vercel dev`).
 
 ### Tech News System
 ```bash
@@ -835,6 +881,8 @@ npm run scrape:news:replay -- --replay-file artifacts/tech-news-runs/<run>.json
 npm run cleanup:duplicates:dry  # Preview cleanup of bad legacy rows
 npm run cleanup:duplicates      # Remove bad legacy rows and snapshot them
 npm run cleanup:db              # Clean up old/invalid articles
+npm run backfill:importance:dry # Preview importance scores for existing rows
+npm run backfill:importance     # Write importance scores for existing rows
 ```
 
 ### LinkedIn Automation
@@ -878,14 +926,26 @@ Please report security vulnerabilities to: **cemkoyluoglu@icloud.com**
 
 ### Security Features
 
-- ✅ **API Rate Limiting** (10 requests/minute per user)
-- ✅ **UUID Validation** (RFC 4122 compliant)
-- ✅ **Chat ID Authorization** (Telegram webhook)
-- ✅ **Environment Variable Encryption**
-- ✅ **Webhook Signature Verification**
-- ✅ **SQL Injection Prevention** (Parameterized queries)
-- ✅ **XSS Protection** (HTML sanitization)
-- ✅ **CORS Configuration** (Origin whitelisting)
+- **API rate limiting** — per-client throttling on the chat and monitoring endpoints
+- **Input validation** — article slugs are constrained to `^[a-z0-9-]+$` and a
+  length cap *before* reaching any query; pagination values are clamped
+- **UUID validation** on Telegram callback payloads
+- **Webhook secret verification** — `X-Telegram-Bot-Api-Secret-Token` is checked
+  and the endpoint refuses to run if the secret is unset
+- **SQL injection prevention** — all access goes through the Supabase client
+  (parameterised); the one custom RPC uses bind parameters and no dynamic SQL
+- **Least-privilege database functions** — `SECURITY INVOKER`, a pinned
+  `search_path`, and `REVOKE ALL FROM PUBLIC` plus explicit grants
+- **XSS posture** — React escaping end to end; article bodies render through
+  `react-markdown`. `dangerouslySetInnerHTML` is not used anywhere in the codebase
+- **Strict CSP** — `default-src 'self'` with an explicit allowlist, plus HSTS,
+  `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy` and `Permissions-Policy`
+- **Secret hygiene** — the Supabase service-role key is never injected into the
+  client bundle (enforced by omission in `vite.config.ts`); only the anon key
+  reaches the browser
+- **CORS** — origin allowlist on the public API. Note this currently uses a
+  prefix match rather than an exact one; the endpoint is unauthenticated and
+  read-only, so impact is limited, but see `SECURITY.md` for the caveat
 
 ---
 
@@ -901,10 +961,13 @@ Please report security vulnerabilities to: **cemkoyluoglu@icloud.com**
 - [x] Supabase migration
 - [x] Health monitoring system
 - [x] LinkedIn digest automation
-- [x] Newsletter system
 - [x] Manual article scraper
 - [x] Chat history persistence
 - [x] Smart content validation
+- [x] Editorial design system (Tailwind v4, CSS-first)
+- [x] EN/TR internationalisation
+- [x] 3D wireframe hero with an idle-loaded, ~330×-compressed GLB
+- [x] Importance-based article ranking (scrape-time score + query-time blend)
 
 ### 🚧 In Progress
 - [ ] RSS feed generation
@@ -915,7 +978,10 @@ Please report security vulnerabilities to: **cemkoyluoglu@icloud.com**
 - [ ] Multi-language support (Spanish, French)
 - [ ] Mobile app (React Native)
 - [ ] AI-powered article summarization
-- [ ] Newsletter email delivery
+
+> The newsletter subscription feature was removed. The `api/newsletter.js`
+> endpoint and its UI are gone; the `newsletter_subscribers` table may still
+> exist as a database leftover and can be dropped manually.
 
 ---
 

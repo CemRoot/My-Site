@@ -24,3 +24,6 @@ export const PROJECT_URLS = {
     'https://chromewebstore.google.com/detail/youtube-ai-summarizer/dkbgkfeobjailmeiaidmapifohkjpgji?authuser=0&hl=en',
   youtubeAiSummarizerGithub: 'https://github.com/CemRoot/yt-ai-summarizer',
 } as const;
+
+/** Springer CCIS volume — AICS 2025 proceedings (book DOI landing page). */
+export const SPRINGER_CCIS_BOOK_URL = 'https://link.springer.com/book/9783032258083';

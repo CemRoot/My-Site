@@ -1,4 +1,9 @@
-import React, {
+/**
+ * Tech News index — LEAD/NEXT carousel (top-5 ranked) + hairline index rows.
+ * Data layer: useTechNews + list-scroll restore (unchanged).
+ */
+
+import {
   useState,
   useEffect,
   useLayoutEffect,
@@ -6,17 +11,13 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import { Newspaper, TrendingUp, Calendar } from 'lucide-react';
-import { Card, CardHeader, CardContent } from './ui/card';
-import { Skeleton } from './ui/skeleton';
-import { Button } from './ui/button';
-import { NewsletterSignup } from './NewsletterSignup';
+import { Link } from 'react-router-dom';
 import { usePageContext } from '../lib/context/PageContext';
 import ErrorBoundary from './ErrorBoundary';
 import { SEO } from './SEO';
 import { formatDate } from '../lib/utils/formatDate';
-import { getCategoryColor } from '../lib/utils/articleHelpers';
-import { TechNewsArticleCard } from './TechNewsArticleCard';
+import { getOptimizedImageUrl, IMAGE_PRESETS } from '../lib/utils/imageProxy';
+import { prefetchArticle } from '../lib/hooks/useArticle';
 import { useTechNews } from '../lib/hooks/useTechNews';
 import {
   clearTechNewsRestoreNavFlag,
@@ -24,33 +25,64 @@ import {
   readTechNewsListScroll,
   writeTechNewsListScroll,
 } from '../lib/techNewsListRestore';
+import type { Article } from '../lib/types';
+import { useI18n, type Tr } from '../features/i18n';
 
-/**
- * Tech News Component
- * Displays latest tech news articles translated from Turkish to English
- */
-const AVAILABLE_CATEGORIES: { label: string; value: string }[] = [
-  { label: 'All', value: 'all' },
-  { label: 'AI Applications', value: 'AI Applications' },
-  { label: 'AI', value: 'AI' },
-  { label: 'Tech', value: 'Tech' },
-  { label: 'Science', value: 'Science' },
-  { label: 'Sustainability', value: 'Sustainability' },
-  { label: 'News', value: 'News' },
-  { label: 'Latest News', value: 'Latest News' },
+const AVAILABLE_CATEGORIES: { label: Tr; value: string }[] = [
+  { label: { en: 'All', tr: 'Tümü' }, value: 'all' },
+  { label: { en: 'AI Applications', tr: 'AI Uygulamaları' }, value: 'AI Applications' },
+  { label: { en: 'AI', tr: 'AI' }, value: 'AI' },
+  { label: { en: 'Tech', tr: 'Teknoloji' }, value: 'Tech' },
+  { label: { en: 'Science', tr: 'Bilim' }, value: 'Science' },
+  { label: { en: 'Sustainability', tr: 'Sürdürülebilirlik' }, value: 'Sustainability' },
+  { label: { en: 'News', tr: 'Haber' }, value: 'News' },
 ];
 
-function truncateText(text: string, maxLength: number) {
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength).trim() + '...';
+const PAGE =
+  'mx-auto max-w-[1440px] px-[clamp(18px,4vw,52px)] pb-[clamp(64px,10vh,120px)]';
+const MONO = 'font-mono text-[11px] font-medium tracking-[0.14em]';
+const FEATURED_COUNT = 5;
+const ROTATE_MS = 8000;
+
+function articleMeta(article: Article): string {
+  const parts = [formatDate(article.date).toUpperCase()];
+  if (article.category) parts.push(article.category.toUpperCase());
+  return parts.join(' · ');
+}
+
+function SkeletonBlock({ className }: { className: string }) {
+  return <div className={`animate-pulse bg-[rgba(255,255,255,0.05)] ${className}`} />;
+}
+
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onChange = () => setReduced(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  return reduced;
 }
 
 function TechNews() {
+  const { t, lang } = useI18n();
+  const upper = (value: string) => value.toLocaleUpperCase(lang === 'tr' ? 'tr-TR' : 'en-US');
   const [selectedCategory, setSelectedCategory] = useState<string>(() => {
     if (!isTechNewsRestoreNavActive()) return 'all';
     return readTechNewsListScroll()?.category ?? 'all';
   });
   const { setPageInfo } = usePageContext();
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const [leadIndex, setLeadIndex] = useState(0);
+  const [carouselPaused, setCarouselPaused] = useState(false);
 
   const restorationTargetPage = useMemo(() => {
     if (!isTechNewsRestoreNavActive()) return null;
@@ -180,199 +212,302 @@ function TechNews() {
 
   useEffect(() => () => setPageInfo(null), [setPageInfo]);
 
+  // Reset carousel when category / article set changes
+  useEffect(() => {
+    setLeadIndex(0);
+  }, [selectedCategory, currentArticles[0]?.id]);
+
+  const featured = currentArticles.slice(0, FEATURED_COUNT);
+  const featuredLen = featured.length;
+  const safeLeadIndex = featuredLen > 0 ? leadIndex % featuredLen : 0;
+  const lead = featured[safeLeadIndex] ?? null;
+  const rail = featuredLen > 1
+    ? Array.from({ length: featuredLen - 1 }, (_, i) => featured[(safeLeadIndex + 1 + i) % featuredLen])
+    : [];
+  const indexRows = currentArticles.slice(FEATURED_COUNT);
+
+  const stepLead = useCallback(
+    (delta: number) => {
+      if (featuredLen <= 1) return;
+      setLeadIndex((prev) => (prev + delta + featuredLen) % featuredLen);
+    },
+    [featuredLen],
+  );
+
+  useEffect(() => {
+    if (prefersReducedMotion || carouselPaused || featuredLen <= 1) return;
+    const id = window.setInterval(() => {
+      setLeadIndex((prev) => (prev + 1) % featuredLen);
+    }, ROTATE_MS);
+    return () => window.clearInterval(id);
+  }, [prefersReducedMotion, carouselPaused, featuredLen]);
+
+  const prefetch = useCallback((slug: string) => {
+    void import('./TechNewsDetail').catch(() => undefined);
+    prefetchArticle(slug);
+  }, []);
+
+  const featuredPrefetchKey = featured.map((a) => a.slug).join('|');
+
+  // Prefetch active LEAD + NEXT slugs
+  useEffect(() => {
+    if (!featuredPrefetchKey) return;
+    for (const slug of featuredPrefetchKey.split('|')) {
+      if (slug) prefetch(slug);
+    }
+  }, [featuredPrefetchKey, prefetch]);
+
   return (
     <>
       <SEO
         title="Tech News | Cem Koyluoglu"
         description="Latest technology news, translated and summarized by AI. Stay up to date with AI, tech, startups, and software engineering news."
         ogTitle="Tech News | Cem Koyluoglu"
-        ogDescription="Latest technology news, translated and summarized by AI. Stay up to date with AI, tech, startups, and software engineering news."
+        ogDescription="Latest technology news, translated and summarized by AI."
       />
-    <main
-      className="min-h-screen bg-gradient-to-b from-background to-muted/20 pb-24"
-      style={{ paddingTop: 'calc(var(--nav-height, 120px) + 56px)' }}
-    >
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
-            <TrendingUp className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Latest Tech News</span>
-          </div>
-          
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-blue-500 to-purple-500 bg-clip-text text-transparent antialiased leading-tight" style={{ lineHeight: '1.3', paddingTop: '0.15em', paddingBottom: '0.2em' }}>
-            Tech Insights
-          </h1>
-          
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Stay updated with the latest technology news, trends, and innovations from around the world
-          </p>
-          
-          {newsData && newsData.lastUpdated && (
-            <div className="mt-6 flex items-center justify-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                <span>
-                  Updated{' '}
-                  {new Date(newsData.lastUpdated).toLocaleDateString('en-GB', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
+      <main
+        className="min-h-screen bg-background pb-24"
+        style={{ paddingTop: 'calc(var(--nav-height, 64px) + 40px)' }}
+      >
+        <div className={PAGE}>
+          <header className="border-b border-hairline pb-8">
+            <p className={`${MONO} text-signal`}>
+              {t({ en: 'TECH NEWS · INDEX', tr: 'TEKNOLOJİ HABERLERİ · DİZİN' })}
+            </p>
+            <h1 className="mt-3 font-sans text-[clamp(32px,5vw,52px)] font-bold leading-[0.96] tracking-[-0.04em]">
+              {t({ en: 'Tech News', tr: 'Teknoloji Haberleri' })}
+            </h1>
+            <p className="mt-4 max-w-[65ch] font-sans text-[15px] leading-[1.65] text-ink-70">
+              {t({
+                en: 'Scraped, translated, and filtered — AI, science, and systems news without the noise.',
+                tr: 'Toplanır, çevrilir, süzülür — gürültüsüz AI, bilim ve sistem haberleri.',
+              })}
+            </p>
+          </header>
+
+          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-hairline py-5">
+            <div
+              className="flex flex-wrap gap-x-4 gap-y-2"
+              role="toolbar"
+              aria-label={t({ en: 'Filter by category', tr: 'Kategoriye göre filtrele' })}
+            >
+              {AVAILABLE_CATEGORIES.map((c) => {
+                const active = selectedCategory === c.value;
+                return (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => {
+                      if (selectedCategory !== c.value) setSelectedCategory(c.value);
+                    }}
+                    className={`${MONO} cursor-pointer border-b pb-1 transition-colors ${
+                      active
+                        ? 'border-signal text-signal'
+                        : 'border-transparent text-ink-42 hover:text-foreground'
+                    }`}
+                    aria-pressed={active}
+                  >
+                    {upper(t(c.label))}
+                  </button>
+                );
+              })}
+            </div>
+            <p className={`${MONO} text-ink-42`}>
+              {loading && !lead
+                ? t({ en: 'LOADING…', tr: 'YÜKLENİYOR…' })
+                : t({
+                    en: `${currentArticles.length} / ${totalArticles} SHOWN`,
+                    tr: `${currentArticles.length} / ${totalArticles} GÖSTERİLİYOR`,
                   })}
-                </span>
+            </p>
+          </div>
+
+          {error && !loading && (
+            <div className="py-16">
+              <h2 className="font-sans text-2xl font-bold">
+                {t({ en: 'Failed to load', tr: 'Yüklenemedi' })}
+              </h2>
+              <p className="mt-2 text-ink-55">{error}</p>
+              <button
+                type="button"
+                onClick={refetch}
+                className="mt-6 border border-hairline-strong bg-signal px-5 py-3 font-mono text-[11px] tracking-[0.14em] text-background hover:bg-signal-hover"
+              >
+                {t({ en: 'TRY AGAIN', tr: 'TEKRAR DENE' })}
+              </button>
+            </div>
+          )}
+
+          {loading && !lead && (
+            <div className="mt-10 space-y-6">
+              <SkeletonBlock className="aspect-[16/9] w-full max-w-3xl" />
+              <SkeletonBlock className="h-10 w-2/3 max-w-xl" />
+              <div className="grid gap-4 lg:grid-cols-12">
+                <SkeletonBlock className="h-40 lg:col-span-8" />
+                <div className="space-y-3 lg:col-span-4">
+                  <SkeletonBlock className="h-16" />
+                  <SkeletonBlock className="h-16" />
+                  <SkeletonBlock className="h-16" />
+                </div>
               </div>
             </div>
           )}
-        </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="overflow-hidden">
-                <Skeleton className="h-48 w-full" />
-                <CardHeader>
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-1/2" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-4 w-2/3" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && !loading && (
-          <div className="text-center py-20">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-destructive/10 mb-4">
-              <Newspaper className="w-8 h-8 text-destructive" />
-            </div>
-            <h3 className="text-2xl font-bold mb-2">Failed to Load Articles</h3>
-            <p className="text-muted-foreground mb-6">
-              {error}
+          {!loading && !error && newsData && currentArticles.length === 0 && (
+            <p className="py-16 font-sans text-[15px] text-ink-55">
+              {t({
+                en: 'No articles in this filter yet.',
+                tr: 'Bu filtrede henüz haber yok.',
+              })}
             </p>
-            <button
-              onClick={refetch}
-              className="px-6 py-3 bg-primary hover:bg-primary/90 text-black rounded-lg font-medium transition-colors"
-            >
-              Try Again
-            </button>
-          </div>
-        )}
+          )}
 
-        {/* Empty State */}
-        {!loading && !error && newsData && newsData.articles.length === 0 && (
-          <div className="text-center py-20">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
-              <Newspaper className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-2xl font-bold mb-2">No Articles Yet</h3>
-            <p className="text-muted-foreground">
-              Tech news articles will appear here once scraped
-            </p>
-          </div>
-        )}
-
-        {/* Newsletter Signup */}
-        {!loading && !error && (
-          <div className="mb-16">
-            <NewsletterSignup />
-          </div>
-        )}
-
-        {/* Articles Grid */}
-        {!loading && !error && newsData && newsData.articles.length > 0 && (
-          <>
-            {/* Category Filter */}
-            <div className="mb-6 flex flex-wrap gap-2 justify-center">
-              {AVAILABLE_CATEGORIES.map((c) => (
-                <Button
-                  key={c.value}
-                  variant={selectedCategory === c.value ? 'default' : 'outline'}
-                  onClick={() => {
-                    if (selectedCategory !== c.value) {
-                      setSelectedCategory(c.value);
-                    }
-                  }}
-                  className={`h-9 px-4 ${selectedCategory === c.value ? '' : 'bg-background'}`}
-                  style={{
-                    ...(selectedCategory === c.value && c.value !== 'all' ? { backgroundColor: getCategoryColor(c.value), color: '#000' } : {})
-                  }}
-                >
-                  {c.label}
-                </Button>
-              ))}
-            </div>
-
-            {/* Articles Count & Page Info */}
-            <div className="mb-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                Showing {currentArticles.length} of {totalArticles} articles
-                {selectedCategory !== 'all' && ` • Category: ${selectedCategory}`}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {currentArticles.map((article, index) => (
-                <TechNewsArticleCard
-                  key={article.id}
-                  article={article}
-                  truncateText={truncateText}
-                  onBeforeNavigate={persistListScroll}
-                  index={index}
-                />
-              ))}
-            </div>
-
-            {currentPage < totalPages && (
+          {!error && lead && (
+            <>
               <div
-                ref={loadMoreSentinelRef}
-                className="h-8 w-full mt-8"
-                aria-hidden="true"
-              />
-            )}
+                className="mt-10 border-b border-hairline pb-12"
+                onMouseEnter={() => setCarouselPaused(true)}
+                onMouseLeave={() => setCarouselPaused(false)}
+                onFocusCapture={() => setCarouselPaused(true)}
+                onBlurCapture={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                    setCarouselPaused(false);
+                  }
+                }}
+              >
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+                  <p className={`${MONO} text-ink-42`} aria-live="polite">
+                    {t({ en: 'LEAD', tr: 'MANŞET' })}{' '}
+                    {featuredLen > 1
+                      ? `${safeLeadIndex + 1} / ${featuredLen}`
+                      : ''}
+                    {lead ? ` · ${lead.title}` : ''}
+                  </p>
+                  {featuredLen > 1 && (
+                    <div className="flex items-center gap-4" role="group" aria-label={t({ en: 'Featured stories', tr: 'Öne çıkan haberler' })}>
+                      <button
+                        type="button"
+                        onClick={() => stepLead(-1)}
+                        className={`${MONO} text-ink-42 transition-colors hover:text-foreground`}
+                        aria-label={t({ en: 'Previous lead story', tr: 'Önceki manşet' })}
+                      >
+                        ←
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => stepLead(1)}
+                        className={`${MONO} text-ink-42 transition-colors hover:text-foreground`}
+                        aria-label={t({ en: 'Next lead story', tr: 'Sonraki manşet' })}
+                      >
+                        →
+                      </button>
+                    </div>
+                  )}
+                </div>
 
-          {/* Loading More State */}
-          {loadingMore && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
-              {[...Array(3)].map((_, i) => (
-                <Card key={`loading-more-${i}`} className="overflow-hidden">
-                  <Skeleton className="h-48 w-full" />
-                  <CardHeader>
-                    <Skeleton className="h-6 w-3/4 mb-2" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-2/3" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                <div className="grid gap-10 lg:grid-cols-12 lg:gap-12">
+                  <Link
+                    to={`/tech-news/${lead.slug}`}
+                    className="group block text-foreground hover:text-foreground lg:col-span-8"
+                    onClick={persistListScroll}
+                    onMouseEnter={() => prefetch(lead.slug)}
+                    onFocus={() => prefetch(lead.slug)}
+                  >
+                    {lead.image && (
+                      <div className="relative mb-6 aspect-[16/9] overflow-hidden bg-surface">
+                        <img
+                          src={getOptimizedImageUrl(lead.image, IMAGE_PRESETS.hero)}
+                          alt=""
+                          className="absolute inset-0 h-full w-full object-cover transition-opacity group-hover:opacity-90"
+                          loading="eager"
+                          fetchPriority="high"
+                          width={1200}
+                          height={675}
+                        />
+                      </div>
+                    )}
+                    <p className={`${MONO} text-signal`}>
+                      {t({ en: 'LEAD', tr: 'MANŞET' })} · {articleMeta(lead)}
+                    </p>
+                    <h2 className="mt-3 font-sans text-[clamp(26px,3.5vw,40px)] font-bold leading-[1.1] tracking-[-0.03em] [text-wrap:balance]">
+                      {lead.title}
+                    </h2>
+                    {lead.description && (
+                      <p className="mt-4 max-w-[65ch] font-sans text-[15px] leading-[1.65] text-ink-62">
+                        {lead.description}
+                      </p>
+                    )}
+                  </Link>
 
-          {currentPage < totalPages && loadingMore && (
-            <p className="sr-only" role="status">
-              Loading more articles
-            </p>
+                  <aside className="flex flex-col gap-px border-t border-hairline lg:col-span-4 lg:border-t-0 lg:border-l lg:pl-8">
+                    <p className={`${MONO} mb-4 pt-6 text-ink-42 lg:pt-0`}>
+                      {t({ en: 'NEXT', tr: 'SONRAKİ' })}
+                    </p>
+                    {rail.map((article) => (
+                      <Link
+                        key={article.id}
+                        to={`/tech-news/${article.slug}`}
+                        className="border-t border-hairline py-4 text-foreground hover:text-foreground"
+                        onClick={persistListScroll}
+                        onMouseEnter={() => prefetch(article.slug)}
+                        onFocus={() => prefetch(article.slug)}
+                      >
+                        <p className={`${MONO} text-[10.5px] text-ink-42`}>{articleMeta(article)}</p>
+                        <h3 className="mt-2 font-sans text-[17px] font-medium leading-[1.3] text-ink-90">
+                          {article.title}
+                        </h3>
+                      </Link>
+                    ))}
+                  </aside>
+                </div>
+              </div>
+
+              {indexRows.length > 0 && (
+                <ul className="mt-2 list-none p-0">
+                  {indexRows.map((article) => (
+                    <li key={article.id} className="border-b border-hairline">
+                      <Link
+                        to={`/tech-news/${article.slug}`}
+                        className="flex flex-wrap items-baseline justify-between gap-3 py-5 text-foreground hover:text-foreground"
+                        onClick={persistListScroll}
+                        onMouseEnter={() => prefetch(article.slug)}
+                        onFocus={() => prefetch(article.slug)}
+                      >
+                        <h3 className="max-w-[65ch] font-sans text-[18px] font-medium leading-[1.35] tracking-[-0.02em]">
+                          {article.title}
+                        </h3>
+                        <span className={`${MONO} shrink-0 text-[10.5px] text-ink-42`}>
+                          {articleMeta(article)}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {currentPage < totalPages && (
+                <div ref={loadMoreSentinelRef} className="mt-8 h-8 w-full" aria-hidden="true" />
+              )}
+              {loadingMore && (
+                <p className="sr-only" role="status">
+                  {t({ en: 'Loading more articles', tr: 'Daha fazla haber yükleniyor' })}
+                </p>
+              )}
+            </>
           )}
-        </>
-        )}
-      </div>
-    </main>
+        </div>
+      </main>
     </>
   );
 }
 
-export default function TechNewsWithErrorBoundary() {
+function TechNewsWithErrorBoundary() {
+  const { t } = useI18n();
   return (
-    <ErrorBoundary title="Failed to load Tech News">
+    <ErrorBoundary title={t({ en: 'Failed to load Tech News', tr: 'Teknoloji haberleri yüklenemedi' })}>
       <TechNews />
     </ErrorBoundary>
   );
 }
+
+export default TechNewsWithErrorBoundary;

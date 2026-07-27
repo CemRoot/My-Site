@@ -18,7 +18,8 @@ export function formatTechNewsArticle(article, includeContent = false) {
     date: article.date,
     category: article.category,
     slug: article.slug,
-    views: article.views,
+    views: article.views ?? 0,
+    importanceScore: article.importance_score ?? article.importanceScore ?? 50,
     createdAt: article.created_at,
   };
 

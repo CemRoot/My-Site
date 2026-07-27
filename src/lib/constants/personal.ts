@@ -18,7 +18,10 @@ export const PERSONAL_INFO = {
   },
   
   availability: {
-    status: 'available',
+    // Live badge status is derived at runtime (Europe/Dublin) via
+    // getAvailabilityStatus() — see src/lib/utils/availability.ts.
+    // Do not hardcode status here; SiteHeader uses the shared helper.
+    timezone: 'Europe/Dublin',
     freelance: true,
     fullTime: true,
     remote: true,
@@ -51,31 +54,3 @@ export const EDUCATION = {
   classification: 'First Class Honours',
   period: '2022 - 2023',
 } as const;
-
-export const STATS = [
-  {
-    value: 3,
-    suffix: '+',
-    label: 'Years Python Experience',
-    color: 'primary' as const,
-  },
-  {
-    value: 71.4,
-    suffix: '%',
-    label: 'MSc AI Grade (First Class)',
-    color: 'secondary' as const,
-    decimals: 1,
-  },
-  {
-    value: 5,
-    suffix: '+',
-    label: 'Professional Certifications',
-    color: 'accent' as const,
-  },
-  {
-    value: 100,
-    suffix: '%',
-    label: 'Client Satisfaction',
-    color: 'primary' as const,
-  },
-] as const;

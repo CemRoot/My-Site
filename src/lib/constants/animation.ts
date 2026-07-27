@@ -12,8 +12,6 @@ export const CHAT_BLOCK_DURATION_MS = 5 * 60 * 1000;
 
 export const OFF_TOPIC_THRESHOLD = 3;
 
-export const ROUTE_CHANGE_BLUR_DELAY_MS = 100;
-
 export const SCROLL_TOP_THRESHOLD = 500;
 
 export const NEWS_NOTIFICATION_SHOW_DELAY_MS = 4000;

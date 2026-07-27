@@ -6,6 +6,107 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { formatTechNewsArticle } from './lib/formatTechNewsArticle.js';
+import { sortArticlesByRank } from './lib/techNewsRank.js';
+
+const LIST_COLUMNS =
+  'id,title,description,original_title,image_url,date,category,slug,views,created_at,importance_score';
+
+/**
+ * Preferred path: Postgres RPC with composite rank + correct pagination.
+ * Fallback: fetch list rows in batches, sort in edge, then slice.
+ */
+async function fetchRankedList(supabase, { category, page, limit }) {
+  const offset = (page - 1) * limit;
+  const rpcCategory =
+    category && category !== 'all' ? category : null;
+
+  try {
+    const { data: rpcPayload, error: rpcError } = await supabase.rpc(
+      'list_tech_news_ranked',
+      {
+        p_category: rpcCategory,
+        p_limit: limit,
+        p_offset: offset,
+      },
+    );
+
+    if (!rpcError && rpcPayload && typeof rpcPayload === 'object') {
+      const articles = Array.isArray(rpcPayload.articles)
+        ? rpcPayload.articles
+        : [];
+      const totalArticles = Number(rpcPayload.total) || 0;
+      return { articles, totalArticles, source: 'rpc' };
+    }
+
+    if (rpcError) {
+      console.warn('list_tech_news_ranked RPC unavailable, using edge sort:', rpcError.message);
+    }
+  } catch (err) {
+    console.warn('list_tech_news_ranked RPC failed, using edge sort:', err?.message || err);
+  }
+
+  const batchSize = 1000;
+  const all = [];
+  // Prefer ranked columns; fall back if migration not applied yet.
+  const columnSets = [
+    LIST_COLUMNS,
+    'id,title,description,original_title,image_url,date,category,slug,views,created_at',
+  ];
+
+  let usedColumns = columnSets[0];
+  let firstError = null;
+
+  for (const columns of columnSets) {
+    usedColumns = columns;
+    all.length = 0;
+    let from = 0;
+    let ok = true;
+
+    while (true) {
+      let query = supabase
+        .from('tech_news_articles')
+        .select(columns)
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .range(from, from + batchSize - 1);
+
+      if (rpcCategory) {
+        query = query.eq('category', rpcCategory);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        firstError = error;
+        ok = false;
+        break;
+      }
+
+      if (data?.length) {
+        all.push(...data);
+      }
+
+      if (!data || data.length < batchSize) break;
+      from += batchSize;
+    }
+
+    if (ok) break;
+  }
+
+  if (all.length === 0 && firstError) {
+    throw firstError;
+  }
+
+  if (!usedColumns.includes('importance_score')) {
+    console.warn('importance_score column missing — ranking with default score 50');
+  }
+
+  const ranked = sortArticlesByRank(all);
+  return {
+    articles: ranked.slice(offset, offset + limit),
+    totalArticles: ranked.length,
+    source: 'edge-sort',
+  };
+}
 
 export const config = {
   runtime: 'edge',
@@ -186,36 +287,19 @@ export default async function handler(request) {
       });
     }
 
-    // Listing query - Only select needed columns (NOT content - saves bandwidth)
-    const listColumns = 'id,title,description,original_title,image_url,date,category,slug,views,created_at';
-    
-    let query = supabase
-      .from('tech_news_articles')
-      .select(listColumns, { count: 'exact' })
-      .order('date', { ascending: false })
-      .order('created_at', { ascending: false });
-
-    // Apply category filter
-    if (category && category !== 'all') {
-      query = query.eq('category', category);
-    }
-
-    // Apply pagination
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    query = query.range(from, to);
-
-    // Execute query
-    const { data: articles, error, count } = await query;
-
-    if (error) {
+    // Listing — importance × views × recency rank (RPC, with edge-sort fallback)
+    let articles;
+    let totalArticles;
+    try {
+      const ranked = await fetchRankedList(supabase, { category, page, limit });
+      articles = ranked.articles;
+      totalArticles = ranked.totalArticles;
+    } catch (error) {
       console.error('Supabase error:', error);
       return jsonResponse({ success: false, message: 'Failed to fetch articles' }, 500, corsHeaders);
     }
 
-    // Calculate pagination metadata
-    const totalArticles = count || 0;
-    const totalPages = Math.ceil(totalArticles / limit);
+    const totalPages = Math.ceil(totalArticles / limit) || 0;
 
     return jsonResponse({
       success: true,

@@ -39,9 +39,17 @@ yarn-error.log*
 *.swo
 *~
 
-# Vercel project metadata (contains projectId/orgId – do not commit)
-.vercel/project.json
-.vercel/.vc-config.json
+# Vercel local link metadata. Ignore the whole directory — project.json holds
+# projectId/orgId, and the rest is generated boilerplate with no value in VCS.
+.vercel/
+
+# Local agent/working notes — never publish. Contains environment paths,
+# debugging transcripts and in-progress decisions, none of it useful to a reader
+# of this repository.
+memory.md
+
+# Supabase CLI local cache (e.g. cli-latest version check)
+supabase/.temp/
 
 # macOS / editor accidental duplicate copies (e.g. "chat 2.js")
 **/* 2.js
@@ -51,9 +59,9 @@ yarn-error.log*
 
 # Temporary files
 scripts/test-translation.js
+.tmp/
 
 # Private data
-data/newsletter-subscribers.json
 .env*.local
 # Security scan reports - contain sensitive data
 gitleaks-report.json

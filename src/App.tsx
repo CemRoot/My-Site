@@ -1,18 +1,16 @@
 import { useEffect, useLayoutEffect, Suspense, useMemo, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { ArrowUp } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
-import { Navbar } from './components/Navbar';
-import { Footer } from './components/Footer';
+import { SiteHeader } from './sections/SiteHeader';
+import { SiteFooter } from './sections/SiteFooter';
 import { SEO } from './components/SEO';
-import { Button } from './components/ui/button';
 import { Toaster } from './components/ui/sonner';
+import { I18nProvider } from './features/i18n';
 import { useScrollTop } from './lib/hooks/useScrollTop';
 import { useSmoothScroll } from './lib/hooks/useSmoothScroll';
 import { PageContextProvider } from './lib/context/PageContext';
 import { lazyWithRetry, resetChunkErrorCounter } from './lib/chunk-error-handler';
-import { initLazyBlur, debouncedResizeHandler } from './lib/lazy-blur';
-import { SCROLL_TOP_THRESHOLD, ROUTE_CHANGE_BLUR_DELAY_MS } from './lib/constants/animation';
+import { SCROLL_TOP_THRESHOLD } from './lib/constants/animation';
 import {
   clearTechNewsRestoreNavFlag,
   setTechNewsRestoreNavFlag,
@@ -71,14 +69,6 @@ function ScrollToTopOnRouteChange() {
     }
   }, [pathname, isTechNewsList, wasTechNewsDetail]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      initLazyBlur();
-    }, ROUTE_CHANGE_BLUR_DELAY_MS);
-
-    return () => clearTimeout(timer);
-  }, [pathname]);
-
   return null;
 }
 
@@ -110,72 +100,61 @@ export default function App() {
     resetChunkErrorCounter();
   }, []);
 
-  // Initialize lazy blur optimization (mobile only)
-  useEffect(() => {
-    // Initial setup
-    const cleanupFn = initLazyBlur();
-
-    // Listen for resize events (desktop ↔ mobile transitions)
-    window.addEventListener('resize', debouncedResizeHandler);
-
-    return () => {
-      // Cleanup on unmount
-      if (cleanupFn) cleanupFn();
-      window.removeEventListener('resize', debouncedResizeHandler);
-    };
-  }, []);
-
   return (
     <Router>
-      <PageContextProvider>
-        <ScrollToTopOnRouteChange />
-        <div className="min-h-screen bg-background text-foreground antialiased overflow-x-hidden">
-          {/* SEO Meta Tags */}
-          <SEO />
+      <I18nProvider>
+        <PageContextProvider>
+          <ScrollToTopOnRouteChange />
+          {/* overflow-x-clip, not -hidden: `hidden` would make this a scroll
+              container and break `position: sticky` inside it. See globals.css. */}
+          <div className="min-h-screen bg-background text-foreground antialiased overflow-x-clip">
+            {/* SEO Meta Tags */}
+            <SEO />
 
-          {/* Navigation */}
-          <Navbar />
+            {/* Navigation */}
+            <SiteHeader />
 
-          {/* Main Content with Routes */}
-          <main>
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/tech-news" element={<TechNews />} />
-                <Route path="/tech-news/:slug" element={<TechNewsDetail />} />
-                <Route path="/terms" element={<TermsPage />} />
-                <Route path="/privacy-policy" element={<PrivacyPage />} />
-                <Route path="/english-learning" element={<EnglishLearningPage />} />
-                <Route path="*" element={<NotFoundPage />} />
-              </Routes>
-            </Suspense>
-          </main>
+            {/* Main Content with Routes */}
+            <main>
+              <Suspense fallback={<RouteLoadingFallback />}>
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/tech-news" element={<TechNews />} />
+                  <Route path="/tech-news/:slug" element={<TechNewsDetail />} />
+                  <Route path="/terms" element={<TermsPage />} />
+                  <Route path="/privacy-policy" element={<PrivacyPage />} />
+                  <Route path="/english-learning" element={<EnglishLearningPage />} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Routes>
+              </Suspense>
+            </main>
 
-          {/* Footer */}
-          <Footer />
+            {/* Footer */}
+            <SiteFooter />
 
-          {/* Scroll to Top Button */}
-          {showScrollTop && (
-            <Button
-              onClick={scrollToTop}
-              size="icon"
-              className="fixed bottom-4 right-20 sm:bottom-8 sm:right-8 z-50 w-12 h-12 rounded-full bg-primary hover:bg-primary/90 text-black shadow-lg shadow-primary/20 transition-all duration-300 hover:scale-110"
-              aria-label="Scroll to top"
-            >
-              <ArrowUp className="w-5 h-5" />
-            </Button>
-          )}
+            {/* Scroll to Top Button */}
+            {showScrollTop && (
+              <button
+                type="button"
+                onClick={scrollToTop}
+                className="fixed bottom-[var(--fab-bottom)] left-4 z-50 flex h-11 w-11 cursor-pointer items-center justify-center border border-hairline-strong bg-background font-mono text-sm text-foreground hover:border-[rgba(255,255,255,0.35)] sm:left-6"
+                aria-label="Scroll to top"
+              >
+                ↑
+              </button>
+            )}
 
-          {/* Chat Widget - Lazy loaded */}
-          <ChatWidgetWrapper />
+            {/* Chat Widget - Lazy loaded */}
+            <ChatWidgetWrapper />
 
-          {/* Toast Notifications */}
-          <Toaster />
+            {/* Toast Notifications */}
+            <Toaster />
 
-          {/* Vercel Analytics */}
-          <Analytics />
-        </div>
-      </PageContextProvider>
+            {/* Vercel Analytics */}
+            <Analytics />
+          </div>
+        </PageContextProvider>
+      </I18nProvider>
     </Router>
   );
 }

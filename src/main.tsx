@@ -10,7 +10,7 @@ import { createRoot } from "react-dom/client";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import App from "./App.tsx";
 import "./fonts.css";
-import "./index.css";
+import "./styles/globals.css";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));

@@ -2,6 +2,7 @@
   import { defineConfig, loadEnv } from 'vite';
   import type { Plugin } from 'vite';
   import react from '@vitejs/plugin-react-swc';
+  import tailwindcss from '@tailwindcss/vite';
   import path from 'path';
   import { sentryVitePlugin } from '@sentry/vite-plugin';
 
@@ -41,6 +42,7 @@
     return {
     plugins: [
       react(),
+      tailwindcss(),
       publicDirIndexFallback(['/yt-ai-summarizer']),
       // Sentry plugin for uploading source maps
       // Only in production builds with auth token
@@ -81,8 +83,6 @@
         'class-variance-authority@0.7.1': 'class-variance-authority',
         '@radix-ui/react-slot@1.1.2': '@radix-ui/react-slot',
         '@radix-ui/react-separator@1.1.2': '@radix-ui/react-separator',
-        '@radix-ui/react-dialog@1.1.6': '@radix-ui/react-dialog',
-        '@radix-ui/react-checkbox@1.1.4': '@radix-ui/react-checkbox',
         '@': path.resolve(__dirname, './src'),
       },
     },
@@ -114,6 +114,31 @@
     server: {
       port: 3000,
       open: true,
+      // Bind all interfaces so the site is reachable from a phone on the same
+      // Wi-Fi (http://<LAN-IP>:3000) without needing the --host flag.
+      host: true,
+      // DEV ONLY — `server.proxy` is ignored by `vite build`, so this has zero
+      // effect on production.
+      //
+      // The `api/` folder is Vercel serverless; Vite knows nothing about it and
+      // would otherwise serve api/*.js as transformed JS, so /api/tech-news
+      // returned JavaScript source where the app expected JSON and every
+      // article detail page failed with "is not valid JSON".
+      //
+      // Point /api at a real backend so /tech-news/:slug and chat
+      // are actually exercisable locally. Override the target with
+      // VITE_DEV_API_PROXY (e.g. http://localhost:3001 when running `vercel dev`).
+      proxy: {
+        '/api': {
+          target: env.VITE_DEV_API_PROXY || 'https://cemkoyluoglu.codes',
+          changeOrigin: true,
+          secure: true,
+        },
+      },
+    },
+    preview: {
+      port: 4173,
+      host: true,
     },
     };
   });

@@ -30,7 +30,7 @@
 |---|---------|------|-------------|
 | M-1 | Webhook secret verification used plain-string equality (`!==`) which is vulnerable to timing attacks allowing secret enumeration. | `api/deployment-webhook.js` | Replaced with `crypto.timingSafeEqual()`. |
 | M-2 | CORS policy used `origin.includes('.vercel.app')` — any developer can register a free `*.vercel.app` subdomain and bypass CORS, effectively making the endpoint publicly writable. | `api/frontend-health-monitor.js` | Replaced with an explicit allowlist (`cemkoyluoglu.codes` + `process.env.VERCEL_URL`). |
-| M-3 | `/api/newsletter` had **no rate limiting**, allowing unlimited spam/enumeration of the subscriber table. | `api/newsletter.js` | Added: 5 requests / 10 minutes per IP using the existing `lib/rate-limit.js` helper. |
+| M-3 | `/api/newsletter` had **no rate limiting**, allowing unlimited spam/enumeration of the subscriber table. | `api/newsletter.js` | Rate limit was added; endpoint + signup UI were later **removed** in P3 cleanup (no live newsletter route). |
 
 ---
 
@@ -97,7 +97,7 @@ If any of the above were ever present, **rotate them at the provider before goin
 
 ### 4. Confirm Supabase Row-Level Security (RLS) is enabled
 
-- [ ] Verify RLS policies are active on `newsletter_subscribers`, `chat_history`, `tech_news_articles`, and `frontend_error_logs` tables. The anon key is intentionally public; RLS is the only access control layer.
+- [ ] Verify RLS policies are active on `chat_history`, `tech_news_articles`, and `frontend_error_logs` tables (and any leftover `newsletter_subscribers` table if it still exists in the project). The anon key is intentionally public; RLS is the only access control layer.
 
 ### 5. Remove `.vercel/project.json` from git history (optional but recommended)
 

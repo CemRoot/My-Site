@@ -220,33 +220,36 @@ export default function SmartMarkdown({ content }: SmartMarkdownProps) {
   // Render parts
   return (
     <div>
-      {/* TL;DR Section */}
+      {/* TL;DR — editorial mono label + hairline (no tinted cards) */}
       {tldr && (
-        <div className="bg-primary/5 border-l-4 border-primary rounded-lg p-6 mb-6">
-          <h3 className="text-xl font-bold mb-3">
+        <section className="article-editorial-block mb-8 border-b border-hairline pb-6">
+          <h3 className="font-mono text-[11px] font-medium tracking-[0.14em] text-signal">
             TL;DR
           </h3>
-          <p className="text-lg leading-relaxed">{tldr}</p>
-        </div>
+          <p className="mt-3 text-[1.0625rem] leading-[1.65] text-ink-70">{tldr}</p>
+        </section>
       )}
-      
-      {/* Key Highlights Section */}
+
+      {/* Key Highlights — editorial list */}
       {highlights.length > 0 && (
-        <div className="bg-accent/5 border-l-4 border-accent rounded-lg p-6 mb-6">
-          <h3 className="text-xl font-bold mb-3">
-            Key Highlights
+        <section className="article-editorial-block mb-8 border-b border-hairline pb-6">
+          <h3 className="font-mono text-[11px] font-medium tracking-[0.14em] text-signal">
+            KEY HIGHLIGHTS
           </h3>
-          <ul className="space-y-2">
+          <ul className="mt-3 list-none space-y-2.5 p-0">
             {highlights.map((highlight, index) => (
-              <li key={index} className="flex items-start gap-2">
-                <span className="text-primary mt-1" aria-hidden="true">•</span>
-                <span className="text-lg leading-relaxed flex-1 article-highlight-text">
+              <li key={index} className="flex items-start gap-3">
+                <span
+                  className="mt-[0.55em] block h-px w-3 shrink-0 bg-hairline-strong"
+                  aria-hidden="true"
+                />
+                <span className="article-highlight-text flex-1 text-[1.0625rem] leading-[1.65] text-ink-70">
                   {highlight}
                 </span>
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       )}
 
       {parts.map((part, index) => {
@@ -274,7 +277,7 @@ function renderMarkdownContent(content: string) {
             }
             
             return (
-              <p className="text-lg leading-relaxed mb-4" {...props}>
+              <p className="mb-4 text-[1.0625rem] leading-[1.65]" {...props}>
                 {children}
               </p>
             );

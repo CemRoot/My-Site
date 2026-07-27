@@ -4,6 +4,12 @@
  */
 
 import 'dotenv/config';
+import {
+  analyzeArticleImportance,
+  keywordImportanceScore,
+} from './lib/scraper/importanceScore.js';
+
+export { analyzeArticleImportance, keywordImportanceScore };
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
@@ -43,54 +49,6 @@ async function generateWithGemini(prompt) {
   } catch (error) {
     console.error('❌ Gemini API error:', error.message);
     throw error;
-  }
-}
-
-/**
- * Analyze article importance and generate score (0-100)
- */
-export async function analyzeArticleImportance(article) {
-  const prompt = `Analyze this tech news article and rate its importance/impact on a scale of 0-100.
-
-Consider these factors:
-- Innovation level (breakthrough technologies, new products): 30%
-- Company significance (major tech companies: OpenAI, Google, Meta, Apple, Microsoft, etc.): 25%
-- Global impact (affects millions of users, industry changes): 20%
-- Trending topics (AI, robotics, space tech, quantum computing, sustainability): 15%
-- Business implications (funding, partnerships, market changes): 10%
-
-Article Details:
-Title: ${article.title}
-Description: ${article.description}
-Category: ${article.category}
-Content Preview: ${article.content.substring(0, 500)}...
-
-Respond with ONLY a number between 0-100 (no explanation):`;
-
-  try {
-    const scoreText = await generateWithGemini(prompt);
-    const score = parseInt(scoreText.trim());
-    return Math.min(100, Math.max(0, score || 50)); // Ensure 0-100 range
-  } catch (error) {
-    console.error('Error scoring article:', error);
-    
-    // Fallback scoring based on keywords
-    const title = article.title.toLowerCase();
-    const description = article.description.toLowerCase();
-    const content = article.content.toLowerCase();
-    
-    let fallbackScore = 50;
-    
-    // High-value keywords
-    if (title.includes('ai') || title.includes('artificial intelligence') || 
-        title.includes('openai') || title.includes('chatgpt')) fallbackScore += 20;
-    if (title.includes('google') || title.includes('microsoft') || 
-        title.includes('apple') || title.includes('meta')) fallbackScore += 15;
-    if (title.includes('breakthrough') || title.includes('revolutionary') || 
-        title.includes('first') || title.includes('new')) fallbackScore += 10;
-    if (content.includes('billion') || content.includes('million')) fallbackScore += 10;
-    
-    return Math.min(100, Math.max(30, fallbackScore));
   }
 }
 

@@ -40,8 +40,8 @@
     <meta property="og:locale" content="en_US" />
     
     <!-- Additional Meta Tags -->
-    <meta name="theme-color" content="#5BE7FF" />
-    <meta name="msapplication-TileColor" content="#5BE7FF" />
+    <meta name="theme-color" content="#0a0a0b" />
+    <meta name="msapplication-TileColor" content="#ff4a1c" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="format-detection" content="telephone=no" />
@@ -60,18 +60,21 @@
 
     <!-- Hero image loaded eagerly in Hero.tsx with fetchPriority="high" -->
 
-    <!-- Geist Regular: early @font-face + html/body font (replaces font preload; avoids unused-preload warnings). -->
+    <!--
+      Critical first-paint styles. The real @font-face set is self-hosted via
+      @fontsource (see src/fonts.css); this only paints the correct ground
+      colour and font stack before the CSS bundle lands, so there is no
+      light-flash and no fallback-font reflow.
+
+      NOTE: these rules are UNLAYERED, so they beat anything in `@layer base`.
+      Keep the font stack in sync with --font-sans in src/styles/globals.css.
+    -->
     <style>
-      @font-face {
-        font-family: 'Geist Sans';
-        font-style: normal;
-        font-weight: 400;
-        font-display: swap;
-        src: url('/fonts/geist-sans/Geist-Regular.woff2') format('woff2');
-      }
       html,
       body {
-        font-family: 'Geist Sans', ui-sans-serif, system-ui, sans-serif;
+        background: #0a0a0b;
+        color: #ededea;
+        font-family: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, sans-serif;
       }
     </style>
 

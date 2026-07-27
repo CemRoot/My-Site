@@ -15,6 +15,7 @@ import { validateArticle, autoFixArticle } from '../../validation/smartArticlePr
 import { stripSourceSocialLeaks } from '../../embeds/cleanMarkdownEmbeds.js';
 import { getTurkeyIsoDate, normalizeSourceDate } from './dateUtils.js';
 import { generateSlug, transliterateToAscii } from './slugUtils.js';
+import { analyzeArticleImportance } from './importanceScore.js';
 
 export { generateSlug, transliterateToAscii };
 
@@ -482,6 +483,14 @@ export async function saveArticle(article) {
       console.log(`   🔁 Adjusted duplicate slug: "${article.slug}" -> "${uniqueSlug}"`);
     }
 
+    const importanceScore = await analyzeArticleImportance({
+      title: cleanTitle,
+      description: cleanDescription,
+      category: article.category,
+      content: cleanContent,
+    });
+    console.log(`   📊 Importance score: ${importanceScore}/100`);
+
     const { data, error } = await supabase
       .from('tech_news_articles')
       .insert([{
@@ -496,6 +505,7 @@ export async function saveArticle(article) {
         original_source: article.originalSource,
         slug: uniqueSlug,
         content_hash: contentHash,
+        importance_score: importanceScore,
       }])
       .select()
       .single();

@@ -7,10 +7,18 @@ This document outlines the security measures, policies, and reporting procedures
 ## 🔒 Security Measures Implemented
 
 ### 1. CORS Protection
-- **Status**: ✅ Implemented
+- **Status**: ⚠️ Implemented, with a known limitation
 - **Location**: All API endpoints (`api/*.js`)
 - **Protection**: Origin whitelist (only `cemkoyluoglu.codes` and Vercel preview URLs)
-- **Prevention**: Blocks unauthorized cross-origin requests
+- **Known limitation**: `api/tech-news.js` matches the incoming `Origin` with
+  `startsWith()` rather than an exact comparison, so a hostile origin such as
+  `https://cemkoyluoglu.codes.example.com` is reflected back in
+  `Access-Control-Allow-Origin`.
+- **Assessed impact**: Low. The endpoint is unauthenticated and read-only,
+  `Access-Control-Allow-Credentials` is never set, and the data it returns is
+  already public — a cross-origin reader gains nothing they could not fetch
+  server-side. It is a correctness bug rather than a disclosure path.
+- **Remediation**: replace the prefix test with `ALLOWED_ORIGINS.includes(origin)`.
 
 ### 2. Security Headers
 - **Status**: ✅ Implemented
@@ -25,7 +33,7 @@ This document outlines the security measures, policies, and reporting procedures
 
 ### 3. Rate Limiting
 - **Status**: ✅ Implemented
-- **Location**: `lib/rate-limit.js`, `api/chat.js`, `api/lib/chatHelpers.js`
+- **Location**: `lib/rate-limit.js`, `api/chat.js`, `lib/chatHelpers.js`
 - **Protection**: 10 requests per minute per IP for chat endpoint
 - **Note**: In-memory cache (resets on cold starts)
 - **Recommendation**: Upgrade to Upstash Redis for production

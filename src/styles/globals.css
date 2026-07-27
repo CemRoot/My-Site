@@ -1,93 +1,106 @@
-@custom-variant dark (&:is(.dark *));
+@import "tailwindcss";
 
-html, body {
-  overflow-x: hidden;
-  width: 100%;
-  max-width: 100vw;
-}
+/* =============================================================================
+   EDITORIAL / SYSTEMS DESIGN SYSTEM
+   Source of truth for the site's visual language.
+
+   NOTE: this file is compiled by @tailwindcss/vite (wired in vite.config.ts).
+   The previous `src/index.css` was a checked-in COMPILED artifact and has been
+   deleted — do not reintroduce a pre-built stylesheet.
+   ========================================================================== */
 
 :root {
   --font-size: 16px;
-  /* Deep-space noir color system */
-  --background: #070A0F;
-  --foreground: #E5E7EB;
-  --card: #000000;
-  --card-foreground: #E5E7EB;
-  --popover: #0B0F1A;
-  --popover-foreground: #E5E7EB;
-  --primary: #5BE7FF;
-  --primary-foreground: #000000;
-  --secondary: #A78BFA;
-  --secondary-foreground: #000000;
-  --accent: #FFB86C;
-  --accent-foreground: #000000;
-  --muted: #1F2937;
-  --muted-foreground: #9CA3AF;
-  --destructive: #EF4444;
-  --destructive-foreground: #ffffff;
-  --border: rgba(91, 231, 255, 0.1);
-  --input: transparent;
-  --input-background: rgba(11, 15, 26, 0.5);
-  --switch-background: #374151;
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-  --ring: #5BE7FF;
-  --chart-1: #5BE7FF;
-  --chart-2: #A78BFA;
-  --chart-3: #FFB86C;
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 1rem;
-  --sidebar: #070A0F;
-  --sidebar-foreground: #E5E7EB;
-  --sidebar-primary: #5BE7FF;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #0B0F1A;
-  --sidebar-accent-foreground: #E5E7EB;
-  --sidebar-border: rgba(91, 231, 255, 0.1);
-  --sidebar-ring: #5BE7FF;
-}
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --font-weight-medium: 500;
+  /* --- Core surfaces + ink --------------------------------------------- */
+  --background: #0a0a0b;
+  --foreground: #ededea;
+  --surface: #0e0f11;
+  --surface-raised: #17181b;
+
+  /* --- Accent ----------------------------------------------------------- */
+  --signal: #ff4a1c;
+  --signal-hover: #ff764c;
+  --live: #3ddc84;
+
+  /* --- Hairlines -------------------------------------------------------- */
+  --hairline: rgba(255, 255, 255, 0.09);
+  --hairline-strong: rgba(255, 255, 255, 0.2);
+
+  /* Floating FABs clear the SiteFooter strip (~53px) + gap */
+  --fab-bottom: clamp(68px, 8vw, 84px);
+  --chat-panel-bottom: calc(var(--fab-bottom) + 52px);
+
+  /* --- Ink ramp (alpha steps used throughout the design) ---------------- */
+  --ink-90: rgba(237, 237, 234, 0.9);
+  --ink-70: rgba(237, 237, 234, 0.7);
+  --ink-62: rgba(237, 237, 234, 0.62);
+  --ink-55: rgba(237, 237, 234, 0.55);
+  --ink-45: rgba(237, 237, 234, 0.45);
+  --ink-42: rgba(237, 237, 234, 0.42);
+  --ink-38: rgba(237, 237, 234, 0.38);
+  --ink-35: rgba(237, 237, 234, 0.35);
+
+  /* --- shadcn-compatible aliases ----------------------------------------
+     Existing ui/ primitives and legacy pages resolve colour through these,
+     so remapping them retheme the whole site without touching components. */
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --primary: var(--signal);
+  --primary-foreground: #0a0a0b;
+  --secondary: var(--surface-raised);
+  --secondary-foreground: var(--foreground);
+  --muted: #1a1b1e;
+  --muted-foreground: var(--ink-55);
+  --accent: var(--signal);
+  --accent-foreground: #0a0a0b;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: var(--hairline);
+  --input: transparent;
+  --input-background: #0a0a0b;
+  --switch-background: #2a2b2e;
+  --ring: var(--signal);
+
+  /* Editorial language = hard corners. */
+  --radius: 0px;
+
   --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* Set by Navbar at runtime; declared here so layout has a sane default. */
+  --nav-height: 64px;
 }
 
 @theme inline {
+  /* Typography ---------------------------------------------------------- */
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Colour -------------------------------------------------------------- */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-signal: var(--signal);
+  --color-signal-hover: var(--signal-hover);
+  --color-live: var(--live);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
+
+  --color-ink-90: var(--ink-90);
+  --color-ink-70: var(--ink-70);
+  --color-ink-62: var(--ink-62);
+  --color-ink-55: var(--ink-55);
+  --color-ink-45: var(--ink-45);
+  --color-ink-42: var(--ink-42);
+  --color-ink-38: var(--ink-38);
+  --color-ink-35: var(--ink-35);
+
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
@@ -107,378 +120,202 @@ html, body {
   --color-input-background: var(--input-background);
   --color-switch-background: var(--switch-background);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Radius — all flattened to the editorial hard corner. */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
 }
+
+/* =============================================================================
+   BASE
+   ========================================================================== */
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
 
-  body {
-    @apply bg-background text-foreground;
-    background-image: 
-      radial-gradient(circle at 20% 50%, rgba(91, 231, 255, 0.03) 0%, transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(167, 139, 250, 0.03) 0%, transparent 50%);
+  html {
+    font-size: var(--font-size);
+    scroll-behavior: smooth;
   }
 
+  html,
+  body {
+    /*
+      `clip`, not `hidden`. `overflow-x: hidden` computes to `overflow: hidden
+      auto`, which makes the element a SCROLL CONTAINER — and `position: sticky`
+      then binds to that container instead of the viewport. That is what stopped
+      the tech-news related rail from sticking (measured at top: -672px against
+      a declared top: 86px). `clip` prevents horizontal overflow without
+      creating a scroll container.
+
+      Safari 14 (in the build target list) ignores `clip` and falls back to
+      `visible`; `max-width: 100vw` below still guards horizontal scroll there.
+    */
+    overflow-x: clip;
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Editorial default: links carry the signal colour unless a component
+     opts out with `text-inherit`. */
+  a {
+    color: var(--signal);
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: var(--signal-hover);
+  }
+
+  /* Visible keyboard focus on the dark ground. */
+  :focus-visible {
+    outline: 2px solid var(--signal);
+    outline-offset: 2px;
+  }
 }
 
 /**
- * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
+ * Base typography — not applied to elements whose ancestor carries a Tailwind
+ * text-* class.
  */
 @layer base {
   :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
-    h1 {
-      font-size: var(--text-2xl);
-      font-weight: var(--font-weight-medium);
-      line-height: 1.5;
-    }
-
-    h2 {
-      font-size: var(--text-xl);
-      font-weight: var(--font-weight-medium);
-      line-height: 1.5;
-    }
-
-    h3 {
-      font-size: var(--text-lg);
-      font-weight: var(--font-weight-medium);
-      line-height: 1.5;
-    }
-
-    h4 {
-      font-size: var(--text-base);
-      font-weight: var(--font-weight-medium);
-      line-height: 1.5;
-    }
-
-    p {
-      font-size: var(--text-base);
-      font-weight: var(--font-weight-normal);
-      line-height: 1.5;
-    }
-
-    label {
-      font-size: var(--text-base);
-      font-weight: var(--font-weight-medium);
-      line-height: 1.5;
-    }
-
-    button {
-      font-size: var(--text-base);
-      font-weight: var(--font-weight-medium);
-      line-height: 1.5;
-    }
-
-    input {
-      font-size: var(--text-base);
-      font-weight: var(--font-weight-normal);
-      line-height: 1.5;
-    }
+    h1 { font-size: var(--text-2xl); font-weight: var(--font-weight-medium); line-height: 1.5; }
+    h2 { font-size: var(--text-xl);  font-weight: var(--font-weight-medium); line-height: 1.5; }
+    h3 { font-size: var(--text-lg);  font-weight: var(--font-weight-medium); line-height: 1.5; }
+    h4 { font-size: var(--text-base); font-weight: var(--font-weight-medium); line-height: 1.5; }
+    p  { font-size: var(--text-base); font-weight: var(--font-weight-normal); line-height: 1.5; }
+    label  { font-size: var(--text-base); font-weight: var(--font-weight-medium); line-height: 1.5; }
+    button { font-size: var(--text-base); font-weight: var(--font-weight-medium); line-height: 1.5; }
+    input  { font-size: var(--text-base); font-weight: var(--font-weight-normal); line-height: 1.5; }
   }
 }
 
-html {
-  font-size: var(--font-size);
+/* =============================================================================
+   MOTION — the four design keyframes + scroll reveal
+   ========================================================================== */
+
+@keyframes ck-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
 }
 
-/* ===== LIQUID GLASS EFFECTS ===== */
+@keyframes ck-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes ck-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+
+@keyframes ck-sweep {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+/* RTL letter shine — highlight travels through glyph shapes via background-position. */
+@keyframes ck-letter-shine-rtl {
+  0%, 12% { background-position: 120% 50%; }
+  48%, 100% { background-position: -20% 50%; }
+}
+
 @layer utilities {
-  /* Base liquid glass effect */
-  .liquid-glass {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 
-      0 8px 32px 0 rgba(91, 231, 255, 0.08),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+  /* Scroll-linked reveal. Uses `animation-timeline: view()` where supported
+     (Chrome/Edge); browsers without it simply render the end state.
+     The range is entry-based (not cover-based) so elements near the bottom of
+     the page — which can never travel a full cover range — still finish the
+     animation once they are fully in view. */
+  .rv {
+    animation: ck-rise 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    animation-timeline: view();
+    animation-range: entry 5% entry 90%;
   }
 
-  /* Stronger glass effect */
-  .liquid-glass-strong {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(30px) saturate(200%);
-    -webkit-backdrop-filter: blur(30px) saturate(200%);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 
-      0 12px 48px 0 rgba(91, 231, 255, 0.12),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
-      inset 0 -1px 0 0 rgba(91, 231, 255, 0.1);
-  }
+  .anim-rise  { animation: ck-rise 0.8s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+  .anim-fade  { animation: ck-fade 0.7s both; }
+  .anim-pulse { animation: ck-pulse 2.4s ease-in-out infinite; }
 
-  /* Animated gradient border */
-  .liquid-border {
-    position: relative;
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-  }
-
-  .liquid-border::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(
-      135deg,
-      rgba(91, 231, 255, 0.3),
-      rgba(167, 139, 250, 0.3),
-      rgba(255, 184, 108, 0.3)
+  /*
+    Letter-clipped shine for linked accent stats (AICS).
+    Gradient is clipped to glyph shapes — light moves through the letters,
+    not a rectangular overlay. No filters/blur; background-position only.
+  */
+  .stat-shimmer {
+    display: inline-block;
+    color: var(--signal);
+    background-image: linear-gradient(
+      100deg,
+      var(--signal) 0%,
+      var(--signal) 44%,
+      color-mix(in srgb, #ffffff 82%, var(--signal)) 50%,
+      var(--signal) 56%,
+      var(--signal) 100%
     );
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-    opacity: 0.6;
+    background-size: 240% 100%;
+    background-position: 120% 50%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: ck-letter-shine-rtl 4.2s ease-in-out infinite;
   }
 
-  .liquid-border:hover::before {
-    opacity: 1;
-    background: linear-gradient(
-      135deg,
-      rgba(91, 231, 255, 0.5),
-      rgba(167, 139, 250, 0.5),
-      rgba(255, 184, 108, 0.5)
+  .stat-shimmer:hover {
+    background-image: linear-gradient(
+      100deg,
+      var(--signal-hover) 0%,
+      var(--signal-hover) 44%,
+      color-mix(in srgb, #ffffff 88%, var(--signal-hover)) 50%,
+      var(--signal-hover) 56%,
+      var(--signal-hover) 100%
     );
-  }
-
-  /* Animated glow effect */
-  .liquid-glow {
-    position: relative;
-  }
-
-  .liquid-glow::after {
-    content: '';
-    position: absolute;
-    inset: -20px;
-    background: radial-gradient(
-      circle at center,
-      rgba(91, 231, 255, 0.15),
-      transparent 70%
-    );
-    opacity: 0;
-    transition: opacity 0.5s ease;
-    pointer-events: none;
-    z-index: -1;
-    filter: blur(20px);
-  }
-
-  .liquid-glow:hover::after {
-    opacity: 1;
-  }
-
-  /* Shimmer effect */
-  .liquid-shimmer {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .liquid-shimmer::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.1),
-      transparent
-    );
-    transition: left 0.6s ease;
-  }
-
-  .liquid-shimmer:hover::before {
-    left: 100%;
-  }
-
-  /* Frosted glass card -- uses individual border properties so Tailwind border-color utilities can override */
-  .frosted-glass {
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.05) 0%,
-      rgba(255, 255, 255, 0.02) 100%
-    );
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border-width: 1px;
-    border-style: solid;
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 
-      0 8px 32px 0 rgba(0, 0, 0, 0.37),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
-  }
-
-  /* Neon glow border */
-  .neon-border-primary {
-    border: 1px solid rgba(91, 231, 255, 0.3);
-    box-shadow: 
-      0 0 10px rgba(91, 231, 255, 0.2),
-      inset 0 0 10px rgba(91, 231, 255, 0.1);
-  }
-
-  .neon-border-primary:hover {
-    border-color: rgba(91, 231, 255, 0.5);
-    box-shadow: 
-      0 0 20px rgba(91, 231, 255, 0.4),
-      inset 0 0 15px rgba(91, 231, 255, 0.2);
-  }
-
-  .neon-border-secondary {
-    border: 1px solid rgba(167, 139, 250, 0.3);
-    box-shadow: 
-      0 0 10px rgba(167, 139, 250, 0.2),
-      inset 0 0 10px rgba(167, 139, 250, 0.1);
-  }
-
-  .neon-border-secondary:hover {
-    border-color: rgba(167, 139, 250, 0.5);
-    box-shadow: 
-      0 0 20px rgba(167, 139, 250, 0.4),
-      inset 0 0 15px rgba(167, 139, 250, 0.2);
-  }
-
-  /* Morphing background */
-  @keyframes morph {
-    0%, 100% {
-      border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-    }
-    50% {
-      border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
-    }
-  }
-
-  .liquid-morph {
-    animation: morph 8s ease-in-out infinite;
-  }
-
-  /* Floating animation */
-  @keyframes float {
-    0%, 100% {
-      transform: translateY(0px);
-    }
-    50% {
-      transform: translateY(-20px);
-    }
-  }
-
-  .liquid-float {
-    animation: float 6s ease-in-out infinite;
-  }
-
-  /* Pulse glow animation */
-  @keyframes pulse-glow {
-    0%, 100% {
-      opacity: 0.5;
-      box-shadow: 0 0 20px rgba(91, 231, 255, 0.3);
-    }
-    50% {
-      opacity: 1;
-      box-shadow: 0 0 40px rgba(91, 231, 255, 0.6);
-    }
-  }
-
-  .liquid-pulse {
-    animation: pulse-glow 3s ease-in-out infinite;
   }
 
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
 }
 
-/* ===== MOBILE PERFORMANCE OPTIMIZATIONS ===== */
-@layer utilities {
-  /* Reduce animations for users who prefer reduced motion */
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-    }
+/* Honour the OS setting everywhere, including the reveal. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  .rv,
+  .anim-rise,
+  .anim-fade,
+  .anim-pulse,
+  .stat-shimmer {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 
-  /* Mobile-specific optimizations for better performance */
-  @media (max-width: 768px) {
-    /* Reduce backdrop-filter blur for better mobile performance */
-    .liquid-glass {
-      backdrop-filter: blur(12px) saturate(150%);
-      -webkit-backdrop-filter: blur(12px) saturate(150%);
-    }
-
-    .liquid-glass-strong {
-      backdrop-filter: blur(16px) saturate(160%);
-      -webkit-backdrop-filter: blur(16px) saturate(160%);
-    }
-
-    .frosted-glass {
-      backdrop-filter: blur(12px) saturate(150%);
-      -webkit-backdrop-filter: blur(12px) saturate(150%);
-    }
-
-    .liquid-border {
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
-
-    /* Disable glow effects on mobile to reduce GPU load */
-    .liquid-glow::after {
-      display: none;
-    }
-
-    /* Simplify animations on mobile */
-    .liquid-morph {
-      animation: none;
-      border-radius: 50%;
-    }
-
-    .liquid-float {
-      animation: none;
-    }
-
-    /* Reduce box-shadow complexity on mobile */
-    .neon-border-primary,
-    .neon-border-secondary {
-      box-shadow: none;
-    }
-
-    .neon-border-primary:hover,
-    .neon-border-secondary:hover {
-      box-shadow: none;
-    }
+  .stat-shimmer {
+    background-image: none !important;
+    -webkit-text-fill-color: var(--signal) !important;
+    color: var(--signal) !important;
   }
 
-  /* Touch device optimizations */
-  @media (hover: none) and (pointer: coarse) {
-    /* Disable hover-dependent effects */
-    .liquid-shimmer::before {
-      display: none;
-    }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

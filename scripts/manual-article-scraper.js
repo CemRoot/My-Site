@@ -15,6 +15,7 @@ import { env } from './lib/config.js';
 import { htmlToTokens } from './embeds/extractEmbeds.js';
 import { extractAllEmbedsFromMarkdown } from './embeds/extractMarkdownEmbeds.js';
 import { generateSlug } from './lib/scraper/database.js';
+import { analyzeArticleImportance } from './lib/scraper/importanceScore.js';
 
 const CONFIG = {
   FIRECRAWL_API_KEY: env.FIRECRAWL_API_KEY,
@@ -398,6 +399,14 @@ export async function processManualArticle(articleUrl, originalSourceUrl) {
     const uniqueSlug = await ensureUniqueSlug(baseSlug);
 
     // Step 6: Prepare article for database
+    const importanceScore = await analyzeArticleImportance({
+      title: aiResult.title_en,
+      description: aiResult.description_en,
+      category: aiResult.category,
+      content: aiResult.content_en,
+    });
+    console.log(`📊 Importance score: ${importanceScore}/100`);
+
     const article = {
       id: articleId,
       title: aiResult.title_en,
@@ -410,6 +419,7 @@ export async function processManualArticle(articleUrl, originalSourceUrl) {
       original_source: originalSourceUrl,
       date: new Date().toISOString().split('T')[0],
       views: 0,
+      importance_score: importanceScore,
       created_at: new Date().toISOString(),
     };
 

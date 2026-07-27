@@ -1,58 +1,22 @@
-/* Geist Sans Font - Self-hosted from npm package */
-@font-face {
-  font-family: 'Geist Sans';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/geist-sans/Geist-Regular.woff2') format('woff2');
-}
+/* =============================================================================
+   FONTS — self-hosted via @fontsource (npm), served from our own origin.
+   No Google Fonts request, so the strict `default-src 'self'` CSP is unchanged.
 
-@font-face {
-  font-family: 'Geist Sans';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/geist-sans/Geist-Medium.woff2') format('woff2');
-}
+   Subsets: latin + latin-ext. latin-ext is REQUIRED — the site renders
+   "CEM KÖYLÜOĞLU" and the full Turkish translation set (ğ ş İ ı Ö Ü Ç).
+   The vietnamese subset is deliberately not imported.
+   ========================================================================== */
 
-@font-face {
-  font-family: 'Geist Sans';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/geist-sans/Geist-SemiBold.woff2') format('woff2');
-}
+/* Space Grotesk — display + body (400 body, 500 headings/nav, 700 display) */
+@import "@fontsource/space-grotesk/latin-400.css";
+@import "@fontsource/space-grotesk/latin-ext-400.css";
+@import "@fontsource/space-grotesk/latin-500.css";
+@import "@fontsource/space-grotesk/latin-ext-500.css";
+@import "@fontsource/space-grotesk/latin-700.css";
+@import "@fontsource/space-grotesk/latin-ext-700.css";
 
-@font-face {
-  font-family: 'Geist Sans';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/geist-sans/Geist-Bold.woff2') format('woff2');
-}
-
-/* Hobo BT Font - Self-hosted for better reliability */
-@font-face {
-  font-family: 'Hobo BT';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: local('Hobo BT'), url('/fonts/hobo-bt.woff') format('woff');
-}
-
-/* Add font weight variations if needed */
-@font-face {
-  font-family: 'Hobo BT';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: local('Hobo BT'), url('/fonts/hobo-bt.woff') format('woff');
-}
-
-@font-face {
-  font-family: 'Hobo BT';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: local('Hobo BT'), url('/fonts/hobo-bt.woff') format('woff');
-}
+/* IBM Plex Mono — labels, nav, meta, stat captions */
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-ext-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
+@import "@fontsource/ibm-plex-mono/latin-ext-500.css";
