@@ -9,6 +9,7 @@ import { SignalSection } from '../sections/SignalSection';
 import { ExperienceStackSection } from '../sections/ExperienceStackSection';
 import { ServicesSection } from '../sections/ServicesSection';
 import { ContactSection } from '../sections/ContactSection';
+import { ProbeTree } from '../lib/perfProbe';
 import { usePageContext } from '../lib/context/PageContext';
 import { PERSONAL_INFO, EDUCATION } from '../lib/constants/personal';
 
@@ -81,14 +82,14 @@ function HomePage() {
         ogTitle="Cem Koyluoglu - AI Engineer & Microsoft 365 Specialist"
         ogDescription="AI systems that survive production. MSc AI (First Class Honours), published researcher — Springer CCIS. Based in Dublin, Ireland."
       />
-      <HeroSection />
-      <StatsStrip />
-      <SystemsSection />
-      <WorkSection />
-      <SignalSection />
-      <ExperienceStackSection />
-      <ServicesSection />
-      <ContactSection />
+      <ProbeTree id="HeroSection"><HeroSection /></ProbeTree>
+      <ProbeTree id="StatsStrip"><StatsStrip /></ProbeTree>
+      <ProbeTree id="SystemsSection"><SystemsSection /></ProbeTree>
+      <ProbeTree id="WorkSection"><WorkSection /></ProbeTree>
+      <ProbeTree id="SignalSection"><SignalSection /></ProbeTree>
+      <ProbeTree id="ExperienceStackSection"><ExperienceStackSection /></ProbeTree>
+      <ProbeTree id="ServicesSection"><ServicesSection /></ProbeTree>
+      <ProbeTree id="ContactSection"><ContactSection /></ProbeTree>
     </>
   );
 }

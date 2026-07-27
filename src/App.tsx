@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, Suspense, useMemo, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
+import { ProbeTree } from './lib/perfProbe';
 import { SiteHeader } from './sections/SiteHeader';
 import { SiteFooter } from './sections/SiteFooter';
 import { SEO } from './components/SEO';
@@ -78,9 +79,18 @@ function ScrollToTopOnRouteChange() {
   prevPathRef.current = pathname;
 
   useLayoutEffect(() => {
-    if (!(isTechNewsList && wasTechNewsDetail)) {
-      window.scrollTo({ top: 0, behavior: 'auto' });
-    }
+    if (isTechNewsList && wasTechNewsDetail) return;
+    /*
+      Only scroll when there is somewhere to scroll from.
+
+      This runs on the FIRST mount too, where the page is already at the top, so
+      the call was a no-op that still forced a scroll + layout. A CDP sampling
+      profile of the initial load put native `scrollTo` at 93 ms of self time
+      under 16x CPU throttling — the fourth-hottest function on the page, for a
+      scroll that moved nothing.
+    */
+    if (window.scrollY === 0) return;
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }, [pathname, isTechNewsList, wasTechNewsDetail]);
 
   return null;
@@ -126,11 +136,12 @@ export default function App() {
             <SEO />
 
             {/* Navigation */}
-            <SiteHeader />
+            <ProbeTree id="SiteHeader"><SiteHeader /></ProbeTree>
 
             {/* Main Content with Routes */}
             <main>
               <Suspense fallback={<RouteLoadingFallback />}>
+                <ProbeTree id="Routes">
                 <Routes>
                   <Route path="/" element={<HomePage />} />
                   <Route path="/tech-news" element={<TechNews />} />
@@ -140,11 +151,12 @@ export default function App() {
                   <Route path="/english-learning" element={<EnglishLearningPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
+                </ProbeTree>
               </Suspense>
             </main>
 
             {/* Footer */}
-            <SiteFooter />
+            <ProbeTree id="SiteFooter"><SiteFooter /></ProbeTree>
 
             {/* Scroll to Top Button */}
             {showScrollTop && (

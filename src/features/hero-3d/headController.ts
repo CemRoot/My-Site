@@ -39,6 +39,7 @@ import {
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { probeSpan, probeSpanAsync } from '../../lib/perfProbe';
 
 export interface HeadOptions {
   accent?: string;
@@ -252,13 +253,13 @@ export class HeadController {
     }
 
     try {
-      this.renderer = new WebGLRenderer({
+      this.renderer = probeSpan('head.WebGLRenderer', () => new WebGLRenderer({
         canvas,
         alpha: true,
         antialias: !isCoarsePointer(),
         powerPreference: 'low-power',
         failIfMajorPerformanceCaveat: false,
-      });
+      }));
     } catch (error) {
       throw new Error(
         `WebGLRenderer failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -277,7 +278,9 @@ export class HeadController {
     this.group.rotation.x = -0.04;
     this.scene.add(this.group);
 
-    const geometry = await this.loadGeometry(opts.url);
+    const geometry = await probeSpanAsync('head.loadGeometry', () =>
+      this.loadGeometry(opts.url),
+    );
     if (this.disposed) {
       geometry.dispose();
       return;
@@ -288,10 +291,11 @@ export class HeadController {
     this.modelHeight = box ? box.max.y - box.min.y : 2;
     this.wakeRadius = this.modelHeight * WAKE_RADIUS_OF_BUST;
 
-    this.buildWireHead(geometry);
+    probeSpan('head.buildWireHead', () => this.buildWireHead(geometry));
+    // Split the mount across frames — see yieldToMain() below.
     // resize() sets the aspect and then reframes, so the scatter cloud below is
     // sized against a frustum that is already correct for this canvas.
-    this.resize();
+    probeSpan('head.resize', () => this.resize());
 
     // Attach the wake listener up front rather than as a completion callback of
     // the intro. Tying it to the animation meant that if rAF was ever paused
@@ -301,10 +305,10 @@ export class HeadController {
     this.enablePointer();
 
     if (opts.reducedMotion) {
-      this.showAssembled();
+      probeSpan('head.showAssembled', () => this.showAssembled());
       this.renderer.render(this.scene, this.camera);
     } else {
-      this.startAssemble();
+      probeSpan('head.startAssemble', () => this.startAssemble());
     }
 
     this.resizeObserver = new ResizeObserver(() => {
@@ -352,7 +356,7 @@ export class HeadController {
 
   private buildWireHead(geometry: BufferGeometry): void {
     const maxSegs = isCoarsePointer() ? MAX_SEGMENTS_MOBILE : MAX_SEGMENTS_DESKTOP;
-    const edges = buildWireBars(geometry, maxSegs);
+    const edges = probeSpan('head.buildWireBars', () => buildWireBars(geometry, maxSegs));
 
     this.lineMaterial = new LineBasicMaterial({
       color: new Color(this.opts.accent),
@@ -385,20 +389,30 @@ export class HeadController {
     this.jitterZ = new Float32Array(this.segCount);
     this.magScale = new Float32Array(this.segCount);
     this.returnRate = new Float32Array(this.segCount);
-    for (let s = 0; s < this.segCount; s++) {
-      const rnd = mulberry32((s * 40503 + 12345) >>> 0);
-      // Uniform-ish direction on the sphere.
-      const theta = rnd() * Math.PI * 2;
-      const z = rnd() * 2 - 1;
-      const r = Math.sqrt(Math.max(0, 1 - z * z));
-      this.jitterX[s] = Math.cos(theta) * r;
-      this.jitterY[s] = Math.sin(theta) * r;
-      this.jitterZ[s] = z;
-      this.magScale[s] = 0.45 + rnd() * 1.35;
-      // Spread the return over a range so the bust re-forms progressively
-      // rather than every bar arriving home on the same frame.
-      this.returnRate[s] = 0.55 + rnd() * 1.1;
-    }
+    // Locals, not `this.*`, inside the closure: the fields are nullable and
+    // TypeScript drops the narrowing across a callback boundary.
+    const jitterX = this.jitterX;
+    const jitterY = this.jitterY;
+    const jitterZ = this.jitterZ;
+    const magScale = this.magScale;
+    const returnRate = this.returnRate;
+    const segCount = this.segCount;
+    probeSpan('head.perSegmentRandom', () => {
+      for (let s = 0; s < segCount; s++) {
+        const rnd = mulberry32((s * 40503 + 12345) >>> 0);
+        // Uniform-ish direction on the sphere.
+        const theta = rnd() * Math.PI * 2;
+        const z = rnd() * 2 - 1;
+        const r = Math.sqrt(Math.max(0, 1 - z * z));
+        jitterX[s] = Math.cos(theta) * r;
+        jitterY[s] = Math.sin(theta) * r;
+        jitterZ[s] = z;
+        magScale[s] = 0.45 + rnd() * 1.35;
+        // Spread the return over a range so the bust re-forms progressively
+        // rather than every bar arriving home on the same frame.
+        returnRate[s] = 0.55 + rnd() * 1.1;
+      }
+    });
   }
 
   /**
@@ -463,6 +477,8 @@ export class HeadController {
     const segCount = this.segCount;
     const scatterPos = new Float32Array(live.length);
     const delays = new Float32Array(segCount);
+    /** Set once a segment has reached finalPos, so the tick can skip it. */
+    const arrived = new Uint8Array(segCount);
 
     // Spread the cloud over the actual visible rect so the intro fills the hero
     // rather than starting outside the frustum (the old hardcoded radius of 5.8
@@ -515,15 +531,33 @@ export class HeadController {
       const u = Math.min(1, (held - SCATTER_HOLD_MS) / ASSEMBLE_MS);
       const span = 1 - STAGGER;
 
+      /*
+        Only segments that are actually MOVING this frame are written.
+
+        Every segment used to be rewritten on all 150-odd frames of the intro —
+        238,326 float writes per frame — even though STAGGER is 0.78, so each
+        one only travels during 22% of the timeline. The rest are sitting at
+        their scatter position (already in `live` from the set() above) or have
+        already landed on `finalPos`; rewriting them produces the identical
+        number.
+
+        `arrived` stops a landed segment from being written again on every
+        later frame. The rendered output is bit-identical — this is arithmetic
+        that was being thrown away.
+      */
       for (let s = 0; s < segCount; s++) {
+        if (arrived[s] === 1) continue;
         const local = Math.min(1, Math.max(0, (u - delays[s] * STAGGER) / span));
+        if (local <= 0) continue;
         const e = easeOutCubic(local);
         const i = s * 6;
         for (let k = 0; k < 6; k++) {
           const a = scatterPos[i + k];
           live[i + k] = a + (finalPos[i + k] - a) * e;
         }
+        if (local >= 1) arrived[s] = 1;
       }
+
 
       attr.needsUpdate = true;
       if (this.lineMaterial) {
@@ -829,13 +863,13 @@ export async function mountHead(
  * benefit, so only the device cap remains.
  */
 function buildWireBars(geometry: BufferGeometry, maxSegments: number): BufferGeometry {
-  const wire = new WireframeGeometry(geometry);
+  const wire = probeSpan('head.wb:WireframeGeometry', () => new WireframeGeometry(geometry));
   const src = (wire.getAttribute('position') as BufferAttribute).array as Float32Array;
   const segCount = (src.length / 6) | 0;
 
   let out: Float32Array;
   if (segCount <= maxSegments) {
-    out = new Float32Array(src);
+    out = probeSpan('head.wb:copy', () => new Float32Array(src));
   } else {
     out = new Float32Array(maxSegments * 6);
     for (let i = 0; i < maxSegments; i++) {

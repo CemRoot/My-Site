@@ -79,6 +79,18 @@
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
+        /*
+          Diagnostic builds only (VITE_PERF_PROBE=1).
+
+          React's <Profiler> reports actualDuration 0 in a normal production
+          build — the timing code is compiled out. react-dom/profiling is the
+          production build WITH that instrumentation retained, and it exports
+          createRoot, so aliasing the client entry is enough. Never set the flag
+          for a real build: profiling react-dom is measurably slower.
+        */
+        ...(env.VITE_PERF_PROBE === '1'
+          ? { 'react-dom/client': 'react-dom/profiling' }
+          : {}),
         'sonner@2.0.3': 'sonner',
         'class-variance-authority@0.7.1': 'class-variance-authority',
         '@radix-ui/react-slot@1.1.2': '@radix-ui/react-slot',
@@ -110,6 +122,14 @@
       // Aggressive minification for production
       minify: 'terser',
       terserOptions: {
+        /*
+          Diagnostic builds keep function names so a Chrome CPU profile can be
+          attributed function-by-function instead of bundle-by-bundle. Mangling
+          does not change which code runs, so the ranking stays valid.
+        */
+        ...(env.VITE_PERF_PROBE === '1'
+          ? { keep_fnames: true, mangle: { keep_fnames: true } }
+          : {}),
         compress: {
           drop_console: mode === 'production',
           drop_debugger: true,

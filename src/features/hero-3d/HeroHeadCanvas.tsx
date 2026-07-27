@@ -14,6 +14,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import posterMetrics from './posterMetrics.json';
+import { probeSpanAsync } from '../../lib/perfProbe';
 
 const POSTER_SRC = `/models/${posterMetrics.file}`;
 /**
@@ -102,12 +103,13 @@ export function HeroHeadCanvas({ className, pointerTargetRef }: HeroHeadCanvasPr
         canvas.className = 'pointer-events-none absolute inset-0 h-full w-full';
         host.appendChild(canvas);
 
-        import('./headController')
+        probeSpanAsync('head.moduleImport', () => import('./headController'))
           .then(({ mountHead }) => {
-            if (cancelled || !canvas?.isConnected) return;
-            return mountHead(canvas, {
+            const el = canvas;
+            if (cancelled || !el?.isConnected) return;
+            return probeSpanAsync('head.mountHead', () => mountHead(el, {
               pointerTarget: pointerTargetRef?.current ?? stage,
-            }).then((d) => {
+            })).then((d) => {
               if (cancelled) {
                 d();
                 return;
