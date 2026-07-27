@@ -52,5 +52,19 @@ export const EDUCATION = {
   institution: 'National College of Ireland',
   grade: 71.4,
   classification: 'First Class Honours',
-  period: '2022 - 2023',
+  period: 'Sep 2024 – Sep 2025',
+  gpa: '3.1/4',
+  bachelor: {
+    degree: 'BSc Software Engineering',
+    institution: "National Technical University of Ukraine 'Kyiv Polytechnic Institute'",
+    period: 'Sep 2019 – Jun 2023',
+    grade: '93.4/100',
+    gpa: '3.96/4.00',
+  },
+  english: {
+    institution: 'Centre of English Studies (CES)',
+    course: 'Business English',
+    period: 'Jan 2024 – Aug 2024',
+    level: 'C1',
+  },
 } as const;

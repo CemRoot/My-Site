@@ -55,7 +55,7 @@ what the "Systems" section on the home page describes.
 - **🤖 AI-Powered**: Multi-AI system (Groq Llama 3.3 + Google Gemini 2.0 Flash)
 - **💬 AI Chatbot**: Interactive portfolio chatbot with n8n fallback
 - **📊 Relevance Ranking**: Articles carry a scrape-time importance score, blended
-  at query time with view count and recency in a Postgres RPC
+  at query time with view count and 14-day publish-date freshness in a Postgres RPC
 - **📱 Telegram Control Center**: Full system control from your phone
 - **🔄 100% Automated**: GitHub Actions + n8n + Vercel integration
 - **🎨 Editorial Frontend**: Hand-built design system, EN/TR i18n, and a 3D

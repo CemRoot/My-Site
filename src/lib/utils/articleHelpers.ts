@@ -33,6 +33,32 @@ const TITLE_STOP_WORDS = new Set([
   'may',
   'now',
   'use',
+  'with',
+  'from',
+  'this',
+  'that',
+  'than',
+  'into',
+  'over',
+  'after',
+  'about',
+  'your',
+  'their',
+  'what',
+  'when',
+  'where',
+  'which',
+  'while',
+  'will',
+  'just',
+  'more',
+  'most',
+  'some',
+  'such',
+  'took',
+  'step',
+  'back',
+  'worse',
 ]);
 
 function articleTimestamp(a: Pick<Article, 'date' | 'createdAt'>): number {
@@ -42,7 +68,7 @@ function articleTimestamp(a: Pick<Article, 'date' | 'createdAt'>): number {
   return Number.isNaN(fromCreated) ? 0 : fromCreated;
 }
 
-function titleKeywordOverlap(titleA: string, titleB: string): number {
+function topicKeywordOverlap(textA: string, textB: string): number {
   const tokenize = (t: string) =>
     new Set(
       t
@@ -51,8 +77,8 @@ function titleKeywordOverlap(titleA: string, titleB: string): number {
         .split(/\s+/)
         .filter((w) => w.length > 2 && !TITLE_STOP_WORDS.has(w)),
     );
-  const A = tokenize(titleA);
-  const B = tokenize(titleB);
+  const A = tokenize(textA);
+  const B = tokenize(textB);
   if (A.size === 0 || B.size === 0) return 0;
   let n = 0;
   for (const w of A) {
@@ -62,8 +88,9 @@ function titleKeywordOverlap(titleA: string, titleB: string): number {
 }
 
 /**
- * Pick related articles from a pool: closest publish dates first, then title keyword overlap,
- * so each detail page surfaces neighbours in time (not always the three newest in the category).
+ * Pick related articles from a pool: topic keyword overlap first (title +
+ * description), then same category, then newer publish date — so RELATED
+ * surfaces subject neighbours rather than chronological neighbours.
  */
 export function pickRelatedArticles(
   current: Article,
@@ -75,19 +102,26 @@ export function pickRelatedArticles(
   );
   if (filtered.length === 0) return [];
 
-  const t0 = articleTimestamp(current);
-  if (t0 === 0) {
-    return filtered.slice(0, take);
-  }
+  const currentText = `${current.title || ''} ${current.description || ''}`;
 
   return [...filtered]
     .sort((a, b) => {
-      const da = Math.abs(articleTimestamp(a) - t0);
-      const db = Math.abs(articleTimestamp(b) - t0);
-      if (da !== db) return da - db;
-      const oa = titleKeywordOverlap(current.title, a.title);
-      const ob = titleKeywordOverlap(current.title, b.title);
+      const oa = topicKeywordOverlap(
+        currentText,
+        `${a.title || ''} ${a.description || ''}`,
+      );
+      const ob = topicKeywordOverlap(
+        currentText,
+        `${b.title || ''} ${b.description || ''}`,
+      );
       if (oa !== ob) return ob - oa;
+
+      const catA =
+        current.category && a.category === current.category ? 1 : 0;
+      const catB =
+        current.category && b.category === current.category ? 1 : 0;
+      if (catA !== catB) return catB - catA;
+
       return articleTimestamp(b) - articleTimestamp(a);
     })
     .slice(0, take);

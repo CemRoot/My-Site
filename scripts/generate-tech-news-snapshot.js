@@ -15,75 +15,41 @@ const LIST_COLUMNS =
   'id,title,description,original_title,image_url,date,category,slug,views,created_at,importance_score';
 
 async function fetchRankedSnapshotArticles() {
-  const { data: rpcPayload, error: rpcError } = await supabase.rpc(
-    'list_tech_news_ranked',
-    {
-      p_category: null,
-      p_limit: LIMIT,
-      p_offset: 0,
-    },
-  );
-
-  if (!rpcError && rpcPayload && typeof rpcPayload === 'object') {
-    return {
-      articles: Array.isArray(rpcPayload.articles) ? rpcPayload.articles : [],
-      totalArticles: Number(rpcPayload.total) || 0,
-    };
-  }
-
-  if (rpcError) {
-    console.warn('list_tech_news_ranked unavailable for snapshot, edge-sorting:', rpcError.message);
-  }
-
-  const batchSize = 1000;
+  // Prefer a direct date-ordered page so the snapshot stays chronological even
+  // before list_tech_news_ranked migration is applied in Supabase.
   const columnSets = [
     LIST_COLUMNS,
     'id,title,description,original_title,image_url,date,category,slug,views,created_at',
   ];
-  const all = [];
-  let totalArticles = 0;
+
   let lastError = null;
 
   for (const columns of columnSets) {
-    all.length = 0;
-    totalArticles = 0;
-    let from = 0;
-    let ok = true;
+    const { data, error, count } = await supabase
+      .from('tech_news_articles')
+      .select(columns, { count: 'exact' })
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .range(0, LIMIT - 1);
 
-    while (true) {
-      const { data, error, count } = await supabase
-        .from('tech_news_articles')
-        .select(columns, { count: from === 0 ? 'exact' : undefined })
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false })
-        .range(from, from + batchSize - 1);
-
-      if (error) {
-        lastError = error;
-        ok = false;
-        break;
-      }
-      if (from === 0) totalArticles = count || 0;
-      if (data?.length) all.push(...data);
-      if (!data || data.length < batchSize) break;
-      from += batchSize;
+    if (error) {
+      lastError = error;
+      continue;
     }
 
-    if (ok) {
-      if (!columns.includes('importance_score')) {
-        console.warn('⚠️  importance_score missing — snapshot ranks with default 50 until migration is applied');
-      }
-      break;
+    if (!columns.includes('importance_score')) {
+      console.warn('⚠️  importance_score missing — snapshot continues with date sort only');
     }
+
+    const ranked = sortArticlesByRank(data || []);
+    return {
+      articles: ranked.slice(0, LIMIT),
+      totalArticles: count || ranked.length,
+    };
   }
 
-  if (all.length === 0 && lastError) throw lastError;
-
-  const ranked = sortArticlesByRank(all);
-  return {
-    articles: ranked.slice(0, LIMIT),
-    totalArticles: totalArticles || ranked.length,
-  };
+  if (lastError) throw lastError;
+  return { articles: [], totalArticles: 0 };
 }
 
 function emptySnapshot(reason) {

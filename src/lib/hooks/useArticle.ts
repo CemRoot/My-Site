@@ -3,8 +3,8 @@ import { TECH_NEWS_API_BASE } from '../constants/urls';
 import { pickRelatedArticles } from '../utils/articleHelpers';
 import type { Article } from '../types';
 
-/** Small pool is enough for pickRelatedArticles scoring of 3 cards */
-const RELATED_POOL_LIMIT = 24;
+/** Pool large enough for topic-overlap scoring of RELATED cards */
+const RELATED_POOL_LIMIT = 48;
 const RELATED_DISPLAY_COUNT = 3;
 
 const FETCH_CACHE: RequestCache = 'default';

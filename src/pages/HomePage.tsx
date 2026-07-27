@@ -51,7 +51,7 @@ function HomePage() {
         'Live systems overview (news scraper, agent layer, chatbot, deploy pipeline)',
         'Selected work — six real projects with links',
         'Signal — latest tech news from the automated pipeline',
-        'Experience timeline and technology stack',
+        'Experience / Education timeline toggle and technology stack',
         'Fixed-scope service packages',
         'Direct contact channels (email, LinkedIn, GitHub, WhatsApp)',
       ],

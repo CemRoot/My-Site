@@ -12,49 +12,56 @@ const LIST_COLUMNS =
   'id,title,description,original_title,image_url,date,category,slug,views,created_at,importance_score';
 
 /**
- * Preferred path: Postgres RPC with composite rank + correct pagination.
- * Fallback: fetch list rows in batches, sort in edge, then slice.
+ * Date-DESC list with correct pagination.
+ * Prefers a direct ordered range query (works before/after RPC migration).
+ * Falls back to full fetch + in-memory sort if the ordered query fails.
  */
 async function fetchRankedList(supabase, { category, page, limit }) {
   const offset = (page - 1) * limit;
   const rpcCategory =
     category && category !== 'all' ? category : null;
 
-  try {
-    const { data: rpcPayload, error: rpcError } = await supabase.rpc(
-      'list_tech_news_ranked',
-      {
-        p_category: rpcCategory,
-        p_limit: limit,
-        p_offset: offset,
-      },
-    );
-
-    if (!rpcError && rpcPayload && typeof rpcPayload === 'object') {
-      const articles = Array.isArray(rpcPayload.articles)
-        ? rpcPayload.articles
-        : [];
-      const totalArticles = Number(rpcPayload.total) || 0;
-      return { articles, totalArticles, source: 'rpc' };
-    }
-
-    if (rpcError) {
-      console.warn('list_tech_news_ranked RPC unavailable, using edge sort:', rpcError.message);
-    }
-  } catch (err) {
-    console.warn('list_tech_news_ranked RPC failed, using edge sort:', err?.message || err);
-  }
-
-  const batchSize = 1000;
-  const all = [];
-  // Prefer ranked columns; fall back if migration not applied yet.
   const columnSets = [
     LIST_COLUMNS,
     'id,title,description,original_title,image_url,date,category,slug,views,created_at',
   ];
 
-  let usedColumns = columnSets[0];
   let firstError = null;
+
+  for (const columns of columnSets) {
+    let query = supabase
+      .from('tech_news_articles')
+      .select(columns, { count: 'exact' })
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (rpcCategory) {
+      query = query.eq('category', rpcCategory);
+    }
+
+    const { data, error, count } = await query;
+    if (error) {
+      firstError = error;
+      continue;
+    }
+
+    if (!columns.includes('importance_score')) {
+      console.warn('importance_score column missing — continuing with date sort only');
+    }
+
+    const ranked = sortArticlesByRank(data || []);
+    return {
+      articles: ranked,
+      totalArticles: count || ranked.length,
+      source: 'date-order',
+    };
+  }
+
+  // Fallback: batch-fetch all rows, sort in edge, then slice
+  const batchSize = 1000;
+  const all = [];
+  let usedColumns = columnSets[0];
 
   for (const columns of columnSets) {
     usedColumns = columns;
@@ -97,7 +104,7 @@ async function fetchRankedList(supabase, { category, page, limit }) {
   }
 
   if (!usedColumns.includes('importance_score')) {
-    console.warn('importance_score column missing — ranking with default score 50');
+    console.warn('importance_score column missing — continuing with date sort only');
   }
 
   const ranked = sortArticlesByRank(all);

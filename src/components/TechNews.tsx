@@ -1,5 +1,5 @@
 /**
- * Tech News index — LEAD/NEXT carousel (top-5 ranked) + hairline index rows.
+ * Tech News index — LEAD/NEXT carousel (newest-first) + hairline index rows.
  * Data layer: useTechNews + list-scroll restore (unchanged).
  */
 
@@ -10,6 +10,8 @@ import {
   useRef,
   useCallback,
   useMemo,
+  type PointerEvent as ReactPointerEvent,
+  type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { Link } from 'react-router-dom';
 import { usePageContext } from '../lib/context/PageContext';
@@ -43,6 +45,7 @@ const PAGE =
 const MONO = 'font-mono text-[11px] font-medium tracking-[0.14em]';
 const FEATURED_COUNT = 5;
 const ROTATE_MS = 8000;
+const SWIPE_THRESHOLD_PX = 48;
 
 function articleMeta(article: Article): string {
   const parts = [formatDate(article.date).toUpperCase()];
@@ -83,6 +86,19 @@ function TechNews() {
   const prefersReducedMotion = usePrefersReducedMotion();
   const [leadIndex, setLeadIndex] = useState(0);
   const [carouselPaused, setCarouselPaused] = useState(false);
+  const swipeRef = useRef<{
+    pointerId: number | null;
+    startX: number;
+    startY: number;
+    locked: 'horizontal' | 'vertical' | null;
+    swiped: boolean;
+  }>({
+    pointerId: null,
+    startX: 0,
+    startY: 0,
+    locked: null,
+    swiped: false,
+  });
 
   const restorationTargetPage = useMemo(() => {
     if (!isTechNewsRestoreNavActive()) return null;
@@ -234,6 +250,58 @@ function TechNews() {
     [featuredLen],
   );
 
+  const onLeadPointerDown = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (featuredLen <= 1 || e.pointerType === 'mouse') return;
+      const s = swipeRef.current;
+      s.pointerId = e.pointerId;
+      s.startX = e.clientX;
+      s.startY = e.clientY;
+      s.locked = null;
+      s.swiped = false;
+      setCarouselPaused(true);
+    },
+    [featuredLen],
+  );
+
+  const onLeadPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    const s = swipeRef.current;
+    if (s.pointerId !== e.pointerId) return;
+    const dx = e.clientX - s.startX;
+    const dy = e.clientY - s.startY;
+    if (!s.locked) {
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+      s.locked = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
+    }
+    if (s.locked === 'horizontal') {
+      e.preventDefault();
+    }
+  }, []);
+
+  const finishLeadSwipe = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      const s = swipeRef.current;
+      if (s.pointerId !== e.pointerId) return;
+      const dx = e.clientX - s.startX;
+      if (s.locked === 'horizontal' && Math.abs(dx) >= SWIPE_THRESHOLD_PX) {
+        s.swiped = true;
+        stepLead(dx < 0 ? 1 : -1);
+      }
+      s.pointerId = null;
+      s.locked = null;
+      setCarouselPaused(false);
+    },
+    [stepLead],
+  );
+
+  const onLeadClickCapture = useCallback((e: ReactMouseEvent<HTMLDivElement>) => {
+    if (swipeRef.current.swiped) {
+      e.preventDefault();
+      e.stopPropagation();
+      swipeRef.current.swiped = false;
+    }
+  }, []);
+
   useEffect(() => {
     if (prefersReducedMotion || carouselPaused || featuredLen <= 1) return;
     const id = window.setInterval(() => {
@@ -365,7 +433,7 @@ function TechNews() {
           {!error && lead && (
             <>
               <div
-                className="mt-10 border-b border-hairline pb-12"
+                className="mt-10 touch-pan-y border-b border-hairline pb-12"
                 onMouseEnter={() => setCarouselPaused(true)}
                 onMouseLeave={() => setCarouselPaused(false)}
                 onFocusCapture={() => setCarouselPaused(true)}
@@ -374,6 +442,11 @@ function TechNews() {
                     setCarouselPaused(false);
                   }
                 }}
+                onPointerDown={onLeadPointerDown}
+                onPointerMove={onLeadPointerMove}
+                onPointerUp={finishLeadSwipe}
+                onPointerCancel={finishLeadSwipe}
+                onClickCapture={onLeadClickCapture}
               >
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                   <p className={`${MONO} text-ink-42`} aria-live="polite">

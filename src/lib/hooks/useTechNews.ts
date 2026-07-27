@@ -40,6 +40,15 @@ function mergePaginatedArticles(
   return mergedArticles;
 }
 
+/** Newest publish date first (createdAt tie-break) — keeps UI chronological even if API lag. */
+function sortArticlesByDateDesc(articles: NewsDatabase['articles']) {
+  return [...articles].sort((a, b) => {
+    const dateCmp = String(b.date || '').localeCompare(String(a.date || ''));
+    if (dateCmp !== 0) return dateCmp;
+    return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+  });
+}
+
 async function loadBuildSnapshot(): Promise<NewsDatabase | null> {
   try {
     const response = await fetch(BUILD_SNAPSHOT_URL, { cache: 'default' });
@@ -82,7 +91,7 @@ export function useTechNews(
             version: '2.0.0',
             lastUpdated: data._cache?.generatedAt || new Date().toISOString(),
             totalArticles: data.pagination?.totalArticles ?? data.articles.length,
-            articles: newArticles,
+            articles: sortArticlesByDateDesc(newArticles),
           },
         };
       });
