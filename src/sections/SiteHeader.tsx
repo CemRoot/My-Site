@@ -8,10 +8,11 @@ import {
   useEffect,
   useRef,
   useState,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
   type TransitionEvent,
 } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { NAV_ITEMS, type NavItem } from '../lib/constants/navigation';
 import { useAvailability } from '../lib/hooks/useAvailability';
 import type { AvailabilityStatus } from '../lib/utils/availability';
@@ -120,7 +121,7 @@ function HeaderNavLink({
   label: string;
   isHome: boolean;
   pathname: string;
-  onNavigate?: () => void;
+  onNavigate?: (event: ReactMouseEvent<HTMLAnchorElement>) => void;
   className?: string;
 }) {
   const active =
@@ -236,6 +237,7 @@ export function SiteHeader() {
   const { lang, t, toggle } = useI18n();
   const availability = useAvailability();
   const location = useLocation();
+  const navigate = useNavigate();
   const isHome = location.pathname === '/';
   const headerRef = useRef<HTMLElement>(null);
   /**
@@ -253,6 +255,31 @@ export function SiteHeader() {
   const [panelRevealed, setPanelRevealed] = useState(false);
 
   const closeMenu = () => setMenuOpen(false);
+  const handleMobileNavigate =
+    (item: NavItem) => (event: ReactMouseEvent<HTMLAnchorElement>) => {
+      if (!compact) return;
+
+      if (item.isHash) {
+        event.preventDefault();
+        closeMenu();
+
+        if (isHome) {
+          const target = document.querySelector(item.href);
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (window.location.hash !== item.href) {
+              window.history.pushState(null, '', item.href);
+            }
+            return;
+          }
+        }
+
+        void navigate(`/${item.href}`);
+        return;
+      }
+
+      closeMenu();
+    };
 
   // Legacy pages size sticky offsets from --nav-height; keep it accurate.
   useEffect(() => {
@@ -317,7 +344,7 @@ export function SiteHeader() {
     return () => window.clearTimeout(timer);
   }, [menuOpen, panelMounted, panelRevealed]);
 
-  // Escape + hard scroll lock (iOS-safe) while the mobile panel is mounted.
+  // Escape + scroll lock while the mobile panel is mounted.
   useEffect(() => {
     if (!panelMounted) return;
 
@@ -325,39 +352,26 @@ export function SiteHeader() {
       if (event.key === 'Escape') setMenuOpen(false);
     };
 
-    const scrollY = window.scrollY;
     const html = document.documentElement;
     const { body } = document;
+    const scrollbarWidth = window.innerWidth - html.clientWidth;
     const previous = {
       htmlOverflow: html.style.overflow,
       bodyOverflow: body.style.overflow,
-      bodyPosition: body.style.position,
-      bodyTop: body.style.top,
-      bodyLeft: body.style.left,
-      bodyRight: body.style.right,
-      bodyWidth: body.style.width,
+      bodyPaddingRight: body.style.paddingRight,
     };
 
     html.classList.add('mobile-nav-open');
     html.style.overflow = 'hidden';
     body.style.overflow = 'hidden';
-    body.style.position = 'fixed';
-    body.style.top = `-${scrollY}px`;
-    body.style.left = '0';
-    body.style.right = '0';
-    body.style.width = '100%';
+    if (scrollbarWidth > 0) body.style.paddingRight = `${scrollbarWidth}px`;
     window.addEventListener('keydown', onKeyDown);
 
     return () => {
       html.classList.remove('mobile-nav-open');
       html.style.overflow = previous.htmlOverflow;
       body.style.overflow = previous.bodyOverflow;
-      body.style.position = previous.bodyPosition;
-      body.style.top = previous.bodyTop;
-      body.style.left = previous.bodyLeft;
-      body.style.right = previous.bodyRight;
-      body.style.width = previous.bodyWidth;
-      window.scrollTo(0, scrollY);
+      body.style.paddingRight = previous.bodyPaddingRight;
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [panelMounted]);
@@ -525,7 +539,7 @@ export function SiteHeader() {
                     label={t(item.label)}
                     isHome={isHome}
                     pathname={location.pathname}
-                    onNavigate={closeMenu}
+                    onNavigate={handleMobileNavigate(item)}
                     className={[
                       'font-mono text-[15px] font-medium tracking-[0.14em] transition-colors',
                       item.accent
