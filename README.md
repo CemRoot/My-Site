@@ -464,17 +464,18 @@ The pipeline in `scripts/lib/scraper/ScrapeOrchestrator.js` consists of **6 agen
 
 | Role | Model | Provider |
 |------|-------|----------|
-| Translation (primary) | `llama-3.1-8b-instant` | Groq |
-| Translation (fallback) | `openai/gpt-oss-20b` | Groq |
-| Translation (last resort) | `llama-3.3-70b-versatile` | Groq |
-| List extraction / parser | `llama-3.1-8b-instant` | Groq |
-| Enhancement checks | `llama-3.1-8b-instant` | Groq |
+| Translation (primary) | `openai/gpt-oss-20b` | Groq |
+| Translation (fallback / last resort) | `llama-3.3-70b-versatile` | Groq |
+| List extraction / parser | `openai/gpt-oss-20b` | Groq |
+| Enhancement checks | `openai/gpt-oss-20b` | Groq |
 | Optional (content translation) | `gemini-3-flash-preview:cloud` | Ollama cloud |
 
-> **Model tiering rationale:** the lightweight, high-throughput `llama-3.1-8b-instant`
+> **Model tiering rationale:** the lightweight, high-throughput `openai/gpt-oss-20b`
 > is the primary translation model so a full run does not exhaust the daily token
 > budget (TPD) on the heavy 70B model. `llama-3.3-70b-versatile` is kept only as a
-> last-resort quality fallback. Both Groq clients are configured with `maxRetries`
+> last-resort quality fallback. `llama-3.1-8b-instant` was the previous primary
+> until Groq decommissioned it on 2026-08-16; `openai/gpt-oss-20b` is Groq's
+> recommended replacement. Both Groq clients are configured with `maxRetries`
 > and `timeout`, so transient connection drops (e.g. "Premature close") are retried
 > automatically before the model cascade falls back.
 

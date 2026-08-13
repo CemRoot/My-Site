@@ -80,13 +80,12 @@ discover candidates
 ## Translation Pipeline
 
 ```
-article.title       → Groq llama-3.1-8b-instant (fastMode, shortText, NO embed rules)
-article.description → Groq llama-3.1-8b-instant (fastMode, shortText, NO embed rules)
+article.title       → Groq openai/gpt-oss-20b (fastMode, shortText, NO embed rules)
+article.description → Groq openai/gpt-oss-20b (fastMode, shortText, NO embed rules)
 article.content     → Ollama gemini-3-flash-preview:cloud (primary)
-                     → Groq llama-3.3-70b-versatile (fallback)
-                     → Groq openai/gpt-oss-20b (fallback)
-                     → Groq llama-3.1-8b-instant (last resort)
-TL;DR enhancement   → Groq llama-3.1-8b-instant
+                     → Groq openai/gpt-oss-20b (primary)
+                     → Groq llama-3.3-70b-versatile (last resort)
+TL;DR enhancement   → Groq openai/gpt-oss-20b
 ```
 
 ### translateText() Signature
@@ -147,11 +146,13 @@ Frontend React components render these tokens as embedded players.
 
 ## AI Models Config (scripts/lib/scraper/config.js)
 ```js
-GROQ_PRIMARY_MODEL = 'llama-3.3-70b-versatile'   // content fallback
-GROQ_FALLBACK_MODEL = 'openai/gpt-oss-20b'
-GROQ_LAST_RESORT_MODEL = 'llama-3.1-8b-instant'
-GROQ_FAST_MODEL = 'llama-3.1-8b-instant'          // title/desc
-GROQ_ENHANCEMENT_MODEL = 'llama-3.1-8b-instant'   // TL;DR
+GROQ_PRIMARY_MODEL = 'openai/gpt-oss-20b'         // content primary
+GROQ_FALLBACK_MODEL = 'llama-3.3-70b-versatile'
+GROQ_LAST_RESORT_MODEL = 'llama-3.3-70b-versatile'
+GROQ_FAST_MODEL = 'openai/gpt-oss-20b'            // title/desc
+GROQ_ENHANCEMENT_MODEL = 'openai/gpt-oss-20b'     // TL;DR
+GROQ_PARSER_MODEL = 'openai/gpt-oss-20b'          // article list extraction
+// llama-3.1-8b-instant decommissioned 2026-08-16 — do not reintroduce
 OLLAMA_PRIMARY_MODEL = 'deepseek-v4-pro:cloud'  // content primary
 ```
 
