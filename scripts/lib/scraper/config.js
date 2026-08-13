@@ -42,14 +42,18 @@ export const SCRAPER_CONFIG = {
 };
 
 // Model tiering intentionally starts with the lightweight, high-throughput
-// llama-3.1-8b-instant so a full run does not exhaust the daily token budget
+// openai/gpt-oss-20b so a full run does not exhaust the daily token budget
 // (TPD) on the heavy 70B model. The 70B model is kept only as a last resort for
 // quality. This matches the tiering documented in scrape-tech-news.yml.
-export const GROQ_PRIMARY_MODEL = 'llama-3.1-8b-instant';
-export const GROQ_FALLBACK_MODEL = 'openai/gpt-oss-20b';
+// NOTE: llama-3.1-8b-instant was decommissioned by Groq on 2026-08-16; every
+// tier that used it now points at openai/gpt-oss-20b, Groq's recommended
+// replacement. The cascade in translator.js de-duplicates repeated entries.
+export const GROQ_PRIMARY_MODEL = 'openai/gpt-oss-20b';
+export const GROQ_FALLBACK_MODEL = 'llama-3.3-70b-versatile';
 export const GROQ_LAST_RESORT_MODEL = 'llama-3.3-70b-versatile';
-export const GROQ_ENHANCEMENT_MODEL = 'llama-3.1-8b-instant';
-export const GROQ_FAST_MODEL = 'llama-3.1-8b-instant';
+export const GROQ_ENHANCEMENT_MODEL = 'openai/gpt-oss-20b';
+export const GROQ_FAST_MODEL = 'openai/gpt-oss-20b';
+export const GROQ_PARSER_MODEL = 'openai/gpt-oss-20b';
 
 export const OLLAMA_PRIMARY_MODEL = 'deepseek-v4-pro:cloud';
 export const OLLAMA_API_KEY = env.OLLAMA_API_KEY;

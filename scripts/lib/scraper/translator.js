@@ -309,9 +309,12 @@ export async function translateText(text, useOllama = false, fastMode = false, s
   //   }
   // }
 
-  const models = fastMode
+  // De-duplicate: several tiers can resolve to the same model id (e.g. after the
+  // llama-3.1-8b-instant decommission), and retrying an identical model adds
+  // latency without adding a real fallback.
+  const models = [...new Set(fastMode
     ? [GROQ_FAST_MODEL, GROQ_PRIMARY_MODEL, GROQ_LAST_RESORT_MODEL]
-    : [GROQ_PRIMARY_MODEL, GROQ_FALLBACK_MODEL, GROQ_LAST_RESORT_MODEL];
+    : [GROQ_PRIMARY_MODEL, GROQ_FALLBACK_MODEL, GROQ_LAST_RESORT_MODEL])];
 
   for (let i = 0; i < models.length && !translatedContent; i++) {
     const model = models[i];

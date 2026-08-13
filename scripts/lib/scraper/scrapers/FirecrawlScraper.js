@@ -5,7 +5,7 @@
 
 import Groq from 'groq-sdk';
 import { BaseScraper } from './BaseScraper.js';
-import { SCRAPER_CONFIG } from '../config.js';
+import { SCRAPER_CONFIG, GROQ_PARSER_MODEL } from '../config.js';
 import { htmlToTokens } from '../../../embeds/extractEmbeds.js';
 import { extractAllEmbedsFromMarkdown } from '../../../embeds/extractMarkdownEmbeds.js';
 import {
@@ -343,7 +343,7 @@ export class FirecrawlScraper extends BaseScraper {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         const completion = await this.groqParser.chat.completions.create({
-          model: 'llama-3.1-8b-instant',
+          model: GROQ_PARSER_MODEL,
           messages: [
             {
               role: 'system',
