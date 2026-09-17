@@ -5,7 +5,7 @@ name: LinkedIn Groups Daily Digest
 # 
 # This workflow:
 # 1. Fetches recent tech news articles from Supabase
-# 2. Uses AI (Groq/Llama) to score and select relevant articles
+# 2. Uses AI (Groq gpt-oss) to score and select relevant articles
 # 3. Generates group-optimized content with hooks and discussion questions
 # 4. Sends formatted content to Telegram for manual posting
 
@@ -78,7 +78,7 @@ jobs:
           echo "Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
           echo "Mode: ${{ github.event.inputs.mode || 'daily' }}"
           echo "Group: ${{ github.event.inputs.group_id || 'auto (priority 1-2)' }}"
-          echo "AI Engine: Groq (Llama 3.3 70B)"
+          echo "AI Engine: Groq (openai/gpt-oss-120b)"
           echo "=================================================="
           
           # Run the digest generator

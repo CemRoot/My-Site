@@ -105,7 +105,7 @@ async function checkGroq() {
         'Authorization': `Bearer ${env.GROQ_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         messages: [{ role: 'user', content: 'test' }],
         max_tokens: 5
       })

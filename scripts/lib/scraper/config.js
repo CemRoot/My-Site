@@ -43,14 +43,15 @@ export const SCRAPER_CONFIG = {
 
 // Model tiering intentionally starts with the lightweight, high-throughput
 // openai/gpt-oss-20b so a full run does not exhaust the daily token budget
-// (TPD) on the heavy 70B model. The 70B model is kept only as a last resort for
+// (TPD) on the heavier fallback model, which is kept only as a last resort for
 // quality. This matches the tiering documented in scrape-tech-news.yml.
-// NOTE: llama-3.1-8b-instant was decommissioned by Groq on 2026-08-16; every
-// tier that used it now points at openai/gpt-oss-20b, Groq's recommended
-// replacement. The cascade in translator.js de-duplicates repeated entries.
+// NOTE: Groq decommissioned both llama-3.1-8b-instant and llama-3.3-70b-versatile
+// on 2026-08-16 (calls now return 404 "model does not exist"). The light tiers
+// point at openai/gpt-oss-20b and the heavy tiers at openai/gpt-oss-120b, Groq's
+// recommended replacements. The cascade in translator.js de-duplicates repeats.
 export const GROQ_PRIMARY_MODEL = 'openai/gpt-oss-20b';
-export const GROQ_FALLBACK_MODEL = 'llama-3.3-70b-versatile';
-export const GROQ_LAST_RESORT_MODEL = 'llama-3.3-70b-versatile';
+export const GROQ_FALLBACK_MODEL = 'openai/gpt-oss-120b';
+export const GROQ_LAST_RESORT_MODEL = 'openai/gpt-oss-120b';
 export const GROQ_ENHANCEMENT_MODEL = 'openai/gpt-oss-20b';
 export const GROQ_FAST_MODEL = 'openai/gpt-oss-20b';
 export const GROQ_PARSER_MODEL = 'openai/gpt-oss-20b';

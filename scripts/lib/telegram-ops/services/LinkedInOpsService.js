@@ -155,7 +155,7 @@ Manage automated social posts:
     try {
       await this.sendTelegramMessage(
         '🔵 <b>LinkedIn Groups Digest Oluşturuluyor...</b>\n\n' +
-        '🤖 AI Model: Groq (Llama 3.3 70B)\n' +
+        '🤖 AI Model: Groq (openai/gpt-oss-120b)\n' +
         '📊 Mod: Daily Digest\n\n' +
         '⏳ GitHub Actions workflow tetikleniyor...'
       );

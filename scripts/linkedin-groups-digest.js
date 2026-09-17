@@ -2,7 +2,7 @@
  * LinkedIn Groups Daily Digest Generator
  * 
  * Generates daily tech news digests optimized for LinkedIn Groups.
- * Uses Groq API (Llama 3.3 70B) for AI-powered content generation.
+ * Uses Groq API (openai/gpt-oss-120b) for AI-powered content generation.
  * 
  * Features:
  * - Fetches recent articles from Supabase
@@ -347,7 +347,7 @@ Output JSON:
 
   try {
     const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'openai/gpt-oss-120b',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }

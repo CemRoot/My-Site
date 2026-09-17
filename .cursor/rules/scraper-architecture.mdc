@@ -84,7 +84,7 @@ article.title       → Groq openai/gpt-oss-20b (fastMode, shortText, NO embed r
 article.description → Groq openai/gpt-oss-20b (fastMode, shortText, NO embed rules)
 article.content     → Ollama gemini-3-flash-preview:cloud (primary)
                      → Groq openai/gpt-oss-20b (primary)
-                     → Groq llama-3.3-70b-versatile (last resort)
+                     → Groq openai/gpt-oss-120b (last resort)
 TL;DR enhancement   → Groq openai/gpt-oss-20b
 ```
 
@@ -147,8 +147,8 @@ Frontend React components render these tokens as embedded players.
 ## AI Models Config (scripts/lib/scraper/config.js)
 ```js
 GROQ_PRIMARY_MODEL = 'openai/gpt-oss-20b'         // content primary
-GROQ_FALLBACK_MODEL = 'llama-3.3-70b-versatile'
-GROQ_LAST_RESORT_MODEL = 'llama-3.3-70b-versatile'
+GROQ_FALLBACK_MODEL = 'openai/gpt-oss-120b'
+GROQ_LAST_RESORT_MODEL = 'openai/gpt-oss-120b'
 GROQ_FAST_MODEL = 'openai/gpt-oss-20b'            // title/desc
 GROQ_ENHANCEMENT_MODEL = 'openai/gpt-oss-20b'     // TL;DR
 GROQ_PARSER_MODEL = 'openai/gpt-oss-20b'          // article list extraction

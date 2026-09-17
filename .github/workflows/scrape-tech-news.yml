@@ -136,9 +136,10 @@ jobs:
           echo ""
           echo "🤖 AI Models (ALL PRODUCTION - STABLE):"
           echo "   Primary: openai/gpt-oss-20b (1000 T/s, 250K TPM) ⚡"
-          echo "   Fallback / Last Resort: llama-3.3-70b-versatile (280 T/s, 300K TPM)"
+          echo "   Fallback / Last Resort: openai/gpt-oss-120b (500 T/s, 250K TPM)"
           echo "   Parser: openai/gpt-oss-20b (article list extraction)"
-          echo "   ℹ️ llama-3.1-8b-instant decommissioned 2026-08-16 → replaced by openai/gpt-oss-20b"
+          echo "   ℹ️ llama-3.1-8b-instant + llama-3.3-70b-versatile decommissioned 2026-08-16"
+          echo "      → replaced by openai/gpt-oss-20b (light) and openai/gpt-oss-120b (heavy)"
           echo "   ⚠️ Preview models (llama-4, qwen3) NOT used for stability"
           echo ""
           echo "⚡ Rate Limiting:"
@@ -179,6 +180,7 @@ jobs:
       # Zamanlanmış koşularda tam scrape atlanınca da Telegram'a kısa özet gider (aksi halde "bildirim yok" sanılıyordu).
       - name: 📱 Telegram — preflight atladı (tam scrape yok)
         if: success() && steps.gate.outputs.proceed != 'true' && github.event_name == 'schedule'
+        continue-on-error: true
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -229,8 +231,11 @@ jobs:
           echo ""
           echo "═══════════════════════════════════════════════════════════"
       
+      # continue-on-error: a Telegram outage (api.telegram.org ETIMEDOUT) must not
+      # turn a successful scrape into a failed run — the articles are already in DB.
       - name: 📱 Send success notification to Telegram
         if: success() && steps.gate.outputs.proceed == 'true'
+        continue-on-error: true
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

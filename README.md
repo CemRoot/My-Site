@@ -105,7 +105,7 @@ what the "Systems" section on the home page describes.
 <td width="50%">
 
 #### Portfolio Chatbot
-- **Groq AI (Llama 3.3 70B)** primary backend
+- **Groq AI (openai/gpt-oss-120b)** primary backend
 - **n8n fallback** for high availability
 - Chat history persistence (Supabase)
 - Session management
@@ -240,7 +240,7 @@ is configured in CSS.
 | Service | Purpose | Notes |
 |---------|---------|-------|
 | **Supabase** | PostgreSQL Database | Free/Pro tier |
-| **Groq AI** | Translation & Chat | Chat: Llama 3.3 70B · Translation: Llama 3.1 8B (70B fallback) |
+| **Groq AI** | Translation & Chat | Chat: `openai/gpt-oss-120b` · Translation: `openai/gpt-oss-20b` (`gpt-oss-120b` fallback) |
 | **Google Gemini** | Content Generation | 2.0 Flash |
 | **Firecrawl** | Web Scraping | 500/mo free |
 | **n8n** | Workflow Automation | Self-hosted/Cloud |
@@ -465,17 +465,18 @@ The pipeline in `scripts/lib/scraper/ScrapeOrchestrator.js` consists of **6 agen
 | Role | Model | Provider |
 |------|-------|----------|
 | Translation (primary) | `openai/gpt-oss-20b` | Groq |
-| Translation (fallback / last resort) | `llama-3.3-70b-versatile` | Groq |
+| Translation (fallback / last resort) | `openai/gpt-oss-120b` | Groq |
 | List extraction / parser | `openai/gpt-oss-20b` | Groq |
 | Enhancement checks | `openai/gpt-oss-20b` | Groq |
 | Optional (content translation) | `gemini-3-flash-preview:cloud` | Ollama cloud |
 
 > **Model tiering rationale:** the lightweight, high-throughput `openai/gpt-oss-20b`
 > is the primary translation model so a full run does not exhaust the daily token
-> budget (TPD) on the heavy 70B model. `llama-3.3-70b-versatile` is kept only as a
-> last-resort quality fallback. `llama-3.1-8b-instant` was the previous primary
-> until Groq decommissioned it on 2026-08-16; `openai/gpt-oss-20b` is Groq's
-> recommended replacement. Both Groq clients are configured with `maxRetries`
+> budget (TPD) on the heavier model. `openai/gpt-oss-120b` is kept only as a
+> last-resort quality fallback. Groq decommissioned `llama-3.1-8b-instant` and
+> `llama-3.3-70b-versatile` on 2026-08-16 (calls return 404 "model does not
+> exist"); `openai/gpt-oss-20b` and `openai/gpt-oss-120b` are Groq's recommended
+> replacements. Both Groq clients are configured with `maxRetries`
 > and `timeout`, so transient connection drops (e.g. "Premature close") are retried
 > automatically before the model cascade falls back.
 

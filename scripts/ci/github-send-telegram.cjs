@@ -8,6 +8,10 @@
  *   TELEGRAM_CHAT_ID
  *   TELEGRAM_MESSAGE_BODY — full message text (HTML parse_mode)
  *   TELEGRAM_WEB_PAGE_PREVIEW — optional "true" to allow link previews (default: false)
+ *
+ * Transient failures (network errors, 5xx, 429) are retried with exponential
+ * backoff: api.telegram.org occasionally times out from GitHub runners and a
+ * single ETIMEDOUT used to mark an otherwise successful workflow as failed.
  */
 
 'use strict';
@@ -26,7 +30,12 @@ if (!text) {
   process.exit(1);
 }
 
-async function main() {
+const MAX_ATTEMPTS = 4;
+const RETRY_BASE_MS = 2000;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function sendOnce() {
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -36,6 +45,7 @@ async function main() {
       parse_mode: 'HTML',
       disable_web_page_preview: !allowPreview,
     }),
+    signal: AbortSignal.timeout(20000),
   });
 
   let data = {};
@@ -46,16 +56,46 @@ async function main() {
   }
 
   if (!res.ok || !data.ok) {
-    console.error('github-send-telegram: Telegram API failed', {
-      httpStatus: res.status,
-      description: data.description,
-      error_code: data.error_code,
-      body: data,
-    });
-    process.exit(1);
+    const err = new Error(
+      `Telegram API failed (HTTP ${res.status}): ${data.description || 'no description'}`
+    );
+    // 429 and 5xx are worth another attempt; 4xx (bad token, bad HTML) is not.
+    err.retryable = res.status === 429 || res.status >= 500;
+    err.retryAfterMs = data.parameters?.retry_after
+      ? data.parameters.retry_after * 1000
+      : null;
+    throw err;
   }
 
-  console.log('github-send-telegram: ok, message_id=', data.result?.message_id);
+  return data;
+}
+
+async function main() {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const data = await sendOnce();
+      console.log('github-send-telegram: ok, message_id=', data.result?.message_id);
+      return;
+    } catch (err) {
+      // fetch/undici network errors have no `retryable` flag — treat them as transient.
+      const retryable = err.retryable !== false;
+      const isLast = attempt === MAX_ATTEMPTS;
+
+      console.error(
+        `github-send-telegram: attempt ${attempt}/${MAX_ATTEMPTS} failed:`,
+        err.message || err
+      );
+
+      if (!retryable || isLast) {
+        if (err.cause) console.error('github-send-telegram: cause:', err.cause);
+        process.exit(1);
+      }
+
+      const waitMs = err.retryAfterMs ?? RETRY_BASE_MS * 2 ** (attempt - 1);
+      console.error(`github-send-telegram: retrying in ${waitMs}ms...`);
+      await sleep(waitMs);
+    }
+  }
 }
 
 main().catch((err) => {
