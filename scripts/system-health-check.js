@@ -8,6 +8,8 @@
 import { supabase } from './lib/supabaseAdmin.js';
 import { env } from './lib/config.js';
 import { sendTelegramMessage } from './lib/telegram.js';
+import { redactSecrets } from './lib/redact.js';
+import { GROQ_ENHANCEMENT_MODEL } from '../lib/groqModels.js';
 
 /**
  * Check Supabase connection and get stats
@@ -46,7 +48,7 @@ async function checkSupabase() {
     console.error('❌ Supabase: FAILED');
     return {
       status: 'unhealthy',
-      error: error.message
+      error: redactSecrets(error.message)
     };
   }
 }
@@ -85,7 +87,7 @@ async function checkFirecrawl() {
     console.error('❌ Firecrawl API: FAILED');
     return {
       status: 'unhealthy',
-      error: error.message
+      error: redactSecrets(error.message)
     };
   }
 }
@@ -105,7 +107,7 @@ async function checkGroq() {
         'Authorization': `Bearer ${env.GROQ_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_ENHANCEMENT_MODEL,
         messages: [{ role: 'user', content: 'test' }],
         max_tokens: 5
       })
@@ -114,7 +116,17 @@ async function checkGroq() {
     if (response.status === 401 || response.status === 403) {
       throw new Error('API key invalid or unauthorized');
     }
-    
+
+    // Any non-2xx is unhealthy. Checking only 401/403 meant a 404 ("the model
+    // does not exist") reported healthy — which is why this check stayed green
+    // through the 2026-08-16 decommission that broke the scraper.
+    if (!response.ok) {
+      const detail = response.status === 404
+        ? ` — model "${GROQ_ENHANCEMENT_MODEL}" may have been decommissioned`
+        : '';
+      throw new Error(`Groq API returned HTTP ${response.status}${detail}`);
+    }
+
     console.log('✅ Groq API: OK');
     return {
       status: 'healthy',
@@ -124,7 +136,7 @@ async function checkGroq() {
     console.error('❌ Groq API: FAILED');
     return {
       status: 'unhealthy',
-      error: error.message
+      error: redactSecrets(error.message)
     };
   }
 }
@@ -153,7 +165,7 @@ async function checkTelegram() {
     console.error('❌ Telegram Bot: FAILED');
     return {
       status: 'unhealthy',
-      error: error.message
+      error: redactSecrets(error.message)
     };
   }
 }
@@ -175,7 +187,7 @@ async function checkGitHubActions() {
   } catch (error) {
     return {
       status: 'unknown',
-      error: error.message
+      error: redactSecrets(error.message)
     };
   }
 }
@@ -213,7 +225,7 @@ async function checkVercelStatus() {
     console.error('❌ Vercel Status: FAILED');
     return {
       status: 'unknown',
-      error: error.message
+      error: redactSecrets(error.message)
     };
   }
 }
@@ -353,18 +365,18 @@ async function runHealthCheck() {
     process.exit(criticalFailure ? 1 : 0);
     
   } catch (error) {
-    console.error('💥 Fatal error during health check:', error);
+    console.error('💥 Fatal error during health check:', redactSecrets(error));
     
     // Try to send error notification
     try {
       await sendTelegramMessage(
         `🚨 <b>SİSTEM SAĞLIK KONTROLÜ HATASI</b>\n\n` +
         `❌ Sağlık kontrolü çalıştırılamadı\n` +
-        `🔍 Hata: ${error.message}\n` +
+        `🔍 Hata: ${redactSecrets(error.message)}\n` +
         `⏰ ${new Date().toLocaleString('tr-TR')}`
       );
     } catch (telegramError) {
-      console.error('Failed to send error notification:', telegramError);
+      console.error('Failed to send error notification:', redactSecrets(telegramError));
     }
     
     process.exit(1);

@@ -105,7 +105,7 @@ what the "Systems" section on the home page describes.
 <td width="50%">
 
 #### Portfolio Chatbot
-- **Groq AI (Llama 3.3 70B)** primary backend
+- **Groq AI (openai/gpt-oss-120b)** primary backend
 - **n8n fallback** for high availability
 - Chat history persistence (Supabase)
 - Session management
@@ -240,7 +240,7 @@ is configured in CSS.
 | Service | Purpose | Notes |
 |---------|---------|-------|
 | **Supabase** | PostgreSQL Database | Free/Pro tier |
-| **Groq AI** | Translation & Chat | Chat: Llama 3.3 70B · Translation: Llama 3.1 8B (70B fallback) |
+| **Groq AI** | Translation & Chat | Chat: `openai/gpt-oss-120b` · Translation: `openai/gpt-oss-20b` (`gpt-oss-120b` fallback) |
 | **Google Gemini** | Content Generation | 2.0 Flash |
 | **Firecrawl** | Web Scraping | 500/mo free |
 | **n8n** | Workflow Automation | Self-hosted/Cloud |
@@ -465,21 +465,50 @@ The pipeline in `scripts/lib/scraper/ScrapeOrchestrator.js` consists of **6 agen
 | Role | Model | Provider |
 |------|-------|----------|
 | Translation (primary) | `openai/gpt-oss-20b` | Groq |
-| Translation (fallback / last resort) | `llama-3.3-70b-versatile` | Groq |
+| Translation (fallback / last resort) | `openai/gpt-oss-120b` | Groq |
 | List extraction / parser | `openai/gpt-oss-20b` | Groq |
 | Enhancement checks | `openai/gpt-oss-20b` | Groq |
 | Optional (content translation) | `gemini-3-flash-preview:cloud` | Ollama cloud |
 
 > **Model tiering rationale:** the lightweight, high-throughput `openai/gpt-oss-20b`
 > is the primary translation model so a full run does not exhaust the daily token
-> budget (TPD) on the heavy 70B model. `llama-3.3-70b-versatile` is kept only as a
-> last-resort quality fallback. `llama-3.1-8b-instant` was the previous primary
-> until Groq decommissioned it on 2026-08-16; `openai/gpt-oss-20b` is Groq's
-> recommended replacement. Both Groq clients are configured with `maxRetries`
+> budget (TPD) on the heavier model. `openai/gpt-oss-120b` is kept only as a
+> last-resort quality fallback. Groq decommissioned `llama-3.1-8b-instant` and
+> `llama-3.3-70b-versatile` on 2026-08-16 (calls return 404 "model does not
+> exist"); `openai/gpt-oss-20b` and `openai/gpt-oss-120b` are Groq's recommended
+> replacements. Both Groq clients are configured with `maxRetries`
 > and `timeout`, so transient connection drops (e.g. "Premature close") are retried
 > automatically before the model cascade falls back.
 
+> **Surviving the next decommission:** every Groq model id in the project lives in
+> `lib/groqModels.js` — scraper tiers, the LinkedIn digest and the live site chat.
+> Each reads an environment variable first (`GROQ_PRIMARY_MODEL`,
+> `GROQ_FALLBACK_MODEL`, `GROQ_LAST_RESORT_MODEL`, `GROQ_ENHANCEMENT_MODEL`,
+> `GROQ_FAST_MODEL`, `GROQ_PARSER_MODEL`, `GROQ_LINKEDIN_MODEL`, `CHAT_GROQ_MODEL`,
+> `CHAT_GROQ_FALLBACK_MODEL`) and falls back to the default there. In GitHub Actions
+> these are repository **variables**, not secrets, so a retired model can be swapped
+> from the repo settings without a code change or release.
+>
+> `npm run check:groq-models` queries the live Groq model list and fails with an
+> explicit message naming the dead tier and the variable to set. It runs in the
+> workflow as a gate *before* any Firecrawl credit is spent — previously a retired
+> model only surfaced as a mid-run 404, after the run had already paid for scrapes.
+> Each tier is checked with the credential that will actually call it (the parser
+> runs on `GROQ_PARSER_API_KEY`, which may see a different set of models), and a
+> rejected key is fatal rather than treated as a transient outage.
+>
+> Scopes: `scrape-tech-news.yml` runs `--scope=scraper`, `linkedin-groups.yml`
+> runs `--scope=linkedin`, and `system-health-check.yml` runs `--scope=all` on its
+> schedule, so a retirement affecting *any* pipeline — including the site chat,
+> which has no workflow of its own — is reported before that pipeline next runs.
+>
+> Fail-open applies only to failures that heal on their own (no connection, or a
+> 5xx). A rejected key, a 4xx, an empty list or an unparseable body are fatal
+> regardless of `STRICT_GROQ_MODEL_CHECK`: the gate cannot confirm availability,
+> so it does not pretend to.
+
 Required secrets: `GROQ_API_KEY`, `GROQ_PARSER_API_KEY`, `OLLAMA_API_KEY` (optional fallback).
+Optional repository variables: the `GROQ_*_MODEL` overrides above.
 
 ### Slug Generation
 

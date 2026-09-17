@@ -448,7 +448,7 @@ ${isN8n ? '✅' : '⚪'} n8n Workflow
 <b>📝 Backend Features:</b>
 
 <b>🟢 Vercel API (chat.js)</b>
-• Model: Groq Llama 3.3 70B
+• Model: Groq openai/gpt-oss-120b
 • Speed: ⚡ Very Fast
 • Cost: 💚 Free
 • Memory: ❌ None
@@ -518,7 +518,7 @@ ${isN8n ? '✅' : '⚪'} n8n Workflow
       const backendName = newBackend === 'vercel' ? 'Vercel API (chat.js)' : 'n8n Workflow';
       const backendEmoji = newBackend === 'vercel' ? '🟢' : '🔵';
       const features = newBackend === 'vercel'
-        ? '• Groq Llama 3.3 70B\n• Ücretsiz\n• Çok hızlı'
+        ? '• Groq openai/gpt-oss-120b\n• Ücretsiz\n• Çok hızlı'
         : '• OpenAI GPT-4o-mini\n• Supabase Memory\n• Conversation history';
 
       await this.sendTelegramMessage(

@@ -98,6 +98,24 @@ jobs:
         if: steps.gate.outputs.proceed == 'true'
         run: npm ci
 
+      # Fails fast (before any Firecrawl credit is spent) when Groq has retired a
+      # model the cascade depends on — the 2026-08-16 llama decommission was only
+      # noticed mid-run, as a 404 with no fallback tier left.
+      - name: 🤖 Verify Groq models are still available
+        if: steps.gate.outputs.proceed == 'true'
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          # The parser tier runs on its own credential, and a key only sees the
+          # models its account can access — so it must be checked with that key.
+          GROQ_PARSER_API_KEY: ${{ secrets.GROQ_PARSER_API_KEY }}
+          GROQ_PRIMARY_MODEL: ${{ vars.GROQ_PRIMARY_MODEL }}
+          GROQ_FALLBACK_MODEL: ${{ vars.GROQ_FALLBACK_MODEL }}
+          GROQ_LAST_RESORT_MODEL: ${{ vars.GROQ_LAST_RESORT_MODEL }}
+          GROQ_ENHANCEMENT_MODEL: ${{ vars.GROQ_ENHANCEMENT_MODEL }}
+          GROQ_FAST_MODEL: ${{ vars.GROQ_FAST_MODEL }}
+          GROQ_PARSER_MODEL: ${{ vars.GROQ_PARSER_MODEL }}
+        run: node scripts/ci/check-groq-models.mjs --scope=scraper
+
       - name: 🔍 Scrape and translate tech news
         if: steps.gate.outputs.proceed == 'true'
         env:
@@ -112,6 +130,15 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
           TECH_NEWS_FORCE_URLS: ${{ inputs.force_urls }}
+          # Model overrides: set these as repository variables to route around a
+          # Groq decommission without a code change (defaults live in
+          # scripts/lib/scraper/config.js).
+          GROQ_PRIMARY_MODEL: ${{ vars.GROQ_PRIMARY_MODEL }}
+          GROQ_FALLBACK_MODEL: ${{ vars.GROQ_FALLBACK_MODEL }}
+          GROQ_LAST_RESORT_MODEL: ${{ vars.GROQ_LAST_RESORT_MODEL }}
+          GROQ_ENHANCEMENT_MODEL: ${{ vars.GROQ_ENHANCEMENT_MODEL }}
+          GROQ_FAST_MODEL: ${{ vars.GROQ_FAST_MODEL }}
+          GROQ_PARSER_MODEL: ${{ vars.GROQ_PARSER_MODEL }}
           NODE_OPTIONS: '--max-old-space-size=4096'
           TZ: UTC
         run: |
@@ -134,11 +161,9 @@ jobs:
           echo "🏷️ Run label: ${TECH_NEWS_RUN_LABEL}"
           echo "🗓️ Turkey run date: ${TECH_NEWS_RUN_DATE}"
           echo ""
-          echo "🤖 AI Models (ALL PRODUCTION - STABLE):"
-          echo "   Primary: openai/gpt-oss-20b (1000 T/s, 250K TPM) ⚡"
-          echo "   Fallback / Last Resort: llama-3.3-70b-versatile (280 T/s, 300K TPM)"
-          echo "   Parser: openai/gpt-oss-20b (article list extraction)"
-          echo "   ℹ️ llama-3.1-8b-instant decommissioned 2026-08-16 → replaced by openai/gpt-oss-20b"
+          echo "🤖 AI Models: see the 'Verify Groq models' step above for the"
+          echo "   live tier table (printed from scripts/lib/scraper/config.js,"
+          echo "   so it cannot drift from what the pipeline actually calls)."
           echo "   ⚠️ Preview models (llama-4, qwen3) NOT used for stability"
           echo ""
           echo "⚡ Rate Limiting:"
@@ -179,6 +204,7 @@ jobs:
       # Zamanlanmış koşularda tam scrape atlanınca da Telegram'a kısa özet gider (aksi halde "bildirim yok" sanılıyordu).
       - name: 📱 Telegram — preflight atladı (tam scrape yok)
         if: success() && steps.gate.outputs.proceed != 'true' && github.event_name == 'schedule'
+        continue-on-error: true
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -229,8 +255,11 @@ jobs:
           echo ""
           echo "═══════════════════════════════════════════════════════════"
       
+      # continue-on-error: a Telegram outage (api.telegram.org ETIMEDOUT) must not
+      # turn a successful scrape into a failed run — the articles are already in DB.
       - name: 📱 Send success notification to Telegram
         if: success() && steps.gate.outputs.proceed == 'true'
+        continue-on-error: true
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
