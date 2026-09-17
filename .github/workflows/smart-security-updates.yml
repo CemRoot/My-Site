@@ -6,6 +6,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Default to no token scope; the single job below opts into exactly what it needs.
+# Without this, jobs inherit the repository default, which may be read-write.
+permissions: {}
+
 jobs:
   process-dependabot-pr:
     name: Process Dependabot PR
@@ -180,7 +184,7 @@ jobs:
           fi
 
           echo "Sending Telegram notification..."
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+          curl -s --retry 4 --retry-delay 2 --retry-all-errors --max-time 30 -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TELEGRAM_CHAT_ID}" \
             -d "text=${MESSAGE}" \
             -d "parse_mode=HTML"

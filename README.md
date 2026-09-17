@@ -480,7 +480,20 @@ The pipeline in `scripts/lib/scraper/ScrapeOrchestrator.js` consists of **6 agen
 > and `timeout`, so transient connection drops (e.g. "Premature close") are retried
 > automatically before the model cascade falls back.
 
+> **Surviving the next decommission:** every tier reads an environment variable
+> first (`GROQ_PRIMARY_MODEL`, `GROQ_FALLBACK_MODEL`, `GROQ_LAST_RESORT_MODEL`,
+> `GROQ_ENHANCEMENT_MODEL`, `GROQ_FAST_MODEL`, `GROQ_PARSER_MODEL`) and falls back
+> to the default in `scripts/lib/scraper/config.js`. In GitHub Actions these are
+> repository **variables**, not secrets, so a retired model can be swapped from the
+> repo settings without a code change or release.
+>
+> `npm run check:groq-models` queries the live Groq model list and fails with an
+> explicit message naming the dead tier and the variable to set. It runs in the
+> workflow as a gate *before* any Firecrawl credit is spent — previously a retired
+> model only surfaced as a mid-run 404, after the run had already paid for scrapes.
+
 Required secrets: `GROQ_API_KEY`, `GROQ_PARSER_API_KEY`, `OLLAMA_API_KEY` (optional fallback).
+Optional repository variables: the `GROQ_*_MODEL` overrides above.
 
 ### Slug Generation
 

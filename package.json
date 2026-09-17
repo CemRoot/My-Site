@@ -82,6 +82,7 @@
             "n8n:check": "node scripts/n8n-trial-status.js",
             "n8n:reset": "node scripts/n8n-trial-status.js reset",
             "health:check": "node scripts/system-health-check.js",
+    "check:groq-models": "node scripts/ci/check-groq-models.mjs",
             "vercel:status": "node scripts/vercel-status-monitor.js",
             "cleanup:db": "node scripts/cleanup-tech-news.js",
             "cleanup:duplicates": "node scripts/cleanup-duplicates.js",

@@ -45,16 +45,38 @@ export const SCRAPER_CONFIG = {
 // openai/gpt-oss-20b so a full run does not exhaust the daily token budget
 // (TPD) on the heavier fallback model, which is kept only as a last resort for
 // quality. This matches the tiering documented in scrape-tech-news.yml.
-// NOTE: Groq decommissioned both llama-3.1-8b-instant and llama-3.3-70b-versatile
-// on 2026-08-16 (calls now return 404 "model does not exist"). The light tiers
-// point at openai/gpt-oss-20b and the heavy tiers at openai/gpt-oss-120b, Groq's
+//
+// NOTE: Groq decommissioned llama-3.1-8b-instant AND llama-3.3-70b-versatile on
+// 2026-08-16 (calls return 404 "model does not exist"). The light tiers point at
+// openai/gpt-oss-20b and the heavy tiers at openai/gpt-oss-120b, Groq's
 // recommended replacements. The cascade in translator.js de-duplicates repeats.
-export const GROQ_PRIMARY_MODEL = 'openai/gpt-oss-20b';
-export const GROQ_FALLBACK_MODEL = 'openai/gpt-oss-120b';
-export const GROQ_LAST_RESORT_MODEL = 'openai/gpt-oss-120b';
-export const GROQ_ENHANCEMENT_MODEL = 'openai/gpt-oss-20b';
-export const GROQ_FAST_MODEL = 'openai/gpt-oss-20b';
-export const GROQ_PARSER_MODEL = 'openai/gpt-oss-20b';
+//
+// Every tier is overridable by an environment variable so the next Groq
+// decommission can be worked around by setting a repo secret/variable, without
+// waiting for a code change and release. `scripts/ci/check-groq-models.mjs`
+// validates these ids against the live Groq model list before a run starts.
+const modelFromEnv = (name, fallback) => (process.env[name] || '').trim() || fallback;
+
+export const GROQ_PRIMARY_MODEL = modelFromEnv('GROQ_PRIMARY_MODEL', 'openai/gpt-oss-20b');
+export const GROQ_FALLBACK_MODEL = modelFromEnv('GROQ_FALLBACK_MODEL', 'openai/gpt-oss-120b');
+export const GROQ_LAST_RESORT_MODEL = modelFromEnv('GROQ_LAST_RESORT_MODEL', 'openai/gpt-oss-120b');
+export const GROQ_ENHANCEMENT_MODEL = modelFromEnv('GROQ_ENHANCEMENT_MODEL', 'openai/gpt-oss-20b');
+export const GROQ_FAST_MODEL = modelFromEnv('GROQ_FAST_MODEL', 'openai/gpt-oss-20b');
+export const GROQ_PARSER_MODEL = modelFromEnv('GROQ_PARSER_MODEL', 'openai/gpt-oss-20b');
+
+/**
+ * Tier -> model id map, consumed by the model availability check and by the
+ * workflow banner so the logs can never drift from what the code actually calls.
+ * `required: true` means a run cannot succeed without it.
+ */
+export const GROQ_MODEL_TIERS = [
+  { tier: 'primary', model: GROQ_PRIMARY_MODEL, required: true },
+  { tier: 'fallback', model: GROQ_FALLBACK_MODEL, required: true },
+  { tier: 'last-resort', model: GROQ_LAST_RESORT_MODEL, required: false },
+  { tier: 'enhancement', model: GROQ_ENHANCEMENT_MODEL, required: false },
+  { tier: 'fast', model: GROQ_FAST_MODEL, required: false },
+  { tier: 'parser', model: GROQ_PARSER_MODEL, required: true },
+];
 
 export const OLLAMA_PRIMARY_MODEL = 'deepseek-v4-pro:cloud';
 export const OLLAMA_API_KEY = env.OLLAMA_API_KEY;

@@ -8,6 +8,7 @@
 import { supabase } from './lib/supabaseAdmin.js';
 import { env } from './lib/config.js';
 import { sendTelegramMessage } from './lib/telegram.js';
+import { redactSecrets } from './lib/redact.js';
 
 /**
  * Check Supabase connection and get stats
@@ -46,7 +47,7 @@ async function checkSupabase() {
     console.error('❌ Supabase: FAILED');
     return {
       status: 'unhealthy',
-      error: error.message
+      error: redactSecrets(error.message)
     };
   }
 }
@@ -85,7 +86,7 @@ async function checkFirecrawl() {
     console.error('❌ Firecrawl API: FAILED');
     return {
       status: 'unhealthy',
-      error: error.message
+      error: redactSecrets(error.message)
     };
   }
 }
@@ -124,7 +125,7 @@ async function checkGroq() {
     console.error('❌ Groq API: FAILED');
     return {
       status: 'unhealthy',
-      error: error.message
+      error: redactSecrets(error.message)
     };
   }
 }
@@ -153,7 +154,7 @@ async function checkTelegram() {
     console.error('❌ Telegram Bot: FAILED');
     return {
       status: 'unhealthy',
-      error: error.message
+      error: redactSecrets(error.message)
     };
   }
 }
@@ -175,7 +176,7 @@ async function checkGitHubActions() {
   } catch (error) {
     return {
       status: 'unknown',
-      error: error.message
+      error: redactSecrets(error.message)
     };
   }
 }
@@ -213,7 +214,7 @@ async function checkVercelStatus() {
     console.error('❌ Vercel Status: FAILED');
     return {
       status: 'unknown',
-      error: error.message
+      error: redactSecrets(error.message)
     };
   }
 }
@@ -353,18 +354,18 @@ async function runHealthCheck() {
     process.exit(criticalFailure ? 1 : 0);
     
   } catch (error) {
-    console.error('💥 Fatal error during health check:', error);
+    console.error('💥 Fatal error during health check:', redactSecrets(error));
     
     // Try to send error notification
     try {
       await sendTelegramMessage(
         `🚨 <b>SİSTEM SAĞLIK KONTROLÜ HATASI</b>\n\n` +
         `❌ Sağlık kontrolü çalıştırılamadı\n` +
-        `🔍 Hata: ${error.message}\n` +
+        `🔍 Hata: ${redactSecrets(error.message)}\n` +
         `⏰ ${new Date().toLocaleString('tr-TR')}`
       );
     } catch (telegramError) {
-      console.error('Failed to send error notification:', telegramError);
+      console.error('Failed to send error notification:', redactSecrets(telegramError));
     }
     
     process.exit(1);

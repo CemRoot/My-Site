@@ -98,6 +98,21 @@ jobs:
         if: steps.gate.outputs.proceed == 'true'
         run: npm ci
 
+      # Fails fast (before any Firecrawl credit is spent) when Groq has retired a
+      # model the cascade depends on — the 2026-08-16 llama decommission was only
+      # noticed mid-run, as a 404 with no fallback tier left.
+      - name: 🤖 Verify Groq models are still available
+        if: steps.gate.outputs.proceed == 'true'
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_PRIMARY_MODEL: ${{ vars.GROQ_PRIMARY_MODEL }}
+          GROQ_FALLBACK_MODEL: ${{ vars.GROQ_FALLBACK_MODEL }}
+          GROQ_LAST_RESORT_MODEL: ${{ vars.GROQ_LAST_RESORT_MODEL }}
+          GROQ_ENHANCEMENT_MODEL: ${{ vars.GROQ_ENHANCEMENT_MODEL }}
+          GROQ_FAST_MODEL: ${{ vars.GROQ_FAST_MODEL }}
+          GROQ_PARSER_MODEL: ${{ vars.GROQ_PARSER_MODEL }}
+        run: node scripts/ci/check-groq-models.mjs
+
       - name: 🔍 Scrape and translate tech news
         if: steps.gate.outputs.proceed == 'true'
         env:
@@ -112,6 +127,15 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
           TECH_NEWS_FORCE_URLS: ${{ inputs.force_urls }}
+          # Model overrides: set these as repository variables to route around a
+          # Groq decommission without a code change (defaults live in
+          # scripts/lib/scraper/config.js).
+          GROQ_PRIMARY_MODEL: ${{ vars.GROQ_PRIMARY_MODEL }}
+          GROQ_FALLBACK_MODEL: ${{ vars.GROQ_FALLBACK_MODEL }}
+          GROQ_LAST_RESORT_MODEL: ${{ vars.GROQ_LAST_RESORT_MODEL }}
+          GROQ_ENHANCEMENT_MODEL: ${{ vars.GROQ_ENHANCEMENT_MODEL }}
+          GROQ_FAST_MODEL: ${{ vars.GROQ_FAST_MODEL }}
+          GROQ_PARSER_MODEL: ${{ vars.GROQ_PARSER_MODEL }}
           NODE_OPTIONS: '--max-old-space-size=4096'
           TZ: UTC
         run: |
@@ -134,12 +158,9 @@ jobs:
           echo "🏷️ Run label: ${TECH_NEWS_RUN_LABEL}"
           echo "🗓️ Turkey run date: ${TECH_NEWS_RUN_DATE}"
           echo ""
-          echo "🤖 AI Models (ALL PRODUCTION - STABLE):"
-          echo "   Primary: openai/gpt-oss-20b (1000 T/s, 250K TPM) ⚡"
-          echo "   Fallback / Last Resort: openai/gpt-oss-120b (500 T/s, 250K TPM)"
-          echo "   Parser: openai/gpt-oss-20b (article list extraction)"
-          echo "   ℹ️ llama-3.1-8b-instant + llama-3.3-70b-versatile decommissioned 2026-08-16"
-          echo "      → replaced by openai/gpt-oss-20b (light) and openai/gpt-oss-120b (heavy)"
+          echo "🤖 AI Models: see the 'Verify Groq models' step above for the"
+          echo "   live tier table (printed from scripts/lib/scraper/config.js,"
+          echo "   so it cannot drift from what the pipeline actually calls)."
           echo "   ⚠️ Preview models (llama-4, qwen3) NOT used for stability"
           echo ""
           echo "⚡ Rate Limiting:"

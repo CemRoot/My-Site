@@ -35,6 +35,20 @@ const RETRY_BASE_MS = 2000;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * The bot token sits in the request path, so any error text that echoes the URL
+ * would print a live credential into a public Actions log. GitHub masks values
+ * registered as secrets, but that masking does not cover a token pasted into a
+ * longer string by an upstream library, so scrub it here before logging.
+ */
+function redact(value) {
+  const text = typeof value === 'string' ? value : String(value?.stack || value?.message || value);
+  let safe = text.split(token).join('***');
+  if (chatId) safe = safe.split(chatId).join('***');
+  // Catch a token that reached the string in some other shape (e.g. url-encoded).
+  return safe.replace(/bot\d{5,}:[A-Za-z0-9_-]{20,}/g, 'bot***');
+}
+
 async function sendOnce() {
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
@@ -82,12 +96,11 @@ async function main() {
       const isLast = attempt === MAX_ATTEMPTS;
 
       console.error(
-        `github-send-telegram: attempt ${attempt}/${MAX_ATTEMPTS} failed:`,
-        err.message || err
+        `github-send-telegram: attempt ${attempt}/${MAX_ATTEMPTS} failed: ${redact(err)}`
       );
 
       if (!retryable || isLast) {
-        if (err.cause) console.error('github-send-telegram: cause:', err.cause);
+        if (err.cause) console.error('github-send-telegram: cause:', redact(err.cause));
         process.exit(1);
       }
 
@@ -99,6 +112,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('github-send-telegram:', err);
+  console.error('github-send-telegram:', redact(err));
   process.exit(1);
 });
