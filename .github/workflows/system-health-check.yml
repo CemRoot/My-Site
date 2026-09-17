@@ -34,6 +34,27 @@ jobs:
       - name: 📦 Install dependencies
         run: npm ci
       
+      # Covers every scope — scraper, LinkedIn digest and the live site chat — so a
+      # retirement that would break any of them is reported here on a schedule,
+      # not discovered when that pipeline next runs.
+      - name: 🤖 Verify all Groq models are still available
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_PARSER_API_KEY: ${{ secrets.GROQ_PARSER_API_KEY }}
+          # Model overrides — the health check must probe the same models the
+          # pipelines actually call, otherwise setting a variable to route around
+          # a retirement would leave this reporting on the old default.
+          GROQ_PRIMARY_MODEL: ${{ vars.GROQ_PRIMARY_MODEL }}
+          GROQ_FALLBACK_MODEL: ${{ vars.GROQ_FALLBACK_MODEL }}
+          GROQ_LAST_RESORT_MODEL: ${{ vars.GROQ_LAST_RESORT_MODEL }}
+          GROQ_ENHANCEMENT_MODEL: ${{ vars.GROQ_ENHANCEMENT_MODEL }}
+          GROQ_FAST_MODEL: ${{ vars.GROQ_FAST_MODEL }}
+          GROQ_PARSER_MODEL: ${{ vars.GROQ_PARSER_MODEL }}
+          GROQ_LINKEDIN_MODEL: ${{ vars.GROQ_LINKEDIN_MODEL }}
+          CHAT_GROQ_MODEL: ${{ vars.CHAT_GROQ_MODEL }}
+          CHAT_GROQ_FALLBACK_MODEL: ${{ vars.CHAT_GROQ_FALLBACK_MODEL }}
+        run: node scripts/ci/check-groq-models.mjs --scope=all
+
       - name: 🏥 Run system health check
         env:
           # Supabase
@@ -42,7 +63,21 @@ jobs:
           
           # APIs
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_PARSER_API_KEY: ${{ secrets.GROQ_PARSER_API_KEY }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+
+          # Model overrides — the health check must probe the same models the
+          # pipelines actually call, otherwise setting a variable to route around
+          # a retirement would leave this reporting on the old default.
+          GROQ_PRIMARY_MODEL: ${{ vars.GROQ_PRIMARY_MODEL }}
+          GROQ_FALLBACK_MODEL: ${{ vars.GROQ_FALLBACK_MODEL }}
+          GROQ_LAST_RESORT_MODEL: ${{ vars.GROQ_LAST_RESORT_MODEL }}
+          GROQ_ENHANCEMENT_MODEL: ${{ vars.GROQ_ENHANCEMENT_MODEL }}
+          GROQ_FAST_MODEL: ${{ vars.GROQ_FAST_MODEL }}
+          GROQ_PARSER_MODEL: ${{ vars.GROQ_PARSER_MODEL }}
+          GROQ_LINKEDIN_MODEL: ${{ vars.GROQ_LINKEDIN_MODEL }}
+          CHAT_GROQ_MODEL: ${{ vars.CHAT_GROQ_MODEL }}
+          CHAT_GROQ_FALLBACK_MODEL: ${{ vars.CHAT_GROQ_FALLBACK_MODEL }}
           
           # Telegram
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

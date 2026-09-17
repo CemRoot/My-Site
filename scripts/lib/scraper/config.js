@@ -41,9 +41,9 @@ export const SCRAPER_CONFIG = {
   MAX_CONSECUTIVE_FAILURES: 3,
 };
 
-// Groq model ids live in scripts/lib/groq-models.js so that every id the
-// project calls — scraper and LinkedIn digest alike — is enumerable by the
-// pre-run availability gate and overridable by an environment variable. They are
+// Groq model ids live in lib/groqModels.js so that every id the project calls —
+// scraper, LinkedIn digest and site chat alike — is enumerable by the pre-run
+// availability gate and overridable by an environment variable. They are
 // re-exported here so existing importers keep working unchanged.
 export {
   GROQ_PRIMARY_MODEL,
@@ -53,7 +53,7 @@ export {
   GROQ_FAST_MODEL,
   GROQ_PARSER_MODEL,
   GROQ_MODEL_TIERS,
-} from '../groq-models.js';
+} from '../../../lib/groqModels.js';
 
 export const OLLAMA_PRIMARY_MODEL = 'deepseek-v4-pro:cloud';
 export const OLLAMA_API_KEY = env.OLLAMA_API_KEY;

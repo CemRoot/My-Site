@@ -9,7 +9,7 @@ import { supabase } from './lib/supabaseAdmin.js';
 import { env } from './lib/config.js';
 import { sendTelegramMessage } from './lib/telegram.js';
 import { redactSecrets } from './lib/redact.js';
-import { GROQ_ENHANCEMENT_MODEL } from './lib/groq-models.js';
+import { GROQ_ENHANCEMENT_MODEL } from '../lib/groqModels.js';
 
 /**
  * Check Supabase connection and get stats

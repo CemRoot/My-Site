@@ -16,7 +16,7 @@
  */
 
 import Groq from 'groq-sdk';
-import { GROQ_LINKEDIN_MODEL } from './lib/groq-models.js';
+import { GROQ_LINKEDIN_MODEL } from '../lib/groqModels.js';
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';

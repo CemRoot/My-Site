@@ -14,26 +14,30 @@
  * the parser fails mid-run.
  *
  * Usage:
- *   node scripts/ci/check-groq-models.mjs [--scope=scraper|linkedin|all]
+ *   node scripts/ci/check-groq-models.mjs [--scope=scraper|linkedin|chat|all]
  *
  * Exit codes:
  *   0 — every required tier in scope is available (missing optional tiers warn)
- *   1 — a required tier is missing, a credential is missing or rejected, or the
- *       model list was unreachable and STRICT_GROQ_MODEL_CHECK=true
+ *   1 — a required tier is missing, a credential is missing, or the model list
+ *       could not be read for any non-transient reason (and for a transient one
+ *       when STRICT_GROQ_MODEL_CHECK=true)
  *
- * A transient Groq outage must not block the pipeline, so an unreachable model
- * list warns and exits 0 by default. An authentication failure is never treated
- * that way: a bad or revoked key will not heal on its own, and letting the run
- * proceed would spend Firecrawl credits on a scrape that cannot translate.
+ * A transient Groq outage must not block the pipeline, so a connection failure
+ * or a 5xx warns and exits 0 by default. Nothing else is treated that way: a
+ * rejected key, a 4xx, an empty list or an unparseable body all mean the gate
+ * cannot answer its question, and are fatal regardless of STRICT.
  *
  * Env:
  *   GROQ_API_KEY               — required
  *   GROQ_PARSER_API_KEY        — optional, falls back to GROQ_API_KEY
  *   STRICT_GROQ_MODEL_CHECK    — optional "true" to fail on an unreachable list
- *   GROQ_*_MODEL               — tier overrides, see scripts/lib/groq-models.js
+ *   GROQ_*_MODEL / CHAT_GROQ_MODEL — tier overrides, see lib/groqModels.js
  */
 
-import { GROQ_MODEL_TIERS, GROQ_CREDENTIALS, envVarForTier } from '../lib/groq-models.js';
+// scripts/lib/config.js loads .env / .env.local for local runs; the registry
+// itself reads process.env directly so it stays importable from Vercel too.
+import '../lib/config.js';
+import { GROQ_MODEL_TIERS, GROQ_CREDENTIALS, envVarForTier } from '../../lib/groqModels.js';
 
 const MODELS_URL = 'https://api.groq.com/openai/v1/models';
 const STRICT = process.env.STRICT_GROQ_MODEL_CHECK === 'true';
@@ -41,29 +45,63 @@ const STRICT = process.env.STRICT_GROQ_MODEL_CHECK === 'true';
 const scopeArg = process.argv.find((a) => a.startsWith('--scope='));
 const SCOPE = scopeArg ? scopeArg.split('=')[1] : 'scraper';
 
-/** Thrown when a key is rejected — always fatal, never "transient". */
-class AuthError extends Error {}
+/**
+ * Fail-open is only ever correct for something that will heal on its own: the
+ * connection never completed, or Groq answered 5xx. Everything else — a rejected
+ * key, a 4xx, an empty 2xx list, a body that will not parse — means the gate
+ * cannot answer the question it exists to answer, and letting the run proceed
+ * would spend Firecrawl credits on a scrape that may not be able to translate.
+ * So transience is declared explicitly here rather than inferred from "it threw".
+ */
+class GroqCheckError extends Error {
+  constructor(message, { transient }) {
+    super(message);
+    this.transient = transient;
+  }
+}
 
 async function fetchAvailableModels(apiKey) {
-  const res = await fetch(MODELS_URL, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-    signal: AbortSignal.timeout(20000),
-  });
+  let res;
+  try {
+    res = await fetch(MODELS_URL, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(20000),
+    });
+  } catch (error) {
+    // No HTTP response at all: DNS, connection reset, TLS, timeout.
+    throw new GroqCheckError(`could not reach Groq (${error?.message || error})`, {
+      transient: true,
+    });
+  }
+
+  if (res.status >= 500) {
+    throw new GroqCheckError(`Groq /models returned HTTP ${res.status}`, { transient: true });
+  }
 
   if (res.status === 401 || res.status === 403) {
     // Never echo the body — it is provider output going into public CI logs.
-    throw new AuthError(`Groq rejected the API key (HTTP ${res.status})`);
+    throw new GroqCheckError(`Groq rejected the API key (HTTP ${res.status})`, {
+      transient: false,
+    });
   }
 
   if (!res.ok) {
-    throw new Error(`Groq /models returned HTTP ${res.status}`);
+    throw new GroqCheckError(`Groq /models returned HTTP ${res.status}`, { transient: false });
   }
 
-  const body = await res.json();
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    throw new GroqCheckError('Groq /models returned a body that could not be parsed', {
+      transient: false,
+    });
+  }
+
   const ids = (body?.data || []).map((m) => m?.id).filter(Boolean);
 
   if (ids.length === 0) {
-    throw new Error('Groq /models returned an empty model list');
+    throw new GroqCheckError('Groq /models returned an empty model list', { transient: false });
   }
 
   return new Set(ids);
@@ -84,7 +122,7 @@ function printRemediation(missing) {
   console.error('\nCurrent replacements are listed at:');
   console.error('   https://console.groq.com/docs/deprecations');
   console.error('   https://console.groq.com/docs/models');
-  console.error('\nThen update scripts/lib/groq-models.js so the default is');
+  console.error('\nThen update lib/groqModels.js so the default is');
   console.error('correct for local runs too.\n');
 }
 
@@ -92,7 +130,7 @@ async function main() {
   const tiers = GROQ_MODEL_TIERS.filter((t) => SCOPE === 'all' || t.scope === SCOPE);
 
   if (tiers.length === 0) {
-    console.error(`❌ Unknown scope "${SCOPE}" — expected scraper, linkedin or all.`);
+    console.error(`❌ Unknown scope "${SCOPE}" — expected scraper, linkedin, chat or all.`);
     process.exit(1);
   }
 
@@ -116,10 +154,12 @@ async function main() {
     } catch (error) {
       const message = error?.message || String(error);
 
-      if (error instanceof AuthError) {
+      // Only an explicitly transient failure may fail open.
+      if (error?.transient !== true) {
         console.error(`❌ ${credential.envVar}: ${message}`);
-        console.error('   A rejected key does not recover on its own; failing now rather');
-        console.error('   than spending Firecrawl credits on a run that cannot translate.');
+        console.error('   This will not resolve on its own, so the gate cannot confirm the');
+        console.error('   models are available. Failing now rather than spending Firecrawl');
+        console.error('   credits on a run that may not be able to translate.');
         process.exit(1);
       }
 
@@ -130,7 +170,7 @@ async function main() {
         process.exit(1);
       }
 
-      console.warn('   Continuing anyway; the run cascade will surface real errors.');
+      console.warn('   Transient failure; continuing, the run cascade will surface real errors.');
       process.exit(0);
     }
   }

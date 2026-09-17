@@ -480,12 +480,14 @@ The pipeline in `scripts/lib/scraper/ScrapeOrchestrator.js` consists of **6 agen
 > and `timeout`, so transient connection drops (e.g. "Premature close") are retried
 > automatically before the model cascade falls back.
 
-> **Surviving the next decommission:** every tier reads an environment variable
-> first (`GROQ_PRIMARY_MODEL`, `GROQ_FALLBACK_MODEL`, `GROQ_LAST_RESORT_MODEL`,
-> `GROQ_ENHANCEMENT_MODEL`, `GROQ_FAST_MODEL`, `GROQ_PARSER_MODEL`) and falls back
-> to the default in `scripts/lib/scraper/config.js`. In GitHub Actions these are
-> repository **variables**, not secrets, so a retired model can be swapped from the
-> repo settings without a code change or release.
+> **Surviving the next decommission:** every Groq model id in the project lives in
+> `lib/groqModels.js` — scraper tiers, the LinkedIn digest and the live site chat.
+> Each reads an environment variable first (`GROQ_PRIMARY_MODEL`,
+> `GROQ_FALLBACK_MODEL`, `GROQ_LAST_RESORT_MODEL`, `GROQ_ENHANCEMENT_MODEL`,
+> `GROQ_FAST_MODEL`, `GROQ_PARSER_MODEL`, `GROQ_LINKEDIN_MODEL`, `CHAT_GROQ_MODEL`,
+> `CHAT_GROQ_FALLBACK_MODEL`) and falls back to the default there. In GitHub Actions
+> these are repository **variables**, not secrets, so a retired model can be swapped
+> from the repo settings without a code change or release.
 >
 > `npm run check:groq-models` queries the live Groq model list and fails with an
 > explicit message naming the dead tier and the variable to set. It runs in the
@@ -495,10 +497,15 @@ The pipeline in `scripts/lib/scraper/ScrapeOrchestrator.js` consists of **6 agen
 > runs on `GROQ_PARSER_API_KEY`, which may see a different set of models), and a
 > rejected key is fatal rather than treated as a transient outage.
 >
-> The LinkedIn digest is covered too, via `GROQ_LINKEDIN_MODEL` and
-> `--scope=linkedin` in its own workflow. Every id lives in
-> `scripts/lib/groq-models.js`; anything hardcoded at a call site is invisible to
-> the gate, which is how the digest kept a dead id after the scraper was migrated.
+> Scopes: `scrape-tech-news.yml` runs `--scope=scraper`, `linkedin-groups.yml`
+> runs `--scope=linkedin`, and `system-health-check.yml` runs `--scope=all` on its
+> schedule, so a retirement affecting *any* pipeline — including the site chat,
+> which has no workflow of its own — is reported before that pipeline next runs.
+>
+> Fail-open applies only to failures that heal on their own (no connection, or a
+> 5xx). A rejected key, a 4xx, an empty list or an unparseable body are fatal
+> regardless of `STRICT_GROQ_MODEL_CHECK`: the gate cannot confirm availability,
+> so it does not pretend to.
 
 Required secrets: `GROQ_API_KEY`, `GROQ_PARSER_API_KEY`, `OLLAMA_API_KEY` (optional fallback).
 Optional repository variables: the `GROQ_*_MODEL` overrides above.
