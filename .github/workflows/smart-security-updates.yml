@@ -18,6 +18,9 @@ jobs:
     permissions:
       pull-requests: write
       contents: read
+      # `gh label create` / `gh pr edit --add-label` go through the issues API;
+      # without this the low-priority label silently fails to apply.
+      issues: write
 
     steps:
       - name: Checkout base branch

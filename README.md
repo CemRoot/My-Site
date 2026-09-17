@@ -491,6 +491,14 @@ The pipeline in `scripts/lib/scraper/ScrapeOrchestrator.js` consists of **6 agen
 > explicit message naming the dead tier and the variable to set. It runs in the
 > workflow as a gate *before* any Firecrawl credit is spent — previously a retired
 > model only surfaced as a mid-run 404, after the run had already paid for scrapes.
+> Each tier is checked with the credential that will actually call it (the parser
+> runs on `GROQ_PARSER_API_KEY`, which may see a different set of models), and a
+> rejected key is fatal rather than treated as a transient outage.
+>
+> The LinkedIn digest is covered too, via `GROQ_LINKEDIN_MODEL` and
+> `--scope=linkedin` in its own workflow. Every id lives in
+> `scripts/lib/groq-models.js`; anything hardcoded at a call site is invisible to
+> the gate, which is how the digest kept a dead id after the scraper was migrated.
 
 Required secrets: `GROQ_API_KEY`, `GROQ_PARSER_API_KEY`, `OLLAMA_API_KEY` (optional fallback).
 Optional repository variables: the `GROQ_*_MODEL` overrides above.

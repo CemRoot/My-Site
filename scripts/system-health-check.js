@@ -9,6 +9,7 @@ import { supabase } from './lib/supabaseAdmin.js';
 import { env } from './lib/config.js';
 import { sendTelegramMessage } from './lib/telegram.js';
 import { redactSecrets } from './lib/redact.js';
+import { GROQ_ENHANCEMENT_MODEL } from './lib/groq-models.js';
 
 /**
  * Check Supabase connection and get stats
@@ -106,7 +107,7 @@ async function checkGroq() {
         'Authorization': `Bearer ${env.GROQ_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'openai/gpt-oss-120b',
+        model: GROQ_ENHANCEMENT_MODEL,
         messages: [{ role: 'user', content: 'test' }],
         max_tokens: 5
       })
@@ -115,7 +116,17 @@ async function checkGroq() {
     if (response.status === 401 || response.status === 403) {
       throw new Error('API key invalid or unauthorized');
     }
-    
+
+    // Any non-2xx is unhealthy. Checking only 401/403 meant a 404 ("the model
+    // does not exist") reported healthy — which is why this check stayed green
+    // through the 2026-08-16 decommission that broke the scraper.
+    if (!response.ok) {
+      const detail = response.status === 404
+        ? ` — model "${GROQ_ENHANCEMENT_MODEL}" may have been decommissioned`
+        : '';
+      throw new Error(`Groq API returned HTTP ${response.status}${detail}`);
+    }
+
     console.log('✅ Groq API: OK');
     return {
       status: 'healthy',

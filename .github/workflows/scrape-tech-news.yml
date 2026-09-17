@@ -105,13 +105,16 @@ jobs:
         if: steps.gate.outputs.proceed == 'true'
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          # The parser tier runs on its own credential, and a key only sees the
+          # models its account can access — so it must be checked with that key.
+          GROQ_PARSER_API_KEY: ${{ secrets.GROQ_PARSER_API_KEY }}
           GROQ_PRIMARY_MODEL: ${{ vars.GROQ_PRIMARY_MODEL }}
           GROQ_FALLBACK_MODEL: ${{ vars.GROQ_FALLBACK_MODEL }}
           GROQ_LAST_RESORT_MODEL: ${{ vars.GROQ_LAST_RESORT_MODEL }}
           GROQ_ENHANCEMENT_MODEL: ${{ vars.GROQ_ENHANCEMENT_MODEL }}
           GROQ_FAST_MODEL: ${{ vars.GROQ_FAST_MODEL }}
           GROQ_PARSER_MODEL: ${{ vars.GROQ_PARSER_MODEL }}
-        run: node scripts/ci/check-groq-models.mjs
+        run: node scripts/ci/check-groq-models.mjs --scope=scraper
 
       - name: 🔍 Scrape and translate tech news
         if: steps.gate.outputs.proceed == 'true'

@@ -55,15 +55,25 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
-      
+
+      # Same gate as the scraper: catch a retired Groq model before the digest
+      # runs, instead of discovering it as a mid-run 404.
+      - name: Verify Groq model is still available
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_LINKEDIN_MODEL: ${{ vars.GROQ_LINKEDIN_MODEL }}
+        run: node scripts/ci/check-groq-models.mjs --scope=linkedin
+
       - name: Generate LinkedIn Groups Digest
         env:
           # Supabase Database
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           
-          # Groq AI API
+          # Groq AI API — GROQ_LINKEDIN_MODEL is an optional repository variable
+          # that routes around a model retirement without a code change.
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_LINKEDIN_MODEL: ${{ vars.GROQ_LINKEDIN_MODEL }}
           
           # Telegram Bot
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -78,7 +88,7 @@ jobs:
           echo "Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
           echo "Mode: ${{ github.event.inputs.mode || 'daily' }}"
           echo "Group: ${{ github.event.inputs.group_id || 'auto (priority 1-2)' }}"
-          echo "AI Engine: Groq (openai/gpt-oss-120b)"
+          echo "AI Engine: Groq (see the model check step above)"
           echo "=================================================="
           
           # Run the digest generator
