@@ -37,6 +37,9 @@ const TechNews = lazyWithRetry(() => import('./components/TechNews'));
 const TechNewsDetail = lazyWithRetry(() => import('./components/TechNewsDetail'));
 const TermsPage = lazyWithRetry(() => import('./pages/TermsPage'));
 const PrivacyPage = lazyWithRetry(() => import('./pages/PrivacyPage'));
+const IrishLegalAssistantPrivacyPage = lazyWithRetry(
+  () => import('./pages/IrishLegalAssistantPrivacyPage'),
+);
 const EnglishLearningPage = lazyWithRetry(() => import('./pages/EnglishLearningPage'));
 const NotFoundPage = lazyWithRetry(() => import('./pages/NotFoundPage'));
 
@@ -148,6 +151,7 @@ export default function App() {
                   <Route path="/tech-news/:slug" element={<TechNewsDetail />} />
                   <Route path="/terms" element={<TermsPage />} />
                   <Route path="/privacy-policy" element={<PrivacyPage />} />
+                  <Route path="/privacy" element={<IrishLegalAssistantPrivacyPage />} />
                   <Route path="/english-learning" element={<EnglishLearningPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
