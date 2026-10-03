@@ -1,19 +1,18 @@
 # Dependabot configuration for automated dependency updates
 # https://docs.github.com/en/code-security/dependabot
+#
+# Pairs with .github/workflows/dependabot-auto-merge.yml: patch/minor PRs are
+# auto-merged once the "Build & Audit" check passes; major bumps wait for review.
 
 version: 2
 updates:
-  # Enable version updates for npm
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "daily"
       time: "09:00"
       timezone: "Europe/Dublin"
     open-pull-requests-limit: 10
-    reviewers:
-      - "CemRoot"
     assignees:
       - "CemRoot"
     commit-message:
@@ -21,9 +20,15 @@ updates:
       include: "scope"
     labels:
       - "dependencies"
-      - "security"
-    # Group minor and patch updates
     groups:
+      # All security fixes that are not major bumps land in a single PR.
+      security-patches:
+        applies-to: security-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
       dev-dependencies:
         patterns:
           - "@types/*"
@@ -37,13 +42,7 @@ updates:
         update-types:
           - "minor"
           - "patch"
-    # Ignore specific packages if needed
-    ignore:
-      # Uncomment to ignore specific packages
-      # - dependency-name: "react"
-      #   versions: ["19.x"]
 
-  # Enable version updates for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -54,4 +53,7 @@ updates:
     labels:
       - "ci"
       - "dependencies"
-
+    groups:
+      actions:
+        patterns:
+          - "*"
