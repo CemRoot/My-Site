@@ -27,7 +27,7 @@
             "react-router-dom": "^7.18.4",
             "remark-gfm": "^4.0.1",
             "sonner": "^2.0.7",
-            "tailwind-merge": "^3.6.0",
+            "tailwind-merge": "^3.7.0",
             "three": "^0.185.1",
             "typescript": "^6.0.3",
             "ws": "^8.21.0",
