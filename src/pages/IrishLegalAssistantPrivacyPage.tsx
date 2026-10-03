@@ -189,8 +189,14 @@ function IrishLegalAssistantPrivacyPage() {
         <LegalSection number="10" title="General information only">
           <p>
             Irish Legal Assistant is for general research and information about Irish law. It does
-            not give legal advice and it does not represent you. For important decisions, and for
-            any legal step that has a deadline, consult a qualified Irish legal professional.
+            not give legal advice and it does not provide legal representation. The developer is not
+            your solicitor or barrister. The website at{' '}
+            <a href="https://cemkoyluoglu.codes">cemkoyluoglu.codes</a> is the developer&apos;s
+            personal site, not a law firm.
+          </p>
+          <p>
+            For important decisions, and for any legal step that has a deadline, consult a qualified
+            Irish legal professional.
           </p>
         </LegalSection>
       </LegalPageShell>
