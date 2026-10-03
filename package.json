@@ -28,7 +28,7 @@
             "remark-gfm": "^4.0.1",
             "sonner": "^2.0.7",
             "tailwind-merge": "^3.7.0",
-            "three": "^0.185.1",
+            "three": "^0.186.1",
             "typescript": "^6.0.3",
             "ws": "^8.22.0",
             "xml2js": "^0.6.2"
