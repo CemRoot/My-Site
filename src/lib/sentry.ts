@@ -9,7 +9,7 @@
 */
 import {
   init,
-  inboundFiltersIntegration,
+  eventFiltersIntegration,
   functionToStringIntegration,
   globalHandlersIntegration,
   linkedErrorsIntegration,
@@ -99,7 +99,7 @@ export function initSentry() {
     */
     defaultIntegrations: false,
     integrations: [
-      inboundFiltersIntegration(),
+      eventFiltersIntegration(),
       functionToStringIntegration(),
       globalHandlersIntegration(),
       linkedErrorsIntegration(),
