@@ -18,7 +18,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { label: { en: 'SYSTEMS', tr: 'SİSTEMLER' }, href: '#systems', isHash: true },
   { label: { en: 'WORK', tr: 'ÇALIŞMALAR' }, href: '#work', isHash: true },
-  { label: { en: 'NEWS', tr: 'HABERLER' }, href: '#signal', isHash: true },
+  { label: { en: 'SKILLS', tr: 'YETENEKLER' }, href: '/skills', isHash: false },
   { label: { en: 'SERVICES', tr: 'HİZMETLER' }, href: '#services', isHash: true },
   { label: { en: 'TECH NEWS', tr: 'TEK HABER' }, href: '/tech-news', isHash: false },
   { label: { en: 'CONTACT', tr: 'İLETİŞİM' }, href: '#contact', isHash: true, accent: true },

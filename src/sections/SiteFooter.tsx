@@ -15,8 +15,16 @@ export function SiteFooter() {
       <span>© {year} CEM KÖYLÜOĞLU</span>
       <nav
         className="flex flex-wrap items-center gap-x-3 gap-y-1"
-        aria-label={t({ en: 'Legal', tr: 'Yasal' })}
+        aria-label={t({ en: 'Site', tr: 'Site' })}
       >
+        <Link to="/skills" className="hover:text-foreground">
+          {t({ en: 'SKILLS', tr: 'YETENEKLER' })}
+        </Link>
+        <span aria-hidden="true">·</span>
+        <Link to="/tech-news" className="hover:text-foreground">
+          {t({ en: 'TECH NEWS', tr: 'TEK HABER' })}
+        </Link>
+        <span aria-hidden="true">·</span>
         <Link to="/privacy-policy" className="hover:text-foreground">
           {t({ en: 'PRIVACY', tr: 'GİZLİLİK' })}
         </Link>

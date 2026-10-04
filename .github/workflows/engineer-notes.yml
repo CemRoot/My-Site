@@ -1,0 +1,84 @@
+name: Engineer's Notes
+
+# First-party, indexable tech notes (source_kind='original'): one guarded note
+# per day at most, from primary AI engineering sources. See
+# scripts/notes/generate-engineer-note.mjs for the pipeline and
+# lib/notes/claimGuard.js for what blocks publication.
+#
+# Mondays (and manual runs) start with a live prompt-injection eval against the
+# real model; if any attack leaks into a would-be-published note, that run
+# publishes nothing and the failure is reported to Telegram.
+
+on:
+  schedule:
+    - cron: '30 8 * * *' # 08:30 UTC daily
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Generate and print without saving'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: engineer-notes
+  cancel-in-progress: false
+
+jobs:
+  note:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      GROQ_PRIMARY_MODEL: ${{ vars.GROQ_PRIMARY_MODEL }}
+      GROQ_FALLBACK_MODEL: ${{ vars.GROQ_FALLBACK_MODEL }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: 🛡️ Prompt-injection eval (Mondays and manual runs)
+        id: eval
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$(date -u +%u)" != "1" ]; then
+            echo "Not Monday — skipping live eval"
+            exit 0
+          fi
+          npm run notes:eval
+
+      - name: ✍️ Generate note
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            npm run notes:dry-run
+          else
+            npm run notes:generate
+          fi
+
+      - name: 🧾 Upload run report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: engineer-notes-${{ github.run_id }}
+          path: artifacts/tech-news-runs/engineer-notes-run-*.json
+          if-no-files-found: ignore
+
+      - name: 📱 Telegram — eval failed, nothing published
+        if: failure() && steps.eval.outcome == 'failure'
+        continue-on-error: true
+        env:
+          TELEGRAM_MESSAGE_BODY: |
+            🛑 <b>Engineer's Notes — injection eval FAILED</b>
+            The live prompt-injection eval leaked an attack into a would-be-published note, so nothing was published.
+            <b>Run:</b> ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node scripts/ci/github-send-telegram.cjs

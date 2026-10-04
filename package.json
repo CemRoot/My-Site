@@ -59,7 +59,7 @@
             "postcss": "8.5.23"
       },
       "scripts": {
-            "test": "node --test tests/rate-limit.test.js tests/chat-security.test.js tests/format-tech-news-article.test.mjs tests/prerender-home-shell.test.mjs tests/hero-poster-metrics.test.mjs tests/tech-news-rank.test.mjs tests/preflight-url-utils.test.mjs tests/telegram-html-escape.test.mjs tests/telegram-tech-news-success-message.test.mjs tests/telegram-ops-router.test.mjs tests/slug-normalization.test.mjs tests/use-tech-news-loading-regression.test.mjs tests/scrape-tech-news-schedule.test.mjs tests/sentry-telegram-message.test.mjs tests/seo-render-head.test.mjs tests/seo-article-html.test.mjs tests/sitemap-indexable.test.mjs tests/seo-page.test.mjs",
+            "test": "node --test tests/rate-limit.test.js tests/chat-security.test.js tests/format-tech-news-article.test.mjs tests/prerender-home-shell.test.mjs tests/hero-poster-metrics.test.mjs tests/tech-news-rank.test.mjs tests/preflight-url-utils.test.mjs tests/telegram-html-escape.test.mjs tests/telegram-tech-news-success-message.test.mjs tests/telegram-ops-router.test.mjs tests/slug-normalization.test.mjs tests/use-tech-news-loading-regression.test.mjs tests/scrape-tech-news-schedule.test.mjs tests/sentry-telegram-message.test.mjs tests/seo-render-head.test.mjs tests/seo-article-html.test.mjs tests/sitemap-indexable.test.mjs tests/seo-page.test.mjs tests/notes-claim-guard.test.mjs tests/seo-portfolio-pages.test.mjs tests/seo-reporting.test.mjs",
             "dev": "vite",
             "preview": "vite preview",
             "typecheck": "tsc --noEmit",
@@ -83,6 +83,10 @@
             "health:check": "node scripts/system-health-check.js",
             "check:groq-models": "node scripts/ci/check-groq-models.mjs",
             "vercel:status": "node scripts/vercel-status-monitor.js",
+            "notes:generate": "node scripts/notes/generate-engineer-note.mjs",
+            "notes:dry-run": "node scripts/notes/generate-engineer-note.mjs --dry-run",
+            "notes:eval": "node scripts/notes/eval-injection.mjs",
+            "seo:report": "node scripts/seo/weekly-seo-report.mjs --dry-run",
             "cleanup:db": "node scripts/cleanup-tech-news.js",
             "cleanup:duplicates": "node scripts/cleanup-duplicates.js",
             "cleanup:duplicates:dry": "node scripts/cleanup-duplicates.js --dry-run",
