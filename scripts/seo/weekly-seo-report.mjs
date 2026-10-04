@@ -77,6 +77,9 @@ async function searchConsole() {
 
 async function main() {
   const lines = ['📈 <b>Weekly SEO report</b>', ''];
+  // The repo (and its Actions logs) is public: the log gets crawl health and a
+  // Search Console status line, never the private query/page data.
+  let gscStatus = 'Search Console: not connected';
 
   const health = await crawlHealth();
   lines.push(`<b>Crawl health:</b> ${health.total - health.problems.length}/${health.total} sitemap URLs OK`);
@@ -92,6 +95,7 @@ async function main() {
       lines.push('', '<i>Search Console: not connected (no access token — check the Google auth step).</i>');
     } else {
       const t = gsc.totals;
+      gscStatus = `Search Console: OK (${gsc.queries.length} queries, ${gsc.lowCtr.length} low-CTR pages returned)`;
       lines.push(
         '',
         `<b>Google Search</b> (${gsc.range.startDate} → ${gsc.range.endDate})`,
@@ -106,11 +110,19 @@ async function main() {
     }
   } catch (error) {
     lines.push('', `⚠️ Search Console query failed: ${esc(error.message)}`);
+    gscStatus = `Search Console: FAILED — ${error.message}`;
   }
 
   const message = lines.join('\n');
-  if (DRY_RUN) console.log(message);
-  else await notifyTelegram(message);
+  if (DRY_RUN) {
+    console.log(message);
+    return;
+  }
+  console.log(`Crawl health: ${health.total - health.problems.length}/${health.total} OK`);
+  for (const p of health.problems) console.log(`  ${p}`);
+  console.log(`Engineer's Notes this week: ${notes.length}`);
+  console.log(gscStatus);
+  await notifyTelegram(message);
 }
 
 main().catch(async (error) => {
