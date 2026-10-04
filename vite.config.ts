@@ -56,7 +56,7 @@
               filesToDeleteAfterUpload: './build/**/*.map',
             },
             release: {
-              name: env.VITE_APP_VERSION || env.VERCEL_GIT_COMMIT_SHA || 'unknown',
+              name: env.VERCEL_GIT_COMMIT_SHA || env.VITE_APP_VERSION || 'unknown',
             },
           })
         : null,
@@ -70,7 +70,7 @@
       // Sentry environment variables
       'import.meta.env.VITE_SENTRY_DSN': JSON.stringify(env.VITE_SENTRY_DSN || ''),
       'import.meta.env.VITE_SENTRY_ENVIRONMENT': JSON.stringify(env.VITE_SENTRY_ENVIRONMENT || 'development'),
-      'import.meta.env.VITE_APP_VERSION': JSON.stringify(env.VITE_APP_VERSION || env.VERCEL_GIT_COMMIT_SHA || 'unknown'),
+      'import.meta.env.VITE_APP_VERSION': JSON.stringify(env.VERCEL_GIT_COMMIT_SHA || env.VITE_APP_VERSION || 'unknown'),
     },
     optimizeDeps: {
       include: ['lucide-react'],

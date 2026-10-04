@@ -33,7 +33,20 @@ import {
  * - VITE_APP_VERSION: App version for release tracking
  */
 
+let initialized = false;
+
+/*
+  Ad-blocker noise, matched on specific signatures. This used to be
+  `message.includes('ad')`, which also matched "reading", "loading",
+  "already" — i.e. most real TypeErrors — and silently dropped them.
+*/
+const AD_BLOCKER_ERROR = /adsbygoogle|googlesyndication|doubleclick|googletagmanager|ERR_BLOCKED_BY_CLIENT/i;
+
 export function initSentry() {
+  if (initialized) {
+    return;
+  }
+
   // Only initialize if DSN is provided
   const dsn = import.meta.env.VITE_SENTRY_DSN;
   
@@ -41,6 +54,8 @@ export function initSentry() {
     console.warn('Sentry DSN not found. Skipping Sentry initialization.');
     return;
   }
+
+  initialized = true;
 
   init({
     dsn,
@@ -123,8 +138,8 @@ export function initSentry() {
       if (event.exception) {
         const error = hint.originalException;
 
-        // Ignore network errors from ad blockers
-        if (error instanceof Error && error.message.includes('ad')) {
+        // Ignore errors caused by ad blockers
+        if (error instanceof Error && AD_BLOCKER_ERROR.test(error.message)) {
           return null;
         }
 
@@ -189,6 +204,8 @@ export function initSentry() {
  * Capture a custom exception with additional context
  */
 export function captureException(error: Error, context?: Record<string, any>) {
+  // Callers can report before main.tsx's afterLoad() has run initSentry().
+  initSentry();
   if (context) {
     sentrySetContext('custom', context);
   }
@@ -199,6 +216,7 @@ export function captureException(error: Error, context?: Record<string, any>) {
  * Capture a custom message
  */
 export function captureMessage(message: string, level: SeverityLevel = 'info') {
+  initSentry();
   sentryCaptureMessage(message, level);
 }
 

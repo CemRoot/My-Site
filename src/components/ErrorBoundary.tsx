@@ -27,8 +27,18 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // You can also log the error to an error reporting service here (e.g. Sentry)
     console.error('Uncaught error in component:', error, errorInfo);
+
+    /*
+      React does not rethrow errors a boundary has caught, so Sentry's global
+      handlers never see them — they have to be reported here. Dynamic import
+      keeps the SDK out of the entry chunk (see chunk-error-handler.ts).
+    */
+    import('../lib/sentry')
+      .then(({ captureException }) =>
+        captureException(error, { componentStack: errorInfo.componentStack ?? undefined })
+      )
+      .catch(() => {});
   }
 
   private handleReset = () => {
