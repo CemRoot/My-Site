@@ -109,8 +109,9 @@ async function main() {
   }
 
   const message = lines.join('\n');
-  if (DRY_RUN) console.log(message);
-  else await notifyTelegram(message);
+  // Also in the Actions log, so a run can be checked without opening Telegram.
+  console.log(message);
+  if (!DRY_RUN) await notifyTelegram(message);
 }
 
 main().catch(async (error) => {
