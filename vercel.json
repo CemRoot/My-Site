@@ -56,7 +56,7 @@
       "destination": "/api/seo-page?kind=sitemap"
     },
     {
-      "source": "/:path((?!robots\\.txt|7fdb15710394252f5593bc2fc34e78af\\.txt|sitemap\\.xml|llms\\.txt|llms-full\\.txt|tech-news-latest\\.json|app-shell\\.html|favicon\\.ico|favicon\\.webp|og-image\\.png|og-image\\.webp|portrait\\.webp|assets|fonts|models\\/|yt-ai-summarizer\\/|privacy\\/).*)",
+      "source": "/:path((?!robots\\.txt|7fdb15710394252f5593bc2fc34e78af\\.txt|google7d6d0806dc1226ed\\.html|sitemap\\.xml|llms\\.txt|llms-full\\.txt|tech-news-latest\\.json|app-shell\\.html|favicon\\.ico|favicon\\.webp|og-image\\.png|og-image\\.webp|portrait\\.webp|assets|fonts|models\\/|yt-ai-summarizer\\/|privacy\\/).*)",
       "destination": "/index.html"
     }
   ],
