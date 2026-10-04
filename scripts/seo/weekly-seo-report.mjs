@@ -6,8 +6,10 @@
  * 1. Crawl health: every URL in the live sitemap must answer 200 with a
  *    matching canonical and an indexable robots tag.
  * 2. Content: Engineer's Notes published in the last 7 days (target 4-7).
- * 3. Search Console (when GSC_SERVICE_ACCOUNT_JSON is set): clicks,
- *    impressions, top queries, and high-impression / low-CTR pages to rewrite.
+ * 3. Search Console: clicks, impressions, top queries, and high-impression /
+ *    low-CTR pages to rewrite. Auth is a short-lived GSC_ACCESS_TOKEN minted
+ *    keylessly in CI (see weekly-seo-report.yml); GSC_SERVICE_ACCOUNT_JSON is
+ *    still accepted for local runs.
  */
 
 import { load } from 'cheerio/slim';
@@ -58,9 +60,11 @@ async function contentStats() {
 }
 
 async function searchConsole() {
-  const raw = process.env.GSC_SERVICE_ACCOUNT_JSON;
-  if (!raw) return null;
-  const token = await getAccessToken(JSON.parse(raw));
+  let token = process.env.GSC_ACCESS_TOKEN;
+  if (!token && process.env.GSC_SERVICE_ACCOUNT_JSON) {
+    token = await getAccessToken(JSON.parse(process.env.GSC_SERVICE_ACCOUNT_JSON));
+  }
+  if (!token) return null;
   const siteUrl = process.env.GSC_SITE_URL || `${SITE_URL}/`;
   const range = { token, siteUrl, startDate: day(10), endDate: day(3) }; // GSC data lags ~2-3 days
   const [totals, queries, pages] = await Promise.all([
@@ -85,7 +89,7 @@ async function main() {
   try {
     const gsc = await searchConsole();
     if (!gsc) {
-      lines.push('', '<i>Search Console: not connected (set GSC_SERVICE_ACCOUNT_JSON).</i>');
+      lines.push('', '<i>Search Console: not connected (no access token — check the Google auth step).</i>');
     } else {
       const t = gsc.totals;
       lines.push(
