@@ -18,6 +18,15 @@ import {
   type ProjectFact,
 } from '../../lib/portfolio/facts.js';
 
+/** Mirrors clipDescription in lib/seo/siteMeta.js so client and prerender agree. */
+function clip(text: string, max = 160) {
+  const clean = text.replace(/\s+/g, ' ').trim();
+  if (clean.length <= max) return clean;
+  const cut = clean.slice(0, max - 1);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > max * 0.6 ? cut.slice(0, space) : cut).replace(/[\s,;:.\-–—]+$/, '')}…`;
+}
+
 const PAGE = 'mx-auto max-w-[960px] px-[clamp(18px,4vw,52px)] pb-[clamp(64px,10vh,120px)]';
 const MONO = 'font-mono text-[11px] font-medium tracking-[0.14em] uppercase';
 const H2 = `mt-12 mb-4 ${MONO} text-ink-42`;
@@ -161,7 +170,7 @@ export function SkillPage() {
     <>
       <SEO
         title={`${skill.name} — AI Engineer in Dublin | Cem Koyluoglu`}
-        description={skill.summary.slice(0, 160)}
+        description={clip(skill.summary)}
         canonicalPath={`/skills/${skill.slug}`}
       />
       <Shell crumbs={[['Home', '/'], ['Skills', '/skills'], [skill.name, `/skills/${skill.slug}`]]}>
@@ -205,7 +214,7 @@ export function WorkPage() {
     <>
       <SEO
         title={`${project.title} — Case Study | Cem Koyluoglu, AI Engineer`}
-        description={project.summary.slice(0, 160)}
+        description={clip(project.summary)}
         canonicalPath={`/work/${project.slug}`}
         type="article"
       />
