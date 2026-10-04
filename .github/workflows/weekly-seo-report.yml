@@ -1,8 +1,13 @@
 name: Weekly SEO Report
 
-# Crawl health of every sitemap URL, Engineer's Notes output, and (when the
-# GSC_SERVICE_ACCOUNT_JSON secret is set) Search Console clicks, queries and
-# low-CTR pages — sent to Telegram every Monday.
+# Crawl health of every sitemap URL, Engineer's Notes output, and Search
+# Console clicks, queries and low-CTR pages — sent to Telegram every Monday.
+#
+# Search Console auth is keyless: GitHub's OIDC token is exchanged through
+# Workload Identity Federation (project eng-electron-475410-v2, pool "github",
+# provider "my-site", restricted to CemRoot/My-Site on refs/heads/main) for a
+# short-lived token of gsc-reader@…, which has no project roles and only
+# restricted read access to the Search Console property. No key exists.
 
 on:
   schedule:
@@ -11,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write # OIDC token for Workload Identity Federation
 
 jobs:
   report:
@@ -23,12 +29,23 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - run: npm ci
+      - name: 🔑 Google auth (keyless, Search Console read-only)
+        id: gcp
+        # The report still goes out without Search Console data if this fails.
+        continue-on-error: true
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/563076864971/locations/global/workloadIdentityPools/github/providers/my-site
+          service_account: gsc-reader@eng-electron-475410-v2.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/webmasters.readonly
+          create_credentials_file: false
       - name: 📈 Build and send report
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
+          GSC_ACCESS_TOKEN: ${{ steps.gcp.outputs.access_token }}
           GSC_SITE_URL: ${{ vars.GSC_SITE_URL }}
         run: node scripts/seo/weekly-seo-report.mjs
