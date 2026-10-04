@@ -32,6 +32,7 @@ import { useI18n, type Tr } from '../features/i18n';
 
 const AVAILABLE_CATEGORIES: { label: Tr; value: string }[] = [
   { label: { en: 'All', tr: 'Tümü' }, value: 'all' },
+  { label: { en: "Engineer's Notes", tr: 'Mühendis Notları' }, value: "Engineer's Notes" },
   { label: { en: 'AI Applications', tr: 'AI Uygulamaları' }, value: 'AI Applications' },
   { label: { en: 'AI', tr: 'AI' }, value: 'AI' },
   { label: { en: 'Tech', tr: 'Teknoloji' }, value: 'Tech' },
