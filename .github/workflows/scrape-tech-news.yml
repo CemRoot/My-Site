@@ -195,6 +195,15 @@ jobs:
           echo ""
           npm run scrape:news
 
+      # Best-effort: ping IndexNow for new indexable URLs. Never fails the run.
+      - name: 🔎 Post-scrape SEO (IndexNow)
+        if: success() && steps.gate.outputs.proceed == 'true'
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/seo/post-scrape-seo.mjs
+
       - name: ⏭️ Skipped full scrape (preflight)
         if: success() && steps.gate.outputs.proceed != 'true'
         run: |

@@ -59,14 +59,13 @@
             "postcss": "8.5.23"
       },
       "scripts": {
-            "test": "node --test tests/rate-limit.test.js tests/chat-security.test.js tests/format-tech-news-article.test.mjs tests/prerender-home-shell.test.mjs tests/hero-poster-metrics.test.mjs tests/tech-news-rank.test.mjs tests/preflight-url-utils.test.mjs tests/telegram-html-escape.test.mjs tests/telegram-tech-news-success-message.test.mjs tests/telegram-ops-router.test.mjs tests/slug-normalization.test.mjs tests/use-tech-news-loading-regression.test.mjs tests/scrape-tech-news-schedule.test.mjs tests/sentry-telegram-message.test.mjs",
+            "test": "node --test tests/rate-limit.test.js tests/chat-security.test.js tests/format-tech-news-article.test.mjs tests/prerender-home-shell.test.mjs tests/hero-poster-metrics.test.mjs tests/tech-news-rank.test.mjs tests/preflight-url-utils.test.mjs tests/telegram-html-escape.test.mjs tests/telegram-tech-news-success-message.test.mjs tests/telegram-ops-router.test.mjs tests/slug-normalization.test.mjs tests/use-tech-news-loading-regression.test.mjs tests/scrape-tech-news-schedule.test.mjs tests/sentry-telegram-message.test.mjs tests/seo-render-head.test.mjs tests/seo-article-html.test.mjs tests/sitemap-indexable.test.mjs tests/seo-page.test.mjs",
             "dev": "vite",
             "preview": "vite preview",
             "typecheck": "tsc --noEmit",
-            "prebuild": "node scripts/sitemap-generator.js && node scripts/generate-tech-news-snapshot.js",
+            "prebuild": "node scripts/generate-tech-news-snapshot.js",
             "build": "vite build",
             "postbuild": "node scripts/prerender-static-shells.js && (node scripts/post-build-telegram.js || true)",
-            "sitemap": "node scripts/sitemap-generator.js",
             "snapshot:news": "node scripts/generate-tech-news-snapshot.js",
             "scrape:news": "node --max-old-space-size=4096 scripts/news-scraper.js",
             "scrape:news:parity": "node scripts/ci/tech-news-preflight.mjs && node scripts/ci/run-scrape-if-preflight-ok.mjs",

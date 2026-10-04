@@ -1,6 +1,12 @@
 import { supabase } from './lib/supabaseAdmin.js';
 import { notifyTelegram } from './lib/telegram.js';
 import { writeJsonArtifact } from './lib/config.js';
+import { SOURCE_KIND_TRANSLATED } from '../lib/seo/indexability.js';
+
+// Retention only ever applies to legacy translated articles. First-party
+// ('original') articles are permanent URLs meant to rank; deleting them would
+// turn indexed pages into 404s. Requires the source_kind migration — without
+// the column this query fails loudly instead of deleting everything.
 
 /**
  * Main cleanup function
@@ -13,7 +19,7 @@ async function cleanupOldArticles() {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const cutoffDate = thirtyDaysAgo.toISOString();
 
-  console.log(`Deleting articles older than: ${cutoffDate}`);
+  console.log(`Deleting translated articles older than: ${cutoffDate}`);
 
   let totalDeletedTechNews = 0;
   let totalDeletedRejected = 0;
@@ -22,6 +28,7 @@ async function cleanupOldArticles() {
     const { data: oldTechNewsRows, error: oldTechNewsError } = await supabase
       .from('tech_news_articles')
       .select('id, slug, title, source_url, category, created_at')
+      .eq('source_kind', SOURCE_KIND_TRANSLATED)
       .lt('created_at', cutoffDate);
 
     if (oldTechNewsError) {
@@ -83,6 +90,7 @@ async function cleanupOldArticles() {
     const { data: deletedTechNews, error: techNewsError } = await supabase
       .from('tech_news_articles')
       .delete()
+      .eq('source_kind', SOURCE_KIND_TRANSLATED)
       .lt('created_at', cutoffDate)
       .select('id');
 

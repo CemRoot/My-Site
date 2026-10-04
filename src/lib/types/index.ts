@@ -46,6 +46,12 @@ export interface SEOMetadata {
   twitterCard?: string;
   /** e.g. "noindex, nofollow" for error pages */
   robots?: string;
+  /** og:type — "article" for tech-news detail pages */
+  type?: 'website' | 'article';
+  /** Path used for canonical/og:url; defaults to the current pathname (never the query) */
+  canonicalPath?: string;
+  /** ISO timestamp for article:published_time (articles only) */
+  publishedTime?: string;
 }
 
 /** Tech news article from the Supabase database */
@@ -63,6 +69,9 @@ export interface Article {
   originalSource?: string;
   views?: number;
   importanceScore?: number;
+  /** "original" = first-party, indexable; "translated" = legacy, noindex */
+  sourceKind?: 'translated' | 'original';
+  updatedAt?: string;
 }
 
 /** Response shape from /api/tech-news */
