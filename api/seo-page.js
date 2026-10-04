@@ -23,7 +23,7 @@ import { buildSitemapXml } from '../lib/seo/sitemap.js';
 import { ROBOTS_NOINDEX } from '../lib/seo/siteMeta.js';
 
 const SHELL_FILE = 'build/app-shell.html';
-const SHELL_HOSTS = /^(?:www\.)?cemkoyluoglu\.codes$|\.vercel\.app$/i;
+const PRODUCTION_ORIGIN = 'https://cemkoyluoglu.codes';
 
 const CACHE_OK = 'public, max-age=0, s-maxage=600, stale-while-revalidate=86400';
 const CACHE_SHORT = 'public, max-age=0, s-maxage=60';
@@ -36,10 +36,22 @@ let cachedShell = null;
 
 /**
  * The pristine built index.html, written by scripts/prerender-static-shells.js.
- * Bundled with the function via vercel.json includeFiles; fetched from the
+ * Bundled with the function via vercel.json includeFiles; fetched from this
  * deployment as a fallback.
+ *
+ * The fallback origin comes only from Vercel-set environment variables, never
+ * from request headers: the result is cached for the life of the instance, so
+ * a spoofable Host/X-Forwarded-Host would let one request poison the shell for
+ * every later visitor.
  */
-async function loadShell(req) {
+function shellOrigins() {
+  const origins = [];
+  if (process.env.VERCEL_URL) origins.push(`https://${process.env.VERCEL_URL}`);
+  if (process.env.VERCEL_ENV === 'production') origins.push(PRODUCTION_ORIGIN);
+  return origins;
+}
+
+async function loadShell() {
   if (cachedShell) return cachedShell;
 
   try {
@@ -49,10 +61,9 @@ async function loadShell(req) {
     // not bundled — try the deployment itself
   }
 
-  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '');
-  if (SHELL_HOSTS.test(host)) {
+  for (const origin of shellOrigins()) {
     try {
-      const response = await fetch(`https://${host}/app-shell.html`, {
+      const response = await fetch(`${origin}/app-shell.html`, {
         signal: AbortSignal.timeout(3000),
       });
       if (response.ok) {
