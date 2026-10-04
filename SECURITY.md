@@ -40,7 +40,7 @@ This document outlines the security measures, policies, and reporting procedures
 
 ### 4. Input Validation
 - **Status**: ✅ Implemented
-- **Location**: `api/tech-news.js`, `api/og-meta.js`
+- **Location**: `api/tech-news.js`, `api/seo-page.js` (shared `isValidSlug` in `lib/seo/findArticleBySlug.js`)
 - **Validation**: Slug parameter (`[a-z0-9-]+`, max 200 chars)
 - **Prevention**: NoSQL injection, path traversal
 

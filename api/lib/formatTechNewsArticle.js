@@ -23,6 +23,13 @@ export function formatTechNewsArticle(article, includeContent = false) {
     createdAt: article.created_at,
   };
 
+  if (article.source_kind) {
+    formatted.sourceKind = article.source_kind;
+  }
+  if (article.updated_at) {
+    formatted.updatedAt = article.updated_at;
+  }
+
   if (includeContent && article.content) {
     formatted.content = article.content;
     if (article.original_source) {

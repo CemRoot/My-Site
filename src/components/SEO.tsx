@@ -18,8 +18,14 @@ export function SEO({
   ogImage = DEFAULT_OG_IMAGE_URL,
   twitterCard = 'summary_large_image',
   robots = 'index, follow',
+  type = 'website',
+  canonicalPath,
+  publishedTime,
 }: SEOMetadata = {}) {
   useEffect(() => {
+    // Canonical never carries query strings or hashes (tracking params, filters).
+    const canonicalUrl = `${window.location.origin}${canonicalPath ?? window.location.pathname}`;
+
     // Set page title
     document.title = title;
 
@@ -49,8 +55,8 @@ export function SEO({
     setMetaTag('og:title', ogTitle, true);
     setMetaTag('og:description', ogDescription, true);
     setMetaTag('og:image', ogImage, true);
-    setMetaTag('og:type', 'website', true);
-    setMetaTag('og:url', window.location.href, true);
+    setMetaTag('og:type', type, true);
+    setMetaTag('og:url', canonicalUrl, true);
     setMetaTag('og:site_name', `${PERSONAL_INFO.name} Portfolio`, true);
     setMetaTag('og:locale', 'en_IE', true);
 
@@ -61,9 +67,14 @@ export function SEO({
     setMetaTag('twitter:image', ogImage);
     setMetaTag('twitter:creator', PERSONAL_INFO.twitterHandle);
 
-    // Additional SEO tags
-    setMetaTag('theme-color', '#5BE7FF');
-    setMetaTag('msapplication-TileColor', '#5BE7FF');
+    const publishedMeta = document.querySelector('meta[property="article:published_time"]');
+    if (type === 'article' && publishedTime) {
+      setMetaTag('article:published_time', publishedTime, true);
+    } else {
+      publishedMeta?.remove();
+    }
+
+    // Additional SEO tags (theme colours live in index.html)
     setMetaTag('mobile-web-app-capable', 'yes');
     setMetaTag('apple-mobile-web-app-status-bar-style', 'black-translucent');
     setMetaTag('format-detection', 'telephone=no');
@@ -75,16 +86,18 @@ export function SEO({
       canonical.rel = 'canonical';
       document.head.appendChild(canonical);
     }
-    canonical.href = window.location.href;
+    canonical.href = canonicalUrl;
 
     // JSON-LD structured data for better SEO
     const structuredData = {
       '@context': 'https://schema.org',
       '@type': 'Person',
+      // Same @id as the server-rendered graph (lib/seo/siteMeta.js) so the two merge.
+      '@id': `${window.location.origin}/#person`,
       name: PERSONAL_INFO.name,
       jobTitle: PERSONAL_INFO.title,
       description: description,
-      url: window.location.href,
+      url: `${window.location.origin}/`,
       email: PERSONAL_INFO.email,
       telephone: PERSONAL_INFO.phone,
       address: {
@@ -93,9 +106,8 @@ export function SEO({
         addressCountry: 'Ireland',
       },
       alumniOf: {
-        '@type': 'EducationalOrganization',
+        '@type': 'CollegeOrUniversity',
         name: EDUCATION.institution,
-        degree: EDUCATION.degree,
       },
       knowsAbout: [...SEO_KNOWS_ABOUT],
       sameAs: [
@@ -112,7 +124,7 @@ export function SEO({
       document.head.appendChild(scriptTag);
     }
     scriptTag.textContent = JSON.stringify(structuredData);
-  }, [title, description, keywords, author, ogTitle, ogDescription, ogImage, twitterCard, robots]);
+  }, [title, description, keywords, author, ogTitle, ogDescription, ogImage, twitterCard, robots, type, canonicalPath, publishedTime]);
 
   return null;
 }

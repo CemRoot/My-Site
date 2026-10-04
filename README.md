@@ -820,7 +820,7 @@ My-Site/
 │   ├── tech-news.js              # News API (Edge Runtime)
 │   ├── telegram-webhook.js       # Telegram bot webhook
 │   ├── telegram-control.js       # Bot control endpoint
-│   ├── og-meta.js                # Dynamic Open Graph meta
+│   ├── seo-page.js               # Server-rendered /tech-news, /tech-news/:slug, sitemap
 │   ├── deployment-webhook.js     # Deploy notifications
 │   ├── frontend-health-monitor.js# Error monitoring
 │   ├── conversation-state.js     # Telegram state management

@@ -107,30 +107,37 @@ function TechNewsDetail() {
 
   if (error || !article) {
     return (
-      <main
-        className="min-h-screen bg-background"
-        style={{ paddingTop: 'calc(var(--nav-height, 64px) + 40px)' }}
-      >
-        <div className={PAGE}>
-          <h1 className="font-sans text-3xl font-bold">
-            {t({ en: 'Article not found', tr: 'Haber bulunamadı' })}
-          </h1>
-          <p className="mt-3 text-ink-55">
-            {error ||
-              t({
-                en: 'The article you are looking for does not exist.',
-                tr: 'Aradığınız haber mevcut değil.',
-              })}
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate('/tech-news')}
-            className={`mt-8 ${MONO} text-signal hover:text-signal-hover`}
-          >
-            {t({ en: '← BACK TO INDEX', tr: '← DİZİNE DÖN' })}
-          </button>
-        </div>
-      </main>
+      <>
+        <SEO
+          title="Article not found | Tech News"
+          description="The article you are looking for does not exist or has been removed."
+          robots="noindex, nofollow"
+        />
+        <main
+          className="min-h-screen bg-background"
+          style={{ paddingTop: 'calc(var(--nav-height, 64px) + 40px)' }}
+        >
+          <div className={PAGE}>
+            <h1 className="font-sans text-3xl font-bold">
+              {t({ en: 'Article not found', tr: 'Haber bulunamadı' })}
+            </h1>
+            <p className="mt-3 text-ink-55">
+              {error ||
+                t({
+                  en: 'The article you are looking for does not exist.',
+                  tr: 'Aradığınız haber mevcut değil.',
+                })}
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/tech-news')}
+              className={`mt-8 ${MONO} text-signal hover:text-signal-hover`}
+            >
+              {t({ en: '← BACK TO INDEX', tr: '← DİZİNE DÖN' })}
+            </button>
+          </div>
+        </main>
+      </>
     );
   }
 
@@ -145,6 +152,11 @@ function TechNewsDetail() {
         ogTitle={article.title}
         ogDescription={article.description}
         ogImage={article.image || DEFAULT_OG_IMAGE_URL}
+        type="article"
+        canonicalPath={`/tech-news/${article.slug}`}
+        publishedTime={article.date || article.createdAt}
+        // Legacy translated articles stay readable but out of the index.
+        robots={article.sourceKind === 'original' ? 'index, follow' : 'noindex, follow'}
       />
 
       <main

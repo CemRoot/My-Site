@@ -7,6 +7,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { formatTechNewsArticle } from './lib/formatTechNewsArticle.js';
 import { sortArticlesByRank } from './lib/techNewsRank.js';
+import { findArticleBySlug, isValidSlug } from '../lib/seo/findArticleBySlug.js';
 
 const LIST_COLUMNS =
   'id,title,description,original_title,image_url,date,category,slug,views,created_at,importance_score';
@@ -132,62 +133,6 @@ const ALLOWED_ORIGINS = [
   'https://www.cemkoyluoglu.codes',
 ];
 
-function normalizeSlugValue(value) {
-  if (!value) return '';
-  try {
-    return decodeURIComponent(String(value)).toLowerCase().replace(/\/+$/, '');
-  } catch {
-    return String(value).toLowerCase().replace(/\/+$/, '');
-  }
-}
-
-function generateLegacyTitleSlug(title) {
-  const normalizedWords = String(title || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, ' ')
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (normalizedWords.length === 0) {
-    return '';
-  }
-
-  let slug = normalizedWords.join('-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-
-  if (slug.length > 60) {
-    const shortened = slug.substring(0, 60).replace(/-+$/g, '');
-    const lastDash = shortened.lastIndexOf('-');
-    slug = lastDash > 20 ? shortened.substring(0, lastDash) : shortened;
-  }
-
-  return slug;
-}
-
-async function findLegacyTitleSlugArticle(slug) {
-  const normalizedSlug = normalizeSlugValue(slug);
-  if (!normalizedSlug) return null;
-
-  const { data, error } = await supabase
-    .from('tech_news_articles')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(250);
-
-  if (error) {
-    console.error('Legacy title-slug fallback error:', error);
-    return null;
-  }
-
-  return (data || []).find(article => {
-    const legacyTitleSlug = generateLegacyTitleSlug(article.title);
-    return (
-      legacyTitleSlug === normalizedSlug ||
-      legacyTitleSlug.startsWith(`${normalizedSlug}-`) ||
-      normalizedSlug.startsWith(`${legacyTitleSlug}-`)
-    );
-  }) || null;
-}
-
 /**
  * Edge Function Handler (Web Standards API)
  */
@@ -230,47 +175,13 @@ export default async function handler(request) {
     }
 
     // Security: Validate slug input
-    if (slug) {
-      if (typeof slug !== 'string' || slug.length > 200) {
-        return jsonResponse({ success: false, message: 'Invalid slug format' }, 400, corsHeaders);
-      }
-      if (!/^[a-z0-9-]+$/i.test(slug)) {
-        return jsonResponse({ success: false, message: 'Slug contains invalid characters' }, 400, corsHeaders);
-      }
+    if (slug && !isValidSlug(slug)) {
+      return jsonResponse({ success: false, message: 'Invalid slug format' }, 400, corsHeaders);
     }
 
     // If slug is provided, return single article (with full content)
     if (slug) {
-      const { data: exactArticle, error: exactError } = await supabase
-        .from('tech_news_articles')
-        .select('*')
-        .eq('slug', slug)
-        .maybeSingle();
-
-      let article = exactArticle;
-
-      if (!article && exactError) {
-        console.error('Exact slug lookup error:', exactError);
-      }
-
-      if (!article) {
-        const { data: legacyMatches, error: legacyError } = await supabase
-          .from('tech_news_articles')
-          .select('*')
-          .like('slug', `${slug}%`)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (legacyError) {
-          console.error('Legacy slug fallback error:', legacyError);
-        }
-
-        article = legacyMatches?.[0] || null;
-      }
-
-      if (!article) {
-        article = await findLegacyTitleSlugArticle(slug);
-      }
+      const article = await findArticleBySlug(supabase, slug);
 
       if (!article) {
         return jsonResponse({ success: false, message: 'Article not found' }, 404, corsHeaders);
