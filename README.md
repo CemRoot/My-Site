@@ -1,1106 +1,359 @@
 <div align="center">
 
-# 🌐 Tech News Automation Platform
+# Cem Köylüoğlu — AI Engineer
 
-### AI-Powered News Aggregation & Distribution System
+**A portfolio that runs in production.**<br>
+Behind the site are scheduled AI pipelines, a guarded LLM writer, a grounded chat assistant,<br>
+a server-rendered SEO layer and a Telegram bot that operates all of it from a phone.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Node Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-6.0-blue)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-19.2-61dafb)](https://reactjs.org/)
-[![Vite](https://img.shields.io/badge/Vite-8.0-646cff?logo=vite)](https://vite.dev/)
-[![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-000000?logo=vercel)](https://vercel.com)
-[![Sentry](https://img.shields.io/badge/Monitored%20by-Sentry-362d59?logo=sentry)](https://sentry.io)
+[![Live site](https://img.shields.io/badge/live-cemkoyluoglu.codes-ff4a1c?style=for-the-badge)](https://cemkoyluoglu.codes)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-cem--koyluoglu-0a66c2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/cem-koyluoglu/)
+[![Email](https://img.shields.io/badge/email-cemkoyluoglu%40icloud.com-1f1f1f?style=for-the-badge&logo=maildotru&logoColor=white)](mailto:cemkoyluoglu@icloud.com)
 
-[Live Demo](https://cemkoyluoglu.codes) · [Report Bug](https://github.com/CemRoot/My-Site/issues) · [Request Feature](https://github.com/CemRoot/My-Site/issues)
+![React 19](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-22-5fa04e?logo=nodedotjs&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres-3ecf8e?logo=supabase&logoColor=white)
+![Groq](https://img.shields.io/badge/LLM-Groq-f55036)
+![Vercel](https://img.shields.io/badge/Vercel-serverless-000?logo=vercel)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-14_workflows-2088ff?logo=githubactions&logoColor=white)
+![Sentry](https://img.shields.io/badge/Sentry-monitored-362d59?logo=sentry)
 
 </div>
 
 ---
 
-## 📋 Table of Contents
+## In 30 seconds
 
-- [Overview](#-overview)
-- [Key Features](#-key-features)
-- [Architecture](#-architecture)
-- [Daily News Agent](#-daily-news-agent)
-- [Tech Stack](#-tech-stack)
-- [Quick Start](#-quick-start)
-- [Telegram Bot](#-telegram-bot-control-center)
-- [Automation](#-automation-workflows)
-- [Scrape Tech News Architecture](#-scrape-tech-news-architecture-and-data-flow)
-- [Configuration](#-configuration)
-- [Deployment](#-deployment)
-- [Monitoring](#-monitoring--observability)
-- [Contributing](#-contributing)
-- [Security](#-security)
-- [License](#-license)
+> **Who:** Cem Köylüoğlu, AI Engineer in Dublin, Ireland.<br>
+> **MSc Artificial Intelligence, First Class Honours**, National College of Ireland.<br>
+> **BSc Software Engineering (GPA 3.96/4.00)**, Kyiv Polytechnic Institute.<br>
+> Three years running Azure / Entra ID / Intune / Microsoft 365 operations for an EU client.
 
----
+This repository is the source of [cemkoyluoglu.codes](https://cemkoyluoglu.codes). It is a portfolio, and it is also a small production system that I designed, built and operate on my own:
 
-## 🎯 Overview
+| | What it is | What it shows |
+|---|---|---|
+| 🗞️ | **Automated tech-news pipeline.** Scrapes, translates and quality-gates articles on a schedule, then publishes them. | LLM engineering, data pipelines, failure handling |
+| ✍️ | **Engineer's Notes.** Daily analysis of primary AI sources, written by an LLM that is **not allowed** to invent facts. | Guardrails, prompt-injection defence, evals |
+| 💬 | **Portfolio chat assistant.** Answers questions about my work from a curated knowledge pack, with a fallback backend. | RAG-style grounding, LLM security, reliability |
+| 🔎 | **Server-rendered SEO layer** on a single-page app: skill pages, case studies, a live sitemap and a weekly Search Console report. | Web architecture, structured data, measurement |
+| 🧊 | **3D wireframe hero.** A 79 MB photogrammetry scan reduced to 251 KB without delaying the first paint. | Performance engineering, 3D/graphics pipelines |
+| 📱 | **Telegram operations bot.** Triggers jobs, inspects health and receives alerts from a phone. | DevOps, observability, automation |
 
-This repository is a personal portfolio site that is also a **running system**,
-not a static brochure. The public site at
-[cemkoyluoglu.codes](https://cemkoyluoglu.codes) is the front door; behind it sit
-scrapers that pull tech news on a schedule, AI agents that translate and score
-it, a RAG chatbot grounded in the author's CV and projects, and a Telegram bot
-that operates the whole thing from a phone.
-
-The frontend is deliberately part of the story: the site's own architecture is
-what the "Systems" section on the home page describes.
-
-### 🌟 What Makes This Special?
-
-- **🤖 AI-Powered**: Multi-AI system (Groq Llama 3.3 + Google Gemini 2.0 Flash)
-- **💬 AI Chatbot**: Interactive portfolio chatbot with n8n fallback
-- **📊 Relevance Ranking**: Articles carry a scrape-time importance score, blended
-  at query time with view count and 14-day publish-date freshness in a Postgres RPC
-- **📱 Telegram Control Center**: Full system control from your phone
-- **🔄 100% Automated**: GitHub Actions + n8n + Vercel integration
-- **🎨 Editorial Frontend**: Hand-built design system, EN/TR i18n, and a 3D
-  wireframe hero compressed ~330× so it stays off the critical path
-- **📈 Production-Ready**: Sentry monitoring, health checks, deployment tracking
-- **🔒 Security-Conscious**: Rate limiting, secret hygiene, strict CSP,
-  least-privilege database functions
+**Looking for a specific skill?** Each one links to evidence on the live site:
+[RAG & grounded LLMs](https://cemkoyluoglu.codes/skills/rag-systems) ·
+[Deepfake detection](https://cemkoyluoglu.codes/skills/deepfake-detection) ·
+[Computer vision](https://cemkoyluoglu.codes/skills/computer-vision) ·
+[Agentic workflows](https://cemkoyluoglu.codes/skills/agentic-workflows) ·
+[Azure & Microsoft 365](https://cemkoyluoglu.codes/skills/azure-microsoft-365)
 
 ---
 
-## ✨ Key Features
+## Selected work
 
-### 🗞️ News Aggregation System
-
-<table>
-<tr>
-<td width="50%">
-
-#### Intelligent Scraping
-- Deterministic daily agent across 6 business categories
-- Smart rate limiting (respects API limits)
-- Duplicate detection & prevention
-- Source attribution & tracking
-- Original article link preservation
-- Replayable run artifacts for rejected/failed/deleted batches
-- **Manual article scraper via Telegram**
-
-</td>
-<td width="50%">
-
-#### AI Translation & Processing
-- Turkish → English translation (Groq AI)
-- **Google Gemini 2.0 Flash** for content optimization
-- Context-aware processing
-- Social media embed preservation
-- Markdown formatting retention
-- **Smart content quality validation**
-
-</td>
-</tr>
-</table>
-
-### 💬 AI Chatbot System
-
-<table>
-<tr>
-<td width="50%">
-
-#### Portfolio Chatbot
-- **Groq AI (openai/gpt-oss-120b)** primary backend
-- **n8n fallback** for high availability
-- Chat history persistence (Supabase)
-- Session management
-- Rate limiting protection
-
-</td>
-<td width="50%">
-
-#### Smart Features
-- Context-aware responses
-- Page context integration
-- Multi-language support
-- Real-time conversation tracking
-- Automatic session cleanup
-
-</td>
-</tr>
-</table>
-
-### 🤖 Telegram Bot Control Center
-
-<table>
-<tr>
-<td width="50%">
-
-#### Interactive Menu System
-- 📰 Manual scraping trigger
-- ➕ Manual article addition
-- 🔧 System Management
-  - 🤖 n8n trial tracking
-  - 🔄 Webhook reset
-  - 🏥 Health checks
-- 📊 Real-time statistics
-- 💾 Database management
-- 📱 LinkedIn digest management
-
-</td>
-<td width="50%">
-
-#### Automated Notifications
-- ✅ Success reports
-- ❌ Error alerts with details
-- 📈 Daily health summaries
-- 🚀 Deployment notifications
-- 🚨 Vercel status alerts
-- 📱 Real-time updates
-
-</td>
-</tr>
-</table>
-
-### 🎨 Editorial Frontend
-
-- Dark editorial design system — a single CSS source of truth, zero-radius
-  surfaces, hairline borders, `Space Grotesk` + `IBM Plex Mono`
-- 3D wireframe hero: a 1.8M-triangle photogrammetry scan reduced to a **251 KB**
-  GLB (~330×) and lazy-loaded on idle, so it never touches first paint
-- Full EN/TR internationalisation via React context
-- `/tech-news` reading experience tuned for scannability — F-pattern list,
-  ~68ch body measure, sticky related rail
-
-### 🔄 Full Automation
-
-- **Scheduled Scraping**: 3x daily on weekdays (07:00, 13:00, 15:00 UTC)
-- **Manual Article Scraper**: On-demand article processing via Telegram
-- **LinkedIn Digest**: Daily automated post generation (via n8n)
-- **Vercel Status Monitor**: 30-min interval platform health checks
-- **Auto Deployment**: Vercel CI/CD with post-build hooks
+| Project | Highlights |
+|---|---|
+| [**DeepFake Detection Framework**](https://cemkoyluoglu.codes/work/deepfake-detection-framework) | MSc dissertation. Attention-enhanced EfficientNetB7, **~97 % accuracy** on 10K+ synthetic images, compared against CNN/SVM/RF baselines, with a real-time Streamlit demo. |
+| [**YouTube AI Summarizer**](https://cemkoyluoglu.codes/work/youtube-ai-summarizer) | Published on the **Chrome Web Store**. Summaries, deep analysis, transcript-grounded chat and a two-host AI podcast mode, in 20+ languages, bring-your-own-key. |
+| [**Ireland Expat Assistant**](https://cemkoyluoglu.codes/work/ireland-expat-assistant) | Custom GPT that answers from official documents on visas/IRP, Irish tax (PAYE/PRSI/USC), HSE and citizenship. |
+| [**Automated AI News Pipeline**](https://cemkoyluoglu.codes/work/ai-news-pipeline) | The system in this repository (details below). |
+| [**Automated Data Analysis System**](https://cemkoyluoglu.codes/work/automated-data-analysis-system) | Python/Pandas pipelines that cut manual processing by **60 %**. |
+| [**Customer Dashboard Platform**](https://cemkoyluoglu.codes/work/customer-dashboard-platform) | Django + Oracle dashboards for **100+ customers**, with a **40 %** ETL efficiency gain. |
 
 ---
 
-## 🏗️ Architecture
+## How it fits together
 
-> **Enterprise-Grade System Design** following Google Cloud Architecture best practices
+```mermaid
+flowchart LR
+    subgraph Visitors
+        U[Browser]
+        G[Search engines]
+    end
 
-### 📊 Component Architecture
+    subgraph Vercel
+        SPA[React 19 SPA<br/>prerendered shells]
+        SEO[api/seo-page<br/>SSR head, sitemap, 404s]
+        CHAT[api/chat<br/>guarded LLM chat]
+        TG[api/telegram-webhook<br/>ops bot]
+    end
 
-| Layer | Components | Technology | Purpose |
-|-------|-----------|------------|---------|
-| **Edge** | CDN, Cache | Vercel Edge Network | Global content delivery, <100ms latency |
-| **Frontend** | React SPA, UI Components | React 18, TypeScript, Vite | User interface, real-time updates |
-| **API Gateway** | Serverless Functions | Vercel Edge Functions | Request routing, authentication |
-| **Orchestration** | Workflows, Schedulers | GitHub Actions, n8n | Automation, scheduled tasks |
-| **AI/ML** | Translation, Chat, Generation | Groq AI, Google Gemini, Firecrawl | Content processing, intelligence |
-| **Observability** | Monitoring, Logging | Sentry, Custom Health Checks | Error tracking, performance monitoring |
-| **Data** | Database, Storage | Supabase PostgreSQL | Persistent storage, real-time sync |
-| **Communication** | Messaging, Notifications | Telegram Bot, LinkedIn API | User interaction, distribution |
+    subgraph GHA[GitHub Actions]
+        SCR[Scrape Tech News<br/>weekdays ×2]
+        NOTES[Engineer's Notes<br/>daily + weekly eval]
+        REP[Weekly SEO report]
+        OPS[Health · cleanup · security]
+    end
 
-### 🗂️ System Components
+    DB[(Supabase<br/>Postgres + RLS)]
+    LLM[Groq LLMs<br/>model cascade]
+    T[Telegram]
 
-| Layer | Component | Technology | Purpose |
-|-------|-----------|------------|---------|
-| **Frontend** | React SPA | React 18.3 + TypeScript 5.9 | Modern, responsive UI |
-| | Build Tool | Vite 6.4 | Fast build & HMR |
-| | Styling | Tailwind CSS 4 (CSS-first) | Utility-first styling |
-| **Backend** | API Gateway | Vercel Edge Functions | Serverless endpoints |
-| | Webhooks | Telegram, Deployment | Event handling |
-| **Database** | Primary DB | Supabase PostgreSQL | Structured data storage |
-| | Chat History | Supabase | Conversation persistence |
-| **AI/ML** | Translation | Groq AI (Llama 3.1 8B primary, 70B last resort) | Multi-language support |
-| | Content Gen | Google Gemini 2.0 Flash | Article processing |
-| | Chat Widget | Groq AI + n8n fallback | User interaction |
-| | Web Scraping | Firecrawl API | Article extraction |
-| **Observability** | Error Tracking | Sentry 10.x | Frontend & backend |
-| | Health Checks | Custom Scripts | System monitoring |
-| **Communication** | Bot Platform | Telegram Bot API | Interactive control |
-| | Social Media | LinkedIn API (n8n OAuth) | Content distribution |
-| | Email | Newsletter System | Subscriber management |
-
----
-
-## 🛠️ Tech Stack
-
-### Frontend
-| Technology | Version | Purpose |
-|-----------|---------|---------|
-| **React** | 19.2 | UI framework |
-| **TypeScript** | 6.0 | Type safety (`strict`) |
-| **Vite** | 8.0 | Build tool — output in `build/` |
-| **Tailwind CSS** | 4.3 (CSS-first) | Styling, compiled by `@tailwindcss/vite` |
-| **three.js** | 0.185 | Hero wireframe head, lazy-loaded on idle |
-| **React Router** | 7.18 | Client-side routing (`BrowserRouter`) |
-| **React Markdown** | 10.1 | Article rendering (no `dangerouslySetInnerHTML`) |
-| **Radix UI** | `react-slot` only | Underpins the `button` primitive |
-| **Fontsource** | 5.3 | Self-hosted Space Grotesk + IBM Plex Mono |
-
-Design tokens, the `@theme` block and every utility live in a single source of
-truth: `src/styles/globals.css`. There is no `tailwind.config.js` — Tailwind v4
-is configured in CSS.
-
-### Backend & APIs
-| Service | Purpose | Notes |
-|---------|---------|-------|
-| **Supabase** | PostgreSQL Database | Free/Pro tier |
-| **Groq AI** | Translation & Chat | Chat: `openai/gpt-oss-120b` · Translation: `openai/gpt-oss-20b` (`gpt-oss-120b` fallback) |
-| **Google Gemini** | Content Generation | 2.0 Flash |
-| **Firecrawl** | Web Scraping | 500/mo free |
-| **n8n** | Workflow Automation | Self-hosted/Cloud |
-| **Telegram Bot API** | Notifications & Control | Unlimited |
-| **GitHub Actions** | CI/CD & Automation | 2000 min/mo free |
-| **Sentry** | Error Tracking | 5K errors/mo |
-
-### Infrastructure
-| Platform | Purpose | Cost |
-|----------|---------|------|
-| **Vercel** | Hosting & Edge Functions | Free/Pro |
-| **GitHub** | Version Control & Actions | Free |
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-```bash
-node >= 20.0.0
-npm >= 10.0.0
-git >= 2.40.0
+    U --> SPA
+    U --> CHAT
+    G --> SEO
+    SEO --> DB
+    CHAT --> LLM
+    SCR --> LLM --> DB
+    NOTES --> LLM
+    NOTES --> DB
+    REP -->|Search Console via OIDC| T
+    SCR --> T
+    OPS --> T
+    T <--> TG
+    TG -->|workflow_dispatch| SCR
 ```
 
-### Installation
+---
+
+## Tech stack
+
+| Layer | Tools |
+|---|---|
+| **Frontend** | React 19, TypeScript, Vite 8 (Rolldown), Tailwind CSS 4, three.js, React Router 7, self-hosted fonts, EN/TR i18n |
+| **Backend** | Vercel serverless functions (Node.js), Supabase (Postgres, Row Level Security, RPC ranking functions) |
+| **AI / LLM** | Groq (`gpt-oss-20b` / `gpt-oss-120b` cascade), Ollama Cloud, Firecrawl + Cheerio scraping, n8n fallback |
+| **Automation** | 14 GitHub Actions workflows, Telegram Bot API, IndexNow, Google Search Console API |
+| **Quality & ops** | Sentry (client and server), Vercel Analytics & Speed Insights, Dependabot, weekly `npm audit` |
+
+---
+
+## 🔬 Under the hood — for the curious
+
+The sections above are the summary. The ones below are the engineering decisions behind it, with links into the code. Click a section to expand it.
+
+<details>
+<summary><b>1. Engineer's Notes — an LLM writer that cannot put words in my mouth</b></summary>
+
+<br>
+
+Every morning (`engineer-notes.yml`, 08:30 UTC) the generator picks a fresh post from **primary sources only**: Hugging Face, OpenAI, Google AI, DeepMind, AWS ML, Microsoft AI/Azure and NVIDIA. It never uses aggregators. An LLM then writes an engineering analysis of that post.
+
+Auto-publishing AI text under a person's name is risky, so a note goes live only after passing **three independent layers**:
+
+1. **Output guard** ([`lib/notes/claimGuard.js`](lib/notes/claimGuard.js)). Deterministic checks reject:
+   - any first-person voice (`I`, `we`, `our`…);
+   - any mention of the site owner;
+   - any URL or number that does not appear in the source text;
+   - any echo of injected instructions.
+
+   A failed check goes back to the model as a fix hint. If retries still fail, nothing is published.
+2. **No model-written credentials.** The "Related work" section is appended from a verified registry ([`lib/portfolio/facts.js`](lib/portfolio/facts.js)) by [`relatedWork.js`](lib/notes/relatedWork.js). The model never writes it, so it cannot invent experience.
+3. **Live prompt-injection eval** ([`scripts/notes/eval-injection.mjs`](scripts/notes/eval-injection.mjs)). Every Monday, before publishing, the real model receives five hostile source articles: claim fake experience, praise the owner, inject a link, leak the system prompt, invent benchmark numbers. **One leak fails the workflow** and blocks that day's publication.
+
+Each note ends with an AI-assistance disclosure that credits the source.
+
+</details>
+
+<details>
+<summary><b>2. Server-rendered SEO on a client-side SPA, without moving to Next.js</b></summary>
+
+<br>
+
+The site is a Vite SPA, so crawlers originally saw one generic `index.html` for every URL. Rather than rewrite the app, I added a thin rendering layer:
+
+- **[`api/seo-page.js`](api/seo-page.js)** serves `/tech-news`, `/tech-news/:slug` and `/sitemap.xml`. It injects page-specific `<title>`, canonical, Open Graph and `NewsArticle` JSON-LD into the built shell, plus crawler-readable markup inside `#root`. React then mounts over it. Missing articles return a **real HTTP 404** with `noindex`, not a soft 200.
+- **[`scripts/prerender-static-shells.js`](scripts/prerender-static-shells.js)** writes a static HTML shell for every skill page and case study at build time.
+- **One route manifest** ([`lib/seo/staticRoutes.js`](lib/seo/staticRoutes.js)) drives both the prerender and the sitemap, so they cannot disagree.
+- **Indexability is a data decision.** The `source_kind` column separates machine-translated articles (readable, `noindex, follow`) from original writing (indexed). The sitemap only lists the indexed ones ([`lib/seo/indexability.js`](lib/seo/indexability.js)).
+- **Security fix along the way.** The shell is never fetched using the request's `Host` header. A spoofed header could otherwise have poisoned the cached shell (stored XSS).
+- After each scrape, new indexable URLs are pushed to **IndexNow** ([`scripts/seo/post-scrape-seo.mjs`](scripts/seo/post-scrape-seo.mjs)).
+
+</details>
+
+<details>
+<summary><b>3. The tech-news pipeline — built for when things go wrong</b></summary>
+
+<br>
+
+`scrape-tech-news.yml` runs twice every weekday. Flow:
+**preflight → scrape → translate/enhance → quality gates → save → IndexNow → Telegram report**.
+
+- **Preflight before spending money.** [`tech-news-preflight.mjs`](scripts/ci/tech-news-preflight.mjs) checks for new URLs and skips paid API calls when there is nothing to do. [`check-groq-models.mjs`](scripts/ci/check-groq-models.mjs) checks every configured model id against Groq's live model list. Groq retired two models on 2026-08-16, and this gate is how that was caught.
+- **One registry of model ids** ([`lib/groqModels.js`](lib/groqModels.js)). Every id can be overridden with an environment variable, so a model retirement can be handled without a code change.
+- **Model cascade.** A lightweight model handles the bulk of the work so the daily token budget isn't spent early. Fallback and last-resort tiers take over on errors, and Ollama Cloud is available as an alternate translator.
+- **Scraping:** Firecrawl first, falling back to Cheerio ([`ScraperRouter`](scripts/lib/scraper/scrapers/)).
+- **Quality gates** ([`scripts/validation/`](scripts/validation/)) reject:
+  - cookie-banner garbage;
+  - leaked prompt instructions;
+  - output in the wrong language;
+  - broken dates;
+  - social-embed leaks;
+  - duplicates, by source URL and by content hash.
+- **Replayable runs.** Rejected, failed and deleted batches are written as artifacts. `npm run scrape:news:replay` re-processes them without scraping again.
+- **Ranking.** Each article gets an importance score at scrape time. A Postgres RPC blends that score with views and 14-day freshness when the list is queried.
+
+</details>
+
+<details>
+<summary><b>4. The 3D hero — from 79 MB to 251 KB</b></summary>
+
+<br>
+
+The hero head comes from a photogrammetry scan: **79 MB GLB, 1.8 M triangles**. [`scripts/optimize-hero-model.mjs`](scripts/optimize-hero-model.mjs) reduces it to **251 KB, 27.8 k triangles, about 315× smaller**:
+
+- The hero draws only `EdgesGeometry` lines, so UVs, normals, tangents and every texture are dropped. Most of the saving comes from that step.
+- The mesh is simplified with meshoptimizer.
+- It is compressed with **meshopt rather than Draco**. Draco's `.wasm` decoder would come from a CDN that the strict `default-src 'self'` CSP blocks. Meshopt's ~25 KB decoder ships inside three.js.
+- A **29 KB WebP poster** ([`generate-hero-poster.mjs`](scripts/generate-hero-poster.mjs)) paints with the first HTML. The roughly 430 KB of three.js + GLB loads only when the browser is idle, so the 3D never delays first paint.
+
+</details>
+
+<details>
+<summary><b>5. Performance — and two ways Lighthouse can mislead you</b></summary>
+
+<br>
+
+| | Before | After (mobile) |
+|---|---|---|
+| Performance score | 66 | 78 – 95 |
+| Largest Contentful Paint | 5.3 s | **2.6 – 2.9 s** |
+| Cumulative Layout Shift | — | **0** |
+
+The interesting part is what the investigation found ([`docs/performance.md`](docs/performance.md)):
+
+1. **Lighthouse attributes long tasks to whichever script started them.** It blamed `react-vendor.js` for 994 ms. A real sampling profiler showed 261 ms of React time and **~7 ms** for the page's own components. The obvious fix, memoising every section, would have achieved nothing.
+2. **Lighthouse's default throttling doesn't actually slow the CPU.** It runs at full speed and multiplies the timings afterwards, so its traces contain no sampling profile. [`scripts/cpu-profile.mjs`](scripts/cpu-profile.mjs) slows the CPU for real through the Chrome DevTools Protocol and records function-level evidence.
+
+*Bundle-level attribution is a hint; function-level attribution is evidence.*
+
+</details>
+
+<details>
+<summary><b>6. The chat assistant — useful, and hard to misuse</b></summary>
+
+<br>
+
+- **Grounded answers.** A curated knowledge pack ([`lib/chatKnowledge.js`](lib/chatKnowledge.js)) is the authoritative source for facts about me. The model is told to prefer it over guessing.
+- **Deterministic pre-filter** ([`lib/chatSecurity.js`](lib/chatSecurity.js)). It hard-blocks only purely off-topic requests, code-generation requests and prompt injection, in English and Turkish. Mixed questions still get the on-topic part answered, with a polite decline for the rest. Earlier refusals don't carry over and spoil follow-up questions.
+- **Output policy and sanitisation** run before anything is returned. Requests are **rate-limited** per client (10/min).
+- **Reliability:** a two-model Groq fallback, then an **n8n backend** if Groq is unavailable. Each fallback sends a Telegram alert with the reason.
+
+</details>
+
+<details>
+<summary><b>7. Search Console without a stored key</b></summary>
+
+<br>
+
+The weekly SEO report (`weekly-seo-report.yml`, Mondays) does three things:
+
+- crawls every sitemap URL and checks it returns 200, with a matching canonical and an indexable robots tag;
+- counts the week's Engineer's Notes;
+- pulls clicks, impressions, top queries and high-impression / low-CTR pages from Search Console.
+
+The workflow stores **no Google credentials**. GitHub's OIDC token is exchanged through **Google Workload Identity Federation** for a short-lived access token. The identity pool trusts only this repository's `main` branch. Search data is sent to Telegram rather than the public Actions log.
+
+</details>
+
+<details>
+<summary><b>8. Operations — 14 workflows and a bot</b></summary>
+
+<br>
+
+| Workflow | When | Purpose |
+|---|---|---|
+| Scrape Tech News | Weekdays 13:00 & 15:00 UTC | News pipeline (see §3) |
+| Engineer's Notes | Daily 08:30 UTC | Guarded note generation (see §1) |
+| Weekly SEO Report | Mondays 07:00 UTC | Crawl health + Search Console |
+| System Health Check | Daily | End-to-end checks, reported to Telegram |
+| Vercel Status Monitor | Every 5 h | Deployment / platform status |
+| Database Cleanup | Mondays | Retention for translated articles |
+| Security Scan | Mondays | `npm audit` + production build audit |
+| LinkedIn Groups Digest | Daily | AI-summarised group digest |
+| Manual Article Scraper | On demand / from Telegram | Add a single article by URL |
+| Dependabot auto-merge, Smart Security Updates | On PR | Keep dependencies patched |
+| Telegram setup / webhook reset, n8n tracker | On demand / daily | Bot and integration upkeep |
+
+The **Telegram bot** ([`scripts/lib/telegram-ops/`](scripts/lib/telegram-ops/)) can start a scrape, add an article, run health checks, show statistics and manage the LinkedIn digest, all from a phone. Sentry errors, deployments and pipeline results are forwarded to the same chat.
+
+</details>
+
+<details>
+<summary><b>9. Security posture</b></summary>
+
+<br>
+
+- **Database:** Row Level Security on every table with least-privilege grants. Sensitive tables deny anonymous access entirely. Function `search_path` is pinned. See [`supabase/migrations/`](supabase/migrations/).
+- **HTTP:** a strict Content-Security-Policy, HSTS with preload, `X-Frame-Options: DENY`, `nosniff` and a locked-down `Permissions-Policy` ([`vercel.json`](vercel.json)).
+- **Secrets:** server-only keys never reach the client bundle, log output is redacted ([`scripts/lib/redact.js`](scripts/lib/redact.js)), and Google access uses no stored key.
+- **LLM surface:** the chat filters, notes guard and weekly injection eval described above.
+- Vulnerability reporting: [`SECURITY.md`](SECURITY.md).
+
+</details>
+
+---
+
+## Running it locally
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/CemRoot/My-Site.git
 cd My-Site
-
-# 2. Install dependencies
 npm install
-
-# 3. Setup environment variables
-cp .env.example .env
-
-# 4. Add your API keys to .env
-# See Configuration section below
-
-# 5. Start development server
-npm run dev
+npm run dev          # http://localhost:5173
 ```
 
-### First-Time Setup
+The homepage, skill pages and case studies work with no configuration. Tech News, chat and the automation scripts need the services below, set in `.env.local` or as GitHub/Vercel secrets:
+
+| Variable | Used by |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Database (API + scripts; the build-time news snapshot) |
+| `GROQ_API_KEY`, `GROQ_PARSER_API_KEY` | Chat, scraper, Engineer's Notes |
+| `FIRECRAWL_API_KEY`, `OLLAMA_API_KEY` | Scraping, alternate translator |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_CONTROL_API_SECRET` | Ops bot and alerts |
+| `VITE_SENTRY_DSN`, `SENTRY_DSN` | Error tracking (optional) |
+
+Useful scripts:
 
 ```bash
-# Setup Telegram bot menu
-npm run telegram:setup-menu
-
-# Run initial health check
-npm run health:check
+npm run typecheck        # TypeScript, no emit
+npm run build            # news snapshot (needs Supabase) → vite build → prerender shells
+npm run notes:dry-run    # generate an Engineer's Note without publishing
+npm run notes:eval       # run the prompt-injection eval
+npm run seo:report       # weekly SEO report, printed instead of sent
+npm run health:check     # end-to-end system health check
 ```
 
----
-
-## 📱 Telegram Bot Control Center
-
-### Features
-
-The Telegram bot provides complete system control from your mobile device:
+<details>
+<summary><b>Repository map</b></summary>
 
 ```
-┌─────────────────────────────────┐
-│     🤖 TECH NEWS BOT MENU       │
-├─────────────────────────────────┤
-│  📰 Haberleri Çek               │
-│  📱 LinkedIn Posts              │
-│  🏥 Sağlık Kontrolü             │
-│  📊 Sistem Durumu               │
-│  📈 İstatistikler               │
-│  🔧 GitHub Actions              │
-│  💾 Veritabanı                  │
-│  🔄 Menüyü Yenile               │
-│  ℹ️ Yardım                      │
-└─────────────────────────────────┘
+api/                 Vercel serverless functions: SEO renderer, chat, Telegram webhook, monitors
+lib/                 Code shared by the API and the scripts
+  ├─ seo/            Head rendering, sitemap, indexability, IndexNow, Search Console
+  ├─ notes/          Engineer's Notes: feeds, topics, prompt, claim guard, related work
+  ├─ portfolio/      Verified project & skill registry (single source of truth)
+  └─ chat*.js        Chat knowledge pack, security filters, system prompt
+src/                 React app
+  ├─ sections/       Homepage sections (hero, systems, work, services, contact…)
+  ├─ pages/          Skill pages, case studies, legal pages, 404
+  ├─ features/       3D hero, EN/TR i18n
+  └─ components/     Tech News, chat widget, SEO, UI primitives
+scripts/             Pipelines and tooling
+  ├─ lib/scraper/    Scrape orchestrator, translator, importance scoring
+  ├─ validation/     Content quality gates
+  ├─ notes/          Note generator + injection eval
+  ├─ seo/            Post-scrape IndexNow, weekly report
+  └─ ci/             Preflight, model checks, Telegram reporters
+supabase/migrations/ Schema, RLS policies, ranking functions
+.github/workflows/   The 14 scheduled and on-demand workflows
+docs/                Performance investigation notes
 ```
 
-### Available Commands
-
-| Command | Description |
-|---------|-------------|
-| `/start` | Initialize bot and show menu |
-| `/menu` | Display main control menu |
-| `/linkedin` | LinkedIn digest management |
-| `/status` | Quick system status |
-| `/scrape` | Trigger news scraping |
-| `/health` | Run health check |
-| `/help` | Show help and commands |
-
-### Setup
-
-```bash
-# 1. Create Telegram bot with @BotFather
-# 2. Get bot token and chat ID
-# 3. Add to environment variables
-TELEGRAM_BOT_TOKEN=your_token_here
-TELEGRAM_CHAT_ID=your_chat_id_here
-
-# 4. Setup bot menu
-npm run telegram:setup-menu
-
-# 5. Test in Telegram
-# Send: /start
-```
-
----
-
-## 🔄 Automation Workflows
-
-### Scheduled Jobs
-
-| Workflow | Schedule | Purpose |
-|----------|----------|---------|
-| **Scrape Tech News** | 07:00, 13:00, 15:00 UTC (M-F) | Deterministic today-only ingestion across 6 categories |
-| **Manual Article Scraper** | On-demand via Telegram | Process single articles |
-| **System Health Check** | 08:00 UTC (Daily) | Monitor system health |
-| **Vercel Status Monitor** | Every 30 minutes | Monitor Vercel platform status |
-| **LinkedIn Digest** | Daily via n8n | Generate & post digest |
-
-### Manual Triggers
-
-All workflows can be triggered manually:
-
-```bash
-# Via Telegram Bot
-/menu      # Open interactive menu
-/scrape    # Trigger news scraping
-/health    # Run health check
-/linkedin  # Manage LinkedIn digests
-
-# Via npm scripts
-npm run scrape:news          # Full scrape (no preflight — unlike scheduled CI)
-npm run scrape:news:parity   # Preflight then scrape only if gate says proceed (matches scheduled Actions)
-npm run scrape:news:replay -- --replay-file artifacts/tech-news-runs/<run>.json
-npm run cleanup:duplicates:dry
-npm run cleanup:duplicates
-npm run health:check         # Health check
-npm run vercel:status        # Check Vercel status
-```
-
-#### Manual / Forced URL Ingest
-
-When specific articles are missed by scheduled discovery, trigger `workflow_dispatch` and fill in the **force_urls** input:
-
-```
-force_urls:  https://nuvemmag.com/article-1/,https://nuvemmag.com/article-2/
-```
-
-The pipeline will bypass category discovery and process those URLs directly through the full pipeline (detail scrape → quality → translation → persistence). Normal duplicate and quality checks remain active.
-
-Locally:
-
-```bash
-npm run scrape:news -- --force-urls "https://nuvemmag.com/some-article/"
-# or via env var
-TECH_NEWS_FORCE_URLS="https://nuvemmag.com/a/,https://nuvemmag.com/b/" npm run scrape:news
-```
-
----
-
-## 📐 Scrape Tech News — Architecture & Data Flow
-
-End-to-end view of the **Scrape Tech News** GitHub Actions workflow (`.github/workflows/scrape-tech-news.yml`) and the Node orchestrator (`scripts/lib/scraper/ScrapeOrchestrator.js`, CLI entry: `scripts/news-scraper.js`). Diagrams use [Mermaid](https://mermaid.js.org/) and render on GitHub; for local editing, use a preview that supports fenced `mermaid` blocks.
-
-### Workflow (CI/CD)
-
-```mermaid
-flowchart TB
-  subgraph triggers["Triggers"]
-    CRON["Cron — weekdays 07:00 / 13:00 / 15:00 UTC"]
-    WD["workflow_dispatch — manual"]
-  end
-
-  subgraph job["Job: scrape-and-translate · ubuntu-latest"]
-    S1["Checkout repository"]
-    S2["Setup Node.js 22 + npm cache"]
-    PF["Preflight gate — may skip npm ci + scrape on schedule"]
-    S3["npm ci"]
-    S4["Export run env + npm run scrape:news"]
-    S5["Upload artifacts"]
-    S6["Success banner"]
-    S7["Telegram success via CI helper script"]
-    S8["Telegram failure alert"]
-    S1 --> S2 --> PF --> S3 --> S4 --> S5
-    S4 --> S6 --> S7
-    S4 -.->|failure| S8
-  end
-
-  subgraph secrets["Secrets injected into step 4"]
-    SEC["GROQ_API_KEY · GROQ_PARSER_API_KEY · FIRECRAWL_API_KEY\nNEXT_PUBLIC_SUPABASE_* · SUPABASE_SERVICE_ROLE_KEY\nTELEGRAM_BOT_TOKEN · TELEGRAM_CHAT_ID · OLLAMA_API_KEY"]
-  end
-
-  triggers --> job
-  secrets -.-> S4
-```
-
-**Concurrency:** `group: tech-news-daily-agent-${{ github.ref }}` with `cancel-in-progress: false` so overlapping runs are not cancelled mid-flight.
-
-**Scheduled CI vs local `npm run scrape:news`:** On a schedule, Actions runs a **preflight** step (cheap headline URLs vs Supabase) and may skip `npm ci` and the full scraper when nothing new is expected. Locally, `npm run scrape:news` always runs the full pipeline. Use `npm run scrape:news:parity` to mirror scheduled behavior, or trigger **workflow_dispatch** in GitHub.
-
-**`workflow_dispatch` inputs:**
-- `skip_preflight` (boolean) — bypass the preflight headline gate and always run the full scraper.
-- `force_urls` (string) — comma-separated source URLs to force-ingest directly, skipping discovery (useful when specific articles are missed by the scheduled run).
-
-### Agent Architecture
-
-The pipeline in `scripts/lib/scraper/ScrapeOrchestrator.js` consists of **6 agents**:
-
-| # | Agent | Responsibility |
-|---|-------|----------------|
-| 1 | **DiscoveryAgent** | Fetches category pages via `ScraperRouter` (Firecrawl → Cheerio fallback), runs AI list parsing + regex fallback, deduplicates candidates across categories. |
-| 2 | **DetailExtractionAgent** | Fetches the full article page, extracts title/description/content/date/embeds. |
-| 3 | **TranslationAgent** | Translates Turkish content to English via Groq, with placeholder swap to protect embed tokens. |
-| 4 | **EnhancementAgent** | Quality gate: rejects TL;DR-only content, validates English completeness. |
-| 5 | **QualityGateAgent** | Date integrity checks, garbage content detection, save disposition routing. |
-| 6 | **PersistenceAgent** | Duplicate detection (source URL, slug prefix, content hash) and Supabase insert. |
-
-### LLM Models
-
-| Role | Model | Provider |
-|------|-------|----------|
-| Translation (primary) | `openai/gpt-oss-20b` | Groq |
-| Translation (fallback / last resort) | `openai/gpt-oss-120b` | Groq |
-| List extraction / parser | `openai/gpt-oss-20b` | Groq |
-| Enhancement checks | `openai/gpt-oss-20b` | Groq |
-| Optional (content translation) | `gemini-3-flash-preview:cloud` | Ollama cloud |
-
-> **Model tiering rationale:** the lightweight, high-throughput `openai/gpt-oss-20b`
-> is the primary translation model so a full run does not exhaust the daily token
-> budget (TPD) on the heavier model. `openai/gpt-oss-120b` is kept only as a
-> last-resort quality fallback. Groq decommissioned `llama-3.1-8b-instant` and
-> `llama-3.3-70b-versatile` on 2026-08-16 (calls return 404 "model does not
-> exist"); `openai/gpt-oss-20b` and `openai/gpt-oss-120b` are Groq's recommended
-> replacements. Both Groq clients are configured with `maxRetries`
-> and `timeout`, so transient connection drops (e.g. "Premature close") are retried
-> automatically before the model cascade falls back.
-
-> **Surviving the next decommission:** every Groq model id in the project lives in
-> `lib/groqModels.js` — scraper tiers, the LinkedIn digest and the live site chat.
-> Each reads an environment variable first (`GROQ_PRIMARY_MODEL`,
-> `GROQ_FALLBACK_MODEL`, `GROQ_LAST_RESORT_MODEL`, `GROQ_ENHANCEMENT_MODEL`,
-> `GROQ_FAST_MODEL`, `GROQ_PARSER_MODEL`, `GROQ_LINKEDIN_MODEL`, `CHAT_GROQ_MODEL`,
-> `CHAT_GROQ_FALLBACK_MODEL`) and falls back to the default there. In GitHub Actions
-> these are repository **variables**, not secrets, so a retired model can be swapped
-> from the repo settings without a code change or release.
->
-> `npm run check:groq-models` queries the live Groq model list and fails with an
-> explicit message naming the dead tier and the variable to set. It runs in the
-> workflow as a gate *before* any Firecrawl credit is spent — previously a retired
-> model only surfaced as a mid-run 404, after the run had already paid for scrapes.
-> Each tier is checked with the credential that will actually call it (the parser
-> runs on `GROQ_PARSER_API_KEY`, which may see a different set of models), and a
-> rejected key is fatal rather than treated as a transient outage.
->
-> Scopes: `scrape-tech-news.yml` runs `--scope=scraper`, `linkedin-groups.yml`
-> runs `--scope=linkedin`, and `system-health-check.yml` runs `--scope=all` on its
-> schedule, so a retirement affecting *any* pipeline — including the site chat,
-> which has no workflow of its own — is reported before that pipeline next runs.
->
-> Fail-open applies only to failures that heal on their own (no connection, or a
-> 5xx). A rejected key, a 4xx, an empty list or an unparseable body are fatal
-> regardless of `STRICT_GROQ_MODEL_CHECK`: the gate cannot confirm availability,
-> so it does not pretend to.
-
-Required secrets: `GROQ_API_KEY`, `GROQ_PARSER_API_KEY`, `OLLAMA_API_KEY` (optional fallback).
-Optional repository variables: the `GROQ_*_MODEL` overrides above.
-
-### Slug Generation
-
-All new articles use an **English-safe ASCII slug** generated from the translated English title:
-
-- Turkish and Latin-extended characters are transliterated before slug generation (e.g. `ğ→g`, `ü→u`, `ş→s`, `ı→i`, `ö→o`, `ç→c`).
-- Slugs are derived from the post-translation English title, not the Turkish source URL.
-- Existing Turkish slugs can be migrated using the guidance in `scripts/migrate/update-turkish-slugs.sql`.
-
-### Orchestration pipeline (application)
-
-```mermaid
-flowchart TB
-  subgraph entry["Entry"]
-    A["scrapeNews() — ScraperRouter, run report, run label"]
-    A --> B["Telegram: run started"]
-    B --> C["getArticleCount()"]
-  end
-
-  subgraph list["Category discovery — 6 configured feeds"]
-    D["scrapeAllCategories()"]
-    D --> D1["scrapeArticleList per category\nFirecrawl page · Groq list parse · regex merge"]
-    D1 --> D2["mergeArticleCandidates — dedupe URLs across categories"]
-    D2 --> E["Unique candidates + metrics"]
-  end
-
-  C --> D
-
-  subgraph dates["Date partitioning"]
-    F["partitionCandidatesByDate"]
-    F --> P1["today"]
-    F --> P2["recent stale window"]
-    F --> P3["unknown"]
-    F --> P4["stale"]
-    F --> P5["future — rejected"]
-  end
-
-  E --> F
-
-  subgraph unk["Unknown candidates"]
-    VU["verifyUnknownCandidates — optional detail scrape"]
-  end
-
-  P3 --> VU
-
-  subgraph db["Database gate"]
-    G["actionable = today + recent + unknown"]
-    G --> H["getExistingArticles()"]
-    H --> I["missing only — cap at MAX_ARTICLES_PER_RUN"]
-  end
-
-  P1 --> G
-  P2 --> G
-  VU --> G
-
-  subgraph queue["processArticleQueue"]
-    J["Per article: scrapeArticleDetails"]
-    J --> K["Clean content · embed tokens · garbage checks"]
-    K --> L{"Valid for save?"}
-    L -->|no| M["skip / reject / defer"]
-    L -->|yes| N["translateArticle — Groq"]
-    N --> O["saveArticle — Supabase"]
-    O --> P["Circuit breaker on consecutive failures"]
-  end
-
-  I --> J
-
-  subgraph out["Outputs"]
-    R1["JSON artifact under artifacts/tech-news-runs/"]
-    R2["Telegram summary"]
-    R1 --> R2
-  end
-
-  J --> R1
-
-  subgraph ext["External APIs"]
-    FC["Firecrawl"]
-    GQ["Groq"]
-    SB["Supabase"]
-    TG["Telegram"]
-  end
-
-  D1 -.-> FC
-  D1 -.-> GQ
-  J -.-> FC
-  N -.-> GQ
-  O -.-> SB
-  B -.-> TG
-  R2 -.-> TG
-```
-
-### Pipeline reference
-
-| Stage | Responsibility |
-|--------|----------------|
-| **Triggers** | Weekday cron (3×) or manual `workflow_dispatch`. |
-| **Environment** | `TECH_NEWS_RUN_DATE` (Europe/Istanbul) and `TECH_NEWS_RUN_LABEL` tie logs, artifacts, and Telegram to a single run. |
-| **Discovery** | `ScraperRouter` → Firecrawl for HTML/markdown (up to 2 archive pages per category, 25 articles/page); Groq extracts structured article rows; regex supplements; URL merge removes cross-category duplicates. Legacy `/post/` URL 404s trigger an automatic canonical-URL retry. |
-| **Dates** | Candidates classified; future dates rejected; mismatches between list and detail dates can **defer** work. |
-| **Deduplication** | Bulk Supabase lookup before expensive translation; `source_url` / slug rules apply. |
-| **Processing** | Detail scrape → cleaning & embed preservation → Groq translation with quality gates → `tech_news_articles` insert. |
-| **Artifacts** | Each run writes a replayable JSON report (uploaded even if a later step fails, `if: always()`). |
-| **Notifications** | In-run Telegram messages from the script; workflow success step formats the final summary via `scripts/ci/telegram-tech-news-success-message.cjs`. |
-
----
-
-## 🧠 Daily News Agent
-
-The tech news pipeline now behaves as a deterministic daily agent, not an open-ended crawler.
-
-### Target Categories
-
-- `yapay-zeka`
-- `teknoloji`
-- `yapay-zeka-uygulamalari`
-- `gundem`
-- `surdurulebilirlik`
-- `bilim-ve-dunya`
-
-### Decision Flow
-
-1. Discover candidates from the six configured category endpoints, scanning up to 2 archive pages per category (25 articles per page, newest-first).
-2. Normalize each candidate date in Turkey time and classify it as `today`, `unknown`, `stale`, or `future`.
-3. `stale` articles within the 5-day recency window (`MAX_RECENT_PUBLISH_DAYS`) are still eligible — this safety net catches articles missed in a previous run due to the per-page discovery cap.
-4. Bulk-check normalized `source_url` values in Supabase before expensive work.
-5. Skip candidates that already exist in the database.
-6. Verify `unknown` candidates with detail metadata before translation or save.
-7. Translate, validate, and save only valid missing articles.
-8. Write a replayable JSON artifact for every run under `artifacts/tech-news-runs/`.
-
-### Operational Rules
-
-- `scripts/news-scraper.js` is CLI entrypoint only.
-- `scripts/lib/scraper/ScrapeOrchestrator.js` is the active orchestration and decision engine.
-- Scrapers discover candidates; orchestration decides whether they move forward.
-- Unknown dates must never silently become "today".
-- **Slugs are always generated from the translated English title** (via `generateSlug` in `scripts/lib/scraper/slugUtils.js`). The Turkish source URL slug is intentionally ignored for new records.
-- Future or inconsistent dates are deferred or rejected, not normalized into production data.
-- Replay only helps after conflicting bad rows are deleted or repaired.
-
-### Run Output
-
-Each run records business-facing metrics including:
-
-- `rawFound`
-- `todayCandidates`
-- `unknownCandidates`
-- `alreadyInDb`
-- `verifiedUnknown`
-- `staleSkipped`
-- `futureRejected`
-- `saved`
-- `failed`
-- `deferred`
-
-This makes it easy to answer "what happened in this run?" without reading raw logs.
-
----
-
-## ⚙️ Configuration
-
-### Environment Variables
-
-#### Required for Development
-
-```env
-# AI Services
-GROQ_API_KEY=gsk_your_key_here                    # Groq AI for translation & chat
-GROQ_PARSER_API_KEY=gsk_your_parser_key_here     # Groq parser model for list extraction
-FIRECRAWL_API_KEY=fc-your_key_here                # Firecrawl for scraping
-GEMINI_API_KEY=your_gemini_key_here               # Google Gemini for content gen
-OLLAMA_API_KEY=your_ollama_cloud_key_here         # Ollama cloud API key for content translation
-
-# Database
-NEXT_PUBLIC_SUPABASE_URL=https://...              # Supabase project URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...              # Public anon key
-SUPABASE_SERVICE_ROLE_KEY=eyJ...                  # Service role key (admin)
-
-# Telegram Bot
-TELEGRAM_BOT_TOKEN=123456:ABC...                  # Bot token from @BotFather
-TELEGRAM_CHAT_ID=123456789                        # Your chat ID
-```
-
-#### Optional (Production)
-
-```env
-# Security
-TELEGRAM_CONTROL_API_SECRET=random_key            # API endpoint security
-DEPLOYMENT_WEBHOOK_SECRET=random_hex              # Deployment webhook security
-
-# Sentry Error Tracking
-VITE_SENTRY_DSN=https://key@org.ingest.sentry.io/project
-SENTRY_DSN=https://key@org.ingest.sentry.io/project
-
-# GitHub Integration
-GITHUB_TOKEN=ghp_...                              # For workflow triggers
-GITHUB_REPOSITORY=username/repo                   # Repository name
-
-# n8n Integration
-N8N_LINKEDIN_WORKFLOW_WEBHOOK=https://...         # LinkedIn digest workflow
-N8N_CHATBOT_WEBHOOK=https://...                   # Chatbot fallback webhook
-```
-
-### GitHub Secrets
-
-Add these in: `Repository Settings → Secrets and variables → Actions`
-
-```
-GROQ_API_KEY
-GROQ_PARSER_API_KEY
-FIRECRAWL_API_KEY
-GEMINI_API_KEY
-OLLAMA_API_KEY
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY
-TELEGRAM_BOT_TOKEN
-TELEGRAM_CHAT_ID
-```
-
----
-
-## 🚢 Deployment
-
-### Vercel (Recommended)
-
-#### Quick Deploy
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/CemRoot/My-Site)
-
-#### Manual Deploy
-
-```bash
-# 1. Install Vercel CLI
-npm i -g vercel
-
-# 2. Login to Vercel
-vercel login
-
-# 3. Deploy
-vercel
-
-# 4. Deploy to production
-vercel --prod
-```
-
-### Post-Deployment
-
-```bash
-# Automatic (via postbuild hook)
-# - Bot commands configured
-# - Telegram notification sent
-# - Menu updated
-
-# Manual setup (if needed)
-npm run telegram:setup-menu
-```
-
----
-
-## 📊 Monitoring & Observability
-
-### 🔍 Error Tracking (Sentry)
-
-**Real-time error monitoring across frontend and backend:**
-
-- Automatic error capture (React Error Boundaries)
-- Performance monitoring (Core Web Vitals)
-- Session replay
-- Source maps for readable stack traces
-- Release tracking per deployment
-
-### 🏥 Health Checks
-
-```bash
-# Comprehensive system health check
-npm run health:check
-
-# Automated (daily at 08:00 UTC)
-✅ Supabase database connectivity
-✅ Firecrawl API availability  
-✅ Groq AI API status
-✅ Telegram Bot responsiveness
-✅ Vercel platform health
-✅ Recent article metrics
-```
-
-### 📱 Telegram Notifications
-
-| Event | Notification Type | Frequency |
-|-------|------------------|-----------|
-| ✅ **Scraping Success** | Success report + stats | Per workflow run |
-| ❌ **Scraping Errors** | Error details + logs | Immediate |
-| 🏥 **Health Reports** | System status summary | Daily |
-| 🚀 **Deploy Success** | Deployment confirmed | Per deployment |
-| 🚨 **Vercel Incidents** | Platform status alerts | Real-time |
-
----
-
-## 📁 Project Structure
-
-```
-My-Site/
-├── api/                          # Vercel Serverless Functions
-│   ├── lib/                      # Modules used only by the API layer
-│   │   ├── formatTechNewsArticle.js # Public article shape (field allowlist)
-│   │   └── techNewsRank.js       # Composite rank used by the edge fallback
-│   ├── chat.js                   # AI Chatbot endpoint
-│   ├── tech-news.js              # News API (Edge Runtime)
-│   ├── telegram-webhook.js       # Telegram bot webhook
-│   ├── telegram-control.js       # Bot control endpoint
-│   ├── seo-page.js               # Server-rendered /tech-news, /tech-news/:slug, sitemap
-│   ├── deployment-webhook.js     # Deploy notifications
-│   ├── frontend-health-monitor.js# Error monitoring
-│   ├── conversation-state.js     # Telegram state management
-│   └── revalidate-news.js        # News cache revalidation
-├── lib/                          # Server-side shared libraries
-│   ├── chatHelpers.js            # Chat endpoint helpers
-│   ├── chatKnowledge.js          # RAG knowledge grounding the chatbot
-│   ├── chatSecurity.js           # Prompt/topic guardrails
-│   ├── chatSystemPrompt.js       # AI system prompt
-│   ├── rate-limit.js             # Rate limiting
-│   ├── supabaseAdmin.js          # Service-role client (server only)
-│   ├── supabasePublic.js         # Anon-key client
-│   ├── telegram.js               # Shared Telegram utilities
-│   ├── sentry-server.js          # Sentry integration
-│   └── conversation-state.js     # Conversation state logic
-├── scripts/                      # Automation & CI scripts
-│   ├── lib/                      # Shared script modules
-│   │   ├── config.js             # Centralized env config
-│   │   ├── supabaseAdmin.js      # Shared Supabase client
-│   │   ├── telegram.js           # Shared Telegram utilities
-│   │   ├── scraper/              # News scraper sub-modules
-│   │   │   ├── config.js         # Scraper configuration
-│   │   │   ├── database.js       # Article storage & dedup
-│   │   │   ├── dateUtils.js      # Date parsing utilities
-│   │   │   ├── importanceScore.js# 0–100 scoring (Gemini + keyword fallback)
-│   │   │   └── translator.js     # AI translation pipeline
-│   │   └── menu/                 # Telegram bot menu modules
-│   │       └── keyboards.js      # Keyboard layouts
-│   ├── news-scraper.js           # News scraping CLI entrypoint
-│   ├── backfill-importance-scores.js # Score existing rows (supports --dry-run)
-│   ├── optimize-hero-model.mjs   # GLB decimation pipeline for the 3D hero
-│   ├── telegram-menu-handler.js  # Compat shim → lib/telegram-ops/
-│   └── lib/telegram-ops/         # Telegram ops domain services (OOP)
-│   ├── manual-article-scraper.js # Manual article processing
-│   ├── system-health-check.js    # Health monitoring
-│   ├── validation/               # Content validation
-│   └── translate/                # Translation prompts
-├── src/                          # React Frontend
-│   ├── sections/                 # Home page sections (editorial layout)
-│   │   ├── SiteHeader.tsx        # Sticky nav + scroll progress
-│   │   ├── HeroSection.tsx       # Headline + full-bleed 3D canvas layer
-│   │   ├── SystemsSection.tsx    # "what runs this site" status cards
-│   │   ├── WorkSection.tsx       # Numbered project rows
-│   │   ├── SignalSection.tsx     # Latest tech-news teasers
-│   │   └── …                     # Stats, Experience/Stack, Services, Contact
-│   ├── features/                 # Self-contained feature modules
-│   │   ├── hero-3d/              # three.js controller + React canvas wrapper
-│   │   └── i18n/                 # EN/TR provider and dictionary
-│   ├── components/               # Shared UI
-│   │   ├── ui/                   # button, card, textarea, sonner primitives
-│   │   ├── chat/                 # Chat widget sub-components
-│   │   ├── embeds/               # Social media embeds
-│   │   └── markdown/             # Article renderer + typography stylesheet
-│   ├── pages/                    # Route-level pages
-│   ├── lib/                      # Frontend shared modules
-│   │   ├── constants/            # Centralized content constants
-│   │   ├── types/                # Shared TypeScript types
-│   │   ├── hooks/                # Custom React hooks
-│   │   ├── utils/                # Utility functions
-│   │   └── context/              # React context providers
-│   └── styles/globals.css        # Design tokens + Tailwind entry (single source)
-├── supabase/migrations/          # Versioned SQL migrations
-└── public/                       # Static assets (incl. models/ for the GLB)
-```
-
----
-
-## 📜 Scripts Reference
-
-### Development
-```bash
-npm run dev                     # Dev server on :3000, bound to the LAN for device testing
-npm run preview                 # Serve the production build locally on :4173
-npm run typecheck               # tsc --noEmit
-npm test                        # Node built-in test runner
-npm run build                   # prebuild (sitemap + snapshot) → vite → postbuild
-```
-
-> `vite.config.ts` proxies `/api/*` to production during development, because the
-> `api/` folder is Vercel serverless and Vite would otherwise serve those files as
-> JavaScript source. Point it elsewhere with `VITE_DEV_API_PROXY`
-> (e.g. `http://localhost:3001` when running `vercel dev`).
-
-### Tech News System
-```bash
-npm run scrape:news             # Full scrape (no preflight)
-npm run scrape:news:parity      # Preflight + conditional scrape (like scheduled CI)
-npm run scrape:news:replay -- --replay-file artifacts/tech-news-runs/<run>.json
-npm run cleanup:duplicates:dry  # Preview cleanup of bad legacy rows
-npm run cleanup:duplicates      # Remove bad legacy rows and snapshot them
-npm run cleanup:db              # Clean up old/invalid articles
-npm run backfill:importance:dry # Preview importance scores for existing rows
-npm run backfill:importance     # Write importance scores for existing rows
-```
-
-### LinkedIn Automation
-```bash
-# Daily digests are owned by n8n + Telegram approve/reject (see scripts/lib/telegram-ops/)
-npm run linkedin:groups         # Daily LinkedIn groups digest
-npm run linkedin:groups-weekly  # Weekly LinkedIn groups digest
-```
-
-### Telegram Bot
-```bash
-npm run telegram:setup-menu     # Setup bot menu
-npm run telegram:webhook-setup  # Configure webhook
-npm run telegram:webhook-remove # Remove webhook
-npm run telegram:reset          # Reset webhook & clear queue
-npm run telegram:check          # Check webhook status
-```
-
-### n8n Trial Management
-```bash
-npm run n8n:status              # Check trial status
-npm run n8n:check               # Check & send notification
-npm run n8n:reset               # Reset trial period
-```
-
-### Monitoring
-```bash
-npm run health:check            # System health check
-npm run vercel:status           # Check Vercel status
-```
-
----
-
-## 🔒 Security
-
-### Reporting Vulnerabilities
-
-Please report security vulnerabilities to: **cemkoyluoglu@icloud.com**
-
-### Security Features
-
-- **API rate limiting** — per-client throttling on the chat and monitoring endpoints
-- **Input validation** — article slugs are constrained to `^[a-z0-9-]+$` and a
-  length cap *before* reaching any query; pagination values are clamped
-- **UUID validation** on Telegram callback payloads
-- **Webhook secret verification** — `X-Telegram-Bot-Api-Secret-Token` is checked
-  and the endpoint refuses to run if the secret is unset
-- **SQL injection prevention** — all access goes through the Supabase client
-  (parameterised); the one custom RPC uses bind parameters and no dynamic SQL
-- **Least-privilege database functions** — `SECURITY INVOKER`, a pinned
-  `search_path`, and `REVOKE ALL FROM PUBLIC` plus explicit grants
-- **XSS posture** — React escaping end to end; article bodies render through
-  `react-markdown`. `dangerouslySetInnerHTML` is not used anywhere in the codebase
-- **Strict CSP** — `default-src 'self'` with an explicit allowlist, plus HSTS,
-  `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy` and `Permissions-Policy`
-- **Secret hygiene** — the Supabase service-role key is never injected into the
-  client bundle (enforced by omission in `vite.config.ts`); only the anon key
-  reaches the browser
-- **CORS** — origin allowlist on the public API. Note this currently uses a
-  prefix match rather than an exact one; the endpoint is unauthenticated and
-  read-only, so impact is limited, but see `SECURITY.md` for the caveat
-
----
-
-## 🎯 Roadmap
-
-### ✅ Completed
-- [x] Multi-category news scraping
-- [x] AI-powered translation (Groq)
-- [x] Google Gemini content generation
-- [x] AI Chatbot with n8n fallback
-- [x] Telegram bot control system
-- [x] GitHub Actions automation
-- [x] Supabase migration
-- [x] Health monitoring system
-- [x] LinkedIn digest automation
-- [x] Manual article scraper
-- [x] Chat history persistence
-- [x] Smart content validation
-- [x] Editorial design system (Tailwind v4, CSS-first)
-- [x] EN/TR internationalisation
-- [x] 3D wireframe hero with an idle-loaded, ~330×-compressed GLB
-- [x] Importance-based article ranking (scrape-time score + query-time blend)
-
-### 🚧 In Progress
-- [ ] RSS feed generation
-- [ ] Article search functionality
-- [ ] Advanced analytics dashboard
-
-### 📋 Planned
-- [ ] Multi-language support (Spanish, French)
-- [ ] Mobile app (React Native)
-- [ ] AI-powered article summarization
-
-> The newsletter subscription feature was removed. The `api/newsletter.js`
-> endpoint and its UI are gone; the `newsletter_subscribers` table may still
-> exist as a database leftover and can be dropped manually.
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! 
-
-### Development Workflow
-
-```bash
-# 1. Fork the repository
-# 2. Create your feature branch
-git checkout -b feature/AmazingFeature
-
-# 3. Commit your changes
-git commit -m 'Add some AmazingFeature'
-
-# 4. Push to the branch
-git push origin feature/AmazingFeature
-
-# 5. Open a Pull Request
-```
-
----
-
-## 🏆 Acknowledgments
-
-- [Groq AI](https://groq.com/) - Lightning-fast AI inference
-- [Google Gemini](https://ai.google.dev/) - Advanced content generation
-- [Firecrawl](https://firecrawl.dev/) - Reliable web scraping
-- [Supabase](https://supabase.com/) - Open-source Firebase alternative
-- [Vercel](https://vercel.com/) - Seamless deployment platform
-- [n8n](https://n8n.io/) - Workflow automation
-- [Telegram](https://telegram.org/) - Secure messaging platform
-
----
-
-## 📞 Contact & Support
-
-<div align="center">
-
-### Dr. Cem Koyluoglu (CK)
-
-[![Email](https://img.shields.io/badge/Email-cemkoyluoglu%40icloud.com-red?style=for-the-badge&logo=gmail)](mailto:cemkoyluoglu@icloud.com)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Cem%20Koyluoglu-blue?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/cem-koyluoglu/)
-[![GitHub](https://img.shields.io/badge/GitHub-CemRoot-black?style=for-the-badge&logo=github)](https://github.com/CemRoot)
-[![WhatsApp](https://img.shields.io/badge/WhatsApp-%2B353%2087%20344%205918-green?style=for-the-badge&logo=whatsapp)](https://wa.me/353873445918)
-
-📍 **Dublin, Ireland** | 🌍 **Available Worldwide**
-
-</div>
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
-```
-MIT License
-
-Copyright (c) 2025 Cem Koyluoglu
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-```
+</details>
 
 ---
 
 <div align="center">
 
-### ⭐ If you find this project useful, please consider giving it a star!
+### Let's talk
 
-**Made with ❤️ in Dublin, Ireland**
+Open to **AI / ML engineering roles** in Dublin, across Ireland or remote, and to freelance builds.
 
-[⬆ Back to Top](#-tech-news-automation-platform)
+[**cemkoyluoglu.codes**](https://cemkoyluoglu.codes) · [LinkedIn](https://www.linkedin.com/in/cem-koyluoglu/) · [GitHub](https://github.com/CemRoot) · [cemkoyluoglu@icloud.com](mailto:cemkoyluoglu@icloud.com)
 
----
-
-**Last Updated**: March 30, 2026 | **Version**: 3.0.0
-
-[![Built with Love](https://img.shields.io/badge/Built%20with-❤️-red?style=flat-square)](https://github.com/CemRoot/My-Site)
-[![Maintained](https://img.shields.io/badge/Maintained-Yes-green?style=flat-square)](https://github.com/CemRoot/My-Site)
-[![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen?style=flat-square)](http://makeapullrequest.com)
+<sub>MIT licensed — see <a href="LICENSE">LICENSE</a>.</sub>
 
 </div>
