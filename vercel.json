@@ -52,6 +52,18 @@
       "destination": "/terms/index.html"
     },
     {
+      "source": "/skills",
+      "destination": "/skills/index.html"
+    },
+    {
+      "source": "/skills/:slug",
+      "destination": "/skills/:slug/index.html"
+    },
+    {
+      "source": "/work/:slug",
+      "destination": "/work/:slug/index.html"
+    },
+    {
       "source": "/sitemap.xml",
       "destination": "/api/seo-page?kind=sitemap"
     },

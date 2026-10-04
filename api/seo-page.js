@@ -17,7 +17,7 @@ import { renderPage } from '../lib/seo/renderHead.js';
 import { articlePage } from '../lib/seo/articleHtml.js';
 import { findArticleBySlug, isValidSlug } from '../lib/seo/findArticleBySlug.js';
 import { LIST_COLUMNS, LIST_LIMIT, techNewsListHtml } from '../lib/seo/techNewsList.js';
-import { STATIC_ROUTES } from '../lib/seo/staticRoutes.js';
+import { STATIC_ROUTES, sitemapRoutes } from '../lib/seo/staticRoutes.js';
 import { SOURCE_KIND_ORIGINAL } from '../lib/seo/indexability.js';
 import { buildSitemapXml } from '../lib/seo/sitemap.js';
 import { ROBOTS_NOINDEX } from '../lib/seo/siteMeta.js';
@@ -142,6 +142,7 @@ async function renderList(req, res, { supabase, shell }) {
 
 async function renderSitemap(_req, res, { supabase }) {
   const today = new Date().toISOString().slice(0, 10);
+  const staticRoutes = await sitemapRoutes();
   const articles = [];
   try {
     const client = await supabase();
@@ -160,9 +161,9 @@ async function renderSitemap(_req, res, { supabase }) {
     // Static routes are still a valid sitemap; keep it short-lived so the
     // article URLs come back as soon as the database does.
     console.error('seo-page sitemap lookup failed:', error?.message || error);
-    return send(res, 200, buildSitemapXml({ staticRoutes: STATIC_ROUTES, articles: [], today }), CACHE_SHORT, 'application/xml; charset=utf-8');
+    return send(res, 200, buildSitemapXml({ staticRoutes, articles: [], today }), CACHE_SHORT, 'application/xml; charset=utf-8');
   }
-  return send(res, 200, buildSitemapXml({ staticRoutes: STATIC_ROUTES, articles, today }), CACHE_SITEMAP, 'application/xml; charset=utf-8');
+  return send(res, 200, buildSitemapXml({ staticRoutes, articles, today }), CACHE_SITEMAP, 'application/xml; charset=utf-8');
 }
 
 const RENDERERS = { article: renderArticle, list: renderList, sitemap: renderSitemap };

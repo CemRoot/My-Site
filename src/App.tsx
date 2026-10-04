@@ -41,6 +41,15 @@ const IrishLegalAssistantPrivacyPage = lazyWithRetry(
   () => import('./pages/IrishLegalAssistantPrivacyPage'),
 );
 const EnglishLearningPage = lazyWithRetry(() => import('./pages/EnglishLearningPage'));
+const SkillsIndexPage = lazyWithRetry(() =>
+  import('./pages/PortfolioPages').then((m) => ({ default: m.SkillsIndexPage })),
+);
+const SkillPage = lazyWithRetry(() =>
+  import('./pages/PortfolioPages').then((m) => ({ default: m.SkillPage })),
+);
+const WorkPage = lazyWithRetry(() =>
+  import('./pages/PortfolioPages').then((m) => ({ default: m.WorkPage })),
+);
 const NotFoundPage = lazyWithRetry(() => import('./pages/NotFoundPage'));
 
 // Lazy load ChatWidget - it's heavy and not immediately needed
@@ -153,6 +162,9 @@ export default function App() {
                   <Route path="/privacy-policy" element={<PrivacyPage />} />
                   <Route path="/privacy" element={<IrishLegalAssistantPrivacyPage />} />
                   <Route path="/english-learning" element={<EnglishLearningPage />} />
+                  <Route path="/skills" element={<SkillsIndexPage />} />
+                  <Route path="/skills/:slug" element={<SkillPage />} />
+                  <Route path="/work/:slug" element={<WorkPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
                 </ProbeTree>

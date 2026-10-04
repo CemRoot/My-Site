@@ -4,7 +4,9 @@
  * nothing invented from the design mock).
  */
 
+import { Link } from 'react-router-dom';
 import { PROJECTS } from '../lib/constants/projects';
+import { PROJECT_FACTS } from '../../lib/portfolio/facts.js';
 import { SOCIAL_LINKS } from '../lib/constants/personal';
 import { useI18n } from '../features/i18n';
 
@@ -15,6 +17,8 @@ interface WorkRow {
   metaTop: string;
   metaBottom: string;
   href?: string;
+  /** Internal case-study route; preferred over the external link. */
+  caseStudy?: string;
 }
 
 const ROWS: WorkRow[] = PROJECTS.map((project, i) => ({
@@ -24,6 +28,7 @@ const ROWS: WorkRow[] = PROJECTS.map((project, i) => ({
   metaTop: project.tags.slice(0, 2).join(' · ').toUpperCase(),
   metaBottom: (project.stats[0] ?? '').toUpperCase(),
   href: ('github' in project && project.github) || ('link' in project && project.link) || undefined,
+  caseStudy: PROJECT_FACTS.find((fact) => fact.title === project.title)?.slug,
 }));
 
 export function WorkSection() {
@@ -68,6 +73,14 @@ export function WorkSection() {
           const rowClasses = `rv grid grid-cols-[44px_minmax(0,1fr)] items-start gap-[clamp(14px,2vw,26px)] border-t border-hairline py-[26px] text-foreground hover:text-foreground ${
             isLast ? 'border-b' : ''
           }`;
+
+          if (row.caseStudy) {
+            return (
+              <Link key={row.index} to={`/work/${row.caseStudy}`} className={`${rowClasses} group`}>
+                {content}
+              </Link>
+            );
+          }
 
           return row.href ? (
             <a

@@ -13,6 +13,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { renderPage } from '../lib/seo/renderHead.js';
 import { STATIC_ROUTES } from '../lib/seo/staticRoutes.js';
+import { portfolioPages } from '../lib/seo/portfolioPages.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -208,10 +209,16 @@ function prerenderRoutes() {
   console.log('✅ Wrote app-shell.html (article page template)');
 
   // Dynamic routes (/tech-news) are rendered per request by api/seo-page.js.
-  for (const route of STATIC_ROUTES.filter((r) => !r.dynamic)) {
+  // Portfolio pages (/skills, /skills/:slug, /work/:slug) carry their full
+  // content in #root so crawlers read the evidence without JavaScript.
+  const pages = [
+    ...STATIC_ROUTES.filter((r) => !r.dynamic).map((r) => ({ ...r, bodyHtml: routeBody(r.path) })),
+    ...portfolioPages(),
+  ];
+  for (const route of pages) {
     const file = routeFile(route.path);
     try {
-      writeHtml(file, renderPage(baseHtml, { ...route, bodyHtml: routeBody(route.path) }));
+      writeHtml(file, renderPage(baseHtml, route));
       console.log(`✅ Prerendered ${route.path}`);
     } catch (error) {
       // vercel.json rewrites these paths to the file, so it must exist.

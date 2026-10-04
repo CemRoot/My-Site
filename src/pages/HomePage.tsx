@@ -77,9 +77,9 @@ function HomePage() {
   return (
     <>
       <SEO
-        title="Cem Koyluoglu - AI Engineer & Microsoft 365 Specialist | Dublin, Ireland"
-        description="AI Engineer specializing in deepfake detection, computer vision, RAG and agentic workflows. Based in Dublin, Ireland. Available for freelance projects and full-time opportunities."
-        ogTitle="Cem Koyluoglu - AI Engineer & Microsoft 365 Specialist"
+        title="Cem Koyluoglu — AI Engineer in Dublin | RAG & Computer Vision"
+        description="AI Engineer in Dublin, Ireland building production LLM, RAG and computer vision systems. MSc AI, First Class Honours. Open to AI/ML roles and freelance work."
+        ogTitle="Cem Koyluoglu — AI Engineer in Dublin, Ireland"
         ogDescription="AI systems that survive production. MSc AI (First Class Honours), published researcher — Springer CCIS. Based in Dublin, Ireland."
       />
       <ProbeTree id="HeroSection"><HeroSection /></ProbeTree>

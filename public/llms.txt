@@ -1,25 +1,42 @@
 # Cem Koyluoglu
 
-> AI Engineer and System Operations Specialist based in Dublin, Ireland. Portfolio covering LLMs, NLP, computer vision, Azure, Microsoft 365, and curated tech news.
+> AI Engineer in Dublin, Ireland. Builds production LLM, RAG and computer vision systems; MSc Artificial Intelligence (First Class Honours, National College of Ireland). Open to AI/ML roles in Ireland and remote, and to freelance work.
 
-Cem Koyluoglu builds intelligent systems, automation workflows, and cloud solutions. This site is the canonical source for his professional profile, selected projects, and English tech news rewritten from Turkish sources.
+This site is the canonical source for Cem Koyluoglu's professional profile, skills with evidence, project case studies, and Engineer's Notes (AI-assisted technical briefings on primary sources, automatically checked against those sources).
 
 ## Primary
 
-- [Home](https://cemkoyluoglu.codes/): Portfolio landing page with experience, skills, and contact
-- [Tech News](https://cemkoyluoglu.codes/tech-news): Latest technology articles translated and curated in English
+- [Home](https://cemkoyluoglu.codes/): Profile, systems, selected work, experience, services and contact
+- [Skills](https://cemkoyluoglu.codes/skills): AI engineering skills, each linked to evidence
+- [Tech News](https://cemkoyluoglu.codes/tech-news): Engineer's Notes and curated AI news
 - [Full LLM context](https://cemkoyluoglu.codes/llms-full.txt): Expanded biography, skills, and site map for agents
 - [Sitemap](https://cemkoyluoglu.codes/sitemap.xml): Machine-readable list of all public pages and articles
 
-## Projects and work
+## Skills
+
+- [RAG & Grounded LLM Systems](https://cemkoyluoglu.codes/skills/rag-systems)
+- [Deepfake Detection](https://cemkoyluoglu.codes/skills/deepfake-detection)
+- [Computer Vision](https://cemkoyluoglu.codes/skills/computer-vision)
+- [Agentic & LLM Automation](https://cemkoyluoglu.codes/skills/agentic-workflows)
+- [Azure & Microsoft 365](https://cemkoyluoglu.codes/skills/azure-microsoft-365)
+
+## Case studies
+
+- [DeepFake Detection Framework](https://cemkoyluoglu.codes/work/deepfake-detection-framework): MSc dissertation, Attention-Enhanced EfficientNetB7, 97% accuracy on 10,000+ synthetic images
+- [YouTube AI Summarizer](https://cemkoyluoglu.codes/work/youtube-ai-summarizer): Open-source Chrome extension with transcript-grounded chat
+- [Ireland Expat Assistant](https://cemkoyluoglu.codes/work/ireland-expat-assistant): Custom GPT grounded in official Irish documents
+- [Automated AI News Pipeline](https://cemkoyluoglu.codes/work/ai-news-pipeline): LLM cascade with quality gates behind this site's Tech News
+- [Automated Data Analysis System](https://cemkoyluoglu.codes/work/automated-data-analysis-system)
+- [Customer Dashboard Platform](https://cemkoyluoglu.codes/work/customer-dashboard-platform)
+
+## Elsewhere
 
 - [GitHub](https://github.com/CemRoot): Open-source and professional repositories
 - [LinkedIn](https://www.linkedin.com/in/cem-koyluoglu/): Professional profile and career updates
-- [YouTube AI Summarizer](https://cemkoyluoglu.codes/yt-ai-summarizer/): Chrome extension privacy policy and product info
 
 ## Contact
 
-- [Email](mailto:cemkoyluoglu@icloud.com): Direct email for freelance and full-time opportunities
+- [Email](mailto:cemkoyluoglu@icloud.com): Direct email for roles and freelance work
 - [WhatsApp](https://wa.me/353873445918): Fast contact channel (Dublin timezone)
 
 ## Optional
@@ -27,4 +44,3 @@ Cem Koyluoglu builds intelligent systems, automation workflows, and cloud soluti
 - [Privacy Policy](https://cemkoyluoglu.codes/privacy-policy): How site data and analytics are handled
 - [Terms](https://cemkoyluoglu.codes/terms): Website terms and conditions
 - [English Learning](https://cemkoyluoglu.codes/english-learning): Language learning resources page
-- [Tech news API snapshot](https://cemkoyluoglu.codes/tech-news-latest.json): Build-time JSON of the latest article list
