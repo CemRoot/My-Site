@@ -10,15 +10,12 @@ import {
   useRef,
   useCallback,
   useMemo,
-  type PointerEvent as ReactPointerEvent,
-  type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { Link } from 'react-router-dom';
 import { usePageContext } from '../lib/context/PageContext';
 import ErrorBoundary from './ErrorBoundary';
 import { SEO } from './SEO';
 import { formatDate } from '../lib/utils/formatDate';
-import { getOptimizedImageUrl, IMAGE_PRESETS } from '../lib/utils/imageProxy';
 import { prefetchArticle } from '../lib/hooks/useArticle';
 import { useTechNews } from '../lib/hooks/useTechNews';
 import {
@@ -27,8 +24,10 @@ import {
   readTechNewsListScroll,
   writeTechNewsListScroll,
 } from '../lib/techNewsListRestore';
+import { jumpTo } from '../lib/routeScroll';
 import type { Article } from '../lib/types';
 import { useI18n, type Tr } from '../features/i18n';
+import { LeadCarousel } from './tech-news/LeadCarousel';
 
 const AVAILABLE_CATEGORIES: { label: Tr; value: string }[] = [
   { label: { en: 'All', tr: 'Tümü' }, value: 'all' },
@@ -45,8 +44,6 @@ const PAGE =
   'mx-auto max-w-[1440px] px-[clamp(18px,4vw,52px)] pb-[clamp(64px,10vh,120px)]';
 const MONO = 'font-mono text-[11px] font-medium tracking-[0.14em]';
 const FEATURED_COUNT = 5;
-const ROTATE_MS = 8000;
-const SWIPE_THRESHOLD_PX = 48;
 
 function articleMeta(article: Article): string {
   const parts = [formatDate(article.date).toUpperCase()];
@@ -85,21 +82,6 @@ function TechNews() {
   });
   const { setPageInfo } = usePageContext();
   const prefersReducedMotion = usePrefersReducedMotion();
-  const [leadIndex, setLeadIndex] = useState(0);
-  const [carouselPaused, setCarouselPaused] = useState(false);
-  const swipeRef = useRef<{
-    pointerId: number | null;
-    startX: number;
-    startY: number;
-    locked: 'horizontal' | 'vertical' | null;
-    swiped: boolean;
-  }>({
-    pointerId: null,
-    startX: 0,
-    startY: 0,
-    locked: null,
-    swiped: false,
-  });
 
   const restorationTargetPage = useMemo(() => {
     if (!isTechNewsRestoreNavActive()) return null;
@@ -187,13 +169,15 @@ function TechNews() {
     if (!saved || saved.category !== selectedCategory) {
       clearTechNewsRestoreNavFlag();
       scrollRestoreDoneRef.current = true;
+      // Nothing to restore: start at the top instead of the article's offset.
+      if (window.scrollY !== 0) jumpTo(0);
       return;
     }
 
     requestAnimationFrame(() => {
       if (scrollRestoreDoneRef.current) return;
       scrollRestoreDoneRef.current = true;
-      window.scrollTo({ top: saved.scrollY, left: 0, behavior: 'auto' });
+      jumpTo(saved.scrollY);
       clearTechNewsRestoreNavFlag();
     });
   }, [
@@ -229,87 +213,9 @@ function TechNews() {
 
   useEffect(() => () => setPageInfo(null), [setPageInfo]);
 
-  // Reset carousel when category / article set changes
-  useEffect(() => {
-    setLeadIndex(0);
-  }, [selectedCategory, currentArticles[0]?.id]);
-
   const featured = currentArticles.slice(0, FEATURED_COUNT);
-  const featuredLen = featured.length;
-  const safeLeadIndex = featuredLen > 0 ? leadIndex % featuredLen : 0;
-  const lead = featured[safeLeadIndex] ?? null;
-  const rail = featuredLen > 1
-    ? Array.from({ length: featuredLen - 1 }, (_, i) => featured[(safeLeadIndex + 1 + i) % featuredLen])
-    : [];
+  const lead = featured[0] ?? null;
   const indexRows = currentArticles.slice(FEATURED_COUNT);
-
-  const stepLead = useCallback(
-    (delta: number) => {
-      if (featuredLen <= 1) return;
-      setLeadIndex((prev) => (prev + delta + featuredLen) % featuredLen);
-    },
-    [featuredLen],
-  );
-
-  const onLeadPointerDown = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (featuredLen <= 1 || e.pointerType === 'mouse') return;
-      const s = swipeRef.current;
-      s.pointerId = e.pointerId;
-      s.startX = e.clientX;
-      s.startY = e.clientY;
-      s.locked = null;
-      s.swiped = false;
-      setCarouselPaused(true);
-    },
-    [featuredLen],
-  );
-
-  const onLeadPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    const s = swipeRef.current;
-    if (s.pointerId !== e.pointerId) return;
-    const dx = e.clientX - s.startX;
-    const dy = e.clientY - s.startY;
-    if (!s.locked) {
-      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
-      s.locked = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
-    }
-    if (s.locked === 'horizontal') {
-      e.preventDefault();
-    }
-  }, []);
-
-  const finishLeadSwipe = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      const s = swipeRef.current;
-      if (s.pointerId !== e.pointerId) return;
-      const dx = e.clientX - s.startX;
-      if (s.locked === 'horizontal' && Math.abs(dx) >= SWIPE_THRESHOLD_PX) {
-        s.swiped = true;
-        stepLead(dx < 0 ? 1 : -1);
-      }
-      s.pointerId = null;
-      s.locked = null;
-      setCarouselPaused(false);
-    },
-    [stepLead],
-  );
-
-  const onLeadClickCapture = useCallback((e: ReactMouseEvent<HTMLDivElement>) => {
-    if (swipeRef.current.swiped) {
-      e.preventDefault();
-      e.stopPropagation();
-      swipeRef.current.swiped = false;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (prefersReducedMotion || carouselPaused || featuredLen <= 1) return;
-    const id = window.setInterval(() => {
-      setLeadIndex((prev) => (prev + 1) % featuredLen);
-    }, ROTATE_MS);
-    return () => window.clearInterval(id);
-  }, [prefersReducedMotion, carouselPaused, featuredLen]);
 
   const prefetch = useCallback((slug: string) => {
     void import('./TechNewsDetail').catch(() => undefined);
@@ -433,108 +339,15 @@ function TechNews() {
 
           {!error && lead && (
             <>
-              <div
-                className="mt-10 touch-pan-y border-b border-hairline pb-12"
-                onMouseEnter={() => setCarouselPaused(true)}
-                onMouseLeave={() => setCarouselPaused(false)}
-                onFocusCapture={() => setCarouselPaused(true)}
-                onBlurCapture={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-                    setCarouselPaused(false);
-                  }
-                }}
-                onPointerDown={onLeadPointerDown}
-                onPointerMove={onLeadPointerMove}
-                onPointerUp={finishLeadSwipe}
-                onPointerCancel={finishLeadSwipe}
-                onClickCapture={onLeadClickCapture}
-              >
-                <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-                  <p className={`${MONO} text-ink-42`} aria-live="polite">
-                    {t({ en: 'LEAD', tr: 'MANŞET' })}{' '}
-                    {featuredLen > 1
-                      ? `${safeLeadIndex + 1} / ${featuredLen}`
-                      : ''}
-                    {lead ? ` · ${lead.title}` : ''}
-                  </p>
-                  {featuredLen > 1 && (
-                    <div className="flex items-center gap-4" role="group" aria-label={t({ en: 'Featured stories', tr: 'Öne çıkan haberler' })}>
-                      <button
-                        type="button"
-                        onClick={() => stepLead(-1)}
-                        className={`${MONO} text-ink-42 transition-colors hover:text-foreground`}
-                        aria-label={t({ en: 'Previous lead story', tr: 'Önceki manşet' })}
-                      >
-                        ←
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => stepLead(1)}
-                        className={`${MONO} text-ink-42 transition-colors hover:text-foreground`}
-                        aria-label={t({ en: 'Next lead story', tr: 'Sonraki manşet' })}
-                      >
-                        →
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid gap-10 lg:grid-cols-12 lg:gap-12">
-                  <Link
-                    to={`/tech-news/${lead.slug}`}
-                    className="group block text-foreground hover:text-foreground lg:col-span-8"
-                    onClick={persistListScroll}
-                    onMouseEnter={() => prefetch(lead.slug)}
-                    onFocus={() => prefetch(lead.slug)}
-                  >
-                    {lead.image && (
-                      <div className="relative mb-6 aspect-[16/9] overflow-hidden bg-surface">
-                        <img
-                          src={getOptimizedImageUrl(lead.image, IMAGE_PRESETS.hero)}
-                          alt=""
-                          className="absolute inset-0 h-full w-full object-cover transition-opacity group-hover:opacity-90"
-                          loading="eager"
-                          fetchPriority="high"
-                          width={1200}
-                          height={675}
-                        />
-                      </div>
-                    )}
-                    <p className={`${MONO} text-signal`}>
-                      {t({ en: 'LEAD', tr: 'MANŞET' })} · {articleMeta(lead)}
-                    </p>
-                    <h2 className="mt-3 font-sans text-[clamp(26px,3.5vw,40px)] font-bold leading-[1.1] tracking-[-0.03em] [text-wrap:balance]">
-                      {lead.title}
-                    </h2>
-                    {lead.description && (
-                      <p className="mt-4 max-w-[65ch] font-sans text-[15px] leading-[1.65] text-ink-62">
-                        {lead.description}
-                      </p>
-                    )}
-                  </Link>
-
-                  <aside className="flex flex-col gap-px border-t border-hairline lg:col-span-4 lg:border-t-0 lg:border-l lg:pl-8">
-                    <p className={`${MONO} mb-4 pt-6 text-ink-42 lg:pt-0`}>
-                      {t({ en: 'NEXT', tr: 'SONRAKİ' })}
-                    </p>
-                    {rail.map((article) => (
-                      <Link
-                        key={article.id}
-                        to={`/tech-news/${article.slug}`}
-                        className="border-t border-hairline py-4 text-foreground hover:text-foreground"
-                        onClick={persistListScroll}
-                        onMouseEnter={() => prefetch(article.slug)}
-                        onFocus={() => prefetch(article.slug)}
-                      >
-                        <p className={`${MONO} text-[10.5px] text-ink-42`}>{articleMeta(article)}</p>
-                        <h3 className="mt-2 font-sans text-[17px] font-medium leading-[1.3] text-ink-90">
-                          {article.title}
-                        </h3>
-                      </Link>
-                    ))}
-                  </aside>
-                </div>
-              </div>
+              <LeadCarousel
+                // Remount (back to slide 1) when the filter or the article set changes.
+                key={`${selectedCategory}:${featured[0]?.id ?? ''}`}
+                articles={featured}
+                meta={articleMeta}
+                onArticleClick={persistListScroll}
+                prefetch={prefetch}
+                reducedMotion={prefersReducedMotion}
+              />
 
               {indexRows.length > 0 && (
                 <ul className="mt-2 list-none p-0">
