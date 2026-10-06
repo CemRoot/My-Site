@@ -5,6 +5,7 @@
  */
 
 import { hasSourceSocialLeak, stripSourceSocialLeaks } from '../embeds/cleanMarkdownEmbeds.js';
+import { isStillTurkish } from './turkishResidue.js';
 
 /**
  * Validation result structure
@@ -103,7 +104,7 @@ export function validateTitle(title, originalTitle = null) {
   const turkishChars = /[ğüşıöçĞÜŞİÖÇ]/g;
   const turkishCount = (title.match(turkishChars) || []).length;
   
-  if (turkishCount > 3) {
+  if (isStillTurkish(title)) {
     result.addError(
       `Title contains ${turkishCount} Turkish characters`,
       'Title needs retranslation'
@@ -172,7 +173,7 @@ export function validateContent(content, originalContent = null) {
   const totalChars = content.length;
   const turkishRatio = totalChars > 0 ? turkishCount / totalChars : 0;
 
-  if (turkishCount > 30 || turkishRatio > 0.025) {
+  if (isStillTurkish(content)) {
     result.addError(
       `Content contains ${turkishCount} Turkish characters (${(turkishRatio * 100).toFixed(2)}%)`,
       'Content needs retranslation'
@@ -282,7 +283,7 @@ export function validateDescription(description) {
   const turkishChars = /[ğüşıöçĞÜŞİÖÇ]/g;
   const turkishCount = (description.match(turkishChars) || []).length;
   
-  if (turkishCount > 5) {
+  if (isStillTurkish(description)) {
     result.addError(`Description contains ${turkishCount} Turkish characters`);
     return result;
   }

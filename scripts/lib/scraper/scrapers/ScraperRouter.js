@@ -5,7 +5,6 @@
 
 import { FirecrawlScraper } from './FirecrawlScraper.js';
 import { CheerioScraper } from './CheerioScraper.js';
-import { notifyTelegram } from '../../telegram.js';
 
 export class ScraperRouter {
   constructor(firecrawlApiKey) {
@@ -111,13 +110,13 @@ export class ScraperRouter {
     if (this.firecrawlExhausted) return;
     this.firecrawlExhausted = true;
     this.activeScraperName = 'cheerio';
+    // No separate Telegram alert: on the free plan this fires on every run until
+    // the monthly refresh. The run summary shows it on its Scraper line instead.
     console.warn('⚠️  Firecrawl credits exhausted — switching to fetch+cheerio');
-    await notifyTelegram(
-      `⚠️ <b>Firecrawl Kredisi Bitti</b>\n\n` +
-      `🔄 Otomatik olarak <b>fetch+cheerio</b> moduna geçildi\n` +
-      `💡 Firecrawl hesabını kontrol et ve kredi ekle\n` +
-      `⏰ ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`
-    );
+  }
+
+  isFirecrawlExhausted() {
+    return this.firecrawlExhausted;
   }
 
   getActiveScraperName() {

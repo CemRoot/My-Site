@@ -4,6 +4,7 @@
  */
 
 import crypto from 'crypto';
+import { NOTE_DRAFT_CALLBACK_PREFIX } from '../../../../lib/notes/socialDraft.js';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -298,6 +299,26 @@ export class UpdateRouter {
         }
 
         return { success: true, message: 'Source confirmation processed' };
+      }
+
+      if (data.startsWith(NOTE_DRAFT_CALLBACK_PREFIX)) {
+        const noteId = data.slice(NOTE_DRAFT_CALLBACK_PREFIX.length);
+        if (!this.isValidUUID(noteId)) {
+          await callTelegramApi('answerCallbackQuery', {
+            callback_query_id: callback_query.id,
+            text: 'Geçersiz not',
+            show_alert: false,
+          });
+          return { success: false, message: 'Invalid note id' };
+        }
+
+        await callTelegramApi('answerCallbackQuery', {
+          callback_query_id: callback_query.id,
+          text: 'Taslak hazırlanıyor...',
+        });
+
+        await bot.handleNoteDraft(noteId);
+        return { success: true, message: 'Note draft sent' };
       }
 
       if (data.match(/^(approve|reject|edit|view)_[0-9a-f-]+$/i)) {

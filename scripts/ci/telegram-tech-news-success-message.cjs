@@ -26,7 +26,7 @@ const hasUnsavedActionable =
 
 let statusEmoji = saved > 0 ? '✅' : 'ℹ️';
 if (failed > 0 && saved === 0) statusEmoji = '❌';
-else if (hasUnsavedActionable) statusEmoji = '⚠️';
+else if (failed > 0 || hasUnsavedActionable) statusEmoji = '⚠️';
 
 const allInDb =
   saved === 0 &&
@@ -35,7 +35,9 @@ const allInDb =
 
 const headline =
   saved > 0
-    ? 'News Scraper — Saved Successfully'
+    ? failed > 0
+      ? 'News Scraper — Saved, Some Articles Failed'
+      : 'News Scraper — Saved Successfully'
     : hasUnsavedActionable
       ? 'News Scraper — No New Articles Saved'
       : allInDb
@@ -43,6 +45,8 @@ const headline =
         : 'News Scraper — Run Completed';
 
 const scraper = escapeTelegramHtml(report.scraper || 'unknown');
+// Free-plan Firecrawl runs dry before its monthly refresh; cheerio takes over.
+const scraperNote = report.firecrawlExhausted ? ' (Firecrawl credits exhausted)' : '';
 const runLabel = report.runLabel ? escapeTelegramHtml(report.runLabel) : '';
 
 const line = (label, value) =>
@@ -87,11 +91,27 @@ const blocks = [
   line('Failed', failed),
   '',
   '⚙️ <b>System Info</b>',
-  `• Scraper: <code>${scraper}</code>`,
+  `• Scraper: <code>${scraper}</code>${scraperNote}`,
 ];
 
 if (runLabel) {
   blocks.push(`• Run Label: <code>${runLabel}</code>`);
+}
+
+// Name each failed article so a failure is traceable without opening the
+// Actions log (failures used to arrive as separate, anonymous Telegram pings).
+const failedItems = Array.isArray(report.batches?.failed) ? report.batches.failed : [];
+if (failedItems.length) {
+  const shown = failedItems.slice(0, 5).map((item) => {
+    const label = escapeTelegramHtml(item.title || item.url || 'unknown article');
+    const link = item.url ? `<a href="${escapeTelegramHtml(item.url)}">${label}</a>` : label;
+    const reason = escapeTelegramHtml(String(item.reason || item.reasonCode || '').slice(0, 160));
+    return `• ${link}\n  <code>${escapeTelegramHtml(item.reasonCode || item.stage || 'FAILED')}</code> ${reason}`;
+  });
+  if (failedItems.length > shown.length) {
+    shown.push(`• …and ${failedItems.length - shown.length} more`);
+  }
+  blocks.push('', '❌ <b>Failed Articles</b>', ...shown);
 }
 
 if (saved === 0) {

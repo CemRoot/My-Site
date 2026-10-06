@@ -52,6 +52,7 @@ export class TelegramOpsBot {
   handleConfirmCleanAction(...a) { return this.linkedin.handleConfirmCleanAction(...a); }
   handleDigestEditInput(...a) { return this.linkedin.handleDigestEditInput(...a); }
   handleDigestCallback(...a) { return this.linkedin.handleDigestCallback(...a); }
+  handleNoteDraft(...a) { return this.linkedin.handleNoteDraft(...a); }
 
   // Analytics
   handleAnalyticsMenu(...a) { return this.analytics.handleAnalyticsMenu(...a); }

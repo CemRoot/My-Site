@@ -124,12 +124,18 @@ ${content}`;
  * Accepts optional article context to improve accuracy.
  */
 export function createShortTextTranslationPrompt(content, context = '') {
+  // The text to translate is fenced and placed first: with the context block
+  // undelimited in front of it, models translated the context instead of the
+  // headline about two times in three.
   const contextBlock = context
-    ? `\nArticle context (first 300 chars, for reference only — do NOT include this in your output):\n${context.substring(0, 300)}\n`
+    ? `\n\nArticle context, for disambiguation only. Never translate or output it:\n<context>\n${context.substring(0, 300)}\n</context>`
     : '';
 
-  return `Translate this Turkish headline to English. Output ONLY the translated headline — nothing else. Do not add explanations, descriptions, or extra sentences.${contextBlock}
-${content}`;
+  return `Translate the Turkish text inside <text> to English. Output ONLY the translation of that text — nothing else. Do not add explanations, descriptions, or extra sentences. Keep names of people, places, products and brands as written (including ALL-CAPS names such as KIZILELMA).
+
+<text>
+${content}
+</text>${contextBlock}`;
 }
 
 /**

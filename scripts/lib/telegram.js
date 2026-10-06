@@ -51,15 +51,16 @@ export async function sendTelegramMessage(text, options = {}) {
 /**
  * Fire-and-forget notification – never throws, only logs failures.
  * @param {string} text - Message text (HTML parse_mode).
+ * @param {Record<string, unknown>} options - Extra payload fields (reply_markup, etc.).
  */
-export async function notifyTelegram(text) {
+export async function notifyTelegram(text, options = {}) {
   if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) {
     console.log('⚠️  Telegram credentials not configured, skipping notification');
     return;
   }
 
   try {
-    await sendTelegramMessage(text);
+    await sendTelegramMessage(text, options);
   } catch (error) {
     console.error('⚠️  Telegram notification failed:', error.message);
   }

@@ -17,7 +17,7 @@ import {
 import { removeEmbedArtifactNoise, dedupeEmbedTokens, hasSourceSocialLeak, stripSourceSocialLeaks } from '../../embeds/cleanMarkdownEmbeds.js';
 import { assertContentQuality } from '../../validation/contentQualityCheck.js';
 import { validateArticle } from '../../validation/smartArticleProcessor.js';
-import { notifyTelegram } from '../../lib/telegram.js';
+import { isStillTurkish } from '../../validation/turkishResidue.js';
 
 // maxRetries lets the SDK ride out transient Groq connection drops
 // ("Premature close" / socket hang up) with exponential backoff before the
@@ -149,6 +149,7 @@ async function translateWithModel(model, text, retry = false, shortText = false,
     .replace(/^Translate the following.*$/gim, '')
     .replace(/^Translation:.*$/gim, '')
     .replace(/Text to translate:.*$/gim, '')
+    .replace(/<\/?(?:text|context)>/gi, '')
     .trim();
 
   const turkishChars = /[ğüşıöçĞÜŞİÖÇ]/;
@@ -263,8 +264,7 @@ const INSTRUCTION_LEAKAGE_PATTERNS = [
   "what you're asking for", 'what you are asking for',
 ];
 
-function validateTranslationQuality(result) {
-  const turkishChars = /[ğüşıöçĞÜŞİÖÇ]/;
+function validateTranslationQuality(result, source = '') {
   const cjkChars = /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/;
   const otherNonLatin = /[\u0600-\u06ff\u0590-\u05ff\u0e00-\u0e7f\u0400-\u04ff]/;
 
@@ -276,7 +276,12 @@ function validateTranslationQuality(result) {
     result.toLowerCase().includes(p.toLowerCase())
   );
 
-  if (turkishChars.test(result)) return { valid: false, reason: 'still contains Turkish characters' };
+  if (isStillTurkish(result)) return { valid: false, reason: 'still contains Turkish text' };
+  // A Title-Case headline echoed back verbatim has no lowercase Turkish words to
+  // catch, so also reject output that is still the source text.
+  if (source && /[ğüşıöçĞÜŞİÖÇ]/.test(result) && calculateSimilarity(source, result) > 0.8) {
+    return { valid: false, reason: 'output mirrors the Turkish source' };
+  }
   if (cjkChars.test(result)) return { valid: false, reason: 'contains Chinese/Japanese/Korean characters' };
   if (otherNonLatin.test(result)) return { valid: false, reason: 'contains non-Latin characters (Arabic/Hebrew/Cyrillic)' };
   if (latinRatio < 0.8) return { valid: false, reason: `not mostly English (only ${(latinRatio * 100).toFixed(1)}% Latin chars)` };
@@ -324,7 +329,7 @@ export async function translateText(text, useOllama = false, fastMode = false, s
 
       try {
         const result = await translateWithModel(model, cleanContent, isRetry, shortText, context, userPromptOverride);
-        const quality = validateTranslationQuality(result);
+        const quality = validateTranslationQuality(result, cleanContent);
 
         if (quality.valid) {
           translatedContent = result;
@@ -354,8 +359,9 @@ export async function translateText(text, useOllama = false, fastMode = false, s
         }
 
         if (!isRetry) continue;
+        // No Telegram ping here: the remediation loop calls this up to three
+        // times per article, so the run summary reports the final outcome once.
         if (i === models.length - 1) {
-          notifyTelegram(`❌ <b>Tüm modeller başarısız</b>\n<code>${msg.substring(0,150)}</code>`);
           throw new Error(`All translation models failed. Last error: ${msg}`);
         }
         break;
@@ -366,7 +372,6 @@ export async function translateText(text, useOllama = false, fastMode = false, s
   }
 
   if (!translatedContent) {
-    notifyTelegram(`❌ <b>Tüm modeller başarısız</b>\n<code>All translation models exhausted</code>`);
     throw new Error('All translation models failed');
   }
 
