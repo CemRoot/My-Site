@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, Suspense, useMemo, useRef } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigationType } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import { ProbeTree } from './lib/perfProbe';
 import { SiteHeader } from './sections/SiteHeader';
@@ -16,6 +16,14 @@ import {
   clearTechNewsRestoreNavFlag,
   setTechNewsRestoreNavFlag,
 } from './lib/techNewsListRestore';
+import {
+  isTechNewsDetailPath,
+  jumpTo,
+  readRoutePosition,
+  restoreScrollWhenReady,
+  routeEntryId,
+  saveRoutePosition,
+} from './lib/routeScroll';
 
 /*
   HomePage is imported EAGERLY; every other route stays lazy.
@@ -65,45 +73,60 @@ function RouteLoadingFallback() {
   );
 }
 
+// The router owns scroll; stop the browser from restoring it on popstate before
+// the new route has rendered (it would land on the wrong page's height).
+if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+  window.history.scrollRestoration = 'manual';
+}
+
 function ScrollToTopOnRouteChange() {
-  const { pathname } = useLocation();
-  const prevPathRef = useRef<string | undefined>(undefined);
+  const { pathname, key } = useLocation();
+  const navigationType = useNavigationType();
+  const prevRef = useRef<{ key: string; pathname: string } | null>(null);
+  const listRestoreRef = useRef(false);
+  const isFirstEntryRef = useRef(true);
 
-  const prev = prevPathRef.current;
-  const isTechNewsList = pathname === '/tech-news';
-  const wasTechNewsDetail =
-    typeof prev === 'string' &&
-    prev.startsWith('/tech-news/') &&
-    prev !== '/tech-news';
+  /*
+    Runs once per history entry, not once per render. App re-renders for
+    unrelated reasons (the scroll-to-top button toggles at 500px); a decision
+    recomputed on every render used to flip and re-fire the scroll effect while
+    the reader was scrolling. Session flags still have to be set during render
+    so the /tech-news list's useState initialisers see them in the same commit.
+  */
+  if (prevRef.current?.key !== key || prevRef.current.pathname !== pathname) {
+    const prev = prevRef.current;
+    // Render happens before commit, so scrollY still belongs to the page we leave.
+    if (prev) saveRoutePosition(routeEntryId(prev.pathname, prev.key), window.scrollY);
+    // A fresh document load also reports POP; there is nothing of ours to resume.
+    isFirstEntryRef.current = prev === null;
 
-  // Session flags must run during render so /tech-news list useState initializers
-  // see the correct value in the same commit (before child layout effects).
-  if (isTechNewsList) {
-    if (wasTechNewsDetail) {
-      setTechNewsRestoreNavFlag();
-    } else {
+    const isTechNewsList = pathname === '/tech-news';
+    listRestoreRef.current = isTechNewsList && isTechNewsDetailPath(prev?.pathname);
+    if (isTechNewsList) {
+      if (listRestoreRef.current) setTechNewsRestoreNavFlag();
+      else clearTechNewsRestoreNavFlag();
+    } else if (isTechNewsDetailPath(pathname)) {
       clearTechNewsRestoreNavFlag();
     }
-  } else if (pathname.startsWith('/tech-news/')) {
-    clearTechNewsRestoreNavFlag();
+    prevRef.current = { key, pathname };
   }
 
-  prevPathRef.current = pathname;
-
   useLayoutEffect(() => {
-    if (isTechNewsList && wasTechNewsDetail) return;
-    /*
-      Only scroll when there is somewhere to scroll from.
+    // The list restores itself once its paginated data is back.
+    if (listRestoreRef.current) return;
 
-      This runs on the FIRST mount too, where the page is already at the top, so
-      the call was a no-op that still forced a scroll + layout. A CDP sampling
-      profile of the initial load put native `scrollTo` at 93 ms of self time
-      under 16x CPU throttling — the fourth-hottest function on the page, for a
-      scroll that moved nothing.
-    */
+    if (navigationType === 'POP' && !isFirstEntryRef.current) {
+      const saved = readRoutePosition(routeEntryId(pathname, key));
+      if (saved != null) return restoreScrollWhenReady(saved);
+    }
+
+    // Skip the no-op on first load: native scrollTo still forces layout (93 ms
+    // self time under 16x CPU throttling in a CDP profile).
     if (window.scrollY === 0) return;
-    window.scrollTo({ top: 0, behavior: 'auto' });
-  }, [pathname, isTechNewsList, wasTechNewsDetail]);
+    jumpTo(0);
+    // Only a new history entry may move the page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, pathname]);
 
   return null;
 }
