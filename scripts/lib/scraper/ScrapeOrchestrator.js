@@ -27,6 +27,7 @@ import {
 } from './contentRemediation.js';
 import { ScraperRouter } from './scrapers/ScraperRouter.js';
 import { normalizeSourceDate } from './dateUtils.js';
+import { reportScrapeFailure, flushScrapeFailures } from './sentryReporter.js';
 
 const CONFIG = SCRAPER_CONFIG;
 /** Recent window for stale-but-ok articles (days). Single source: SCRAPER_CONFIG.MAX_RECENT_PUBLISH_DAYS */
@@ -407,11 +408,16 @@ function recordRunBatch(report, batch, payload) {
 
   const resolvedReasonCode = payload.reasonCode || mapReasonCode(payload.stage);
 
-  report.batches[batch].push({
+  const entry = {
     timestamp: new Date().toISOString(),
     ...payload,
     reasonCode: resolvedReasonCode,
-  });
+  };
+  report.batches[batch].push(entry);
+
+  if (batch === 'failed') {
+    reportScrapeFailure(entry, { runLabel: report.runLabel });
+  }
 }
 
 class DiscoveryAgent {
@@ -503,8 +509,14 @@ function createAgents(scraperRouter) {
   };
 }
 
-function finalizeRunReport(report, { databaseCountBefore = null, databaseCountAfter = null, circuitBreakerTriggered = false }) {
+function finalizeRunReport(report, { scraperRouter = null, databaseCountBefore = null, databaseCountAfter = null, circuitBreakerTriggered = false }) {
   const metrics = report.metrics;
+  // The scraper can switch mid-run (Firecrawl credits → cheerio), so record
+  // what actually ran rather than what the run started with.
+  if (scraperRouter) {
+    report.scraper = scraperRouter.getActiveScraperName();
+    report.firecrawlExhausted = scraperRouter.isFirecrawlExhausted();
+  }
   report.finishedAt = new Date().toISOString();
   report.durationMs = new Date(report.finishedAt).getTime() - new Date(report.startedAt).getTime();
   report.databaseCountBefore = databaseCountBefore;
@@ -993,6 +1005,7 @@ async function processArticleQueue(articleQueue, agents, runReport, options = {}
       recordRunBatch(runReport, 'failed', {
         url,
         category,
+        title: article.title,
         stage: 'translation',
         reason: translationError.message,
         replayBatch,
@@ -1050,6 +1063,7 @@ async function scrapeNews(argv = process.argv) {
     console.log('⚠️ No articles found in any category. Exiting.');
     finalCount = currentCount;
     finalizeRunReport(runReport, {
+      scraperRouter,
       databaseCountBefore: currentCount,
       databaseCountAfter: finalCount,
       circuitBreakerTriggered: false,
@@ -1119,6 +1133,7 @@ async function scrapeNews(argv = process.argv) {
     console.log('ℹ️  No today or unknown candidates remain after date partitioning.');
     finalCount = currentCount;
     finalizeRunReport(runReport, {
+      scraperRouter,
       databaseCountBefore: currentCount,
       databaseCountAfter: finalCount,
       circuitBreakerTriggered: false,
@@ -1187,6 +1202,7 @@ async function scrapeNews(argv = process.argv) {
     console.log('ℹ️  No verified today candidates remain after DB checks and date verification.');
     finalCount = currentCount;
     finalizeRunReport(runReport, {
+      scraperRouter,
       databaseCountBefore: currentCount,
       databaseCountAfter: finalCount,
       circuitBreakerTriggered: false,
@@ -1224,6 +1240,7 @@ async function scrapeNews(argv = process.argv) {
 
   finalCount = await agents.persistence.getArticleCount();
   finalizeRunReport(runReport, {
+    scraperRouter,
     databaseCountBefore: currentCount,
     databaseCountAfter: finalCount,
     circuitBreakerTriggered,
@@ -1287,6 +1304,7 @@ async function replayBatch(filePath, argv = process.argv) {
 
   if (replayCandidates.length === 0) {
     finalizeRunReport(runReport, {
+      scraperRouter,
       databaseCountBefore: currentCount,
       databaseCountAfter: finalCount,
       circuitBreakerTriggered: false,
@@ -1299,6 +1317,7 @@ async function replayBatch(filePath, argv = process.argv) {
   const processResult = await processArticleQueue(replayCandidates, agents, runReport);
   finalCount = await agents.persistence.getArticleCount();
   finalizeRunReport(runReport, {
+    scraperRouter,
     databaseCountBefore: currentCount,
     databaseCountAfter: finalCount,
     circuitBreakerTriggered: processResult.circuitBreakerTriggered,
@@ -1488,7 +1507,7 @@ async function forceIngestUrls(urls, argv = process.argv) {
   if (toProcess.length === 0) {
     console.log('\nℹ️  All provided URLs already exist in the database.\n');
     const finalCount = await agents.persistence.getArticleCount();
-    finalizeRunReport(runReport, { databaseCountBefore: currentCount, databaseCountAfter: finalCount });
+    finalizeRunReport(runReport, { scraperRouter, databaseCountBefore: currentCount, databaseCountAfter: finalCount });
     await persistRunReport(runReport, runLabel ? `tech-news-force-ingest-run-${runLabel}` : 'tech-news-force-ingest-run');
     return;
   }
@@ -1657,6 +1676,7 @@ async function forceIngestUrls(urls, argv = process.argv) {
       runReport.metrics.translationFailed++;
       recordRunBatch(runReport, 'failed', {
         url, category: candidate.category,
+        title: article.title,
         stage: 'translation',
         reason: translationError.message,
         replayBatch: candidate.replayBatch,
@@ -1669,6 +1689,7 @@ async function forceIngestUrls(urls, argv = process.argv) {
 
   const finalCount = await agents.persistence.getArticleCount();
   finalizeRunReport(runReport, {
+    scraperRouter,
     databaseCountBefore: currentCount,
     databaseCountAfter: finalCount,
   });
@@ -1682,6 +1703,14 @@ async function forceIngestUrls(urls, argv = process.argv) {
 }
 
 export async function runScraperCli(argv = process.argv) {
+  try {
+    return await dispatchScraperCli(argv);
+  } finally {
+    await flushScrapeFailures();
+  }
+}
+
+async function dispatchScraperCli(argv) {
   const replayFile = getCliArg('--replay-file', argv);
   const testUrlIndex = argv.indexOf('--test-url');
   const forceUrlsArg = getCliArg('--force-urls', argv) || process.env.TECH_NEWS_FORCE_URLS || '';

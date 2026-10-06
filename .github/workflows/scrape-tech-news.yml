@@ -130,6 +130,9 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
           TECH_NEWS_FORCE_URLS: ${{ inputs.force_urls }}
+          # Terminal per-article failures go to Sentry (no-op when the secret is unset).
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_ENVIRONMENT: github-actions
           # Model overrides: set these as repository variables to route around a
           # Groq decommission without a code change (defaults live in
           # scripts/lib/scraper/config.js).

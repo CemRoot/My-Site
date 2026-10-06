@@ -6,6 +6,7 @@
  */
 
 import { hasSourceSocialLeak, stripSourceSocialLeaks } from '../embeds/cleanMarkdownEmbeds.js';
+import { isStillTurkish } from './turkishResidue.js';
 
 /**
  * Clean Nuvemmag branding from content
@@ -208,9 +209,10 @@ export function validateArticleContent(article, autoFix = false) {
   if (cyrillicChars.test(textToCheck)) {
     errors.push('❌ CRITICAL: Contains Cyrillic (Russian) characters');
   }
-  if (turkishChars.test(title) || turkishChars.test(description)) {
-    // Turkish in title/description is critical error
-    errors.push('❌ CRITICAL: Title or description contains Turkish characters');
+  if (isStillTurkish(title) || isStillTurkish(description)) {
+    // Untranslated Turkish in title/description is critical; a proper noun like
+    // "Şanlıurfa" is not (see turkishResidue.js).
+    errors.push('❌ CRITICAL: Title or description contains Turkish text');
   } else if (turkishChars.test(content)) {
     // Turkish in content is a warning (might be a quote or name)
     warnings.push('⚠️  Content contains Turkish characters (may be intentional)');

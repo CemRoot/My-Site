@@ -3,6 +3,9 @@
  */
 
 import { getSocialMenuKeyboard, getMainMenuKeyboard } from '../keyboards.js';
+import { socialDraftMessage } from '../../../../lib/notes/socialDraft.js';
+import { NOTE_TOPICS } from '../../../../lib/notes/topics.js';
+import { SITE_URL } from '../../../../lib/seo/siteMeta.js';
 
 export class LinkedInOpsService {
   constructor(deps) {
@@ -11,6 +14,37 @@ export class LinkedInOpsService {
     this.supabase = deps.supabase;
     this.env = deps.env;
     this.config = deps.config;
+  }
+
+  /**
+   * Reply to a "💼 Draft" button on an Engineer's Notes notification with the
+   * note's LinkedIn/X drafts, built from the published row.
+   */
+  async handleNoteDraft(noteId) {
+    const { data: note, error } = await this.supabase
+      .from('tech_news_articles')
+      .select('title, slug, content, quality_flags')
+      .eq('id', noteId)
+      .maybeSingle();
+
+    if (error) {
+      await this.sendTelegramMessage(`❌ <b>Draft failed</b>\n<code>${error.message}</code>`);
+      return;
+    }
+    if (!note) {
+      await this.sendTelegramMessage('❌ <b>Note not found</b> — it may have been deleted.');
+      return;
+    }
+
+    const topicLabel = NOTE_TOPICS.find((t) => t.id === note.quality_flags?.topic)?.label;
+    await this.sendTelegramMessage(
+      socialDraftMessage({
+        title: note.title,
+        body: note.content,
+        url: `${SITE_URL}/tech-news/${note.slug}`,
+        topicLabel,
+      }),
+    );
   }
 
   /**

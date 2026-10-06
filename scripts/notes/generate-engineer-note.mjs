@@ -29,7 +29,7 @@ import { MIN_TOPIC_SCORE, scoreItem } from '../../lib/notes/topics.js';
 import { checkNote, issuesAsFixHints } from '../../lib/notes/claimGuard.js';
 import { NOTE_SYSTEM_PROMPT, buildNoteUserPrompt } from '../../lib/notes/prompt.js';
 import { composeNoteMarkdown } from '../../lib/notes/relatedWork.js';
-import { linkedInDraft, xDraft } from '../../lib/notes/socialDraft.js';
+import { noteDraftButton } from '../../lib/notes/socialDraft.js';
 import { SOURCE_KIND_ORIGINAL } from '../../lib/seo/indexability.js';
 import { INDEXNOW_ENDPOINT, buildIndexNowPayload } from '../../lib/seo/indexNow.js';
 import { SITE_URL } from '../../lib/seo/siteMeta.js';
@@ -264,24 +264,15 @@ async function main() {
 
   if (published.length) {
     await pingIndexNow(published.map((p) => `/tech-news/${p.slug}`));
+    // Social drafts are on demand: each note gets a button and the webhook
+    // replies with its LinkedIn/X draft only when tapped.
     await notifyTelegram(
       [
         "📝 <b>Engineer's Notes published</b>",
         ...published.map((p) => `• <a href="${SITE_URL}/tech-news/${p.slug}">${escapeTelegram(p.title)}</a> — ${escapeTelegram(p.topic)} (${escapeTelegram(p.source)})`),
       ].join('\n'),
+      { reply_markup: { inline_keyboard: published.map((p) => noteDraftButton(p)) } },
     );
-    // Ready-to-paste social drafts, built from the guarded note text only.
-    for (const p of published) {
-      const url = `${SITE_URL}/tech-news/${p.slug}`;
-      await notifyTelegram(
-        [
-          '💼 <b>LinkedIn draft</b> (copy &amp; post)',
-          `<pre>${escapeTelegram(linkedInDraft({ title: p.title, body: p.body, url, topicLabel: p.topic }))}</pre>`,
-          '𝕏 <b>X draft</b>',
-          `<pre>${escapeTelegram(xDraft({ title: p.title, url }))}</pre>`,
-        ].join('\n'),
-      );
-    }
   } else {
     await notifyTelegram(
       [
