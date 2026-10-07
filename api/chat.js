@@ -57,7 +57,7 @@ ${errorDetails ? `📋 <b>Hata Detayı:</b>\n<code>${errorDetails.substring(0, 2
 
 export default withSentry(async function handler(req, res) {
   const ALLOWED_ORIGINS = [
-    'https://cemkoyluoglu.codes',
+    'https://cemkoyluoglu.tech',
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
   ].filter(Boolean);
 

@@ -29,7 +29,7 @@
 | # | Finding | File | Fix Applied |
 |---|---------|------|-------------|
 | M-1 | Webhook secret verification used plain-string equality (`!==`) which is vulnerable to timing attacks allowing secret enumeration. | `api/deployment-webhook.js` | Replaced with `crypto.timingSafeEqual()`. |
-| M-2 | CORS policy used `origin.includes('.vercel.app')` — any developer can register a free `*.vercel.app` subdomain and bypass CORS, effectively making the endpoint publicly writable. | `api/frontend-health-monitor.js` | Replaced with an explicit allowlist (`cemkoyluoglu.codes` + `process.env.VERCEL_URL`). |
+| M-2 | CORS policy used `origin.includes('.vercel.app')` — any developer can register a free `*.vercel.app` subdomain and bypass CORS, effectively making the endpoint publicly writable. | `api/frontend-health-monitor.js` | Replaced with an explicit allowlist (`cemkoyluoglu.tech` + `process.env.VERCEL_URL`). |
 | M-3 | `/api/newsletter` had **no rate limiting**, allowing unlimited spam/enumeration of the subscriber table. | `api/newsletter.js` | Rate limit was added; endpoint + signup UI were later **removed** in P3 cleanup (no live newsletter route). |
 
 ---

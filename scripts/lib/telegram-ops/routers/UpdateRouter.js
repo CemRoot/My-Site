@@ -135,7 +135,7 @@ export class UpdateRouter {
 
       const userId = message.from.id;
 
-      if (/cemkoyluoglu\.codes\/tech-news\/[a-z0-9-]+/i.test(text)) {
+      if (/cemkoyluoglu\.(?:tech|codes)\/tech-news\/[a-z0-9-]+/i.test(text)) {
         await bot.handleDeleteUrlInput(text, userId);
         return { success: true, message: 'Delete article flow initiated' };
       }

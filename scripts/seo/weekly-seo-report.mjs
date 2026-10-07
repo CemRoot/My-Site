@@ -20,7 +20,7 @@ import { SOURCE_KIND_ORIGINAL } from '../../lib/seo/indexability.js';
 import { getAccessToken, lowCtrPages, querySearchAnalytics } from '../../lib/seo/searchConsole.js';
 
 const DRY_RUN = process.argv.includes('--dry-run');
-const UA = 'Mozilla/5.0 (compatible; CemKoyluogluSEOCheck/1.0; +https://cemkoyluoglu.codes)';
+const UA = 'Mozilla/5.0 (compatible; CemKoyluogluSEOCheck/1.0; +https://cemkoyluoglu.tech)';
 const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const day = (offset) => new Date(Date.now() - offset * 86400_000).toISOString().slice(0, 10);
 

@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { usePageContext } from '../lib/context/PageContext';
 import { SEO } from '../components/SEO';
 
-const AUTH_CALLBACK_URL = 'https://auth.cemkoyluoglu.codes';
+const AUTH_CALLBACK_URL = 'https://auth.cemkoyluoglu.tech';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

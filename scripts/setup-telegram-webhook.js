@@ -7,7 +7,7 @@
 import { env } from './lib/config.js';
 import { callTelegramApi } from './lib/telegram.js';
 
-const WEBHOOK_URL = process.env.WEBHOOK_URL || 'https://cemkoyluoglu.codes/api/telegram-webhook';
+const WEBHOOK_URL = process.env.WEBHOOK_URL || 'https://cemkoyluoglu.tech/api/telegram-webhook';
 
 async function setupWebhook() {
   if (!env.TELEGRAM_BOT_TOKEN) {
@@ -105,6 +105,6 @@ switch (command) {
     console.log('');
     console.log('Environment variables:');
     console.log('  TELEGRAM_BOT_TOKEN - Your Telegram bot token (required)');
-    console.log('  WEBHOOK_URL - Your webhook URL (default: https://cemkoyluoglu.codes/api/telegram-webhook)');
+    console.log('  WEBHOOK_URL - Your webhook URL (default: https://cemkoyluoglu.tech/api/telegram-webhook)');
     process.exit(1);
 }

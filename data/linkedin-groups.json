@@ -161,7 +161,7 @@
     "min_relevance_score": 40,
     "max_articles_per_category": 2,
     "recency_hours": 72,
-    "site_base_url": "https://cemkoyluoglu.codes/tech-news"
+    "site_base_url": "https://cemkoyluoglu.tech/tech-news"
   },
   "category_mappings": {
     "AI": ["AI", "Artificial Intelligence", "Machine Learning", "Deep Learning", "LLM", "NLP"],

@@ -191,7 +191,7 @@ function IrishLegalAssistantPrivacyPage() {
             Irish Legal Assistant is for general research and information about Irish law. It does
             not give legal advice and it does not provide legal representation. The developer is not
             your solicitor or barrister. The website at{' '}
-            <a href="https://cemkoyluoglu.codes">cemkoyluoglu.codes</a> is the developer&apos;s
+            <a href="https://cemkoyluoglu.tech">cemkoyluoglu.tech</a> is the developer&apos;s
             personal site, not a law firm.
           </p>
           <p>

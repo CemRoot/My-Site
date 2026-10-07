@@ -23,7 +23,7 @@ import { buildSitemapXml } from '../lib/seo/sitemap.js';
 import { ROBOTS_NOINDEX } from '../lib/seo/siteMeta.js';
 
 const SHELL_FILE = 'build/app-shell.html';
-const PRODUCTION_ORIGIN = 'https://cemkoyluoglu.codes';
+const PRODUCTION_ORIGIN = 'https://cemkoyluoglu.tech';
 
 const CACHE_OK = 'public, max-age=0, s-maxage=600, stale-while-revalidate=86400';
 const CACHE_SHORT = 'public, max-age=0, s-maxage=60';

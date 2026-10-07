@@ -153,7 +153,7 @@ function verifyAuth(req) {
 export default async function handler(req, res) {
   // CORS headers
   const ALLOWED_ORIGINS = [
-    'https://cemkoyluoglu.codes',
+    'https://cemkoyluoglu.tech',
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
   ].filter(Boolean);
 

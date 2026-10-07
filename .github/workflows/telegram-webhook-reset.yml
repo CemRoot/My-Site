@@ -33,7 +33,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          WEBHOOK_URL: https://cemkoyluoglu.codes/api/telegram-webhook
+          WEBHOOK_URL: https://cemkoyluoglu.tech/api/telegram-webhook
         run: |
           echo "🔄 Starting Telegram webhook reset..."
           echo "📅 Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
@@ -92,7 +92,7 @@ jobs:
         run: |
           CURRENT_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
           
-          MESSAGE="✅ <b>TELEGRAM WEBHOOK RESET - BAŞARILI</b>%0A%0A🎉 Webhook başarıyla sıfırlandı!%0A⏰ Zaman: ${CURRENT_TIME}%0A%0A<b>📊 Yapılan İşlemler:</b>%0A✅ Eski webhook silindi%0A✅ Pending updates temizlendi%0A✅ Yeni webhook kuruldu%0A✅ Durum doğrulandı%0A%0A<b>🔍 Sonuç:</b>%0A• Webhook URL: cemkoyluoglu.codes/api/telegram-webhook%0A• Pending Updates: 0%0A• Durum: Aktif%0A%0A💚 <b>Telegram botunuz çalışmaya hazır!</b>%0A%0A<i>Artık mesajlarınız kuyrukta sıkışmayacak.</i>"
+          MESSAGE="✅ <b>TELEGRAM WEBHOOK RESET - BAŞARILI</b>%0A%0A🎉 Webhook başarıyla sıfırlandı!%0A⏰ Zaman: ${CURRENT_TIME}%0A%0A<b>📊 Yapılan İşlemler:</b>%0A✅ Eski webhook silindi%0A✅ Pending updates temizlendi%0A✅ Yeni webhook kuruldu%0A✅ Durum doğrulandı%0A%0A<b>🔍 Sonuç:</b>%0A• Webhook URL: cemkoyluoglu.tech/api/telegram-webhook%0A• Pending Updates: 0%0A• Durum: Aktif%0A%0A💚 <b>Telegram botunuz çalışmaya hazır!</b>%0A%0A<i>Artık mesajlarınız kuyrukta sıkışmayacak.</i>"
           
           curl -s --retry 4 --retry-delay 2 --retry-all-errors --max-time 30 -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TELEGRAM_CHAT_ID}" \

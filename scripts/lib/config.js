@@ -31,7 +31,7 @@ export const env = {
   VERCEL_URL: process.env.VERCEL_URL || '',
   VERCEL_TOKEN: process.env.VERCEL_TOKEN || '',
   VERCEL_PROJECT_ID: process.env.VERCEL_PROJECT_ID || '',
-  SITE_URL: process.env.SITE_URL || process.env.VERCEL_URL || 'https://cemkoyluoglu.codes',
+  SITE_URL: process.env.SITE_URL || process.env.VERCEL_URL || 'https://cemkoyluoglu.tech',
 };
 
 export const paths = {

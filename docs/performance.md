@@ -11,7 +11,7 @@ wrong file. Read [The two traps](#the-two-traps) before trusting any tool here.
 
 ## Current numbers
 
-Measured on production (`cemkoyluoglu.codes`), PageSpeed Insights:
+Measured on production (`cemkoyluoglu.tech`), PageSpeed Insights:
 
 | | Mobile | Desktop |
 |---|---|---|

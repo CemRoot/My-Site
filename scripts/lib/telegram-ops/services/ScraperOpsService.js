@@ -285,7 +285,7 @@ Manage content gathering and articles:
       await this.sendTelegramMessage(
         '🗑️ <b>Haber Silme</b>\n\n' +
         '📎 Silmek istediğiniz haberin linkini gönderin:\n\n' +
-        '<i>Örnek: https://cemkoyluoglu.codes/tech-news/article-slug</i>\n\n' +
+        '<i>Örnek: https://cemkoyluoglu.tech/tech-news/article-slug</i>\n\n' +
         '💡 Doğrudan link gönderirseniz de otomatik algılanır.\n' +
         '⏱️ 10 dakika içinde göndermezsaniz işlem iptal olur.'
       );
@@ -302,12 +302,12 @@ Manage content gathering and articles:
     try {
       const { deleteConversationState } = await import('../../../../lib/conversation-state.js');
 
-      const siteMatch = url.match(/cemkoyluoglu\.codes\/tech-news\/([a-z0-9][a-z0-9-]*)/i);
+      const siteMatch = url.match(/cemkoyluoglu\.(?:tech|codes)\/tech-news\/([a-z0-9][a-z0-9-]*)/i);
       if (!siteMatch) {
         await this.sendTelegramMessage(
           '❌ <b>Geçersiz link!</b>\n\n' +
           'Lütfen geçerli bir haber linki gönderin:\n' +
-          '<i>https://cemkoyluoglu.codes/tech-news/article-slug</i>'
+          '<i>https://cemkoyluoglu.tech/tech-news/article-slug</i>'
         );
         return;
       }

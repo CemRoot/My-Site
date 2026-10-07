@@ -1,4 +1,4 @@
-# https://cemkoyluoglu.codes robots.txt
+# https://cemkoyluoglu.tech robots.txt
 #
 # NOTE: If Cloudflare "AI Scrapers and Crawlers" / managed robots.txt is enabled,
 # it may prepend Disallow rules for GPTBot/ClaudeBot/etc. Disable that managed
@@ -37,4 +37,4 @@ User-agent: CCBot
 Allow: /
 
 # Sitemaps
-Sitemap: https://cemkoyluoglu.codes/sitemap.xml
+Sitemap: https://cemkoyluoglu.tech/sitemap.xml
