@@ -6,7 +6,7 @@
  *
  * Setup in Sentry:
  * 1. Settings → Developer Settings → Custom Integrations → Create New → Internal Integration
- * 2. Webhook URL: https://cemkoyluoglu.codes/api/sentry-webhook?secret=<SENTRY_WEBHOOK_SECRET>
+ * 2. Webhook URL: https://cemkoyluoglu.tech/api/sentry-webhook?secret=<SENTRY_WEBHOOK_SECRET>
  * 3. Enable "Alert Rule Action", give Issue & Event "Read", tick the "issue" webhook
  * 4. Set SENTRY_WEBHOOK_SECRET in Vercel to the same value
  */

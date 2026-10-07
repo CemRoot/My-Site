@@ -2,7 +2,7 @@
  * External URLs and API paths used across the application
  */
 
-export const DEFAULT_OG_IMAGE_URL = 'https://cemkoyluoglu.codes/og-image.png';
+export const DEFAULT_OG_IMAGE_URL = 'https://cemkoyluoglu.tech/og-image.png';
 
 export const GOOGLE_MAPS_DUBLIN_URL = 'https://www.google.com/maps/place/Dublin,+Ireland';
 

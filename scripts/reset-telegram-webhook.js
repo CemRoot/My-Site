@@ -8,7 +8,7 @@
 import { env } from './lib/config.js';
 import { callTelegramApi } from './lib/telegram.js';
 
-const WEBHOOK_URL = process.env.WEBHOOK_URL || 'https://cemkoyluoglu.codes/api/telegram-webhook';
+const WEBHOOK_URL = process.env.WEBHOOK_URL || 'https://cemkoyluoglu.tech/api/telegram-webhook';
 
 // ANSI color codes
 const colors = {

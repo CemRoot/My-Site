@@ -39,7 +39,7 @@ const MAX_AGE_DAYS = 10;
 const MIN_SOURCE_CHARS = 800;
 const MAX_ATTEMPTS = 3;
 const MAX_CANDIDATES_TRIED = 4;
-const USER_AGENT = 'Mozilla/5.0 (compatible; CemKoyluogluNotes/1.0; +https://cemkoyluoglu.codes)';
+const USER_AGENT = 'Mozilla/5.0 (compatible; CemKoyluogluNotes/1.0; +https://cemkoyluoglu.tech)';
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');

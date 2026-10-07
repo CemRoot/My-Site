@@ -1410,7 +1410,7 @@ async function testSingleUrl(url) {
   if (result.success) {
     console.log(`   ✅ Saved! (ID: ${result.data?.id})`);
     console.log(`\n🎉 TEST COMPLETE — article live at:`);
-    console.log(`   https://cemkoyluoglu.codes/tech-news/${articleData.slug}\n`);
+    console.log(`   https://cemkoyluoglu.tech/tech-news/${articleData.slug}\n`);
   } else {
     console.error(`   ❌ Save failed: ${result.error?.message || result.reason}`);
     process.exit(1);

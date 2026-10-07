@@ -440,7 +440,7 @@ export async function processManualArticle(articleUrl, originalSourceUrl) {
     console.log(`   Slug: ${savedArticle.slug}`);
     console.log(`   Category: ${savedArticle.category}`);
     console.log(`   Reading time: ${aiResult.reading_time} min`);
-    console.log(`   URL: https://cemkoyluoglu.codes/tech-news/${savedArticle.slug}`);
+    console.log(`   URL: https://cemkoyluoglu.tech/tech-news/${savedArticle.slug}`);
 
     return {
       success: true,
@@ -532,7 +532,7 @@ if (process.argv[1]?.includes('manual-article-scraper.js')) {
           `📰 <b>Başlık:</b> ${result.article.title}\n\n` +
           `📂 <b>Kategori:</b> ${result.article.category}\n` +
           `📊 <b>Okuma Süresi:</b> ${result.readingTime} dk\n` +
-          `🔗 <b>URL:</b> https://cemkoyluoglu.codes/tech-news/${result.article.slug}\n\n` +
+          `🔗 <b>URL:</b> https://cemkoyluoglu.tech/tech-news/${result.article.slug}\n\n` +
           `<i>✨ ${result.optimizationNotes}</i>`,
           telegramUserId
         );

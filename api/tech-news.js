@@ -129,8 +129,8 @@ const supabase = createClient(
 
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = [
-  'https://cemkoyluoglu.codes',
-  'https://www.cemkoyluoglu.codes',
+  'https://cemkoyluoglu.tech',
+  'https://www.cemkoyluoglu.tech',
 ];
 
 /**

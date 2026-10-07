@@ -6,28 +6,28 @@ This site is the canonical source for Cem Koyluoglu's professional profile, skil
 
 ## Primary
 
-- [Home](https://cemkoyluoglu.codes/): Profile, systems, selected work, experience, services and contact
-- [Skills](https://cemkoyluoglu.codes/skills): AI engineering skills, each linked to evidence
-- [Tech News](https://cemkoyluoglu.codes/tech-news): Engineer's Notes and curated AI news
-- [Full LLM context](https://cemkoyluoglu.codes/llms-full.txt): Expanded biography, skills, and site map for agents
-- [Sitemap](https://cemkoyluoglu.codes/sitemap.xml): Machine-readable list of all public pages and articles
+- [Home](https://cemkoyluoglu.tech/): Profile, systems, selected work, experience, services and contact
+- [Skills](https://cemkoyluoglu.tech/skills): AI engineering skills, each linked to evidence
+- [Tech News](https://cemkoyluoglu.tech/tech-news): Engineer's Notes and curated AI news
+- [Full LLM context](https://cemkoyluoglu.tech/llms-full.txt): Expanded biography, skills, and site map for agents
+- [Sitemap](https://cemkoyluoglu.tech/sitemap.xml): Machine-readable list of all public pages and articles
 
 ## Skills
 
-- [RAG & Grounded LLM Systems](https://cemkoyluoglu.codes/skills/rag-systems)
-- [Deepfake Detection](https://cemkoyluoglu.codes/skills/deepfake-detection)
-- [Computer Vision](https://cemkoyluoglu.codes/skills/computer-vision)
-- [Agentic & LLM Automation](https://cemkoyluoglu.codes/skills/agentic-workflows)
-- [Azure & Microsoft 365](https://cemkoyluoglu.codes/skills/azure-microsoft-365)
+- [RAG & Grounded LLM Systems](https://cemkoyluoglu.tech/skills/rag-systems)
+- [Deepfake Detection](https://cemkoyluoglu.tech/skills/deepfake-detection)
+- [Computer Vision](https://cemkoyluoglu.tech/skills/computer-vision)
+- [Agentic & LLM Automation](https://cemkoyluoglu.tech/skills/agentic-workflows)
+- [Azure & Microsoft 365](https://cemkoyluoglu.tech/skills/azure-microsoft-365)
 
 ## Case studies
 
-- [DeepFake Detection Framework](https://cemkoyluoglu.codes/work/deepfake-detection-framework): MSc dissertation, Attention-Enhanced EfficientNetB7, 97% accuracy on 10,000+ synthetic images
-- [YouTube AI Summarizer](https://cemkoyluoglu.codes/work/youtube-ai-summarizer): Open-source Chrome extension with transcript-grounded chat
-- [Ireland Expat Assistant](https://cemkoyluoglu.codes/work/ireland-expat-assistant): Custom GPT grounded in official Irish documents
-- [Automated AI News Pipeline](https://cemkoyluoglu.codes/work/ai-news-pipeline): LLM cascade with quality gates behind this site's Tech News
-- [Automated Data Analysis System](https://cemkoyluoglu.codes/work/automated-data-analysis-system)
-- [Customer Dashboard Platform](https://cemkoyluoglu.codes/work/customer-dashboard-platform)
+- [DeepFake Detection Framework](https://cemkoyluoglu.tech/work/deepfake-detection-framework): MSc dissertation, Attention-Enhanced EfficientNetB7, 97% accuracy on 10,000+ synthetic images
+- [YouTube AI Summarizer](https://cemkoyluoglu.tech/work/youtube-ai-summarizer): Open-source Chrome extension with transcript-grounded chat
+- [Ireland Expat Assistant](https://cemkoyluoglu.tech/work/ireland-expat-assistant): Custom GPT grounded in official Irish documents
+- [Automated AI News Pipeline](https://cemkoyluoglu.tech/work/ai-news-pipeline): LLM cascade with quality gates behind this site's Tech News
+- [Automated Data Analysis System](https://cemkoyluoglu.tech/work/automated-data-analysis-system)
+- [Customer Dashboard Platform](https://cemkoyluoglu.tech/work/customer-dashboard-platform)
 
 ## Elsewhere
 
@@ -41,6 +41,6 @@ This site is the canonical source for Cem Koyluoglu's professional profile, skil
 
 ## Optional
 
-- [Privacy Policy](https://cemkoyluoglu.codes/privacy-policy): How site data and analytics are handled
-- [Terms](https://cemkoyluoglu.codes/terms): Website terms and conditions
-- [English Learning](https://cemkoyluoglu.codes/english-learning): Language learning resources page
+- [Privacy Policy](https://cemkoyluoglu.tech/privacy-policy): How site data and analytics are handled
+- [Terms](https://cemkoyluoglu.tech/terms): Website terms and conditions
+- [English Learning](https://cemkoyluoglu.tech/english-learning): Language learning resources page

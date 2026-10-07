@@ -13,19 +13,19 @@
     },
     {
       "source": "/finance",
-      "destination": "https://broker.cemkoyluoglu.codes/finance"
+      "destination": "https://broker.cemkoyluoglu.tech/finance"
     },
     {
       "source": "/finance/:path*",
-      "destination": "https://broker.cemkoyluoglu.codes/finance/:path*"
+      "destination": "https://broker.cemkoyluoglu.tech/finance/:path*"
     },
     {
       "source": "/public/live",
-      "destination": "https://broker.cemkoyluoglu.codes/public/live"
+      "destination": "https://broker.cemkoyluoglu.tech/public/live"
     },
     {
       "source": "/health",
-      "destination": "https://broker.cemkoyluoglu.codes/health"
+      "destination": "https://broker.cemkoyluoglu.tech/health"
     },
     {
       "source": "/privacy",

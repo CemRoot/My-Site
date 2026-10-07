@@ -180,7 +180,7 @@
       // VITE_DEV_API_PROXY (e.g. http://localhost:3001 when running `vercel dev`).
       proxy: {
         '/api': {
-          target: env.VITE_DEV_API_PROXY || 'https://cemkoyluoglu.codes',
+          target: env.VITE_DEV_API_PROXY || 'https://cemkoyluoglu.tech',
           changeOrigin: true,
           secure: true,
         },

@@ -10,7 +10,7 @@ He is available for freelance projects and full-time roles (remote or on-site). 
 
 ## Site purpose
 
-https://cemkoyluoglu.codes is a personal portfolio and tech news publication:
+https://cemkoyluoglu.tech is a personal portfolio and tech news publication:
 
 - Portfolio: experience, skills, projects, and contact
 - Tech News: English-language articles curated and rewritten from Turkish tech sources (NuvemMag pipeline), with embeds preserved where relevant
@@ -18,12 +18,12 @@ https://cemkoyluoglu.codes is a personal portfolio and tech news publication:
 
 ## Key URLs
 
-- Home: https://cemkoyluoglu.codes/
-- Tech News list: https://cemkoyluoglu.codes/tech-news
-- Individual articles: https://cemkoyluoglu.codes/tech-news/{slug}
-- Short agent index: https://cemkoyluoglu.codes/llms.txt
-- Sitemap: https://cemkoyluoglu.codes/sitemap.xml
-- Latest news snapshot (JSON): https://cemkoyluoglu.codes/tech-news-latest.json
+- Home: https://cemkoyluoglu.tech/
+- Tech News list: https://cemkoyluoglu.tech/tech-news
+- Individual articles: https://cemkoyluoglu.tech/tech-news/{slug}
+- Short agent index: https://cemkoyluoglu.tech/llms.txt
+- Sitemap: https://cemkoyluoglu.tech/sitemap.xml
+- Latest news snapshot (JSON): https://cemkoyluoglu.tech/tech-news-latest.json
 
 ## Skills and focus areas
 

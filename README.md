@@ -6,7 +6,7 @@
 Behind the site are scheduled AI pipelines, a guarded LLM writer, a grounded chat assistant,<br>
 a server-rendered SEO layer and a Telegram bot that operates all of it from a phone.
 
-[![Live site](https://img.shields.io/badge/live-cemkoyluoglu.codes-ff4a1c?style=for-the-badge)](https://cemkoyluoglu.codes)
+[![Live site](https://img.shields.io/badge/live-cemkoyluoglu.tech-ff4a1c?style=for-the-badge)](https://cemkoyluoglu.tech)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-cem--koyluoglu-0a66c2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/cem-koyluoglu/)
 [![Email](https://img.shields.io/badge/email-cemkoyluoglu%40icloud.com-1f1f1f?style=for-the-badge&logo=maildotru&logoColor=white)](mailto:cemkoyluoglu@icloud.com)
 
@@ -31,7 +31,7 @@ a server-rendered SEO layer and a Telegram bot that operates all of it from a ph
 > **BSc Software Engineering (GPA 3.96/4.00)**, Kyiv Polytechnic Institute.<br>
 > Three years running Azure / Entra ID / Intune / Microsoft 365 operations for an EU client.
 
-This repository is the source of [cemkoyluoglu.codes](https://cemkoyluoglu.codes). It is a portfolio, and it is also a small production system that I designed, built and operate on my own:
+This repository is the source of [cemkoyluoglu.tech](https://cemkoyluoglu.tech). It is a portfolio, and it is also a small production system that I designed, built and operate on my own:
 
 | | What it is | What it shows |
 |---|---|---|
@@ -43,11 +43,11 @@ This repository is the source of [cemkoyluoglu.codes](https://cemkoyluoglu.codes
 | 📱 | **Telegram operations bot.** Triggers jobs, inspects health and receives alerts from a phone. | DevOps, observability, automation |
 
 **Looking for a specific skill?** Each one links to evidence on the live site:
-[RAG & grounded LLMs](https://cemkoyluoglu.codes/skills/rag-systems) ·
-[Deepfake detection](https://cemkoyluoglu.codes/skills/deepfake-detection) ·
-[Computer vision](https://cemkoyluoglu.codes/skills/computer-vision) ·
-[Agentic workflows](https://cemkoyluoglu.codes/skills/agentic-workflows) ·
-[Azure & Microsoft 365](https://cemkoyluoglu.codes/skills/azure-microsoft-365)
+[RAG & grounded LLMs](https://cemkoyluoglu.tech/skills/rag-systems) ·
+[Deepfake detection](https://cemkoyluoglu.tech/skills/deepfake-detection) ·
+[Computer vision](https://cemkoyluoglu.tech/skills/computer-vision) ·
+[Agentic workflows](https://cemkoyluoglu.tech/skills/agentic-workflows) ·
+[Azure & Microsoft 365](https://cemkoyluoglu.tech/skills/azure-microsoft-365)
 
 ---
 
@@ -55,12 +55,12 @@ This repository is the source of [cemkoyluoglu.codes](https://cemkoyluoglu.codes
 
 | Project | Highlights |
 |---|---|
-| [**DeepFake Detection Framework**](https://cemkoyluoglu.codes/work/deepfake-detection-framework) | MSc dissertation. Attention-enhanced EfficientNetB7, **~97 % accuracy** on 10K+ synthetic images, compared against CNN/SVM/RF baselines, with a real-time Streamlit demo. |
-| [**YouTube AI Summarizer**](https://cemkoyluoglu.codes/work/youtube-ai-summarizer) | Published on the **Chrome Web Store**. Summaries, deep analysis, transcript-grounded chat and a two-host AI podcast mode, in 20+ languages, bring-your-own-key. |
-| [**Ireland Expat Assistant**](https://cemkoyluoglu.codes/work/ireland-expat-assistant) | Custom GPT that answers from official documents on visas/IRP, Irish tax (PAYE/PRSI/USC), HSE and citizenship. |
-| [**Automated AI News Pipeline**](https://cemkoyluoglu.codes/work/ai-news-pipeline) | The system in this repository (details below). |
-| [**Automated Data Analysis System**](https://cemkoyluoglu.codes/work/automated-data-analysis-system) | Python/Pandas pipelines that cut manual processing by **60 %**. |
-| [**Customer Dashboard Platform**](https://cemkoyluoglu.codes/work/customer-dashboard-platform) | Django + Oracle dashboards for **100+ customers**, with a **40 %** ETL efficiency gain. |
+| [**DeepFake Detection Framework**](https://cemkoyluoglu.tech/work/deepfake-detection-framework) | MSc dissertation. Attention-enhanced EfficientNetB7, **~97 % accuracy** on 10K+ synthetic images, compared against CNN/SVM/RF baselines, with a real-time Streamlit demo. |
+| [**YouTube AI Summarizer**](https://cemkoyluoglu.tech/work/youtube-ai-summarizer) | Published on the **Chrome Web Store**. Summaries, deep analysis, transcript-grounded chat and a two-host AI podcast mode, in 20+ languages, bring-your-own-key. |
+| [**Ireland Expat Assistant**](https://cemkoyluoglu.tech/work/ireland-expat-assistant) | Custom GPT that answers from official documents on visas/IRP, Irish tax (PAYE/PRSI/USC), HSE and citizenship. |
+| [**Automated AI News Pipeline**](https://cemkoyluoglu.tech/work/ai-news-pipeline) | The system in this repository (details below). |
+| [**Automated Data Analysis System**](https://cemkoyluoglu.tech/work/automated-data-analysis-system) | Python/Pandas pipelines that cut manual processing by **60 %**. |
+| [**Customer Dashboard Platform**](https://cemkoyluoglu.tech/work/customer-dashboard-platform) | Django + Oracle dashboards for **100+ customers**, with a **40 %** ETL efficiency gain. |
 
 ---
 
@@ -352,7 +352,7 @@ docs/                Performance investigation notes
 
 Open to **AI / ML engineering roles** in Dublin, across Ireland or remote, and to freelance builds.
 
-[**cemkoyluoglu.codes**](https://cemkoyluoglu.codes) · [LinkedIn](https://www.linkedin.com/in/cem-koyluoglu/) · [GitHub](https://github.com/CemRoot) · [cemkoyluoglu@icloud.com](mailto:cemkoyluoglu@icloud.com)
+[**cemkoyluoglu.tech**](https://cemkoyluoglu.tech) · [LinkedIn](https://www.linkedin.com/in/cem-koyluoglu/) · [GitHub](https://github.com/CemRoot) · [cemkoyluoglu@icloud.com](mailto:cemkoyluoglu@icloud.com)
 
 <sub>MIT licensed — see <a href="LICENSE">LICENSE</a>.</sub>
 

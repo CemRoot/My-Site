@@ -62,7 +62,7 @@ export default async function handler(req, res) {
     // Revalidate the tech-news API route
     const baseUrl = process.env.VERCEL_URL 
       ? `https://${process.env.VERCEL_URL}` 
-      : process.env.SITE_URL || 'https://cemkoyluoglu.codes';
+      : process.env.SITE_URL || 'https://cemkoyluoglu.tech';
     
     const apiUrl = `${baseUrl}/api/tech-news`;
     

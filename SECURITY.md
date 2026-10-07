@@ -9,10 +9,10 @@ This document outlines the security measures, policies, and reporting procedures
 ### 1. CORS Protection
 - **Status**: ⚠️ Implemented, with a known limitation
 - **Location**: All API endpoints (`api/*.js`)
-- **Protection**: Origin whitelist (only `cemkoyluoglu.codes` and Vercel preview URLs)
+- **Protection**: Origin whitelist (only `cemkoyluoglu.tech` and Vercel preview URLs)
 - **Known limitation**: `api/tech-news.js` matches the incoming `Origin` with
   `startsWith()` rather than an exact comparison, so a hostile origin such as
-  `https://cemkoyluoglu.codes.example.com` is reflected back in
+  `https://cemkoyluoglu.tech.example.com` is reflected back in
   `Access-Control-Allow-Origin`.
 - **Assessed impact**: Low. The endpoint is unauthenticated and read-only,
   `Access-Control-Allow-Credentials` is never set, and the data it returns is

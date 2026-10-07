@@ -165,7 +165,7 @@ function formatErrorMessage(errorData) {
   const severity = type === 'crash' ? 'CRITICAL' : type === 'performance' ? 'WARNING' : 'ERROR';
   
   let text = `${emoji} <b>FRONTEND ${severity}</b>\n\n`;
-  text += `🌐 <b>Site:</b> cemkoyluoglu.codes\n`;
+  text += `🌐 <b>Site:</b> cemkoyluoglu.tech\n`;
   text += `📍 <b>Sayfa:</b> ${pageUrl || 'Bilinmiyor'}\n`;
   text += `⏰ <b>Zaman:</b> ${new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}\n\n`;
   
@@ -204,8 +204,8 @@ export default async function handler(req, res) {
   // free *.vercel.app subdomain, making it an effectively open CORS policy.
   const origin = req.headers.origin || '';
   const ALLOWED_ORIGINS = [
-    'https://cemkoyluoglu.codes',
-    'https://www.cemkoyluoglu.codes',
+    'https://cemkoyluoglu.tech',
+    'https://www.cemkoyluoglu.tech',
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
   ].filter(Boolean);
 

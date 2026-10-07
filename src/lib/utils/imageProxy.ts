@@ -39,7 +39,7 @@ export function getOptimizedImageUrl(
   // Skip if already using our CDN or local assets
   if (
     originalUrl.startsWith('/') ||
-    originalUrl.includes('cemkoyluoglu.codes') ||
+    originalUrl.includes('cemkoyluoglu.tech') ||
     originalUrl.includes(WSRV_CDN_BASE_URL) ||
     originalUrl.includes('images.weserv.nl')
   ) {

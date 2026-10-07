@@ -1,7 +1,7 @@
 # Tech News Scraper — Architecture & Rules
 
 ## Project Overview
-Portfolio site (cemkoyluoglu.codes) with a deterministic Turkish→English tech news ingestion pipeline.
+Portfolio site (cemkoyluoglu.tech) with a deterministic Turkish→English tech news ingestion pipeline.
 Source: nuvemmag.com (Turkish WordPress site)
 Stack: Node.js ESM, Vercel Edge Functions, Supabase PostgreSQL, GitHub Actions
 
