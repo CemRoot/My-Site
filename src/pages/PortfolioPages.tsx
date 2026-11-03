@@ -114,7 +114,7 @@ function NotFound({ kind }: { kind: string }) {
       <Shell crumbs={[['Home', '/'], [kind, '/skills']]}>
         <Title>{kind} not found</Title>
         <Lede>
-          <Link to="/skills" className="text-signal">
+          <Link to="/#skills" className="text-signal">
             See all skills →
           </Link>
         </Lede>
@@ -173,7 +173,7 @@ export function SkillPage() {
         description={clip(skill.summary)}
         canonicalPath={`/skills/${skill.slug}`}
       />
-      <Shell crumbs={[['Home', '/'], ['Skills', '/skills'], [skill.name, `/skills/${skill.slug}`]]}>
+      <Shell crumbs={[['Home', '/'], ['Skills', '/#skills'], [skill.name, `/skills/${skill.slug}`]]}>
         <Title>{skill.headline}</Title>
         <Lede>{skill.summary}</Lede>
         {projects.length > 0 && (
