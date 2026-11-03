@@ -5,6 +5,7 @@ import { HeroSection } from '../sections/HeroSection';
 import { StatsStrip } from '../sections/StatsStrip';
 import { SystemsSection } from '../sections/SystemsSection';
 import { WorkSection } from '../sections/WorkSection';
+import { SkillsSection } from '../sections/SkillsSection';
 import { SignalSection } from '../sections/SignalSection';
 import { ExperienceStackSection } from '../sections/ExperienceStackSection';
 import { ServicesSection } from '../sections/ServicesSection';
@@ -15,7 +16,7 @@ import { PERSONAL_INFO, EDUCATION } from '../lib/constants/personal';
 
 /**
  * Home — the editorial / systems landing page.
- * Section order mirrors the design prototype: hero → stats → systems → work →
+ * Section order: hero → stats → systems → work → skills →
  * signal → experience+stack → services → contact.
  */
 function HomePage() {
@@ -50,6 +51,7 @@ function HomePage() {
         'Hero section with 3D wireframe head and availability status',
         'Live systems overview (news scraper, agent layer, chatbot, deploy pipeline)',
         'Selected work — six real projects with links',
+        'Skills section — RAG, deepfake detection, computer vision, agentic automation, Azure and Microsoft 365',
         'Signal — latest tech news from the automated pipeline',
         'Experience / Education timeline toggle and technology stack',
         'Fixed-scope service packages',
@@ -86,6 +88,7 @@ function HomePage() {
       <ProbeTree id="StatsStrip"><StatsStrip /></ProbeTree>
       <ProbeTree id="SystemsSection"><SystemsSection /></ProbeTree>
       <ProbeTree id="WorkSection"><WorkSection /></ProbeTree>
+      <ProbeTree id="SkillsSection"><SkillsSection /></ProbeTree>
       <ProbeTree id="SignalSection"><SignalSection /></ProbeTree>
       <ProbeTree id="ExperienceStackSection"><ExperienceStackSection /></ProbeTree>
       <ProbeTree id="ServicesSection"><ServicesSection /></ProbeTree>

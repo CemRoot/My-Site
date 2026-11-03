@@ -17,7 +17,7 @@ export function SiteFooter() {
         className="flex flex-wrap items-center gap-x-3 gap-y-1"
         aria-label={t({ en: 'Site', tr: 'Site' })}
       >
-        <Link to="/skills" className="hover:text-foreground">
+        <Link to="/#skills" className="hover:text-foreground">
           {t({ en: 'SKILLS', tr: 'YETENEKLER' })}
         </Link>
         <span aria-hidden="true">·</span>

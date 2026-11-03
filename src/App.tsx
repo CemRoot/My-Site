@@ -160,7 +160,14 @@ export default function App() {
   }, []);
 
   return (
-    <Router>
+    /*
+      Location updates must commit synchronously. React Router 7 otherwise
+      wraps them in startTransition. After the lazy /skills route mounts, that
+      update stays pending: the address bar moves (Skills, Systems, Work, …)
+      while the previous page stays on screen, so the navbar looks dead and
+      Skills appears to open the wrong place.
+    */
+    <Router useTransitions={false}>
       <I18nProvider>
         <PageContextProvider>
           <ScrollToTopOnRouteChange />
