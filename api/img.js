@@ -8,7 +8,7 @@
  * GET /api/img?url=<encoded remote image url>
  */
 import dns from 'node:dns/promises';
-import { isPrivateAddress, parseRemoteImageUrl } from './lib/imageProxyGuard.js';
+import { isPrivateAddress, parseRemoteImageUrl } from '../lib/imageProxyGuard.js';
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const MAX_REDIRECTS = 3;

@@ -5,8 +5,8 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { formatTechNewsArticle } from './lib/formatTechNewsArticle.js';
-import { sortArticlesByRank } from './lib/techNewsRank.js';
+import { formatTechNewsArticle } from '../lib/formatTechNewsArticle.js';
+import { sortArticlesByRank } from '../lib/techNewsRank.js';
 import { findArticleBySlug, isValidSlug } from '../lib/seo/findArticleBySlug.js';
 
 const LIST_COLUMNS =
