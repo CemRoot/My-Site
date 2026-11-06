@@ -6,8 +6,8 @@ import fs from 'fs';
 import path from 'path';
 import { supabase } from './lib/supabaseAdmin.js';
 import { env } from './lib/config.js';
-import { formatTechNewsArticle } from '../api/lib/formatTechNewsArticle.js';
-import { sortArticlesByRank } from '../api/lib/techNewsRank.js';
+import { formatTechNewsArticle } from '../lib/formatTechNewsArticle.js';
+import { sortArticlesByRank } from '../lib/techNewsRank.js';
 
 const LIMIT = 10;
 const OUT_PATH = path.resolve('public', 'tech-news-latest.json');

@@ -12,7 +12,7 @@ export const TIKTOK_EMBED_SCRIPT_URL = 'https://www.tiktok.com/embed.js';
 
 export const YOUTUBE_EMBED_BASE_URL = 'https://www.youtube.com/embed';
 
-export const WSRV_CDN_BASE_URL = 'https://wsrv.nl/';
+export const IMAGE_PROXY_PATH = '/api/img';
 
 export const TECH_NEWS_API_BASE = '/api/tech-news';
 
