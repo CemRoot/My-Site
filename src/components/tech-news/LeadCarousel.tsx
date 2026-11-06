@@ -19,7 +19,7 @@ import {
 } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getOptimizedImageUrl, IMAGE_PRESETS } from '../../lib/utils/imageProxy';
+import { getOptimizedImageUrl, imageFallbackHandler, IMAGE_PRESETS } from '../../lib/utils/imageProxy';
 import { useI18n } from '../../features/i18n';
 import type { Article } from '../../lib/types';
 
@@ -281,6 +281,7 @@ export function LeadCarousel({ articles, meta, onArticleClick, prefetch, reduced
                         draggable={false}
                         width={1200}
                         height={675}
+                        onError={imageFallbackHandler(article.image)}
                       />
                     </div>
                   )}
