@@ -133,3 +133,20 @@ export function useOptimizedImage(
 ): string {
   return getOptimizedImageUrl(url, IMAGE_PRESETS[preset]);
 }
+
+/**
+ * onError handler for <img> tags that use getOptimizedImageUrl().
+ * Some corporate networks block the wsrv.nl CDN, so on the first failure we
+ * retry once with the original source; if that fails too, the image is hidden.
+ */
+export function imageFallbackHandler(originalUrl: string | undefined) {
+  return (e: { currentTarget: HTMLImageElement }) => {
+    const img = e.currentTarget;
+    if (originalUrl && img.dataset.fallbackApplied !== 'true') {
+      img.dataset.fallbackApplied = 'true';
+      img.src = originalUrl;
+      return;
+    }
+    img.style.display = 'none';
+  };
+}
