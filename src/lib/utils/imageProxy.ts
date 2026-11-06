@@ -1,13 +1,11 @@
 /**
  * Image Proxy Utility
- * Uses wsrv.nl (free image CDN) to:
- * - Convert images to WebP
- * - Resize for optimal loading
- * - Cache globally via CDN
- * - Reduce bandwidth and improve LCP
+ * Routes remote article images through our own domain (/api/img) so they load
+ * on networks that block third-party image CDNs and publisher image hosts.
+ * Vercel's CDN caches the responses.
  */
 
-import { WSRV_CDN_BASE_URL } from '../constants/urls';
+import { IMAGE_PROXY_PATH } from '../constants/urls';
 
 interface ImageProxyOptions {
   width?: number;
@@ -17,70 +15,27 @@ interface ImageProxyOptions {
   fit?: 'cover' | 'contain' | 'fill' | 'inside' | 'outside';
 }
 
-const DEFAULT_OPTIONS: ImageProxyOptions = {
-  quality: 80,
-  format: 'webp',
-  fit: 'cover',
-};
-
 /**
- * Generate optimized image URL via wsrv.nl CDN
- * @param originalUrl - Original remote image URL stored with the article
- * @param options - Optimization options
- * @returns Proxied/optimized image URL
+ * Same-origin URL for a remote image. Sizing options are accepted for API
+ * compatibility with the presets; the image is displayed with object-cover.
  */
 export function getOptimizedImageUrl(
   originalUrl: string | undefined,
-  options: ImageProxyOptions = {}
+  _options: ImageProxyOptions = {}
 ): string {
-  // Return empty string if no URL
+  void _options;
   if (!originalUrl) return '';
-  
-  // Skip if already using our CDN or local assets
+
+  // Local assets, our own domain and already-proxied URLs are used as is
   if (
     originalUrl.startsWith('/') ||
-    originalUrl.includes('cemkoyluoglu.tech') ||
-    originalUrl.includes(WSRV_CDN_BASE_URL) ||
-    originalUrl.includes('images.weserv.nl')
+    originalUrl.startsWith('data:') ||
+    originalUrl.includes('cemkoyluoglu.tech')
   ) {
     return originalUrl;
   }
 
-  const opts = { ...DEFAULT_OPTIONS, ...options };
-  
-  // Build wsrv.nl URL
-  const params = new URLSearchParams();
-  
-  // Source URL
-  params.set('url', originalUrl);
-  
-  // Format (WebP for best compression)
-  if (opts.format) {
-    params.set('output', opts.format);
-  }
-  
-  // Quality
-  if (opts.quality) {
-    params.set('q', opts.quality.toString());
-  }
-  
-  // Dimensions
-  if (opts.width) {
-    params.set('w', opts.width.toString());
-  }
-  if (opts.height) {
-    params.set('h', opts.height.toString());
-  }
-  
-  // Fit mode
-  if (opts.fit) {
-    params.set('fit', opts.fit);
-  }
-  
-  // Enable caching
-  params.set('n', '-1'); // Do not upscale
-  
-  return `${WSRV_CDN_BASE_URL}?${params.toString()}`;
+  return `${IMAGE_PROXY_PATH}?url=${encodeURIComponent(originalUrl)}`;
 }
 
 /**
