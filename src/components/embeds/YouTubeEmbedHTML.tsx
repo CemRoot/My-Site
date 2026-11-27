@@ -3,7 +3,6 @@
  * Renders YouTube's official iframe embed
  */
 
-import React from 'react';
 
 interface YouTubeEmbedHTMLProps {
   videoId: string;

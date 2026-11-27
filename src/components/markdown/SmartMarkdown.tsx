@@ -22,7 +22,6 @@ interface MarkdownNode {
 }
 
 // Regex to detect embed tokens: [[EMBED:TYPE:DATA]]
-const TOKEN_REGEX = /^\s*\[\[EMBED:(?:TIKTOK|TWEET|YOUTUBE):.+\]\]\s*$/i;
 const GLOBAL_TOKEN_REGEX = /\[\[EMBED:(TIKTOK|TWEET|YOUTUBE):([^\]]+)\]\]/gi;
 
 function sanitizeContentArtifacts(content: string) {
@@ -38,7 +37,7 @@ function sanitizeContentArtifacts(content: string) {
 
   const dedupedTokens = withoutArtifacts.replace(
     /\[\[EMBED:(TIKTOK|TWEET|YOUTUBE):([^\]]+)\]\]/gi,
-    (match, type, payload) => {
+    (_match: string, type: string, payload: string) => {
       const key = `${String(type).toUpperCase()}:${String(payload).trim()}`;
       if (seenTokens.has(key)) {
         return '';
@@ -49,28 +48,6 @@ function sanitizeContentArtifacts(content: string) {
   );
 
   return dedupedTokens.replace(/\n{3,}/g, '\n\n').trim();
-}
-
-/**
- * Checks if a paragraph contains an embed token
- * Returns the token if found, null otherwise
- */
-function maybeEmbedToken(node: MarkdownNode): string | null {
-  if (!node?.children || node.children.length !== 1) {
-    return null;
-  }
-
-  const onlyChild = node.children[0];
-
-  // Check if it's a text node containing a token
-  if (onlyChild?.type === 'text' && typeof onlyChild?.value === 'string') {
-    const text = onlyChild.value.trim();
-    if (TOKEN_REGEX.test(text)) {
-      return text;
-    }
-  }
-
-  return null;
 }
 
 /**

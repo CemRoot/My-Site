@@ -1,9 +1,7 @@
 name: CI
 
-# Runs on every PR and on main. Build + audit is already gated by the
-# "Build & Audit" job in security-scan.yml; this adds a typecheck.
-# Typecheck is advisory (continue-on-error) until existing TS errors are fixed;
-# remove continue-on-error to make it a hard gate.
+# Runs on every PR and on main. Build + audit is gated separately by the
+# "Build & Audit" job in security-scan.yml.
 on:
   push:
     branches: [ main ]
@@ -22,7 +20,6 @@ jobs:
   typecheck:
     name: Typecheck
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -31,3 +28,15 @@ jobs:
           cache: 'npm'
       - run: npm ci --ignore-scripts
       - run: npm run typecheck
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci --ignore-scripts
+      - run: npm test
