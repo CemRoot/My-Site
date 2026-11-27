@@ -36,7 +36,7 @@ async function reportError(errorData: ErrorReport): Promise<void> {
     // Clear old errors from Set (keep last 50)
     if (reportedErrors.size > 50) {
       const firstKey = reportedErrors.values().next().value;
-      reportedErrors.delete(firstKey);
+      if (firstKey !== undefined) reportedErrors.delete(firstKey);
     }
 
     // Add context
@@ -254,7 +254,7 @@ export function reportReactError(error: Error, errorInfo: React.ErrorInfo): void
     type: 'crash',
     message: error.message,
     stack: error.stack,
-    componentStack: errorInfo.componentStack,
+    componentStack: errorInfo.componentStack ?? undefined,
     severity: 'critical',
   });
 }

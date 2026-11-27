@@ -3,7 +3,7 @@
  * Renders Twitter's official embed HTML with script loader
  */
 
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { TWITTER_WIDGET_SCRIPT_URL } from '../../lib/constants/urls';
 
 interface TweetEmbedHTMLProps {

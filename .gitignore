@@ -3,8 +3,7 @@ node_modules/
 .pnp
 .pnp.js
 
-# Testing (local only — not published to GitHub)
-tests/
+# Testing artifacts
 coverage/
 
 # Scraper run artifacts & local diagnostics (may contain URLs/titles from production)

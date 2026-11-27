@@ -113,7 +113,7 @@ export function lazyWithRetry<T extends React.ComponentType<any>>(
       if (error instanceof Error && isChunkLoadError(error)) {
         handleChunkError(error);
         // Return a dummy component that won't render (page will reload anyway)
-        return { default: (() => null) as T };
+        return { default: (() => null) as unknown as T };
       }
       throw error;
     }

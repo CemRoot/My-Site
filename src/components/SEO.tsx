@@ -116,7 +116,7 @@ export function SEO({
       ],
     };
 
-    let scriptTag = document.querySelector('script#seo-json-ld');
+    let scriptTag = document.querySelector<HTMLScriptElement>('script#seo-json-ld');
     if (!scriptTag) {
       scriptTag = document.createElement('script');
       scriptTag.id = 'seo-json-ld';

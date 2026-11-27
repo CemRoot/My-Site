@@ -4,7 +4,7 @@
  */
 
 'use client';
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { TIKTOK_EMBED_SCRIPT_URL } from '../../lib/constants/urls';
 
 interface TikTokEmbedHTMLProps {

@@ -4,7 +4,6 @@
  * Renders appropriate embed component based on type
  */
 
-import React from 'react';
 import TweetEmbedHTML from './TweetEmbedHTML';
 import TikTokEmbedHTML from './TikTokEmbedHTML';
 import YouTubeEmbedHTML from './YouTubeEmbedHTML';
